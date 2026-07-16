@@ -8,6 +8,7 @@ import { authConfig } from "./auth.config";
 // Server Actions) — never imported directly by middleware.ts.
 export const { handlers, signIn, signOut, auth } = NextAuth({
   ...authConfig,
+  trustHost: true, // Allow localhost in development
   session: { strategy: "jwt" },
   providers: [
     Credentials({
