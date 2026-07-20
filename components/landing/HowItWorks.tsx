@@ -130,6 +130,7 @@ export default function HowItWorks() {
 
   return (
     <section 
+      id="HowItWorks"
       ref={containerRef}
       className="relative border-b border-ink/10 bg-gradient-to-b from-mist/50 to-mist px-8 py-24 overflow-hidden"
     >
@@ -140,10 +141,10 @@ export default function HowItWorks() {
             <Sparkles className="h-3 w-3 fill-teal/20" strokeWidth={2} />
             Hassle-Free Platform Navigation
           </div>
-          <h2 className="font-display text-7xl font-extrabold tracking-tight text-ink">
+          <h2 className="font-display text-4xl md:text-7xl font-extrabold tracking-tight text-ink">
             How EasyHire works
           </h2>
-          <p className="mt-4 text-base font-small text-ink/60 max-w-lg mx-auto">
+          <p className="mt-4 text-sm md:text-base font-small text-ink/60 max-w-lg mx-auto">
             A simplified, streamlined experience engineered to take you from sign up to success in just three steps.
           </p>
         </div>
@@ -156,7 +157,7 @@ export default function HowItWorks() {
               <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-marigold/15">
                 <UserCircle2 className="h-6 w-6 text-marigold" strokeWidth={1.8} />
               </div>
-              <h3 className="font-display text-2xl font-extrabold text-marigold tracking-tight">
+              <h3 className="font-display text-xl md:text-2xl font-extrabold text-marigold tracking-tight">
                 For job seekers
               </h3>
             </div>
@@ -188,9 +189,9 @@ export default function HowItWorks() {
                       <div className="flex-1">
                         <div className="flex items-center gap-2.5 mb-2">
                           <Icon className="step-icon h-5 w-5 text-marigold/70 transition-all duration-300 group-[.active-step]:text-marigold group-[.active-step]:scale-110 group-[.active-step]:rotate-12 group-hover:text-marigold group-hover:scale-110 group-hover:rotate-12" strokeWidth={1.8} />
-                          <p className="font-display text-lg font-bold text-ink tracking-tight">{step.title}</p>
+                          <p className="font-display text-base md:text-lg font-bold text-ink tracking-tight">{step.title}</p>
                         </div>
-                        <p className="text-sm leading-relaxed text-ink/70">{step.detail}</p>
+                        <p className="text-xs md:text-sm leading-relaxed text-ink/70">{step.detail}</p>
                       </div>
                     </div>
                   </div>
@@ -205,7 +206,7 @@ export default function HowItWorks() {
               <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-teal/15">
                 <Building2 className="h-6 w-6 text-teal" strokeWidth={1.8} />
               </div>
-              <h3 className="font-display text-2xl font-extrabold text-teal tracking-tight">
+              <h3 className="font-display text-xl md:text-2xl font-extrabold text-teal tracking-tight">
                 For employers
               </h3>
             </div>
@@ -237,9 +238,9 @@ export default function HowItWorks() {
                       <div className="flex-1">
                         <div className="flex items-center gap-2.5 mb-2">
                           <Icon className="step-icon h-5 w-5 text-teal/70 transition-all duration-300 group-[.active-step]:text-teal group-[.active-step]:scale-110 group-[.active-step]:rotate-12 group-hover:text-teal group-hover:scale-110 group-hover:rotate-12" strokeWidth={1.8} />
-                          <p className="font-display text-lg font-bold text-ink tracking-tight">{step.title}</p>
+                          <p className="font-display text-base md:text-lg font-bold text-ink tracking-tight">{step.title}</p>
                         </div>
-                        <p className="text-sm leading-relaxed text-ink/70">{step.detail}</p>
+                        <p className="text-xs md:text-sm leading-relaxed text-ink/70">{step.detail}</p>
                       </div>
                     </div>
                   </div>

@@ -1,213 +1,337 @@
-# Landing Page Performance Refactor: Centralized GSAP & Scoped Animation Cleanup
+# Pull Request: Authentication & Signup Flow Enhancement
 
 ## Overview
 
-Comprehensive performance audit and architectural refactor of the landing page animation system. Eliminated site-wide GSAP+ScrollTrigger initialization bottlenecks, fixed global ScrollTrigger cleanup bugs, and replaced expensive JavaScript animations with GPU-accelerated CSS where appropriate.
+This pull request implements a comprehensive authentication system upgrade with Google OAuth integration and a complete multi-step signup flow. The changes improve user onboarding experience, authentication security, and overall application robustness.
 
-**Result:** Smoother scrolling, faster interactions, lower CPU/GPU usage while preserving premium visual design.
+## Objectives
 
----
+- Integrate Google OAuth provider for seamless authentication
+- Implement multi-step signup flow with role-based onboarding
+- Enhance UI/UX consistency across authentication pages
+- Add quick profile setup for both seekers and employers
+- Improve responsive design on mobile and desktop devices
 
-## Problem Statement
+## Changes Summary
 
-Landing page interactions felt noticeably laggy despite being a modern Next.js 15 + React 19 + GSAP app. Root cause analysis revealed:
+### Authentication & Login Improvements
 
-1. **Duplicate GSAP initialization** — Every component (Hero, ValueProps, HowItWorks, FAQ, Header) independently called `gsap.registerPlugin(ScrollTrigger)`, causing redundant plugin setup and multiple ScrollTrigger instances competing for CPU.
+#### Login Page (`app/login/page.tsx`)
 
-2. **Global ScrollTrigger cleanup** — Components used `ScrollTrigger.getAll().forEach(trigger => trigger.kill())` during unmount, destroying ScrollTriggers belonging to OTHER sections and breaking animations across the page.
+- Completely redesigned with modern UI following EasyHire brand guidelines
+- Integrated Google OAuth with official Google SVG logo
+- Increased card size from `max-w-md` to `max-w-lg` for better mobile experience
+- Improved layout using flexbox to stick footer to bottom
+- Added OR divider between credentials and OAuth authentication options
+- Enhanced button states with active scale transitions
 
-3. **Expensive JavaScript animations** — Infinite GSAP tweens for hero job card floats and blob drifts ran constantly from page load to unmount, consuming main thread even when off-screen.
+#### Auth Configuration (`auth.ts`)
 
-4. **Hover GSAP overhead** — Hero seam interaction (clipPath tween) fired on every `pointerMove` event, creating 100+ GSAP instantiations per second.
+- Added Google OAuth provider with dynamic user creation
+- Implemented profile callback that auto-creates seeker accounts for OAuth users
+- Enabled account linking to allow multiple sign-in methods on same account
+- Maintained backward compatibility with existing credentials-based authentication
 
-5. **No animation scoping** — All tweens were globally referenced; cleanup was a guessing game between component destruction order and accidental cross-section animation destruction.
+### Signup Flow Implementation
 
----
+#### Multi-Step Signup (`app/signup/page.tsx`)
 
-## Solution
+Complete multi-step wizard with role-based onboarding:
 
-### 1. Centralized GSAP Registration (`lib/gsap.ts`)
+1. Role Selection - Choose between seeker or employer
+2. Credentials - Email, password, and name/company setup
+3. Profile - Quick profile information collection
+4. Success - Confirmation before dashboard redirect
 
-Created a single module-level registration point:
+#### Signup Components
 
-```typescript
-// lib/gsap.ts
-import gsap from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
+**RoleStep** (`components/signup/RoleStep.tsx`)
 
-if (typeof window !== "undefined") {
-  gsap.registerPlugin(ScrollTrigger);
-  ScrollTrigger.config({ autoRefreshEvents: "DOMContentLoaded,load,resize" });
-}
+- Two-column role selection interface
+- Visual distinction with brand colors (marigold for seekers, teal for employers)
+- Hover effects and transitions
 
-export { gsap, ScrollTrigger };
+**CredentialsStep** (`components/signup/CredentialsStep.tsx`)
+
+- Dynamic form based on selected role
+- Conditional fields for full name (seeker) or company name (employer)
+- Password validation with confirmation matching
+- Minimum 8-character password requirement
+- Google OAuth option available only for seekers
+- Improved card sizing matching login page standards
+
+**SeekerProfileStep** (`components/signup/SeekerProfileStep.tsx`)
+
+- Skill selection from predefined options
+- Availability preference (Full-time, Part-time, Project-based)
+- Years of experience selection
+- Skip option for users wanting to complete later
+
+**EmployerProfileStep** (`components/signup/EmployerProfileStep.tsx`)
+
+- Industry selection from common categories
+- Team size selection
+- Skip option for incomplete setup
+
+**SuccessStep** (`components/signup/SuccessStep.tsx`)
+
+- Confirmation message with role-specific text
+- Automatic redirect to appropriate dashboard
+
+#### Type Definitions (`components/signup/types.ts`)
+
+- Role type definition (SEEKER, EMPLOYER)
+- CredentialsData interface
+- SeekerProfileData interface
+- EmployerProfileData interface
+
+### API Endpoints
+
+#### Seeker Profile (`app/api/profile/seeker/route.ts`)
+
+- PATCH endpoint for updating seeker profile
+- Supports skills, availability, and yearsExperience fields
+- Role-based authorization
+- Secure update operations
+
+#### Employer Profile (`app/api/profile/employer/route.ts`)
+
+- PATCH endpoint for updating employer profile
+- Supports industry and teamSize fields
+- Role-based authorization
+- Secure update operations
+
+### Dashboard Routing
+
+#### Unified Dashboard (`app/dashboard/page.tsx`)
+
+- Single entry point that redirects based on user role
+- Seeker role redirects to `/seeker/dashboard`
+- Employer role redirects to `/employer/dashboard`
+- Admin role redirects to `/admin/dashboard`
+- Unauthenticated users redirect to login
+
+#### Seeker Dashboard (`app/seeker/dashboard/page.tsx`)
+
+- Basic dashboard template for seekers
+- Displays user email and role information
+
+### Database Schema Updates
+
+#### Prisma Schema (`prisma/schema.prisma`)
+
+**SeekerProfile Model**
+
+- Added `availability` field (String, optional)
+- Added `yearsExperience` field (String, optional)
+
+**Company Model**
+
+- Added `teamSize` field (String, optional)
+
+#### Database Migration
+
+- Migration name: `20260718100907_add_signup_quick_profile_fields`
+- Creates columns in seeker_profiles table: availability, years_experience
+- Creates column in companies table: team_size
+
+### Validation Schemas
+
+#### Sign-up Validation (`lib/validations/sign-up.ts`)
+
+- Role schema with SEEKER/EMPLOYER enum
+- Credentials schema with email and password validation
+- Password requirements: minimum 8 characters, uppercase letter, number
+- Confirmation password matching validation
+- Seeker onboarding schema with optional fields
+- Employer onboarding schema with optional fields
+
+### Landing Page Enhancements
+
+#### Header Navigation (`components/landing/Header.tsx`)
+
+- Updated navigation items to link to landing sections
+- Navigation targets: #ValueProps, #HowItWorks, #FAQ
+
+#### Hero Section (`components/landing/Hero.tsx`)
+
+- Responsive typography for mobile, tablet, and desktop
+- Fixed icon direction (ArrowLeft to ArrowRight)
+- Removed floating job cards for cleaner design
+- Improved responsive sizing for headings
+
+#### ValueProps Section (`components/landing/ValueProps.tsx`)
+
+- Added section ID for smooth scrolling
+- Responsive font sizing across breakpoints
+- Improved mobile typography hierarchy
+
+#### HowItWorks Section (`components/landing/HowItWorks.tsx`)
+
+- Added section ID for smooth scrolling
+- Responsive typography adjustments
+- Better mobile experience with adjusted font sizes
+
+#### FAQ Section (`components/landing/FAQ.tsx`)
+
+- Added section ID for smooth scrolling
+- Responsive font sizing for questions and answers
+- Improved mobile readability
+
+#### Root Layout (`app/layout.tsx`)
+
+- Added `scroll-smooth` class for smooth scrolling behavior
+- Improved user experience when navigating to sections
+
+## Environment Configuration
+
+### Required Environment Variables
+
+```env
+GOOGLE_ID=your-google-client-id.apps.googleusercontent.com
+GOOGLE_SECRET=your-google-client-secret
+NEXTAUTH_SECRET=your-nextauth-secret-key
+NEXTAUTH_URL=http://localhost:3000
+DATABASE_URL=your-database-url
+DIRECT_URL=your-direct-database-url
 ```
 
-**Every landing component now imports from this module** instead of registering independently. JavaScript module singletons guarantee `registerPlugin()` runs exactly once per bundle, no matter how many components import it.
+### Google OAuth Setup
 
-### 2. Scoped Animation Cleanup with `gsap.context()`
+To enable Google OAuth:
 
-Replaced global cleanup with per-component scoping:
+1. Navigate to Google Cloud Console (https://console.cloud.google.com/)
+2. Create a new project or select existing project
+3. Enable Google+ API
+4. Create OAuth 2.0 credentials (Web Application type)
+5. Add authorized redirect URIs:
+   - Development: `http://localhost:3000/api/auth/callback/google`
+   - Production: `https://yourdomain.com/api/auth/callback/google`
+6. Copy Client ID and Client Secret to environment variables
 
-**Before:**
+## Testing Recommendations
 
-```typescript
-useEffect(() => {
-  gsap.registerPlugin(ScrollTrigger); // ❌ redundant
-  // ... create animations ...
-  return () => {
-    ScrollTrigger.getAll().forEach((t) => t.kill()); // ❌ destroys OTHER sections!
-  };
-}, []);
-```
+### Authentication Testing
 
-**After:**
+- Verify email/password login flow with valid credentials
+- Verify email/password login with invalid credentials
+- Test Google OAuth sign-in process
+- Verify automatic seeker account creation for Google OAuth
+- Test account linking for existing users signing in with Google
+- Verify role-based redirects after authentication
 
-```typescript
-useEffect(() => {
-  const ctx = gsap.context(() => {
-    // ... create animations ...
-  }, sectionRef); // Scoped to this section
+### Signup Flow Testing
 
-  return () => ctx.revert(); // ✅ only reverts this section's tweens
-}, []);
-```
+- Test complete seeker signup flow end-to-end
+- Test complete employer signup flow end-to-end
+- Verify skip options work correctly
+- Test profile data persistence to database
+- Verify email validation in credentials step
+- Test password validation rules
+- Verify form error messages display correctly
 
-`gsap.context()` automatically tracks every tween and ScrollTrigger created inside its callback, then `ctx.revert()` cleans up only those — never touching other sections' animations.
+### UI/UX Testing
 
-### 3. Replace Expensive JS Float Animations with CSS
+- Responsive design on mobile (320px - 480px)
+- Responsive design on tablet (768px - 1024px)
+- Responsive design on desktop (1920px+)
+- Verify footer sticks to bottom on login page
+- Test button hover and active states
+- Verify Google OAuth button displays correctly
+- Test smooth scrolling on landing page
 
-**Hero floating job cards** — Was: Infinite GSAP tween on every card. Now: Pure CSS keyframes with staggered delays.
+### Database Testing
 
-**Before:**
+- Verify new columns created in migration
+- Test seeker profile updates with new fields
+- Test employer profile updates with new fields
+- Verify data integrity after updates
+- Test nullable fields behavior
 
-```typescript
-floatCardsRef.current.forEach((card, index) => {
-  gsap.fromTo(card, { y: 5 }, { y: -5, duration: 3, repeat: -1, yoyo: true });
-});
-```
+## Files Modified
 
-**After (CSS):**
+### Authentication
 
-```css
-@keyframes float-card {
-  0%,
-  100% {
-    transform: translateY(5px);
-  }
-  50% {
-    transform: translateY(-5px);
-  }
-}
-```
+- `auth.ts` - Google OAuth provider configuration
+- `auth.config.ts` - Base authentication configuration
 
-```jsx
-<div className={idx % 2 === 0 ? "animate-float-card" : "animate-float-card-reverse"}
-     style={{ animationDelay: `${idx * 0.4}s` }}>
-```
+### Pages
 
-**Benefit:** CSS keyframes run on the GPU compositor thread, never block the JS main thread.
+- `app/login/page.tsx` - Login page redesign
+- `app/signup/page.tsx` - Multi-step signup flow
+- `app/dashboard/page.tsx` - Dashboard redirect logic
+- `app/seeker/dashboard/page.tsx` - Seeker dashboard
 
-### 4. Better Hero Hover Interaction
+### Components
 
-Hero's `pointerMove` handler was already optimized in prior work (changed from `onMouseMove` to event delegation). Scoped context cleanup ensures cleanup doesn't affect other sections.
+- `components/signup/RoleStep.tsx` - New
+- `components/signup/CredentialsStep.tsx` - New
+- `components/signup/SeekerProfileStep.tsx` - New
+- `components/signup/EmployerProfileStep.tsx` - New
+- `components/signup/SuccessStep.tsx` - New
+- `components/signup/types.ts` - New
+- `components/landing/Header.tsx` - Navigation updates
+- `components/landing/Hero.tsx` - Responsive improvements
+- `components/landing/ValueProps.tsx` - Responsive improvements
+- `components/landing/HowItWorks.tsx` - Responsive improvements
+- `components/landing/FAQ.tsx` - Responsive improvements
 
----
+### API Routes
 
-## Files Changed
+- `app/api/profile/seeker/route.ts` - New
+- `app/api/profile/employer/route.ts` - New
 
-| File                                | Change                                                                                     |
-| ----------------------------------- | ------------------------------------------------------------------------------------------ |
-| `lib/gsap.ts`                       | **NEW** — Centralized GSAP + ScrollTrigger registration module                             |
-| `app/globals.css`                   | Added `@keyframes float-card` and `float-card-reverse` for Hero card floats                |
-| `components/landing/Hero.tsx`       | Use `lib/gsap`, scoped `gsap.context()`, replace infinite GSAP tween with CSS animation    |
-| `components/landing/ValueProps.tsx` | Use `lib/gsap`, scoped `gsap.context()` instead of async `registerPlugin` + global cleanup |
-| `components/landing/HowItWorks.tsx` | Use `lib/gsap`, scoped `gsap.context()` instead of async `registerPlugin` + global cleanup |
-| `components/landing/Header.tsx`     | Use `lib/gsap` (was already using `gsap.context()` correctly)                              |
-| `components/landing/FAQ.tsx`        | Update comment (no GSAP in FAQ anymore)                                                    |
+### Database
 
----
+- `prisma/schema.prisma` - Schema updates
+- `prisma/migrations/20260718100907_add_signup_quick_profile_fields/migration.sql` - New
 
-## Performance Improvements
+### Validation
 
-### CPU Savings
+- `lib/validations/sign-up.ts` - New
 
-- **Single ScrollTrigger registration** instead of 5+ redundant plugin initializations → ~50% less plugin overhead
-- **No infinite JS tweens** on cards/blobs when off-screen → Eliminated main-thread starvation during scroll
-- **Scoped cleanup** prevents accidental cross-section animation destruction → No cascading re-renders
+### Configuration
 
-### GPU Savings
+- `app/layout.tsx` - Added smooth scroll behavior
+- `.env.example` - Updated with OAuth variables
 
-- **CSS keyframes for floats** run on compositor thread → No JS callbacks, no paint cost
-- **Fewer repaints** from isolated cleanup → Better frame consistency
+## Breaking Changes
 
-### Estimated Gains
+None. All changes are backward compatible with existing authentication mechanisms.
 
-- **First Input Delay (FID)**: ~40–60ms improvement (less JS main-thread blocking)
-- **Cumulative Layout Shift (CLS)**: Stable (scoped cleanup prevents jank from animation destruction)
-- **Scroll FPS**: 55–60fps baseline → Consistent 60fps during scroll
-- **Overall Feel**: Noticeably smoother, premium-grade responsiveness
+## Performance Considerations
 
----
+- Google OAuth reduces server-side password hashing load
+- Quick profile setup reduces initial signup completion time
+- Smooth scrolling implemented with CSS for optimal performance
+- Component splitting improves code maintainability and tree-shaking
 
-## Testing Checklist
+## Security Considerations
 
-- [ ] Build succeeds: `npm run build`
-- [ ] Dev server starts: `npm run dev`
-- [ ] **Header** collapse animation on scroll (0–160px) is smooth
-- [ ] **Hero** seam animation on pointer move responds instantly (no lag)
-- [ ] **Hero** floating job cards animate smoothly (no jank)
-- [ ] **ValueProps** cards hover/lift without jank
-- [ ] **HowItWorks** scroll-triggered step highlights (color change) work correctly
-- [ ] **FAQ** accordion toggles instantly (no animation lag)
-- [ ] **All sections** scroll animations trigger at correct breakpoints
-- [ ] **Cross-browser** testing: Chrome, Firefox, Safari (CSS keyframes supported everywhere)
-- [ ] **Mobile** view: Animations responsive, no layout shift
-- [ ] **DevTools Performance** tab: No long tasks (>50ms) during scroll
+- Password validation enforces minimum security standards
+- Account linking allows safe migration between auth methods
+- Role-based access control enforced at API level
+- Google OAuth provider handles token management securely
+- Environmental variables protect sensitive credentials
 
----
+## Future Improvements
 
-## Browser Compatibility
+- Email verification flow for email-based signups
+- Profile completion progress tracking
+- Social proof elements (testimonials, success stories)
+- Advanced profile fields during employer onboarding
+- Integration with onboarding tutorials
+- A/B testing for signup flow optimization
 
-- ✅ Chrome 90+
-- ✅ Firefox 88+
-- ✅ Safari 14+
-- ✅ Edge 90+
+## Deployment Notes
 
-All CSS keyframes and GSAP APIs are widely supported. No polyfills needed.
+1. Deploy code changes first
+2. Run database migration: `npx prisma migrate deploy`
+3. Configure Google OAuth credentials in production environment
+4. Test authentication flows in staging environment
+5. Monitor authentication metrics post-deployment
+6. Be prepared to rollback if issues occur
 
----
+## Conclusion
 
-## Rollback Plan
-
-If issues arise:
-
-1. Revert `lib/gsap.ts` (remove file)
-2. Revert imports in all landing components back to `import gsap from "gsap"`
-3. Restore global cleanup pattern
-4. Remove CSS keyframes from `globals.css`
-
----
-
-## Notes for Reviewers
-
-1. **gsap.context()** is the recommended GSAP best practice for scoped cleanup in modern React. See [GSAP React docs](https://gsap.com/docs/React/).
-2. **CSS keyframes** are always faster than JS tweens for simple, repeating animations (translate, rotate, opacity on single axis).
-3. **Single ScrollTrigger registration** ensures all components share the same global ScrollTrigger state, preventing conflicts.
-4. FAQ component already has no animation (instant toggle), so no changes needed except comment cleanup.
-5. All animation behavior is **visually identical** — only the implementation (performance) changed.
-
----
-
-## Future Optimization Opportunities
-
-- Consider consolidating all `gsap.context()` calls into a single orchestrator timeline for even tighter animation coordination
-- Profile blob animations on low-end devices; consider disabling on slower CPUs
-- Add `prefers-reduced-motion` support for accessibility
-- Consider Image optimization (Next.js Image component) for hero gradients if they're raster
-
----
-
-## Related Issues
-
-Closes: Landing page lag investigation ([UPDATE_LANDING.md](docs/tasks/UPDATE_LANDING.md))
+This update significantly enhances the user authentication and onboarding experience while maintaining security and code quality standards. The implementation follows existing EasyHire brand guidelines and patterns established in the codebase.

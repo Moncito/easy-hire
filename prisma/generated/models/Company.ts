@@ -35,6 +35,7 @@ export type CompanyMinAggregateOutputType = {
   verifiedStatus: $Enums.VerificationStatus | null
   createdAt: Date | null
   updatedAt: Date | null
+  teamSize: string | null
 }
 
 export type CompanyMaxAggregateOutputType = {
@@ -48,6 +49,7 @@ export type CompanyMaxAggregateOutputType = {
   verifiedStatus: $Enums.VerificationStatus | null
   createdAt: Date | null
   updatedAt: Date | null
+  teamSize: string | null
 }
 
 export type CompanyCountAggregateOutputType = {
@@ -61,6 +63,7 @@ export type CompanyCountAggregateOutputType = {
   verifiedStatus: number
   createdAt: number
   updatedAt: number
+  teamSize: number
   _all: number
 }
 
@@ -76,6 +79,7 @@ export type CompanyMinAggregateInputType = {
   verifiedStatus?: true
   createdAt?: true
   updatedAt?: true
+  teamSize?: true
 }
 
 export type CompanyMaxAggregateInputType = {
@@ -89,6 +93,7 @@ export type CompanyMaxAggregateInputType = {
   verifiedStatus?: true
   createdAt?: true
   updatedAt?: true
+  teamSize?: true
 }
 
 export type CompanyCountAggregateInputType = {
@@ -102,6 +107,7 @@ export type CompanyCountAggregateInputType = {
   verifiedStatus?: true
   createdAt?: true
   updatedAt?: true
+  teamSize?: true
   _all?: true
 }
 
@@ -188,6 +194,7 @@ export type CompanyGroupByOutputType = {
   verifiedStatus: $Enums.VerificationStatus
   createdAt: Date
   updatedAt: Date
+  teamSize: string | null
   _count: CompanyCountAggregateOutputType | null
   _min: CompanyMinAggregateOutputType | null
   _max: CompanyMaxAggregateOutputType | null
@@ -222,6 +229,7 @@ export type CompanyWhereInput = {
   verifiedStatus?: Prisma.EnumVerificationStatusFilter<"Company"> | $Enums.VerificationStatus
   createdAt?: Prisma.DateTimeFilter<"Company"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Company"> | Date | string
+  teamSize?: Prisma.StringNullableFilter<"Company"> | string | null
   user?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
   jobs?: Prisma.JobListRelationFilter
   subscriptions?: Prisma.SubscriptionListRelationFilter
@@ -238,6 +246,7 @@ export type CompanyOrderByWithRelationInput = {
   verifiedStatus?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
+  teamSize?: Prisma.SortOrderInput | Prisma.SortOrder
   user?: Prisma.UserOrderByWithRelationInput
   jobs?: Prisma.JobOrderByRelationAggregateInput
   subscriptions?: Prisma.SubscriptionOrderByRelationAggregateInput
@@ -257,6 +266,7 @@ export type CompanyWhereUniqueInput = Prisma.AtLeast<{
   verifiedStatus?: Prisma.EnumVerificationStatusFilter<"Company"> | $Enums.VerificationStatus
   createdAt?: Prisma.DateTimeFilter<"Company"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Company"> | Date | string
+  teamSize?: Prisma.StringNullableFilter<"Company"> | string | null
   user?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
   jobs?: Prisma.JobListRelationFilter
   subscriptions?: Prisma.SubscriptionListRelationFilter
@@ -273,6 +283,7 @@ export type CompanyOrderByWithAggregationInput = {
   verifiedStatus?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
+  teamSize?: Prisma.SortOrderInput | Prisma.SortOrder
   _count?: Prisma.CompanyCountOrderByAggregateInput
   _max?: Prisma.CompanyMaxOrderByAggregateInput
   _min?: Prisma.CompanyMinOrderByAggregateInput
@@ -292,6 +303,7 @@ export type CompanyScalarWhereWithAggregatesInput = {
   verifiedStatus?: Prisma.EnumVerificationStatusWithAggregatesFilter<"Company"> | $Enums.VerificationStatus
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Company"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"Company"> | Date | string
+  teamSize?: Prisma.StringNullableWithAggregatesFilter<"Company"> | string | null
 }
 
 export type CompanyCreateInput = {
@@ -304,6 +316,7 @@ export type CompanyCreateInput = {
   verifiedStatus?: $Enums.VerificationStatus
   createdAt?: Date | string
   updatedAt?: Date | string
+  teamSize?: string | null
   user: Prisma.UserCreateNestedOneWithoutCompanyInput
   jobs?: Prisma.JobCreateNestedManyWithoutCompanyInput
   subscriptions?: Prisma.SubscriptionCreateNestedManyWithoutCompanyInput
@@ -320,6 +333,7 @@ export type CompanyUncheckedCreateInput = {
   verifiedStatus?: $Enums.VerificationStatus
   createdAt?: Date | string
   updatedAt?: Date | string
+  teamSize?: string | null
   jobs?: Prisma.JobUncheckedCreateNestedManyWithoutCompanyInput
   subscriptions?: Prisma.SubscriptionUncheckedCreateNestedManyWithoutCompanyInput
 }
@@ -334,6 +348,7 @@ export type CompanyUpdateInput = {
   verifiedStatus?: Prisma.EnumVerificationStatusFieldUpdateOperationsInput | $Enums.VerificationStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamSize?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   user?: Prisma.UserUpdateOneRequiredWithoutCompanyNestedInput
   jobs?: Prisma.JobUpdateManyWithoutCompanyNestedInput
   subscriptions?: Prisma.SubscriptionUpdateManyWithoutCompanyNestedInput
@@ -350,6 +365,7 @@ export type CompanyUncheckedUpdateInput = {
   verifiedStatus?: Prisma.EnumVerificationStatusFieldUpdateOperationsInput | $Enums.VerificationStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamSize?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   jobs?: Prisma.JobUncheckedUpdateManyWithoutCompanyNestedInput
   subscriptions?: Prisma.SubscriptionUncheckedUpdateManyWithoutCompanyNestedInput
 }
@@ -365,6 +381,7 @@ export type CompanyCreateManyInput = {
   verifiedStatus?: $Enums.VerificationStatus
   createdAt?: Date | string
   updatedAt?: Date | string
+  teamSize?: string | null
 }
 
 export type CompanyUpdateManyMutationInput = {
@@ -377,6 +394,7 @@ export type CompanyUpdateManyMutationInput = {
   verifiedStatus?: Prisma.EnumVerificationStatusFieldUpdateOperationsInput | $Enums.VerificationStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamSize?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type CompanyUncheckedUpdateManyInput = {
@@ -390,6 +408,7 @@ export type CompanyUncheckedUpdateManyInput = {
   verifiedStatus?: Prisma.EnumVerificationStatusFieldUpdateOperationsInput | $Enums.VerificationStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamSize?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type CompanyNullableScalarRelationFilter = {
@@ -408,6 +427,7 @@ export type CompanyCountOrderByAggregateInput = {
   verifiedStatus?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
+  teamSize?: Prisma.SortOrder
 }
 
 export type CompanyMaxOrderByAggregateInput = {
@@ -421,6 +441,7 @@ export type CompanyMaxOrderByAggregateInput = {
   verifiedStatus?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
+  teamSize?: Prisma.SortOrder
 }
 
 export type CompanyMinOrderByAggregateInput = {
@@ -434,6 +455,7 @@ export type CompanyMinOrderByAggregateInput = {
   verifiedStatus?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
+  teamSize?: Prisma.SortOrder
 }
 
 export type CompanyScalarRelationFilter = {
@@ -515,6 +537,7 @@ export type CompanyCreateWithoutUserInput = {
   verifiedStatus?: $Enums.VerificationStatus
   createdAt?: Date | string
   updatedAt?: Date | string
+  teamSize?: string | null
   jobs?: Prisma.JobCreateNestedManyWithoutCompanyInput
   subscriptions?: Prisma.SubscriptionCreateNestedManyWithoutCompanyInput
 }
@@ -529,6 +552,7 @@ export type CompanyUncheckedCreateWithoutUserInput = {
   verifiedStatus?: $Enums.VerificationStatus
   createdAt?: Date | string
   updatedAt?: Date | string
+  teamSize?: string | null
   jobs?: Prisma.JobUncheckedCreateNestedManyWithoutCompanyInput
   subscriptions?: Prisma.SubscriptionUncheckedCreateNestedManyWithoutCompanyInput
 }
@@ -559,6 +583,7 @@ export type CompanyUpdateWithoutUserInput = {
   verifiedStatus?: Prisma.EnumVerificationStatusFieldUpdateOperationsInput | $Enums.VerificationStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamSize?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   jobs?: Prisma.JobUpdateManyWithoutCompanyNestedInput
   subscriptions?: Prisma.SubscriptionUpdateManyWithoutCompanyNestedInput
 }
@@ -573,6 +598,7 @@ export type CompanyUncheckedUpdateWithoutUserInput = {
   verifiedStatus?: Prisma.EnumVerificationStatusFieldUpdateOperationsInput | $Enums.VerificationStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamSize?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   jobs?: Prisma.JobUncheckedUpdateManyWithoutCompanyNestedInput
   subscriptions?: Prisma.SubscriptionUncheckedUpdateManyWithoutCompanyNestedInput
 }
@@ -587,6 +613,7 @@ export type CompanyCreateWithoutJobsInput = {
   verifiedStatus?: $Enums.VerificationStatus
   createdAt?: Date | string
   updatedAt?: Date | string
+  teamSize?: string | null
   user: Prisma.UserCreateNestedOneWithoutCompanyInput
   subscriptions?: Prisma.SubscriptionCreateNestedManyWithoutCompanyInput
 }
@@ -602,6 +629,7 @@ export type CompanyUncheckedCreateWithoutJobsInput = {
   verifiedStatus?: $Enums.VerificationStatus
   createdAt?: Date | string
   updatedAt?: Date | string
+  teamSize?: string | null
   subscriptions?: Prisma.SubscriptionUncheckedCreateNestedManyWithoutCompanyInput
 }
 
@@ -631,6 +659,7 @@ export type CompanyUpdateWithoutJobsInput = {
   verifiedStatus?: Prisma.EnumVerificationStatusFieldUpdateOperationsInput | $Enums.VerificationStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamSize?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   user?: Prisma.UserUpdateOneRequiredWithoutCompanyNestedInput
   subscriptions?: Prisma.SubscriptionUpdateManyWithoutCompanyNestedInput
 }
@@ -646,6 +675,7 @@ export type CompanyUncheckedUpdateWithoutJobsInput = {
   verifiedStatus?: Prisma.EnumVerificationStatusFieldUpdateOperationsInput | $Enums.VerificationStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamSize?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   subscriptions?: Prisma.SubscriptionUncheckedUpdateManyWithoutCompanyNestedInput
 }
 
@@ -659,6 +689,7 @@ export type CompanyCreateWithoutSubscriptionsInput = {
   verifiedStatus?: $Enums.VerificationStatus
   createdAt?: Date | string
   updatedAt?: Date | string
+  teamSize?: string | null
   user: Prisma.UserCreateNestedOneWithoutCompanyInput
   jobs?: Prisma.JobCreateNestedManyWithoutCompanyInput
 }
@@ -674,6 +705,7 @@ export type CompanyUncheckedCreateWithoutSubscriptionsInput = {
   verifiedStatus?: $Enums.VerificationStatus
   createdAt?: Date | string
   updatedAt?: Date | string
+  teamSize?: string | null
   jobs?: Prisma.JobUncheckedCreateNestedManyWithoutCompanyInput
 }
 
@@ -703,6 +735,7 @@ export type CompanyUpdateWithoutSubscriptionsInput = {
   verifiedStatus?: Prisma.EnumVerificationStatusFieldUpdateOperationsInput | $Enums.VerificationStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamSize?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   user?: Prisma.UserUpdateOneRequiredWithoutCompanyNestedInput
   jobs?: Prisma.JobUpdateManyWithoutCompanyNestedInput
 }
@@ -718,6 +751,7 @@ export type CompanyUncheckedUpdateWithoutSubscriptionsInput = {
   verifiedStatus?: Prisma.EnumVerificationStatusFieldUpdateOperationsInput | $Enums.VerificationStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamSize?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   jobs?: Prisma.JobUncheckedUpdateManyWithoutCompanyNestedInput
 }
 
@@ -772,6 +806,7 @@ export type CompanySelect<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   verifiedStatus?: boolean
   createdAt?: boolean
   updatedAt?: boolean
+  teamSize?: boolean
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   jobs?: boolean | Prisma.Company$jobsArgs<ExtArgs>
   subscriptions?: boolean | Prisma.Company$subscriptionsArgs<ExtArgs>
@@ -789,6 +824,7 @@ export type CompanySelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exten
   verifiedStatus?: boolean
   createdAt?: boolean
   updatedAt?: boolean
+  teamSize?: boolean
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["company"]>
 
@@ -803,6 +839,7 @@ export type CompanySelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exten
   verifiedStatus?: boolean
   createdAt?: boolean
   updatedAt?: boolean
+  teamSize?: boolean
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["company"]>
 
@@ -817,9 +854,10 @@ export type CompanySelectScalar = {
   verifiedStatus?: boolean
   createdAt?: boolean
   updatedAt?: boolean
+  teamSize?: boolean
 }
 
-export type CompanyOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "userId" | "companyName" | "logoUrl" | "description" | "website" | "industry" | "verifiedStatus" | "createdAt" | "updatedAt", ExtArgs["result"]["company"]>
+export type CompanyOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "userId" | "companyName" | "logoUrl" | "description" | "website" | "industry" | "verifiedStatus" | "createdAt" | "updatedAt" | "teamSize", ExtArgs["result"]["company"]>
 export type CompanyInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   jobs?: boolean | Prisma.Company$jobsArgs<ExtArgs>
@@ -851,6 +889,7 @@ export type $CompanyPayload<ExtArgs extends runtime.Types.Extensions.InternalArg
     verifiedStatus: $Enums.VerificationStatus
     createdAt: Date
     updatedAt: Date
+    teamSize: string | null
   }, ExtArgs["result"]["company"]>
   composites: {}
 }
@@ -1287,6 +1326,7 @@ export interface CompanyFieldRefs {
   readonly verifiedStatus: Prisma.FieldRef<"Company", 'VerificationStatus'>
   readonly createdAt: Prisma.FieldRef<"Company", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"Company", 'DateTime'>
+  readonly teamSize: Prisma.FieldRef<"Company", 'String'>
 }
     
 

@@ -41,7 +41,7 @@ const FAQItem = memo(function FAQItem({
         onClick={onClick}
         className="flex w-full items-center justify-between gap-4 px-6 py-5 text-left font-display font-bold text-ink hover:text-navy"
       >
-        <span className="text-base md:text-lg tracking-tight leading-snug">{faq.question}</span>
+        <span className="text-sm md:text-base lg:text-lg tracking-tight leading-snug">{faq.question}</span>
         <ChevronDown
           className={`h-5 w-5 shrink-0 text-ink/50 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
           strokeWidth={2.5}
@@ -51,7 +51,7 @@ const FAQItem = memo(function FAQItem({
       {/* Simple conditional render - no animation. Fastest, most responsive. */}
       {isOpen && (
         <div className="border-t border-ink/5 px-6 py-5 bg-white/50">
-          <p className="text-sm md:text-base leading-relaxed text-ink/75">{faq.answer}</p>
+          <p className="text-xs md:text-sm lg:text-base leading-relaxed text-ink/75">{faq.answer}</p>
         </div>
       )}
     </div>
@@ -67,6 +67,7 @@ export default function FAQ() {
 
   return (
     <section
+      id="FAQ"
       className="relative border-b border-ink/10 bg-gradient-to-b from-mist to-mist/50 px-8 py-24 overflow-hidden"
     >
       {/* Decorative Drift Blob */}
@@ -79,10 +80,10 @@ export default function FAQ() {
             <Sparkles className="h-3 w-3 fill-navy/20" strokeWidth={2} />
             Support Center
           </div>
-          <h2 className="font-display text-7xl font-extrabold tracking-tight text-ink">
+          <h2 className="font-display text-4xl md:text-7xl font-extrabold tracking-tight text-ink">
             Frequently asked questions
           </h2>
-          <p className="mt-4 text-base font-small text-ink/60 max-w-md mx-auto">
+          <p className="mt-4 text-sm md:text-base font-small text-ink/60 max-w-md mx-auto">
             Got questions? We have answers. If you can&apos;t find what you need here, reach out to our team.
           </p>
         </div>

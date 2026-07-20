@@ -1,14 +1,10 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { ArrowRight, Sparkles, Briefcase, ArrowLeft } from "lucide-react";
+import { ArrowRight, Sparkles } from "lucide-react";
 import { gsap } from "@/lib/gsap";
 
-const illustrativeJobs = [
-  { title: "Social Media VA", pay: "\u20b125k-32k", type: "Full-Time" },
-  { title: "Executive Assistant", pay: "\u20b135k-45k", type: "Part-Time" },
-];
+
 
 export default function Hero() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -18,7 +14,6 @@ export default function Hero() {
   const rightContentRef = useRef<HTMLDivElement>(null);
 
   const activeSide = useRef<"left" | "right" | "center">("center");
-  const floatCardsRef = useRef<HTMLDivElement[]>([]);
 
   const [statCount, setStatCount] = useState(0);
   const seam = useRef({ top: 55, bottom: 45 });
@@ -131,40 +126,7 @@ export default function Hero() {
     });
   };
 
-  const handleCardMouseMove = (e: React.MouseEvent<HTMLDivElement>, index: number) => {
-    const card = floatCardsRef.current[index];
-    if (!card) return;
 
-    const rect = card.getBoundingClientRect();
-    const x = e.clientX - rect.left - rect.width / 2;
-    const y = e.clientY - rect.top - rect.height / 2;
-
-    gsap.to(card, {
-      rotateY: x * 0.15,
-      rotateX: -y * 0.15,
-      transformPerspective: 600,
-      boxShadow: "0 20px 40px rgba(0,0,0,0.12)",
-      borderColor: "rgba(255,255,255,0.6)",
-      duration: 0.3,
-      overwrite: "auto",
-      ease: "power2.out",
-    });
-  };
-
-  const handleCardMouseLeave = (index: number) => {
-    const card = floatCardsRef.current[index];
-    if (!card) return;
-
-    gsap.to(card, {
-      rotateY: 0,
-      rotateX: 0,
-      boxShadow: "0 8px 32px 0 rgba(31, 38, 135, 0.03)",
-      borderColor: "rgba(255,255,255,0.3)",
-      duration: 0.4,
-      overwrite: "auto",
-      ease: "power2.out",
-    });
-  };
 
   return (
     <>
@@ -196,68 +158,41 @@ export default function Hero() {
               Your Next Career Step Awaits
             </div>
 
-            <h1 className="mb-4 font-display text-5xl font-extrabold leading-tight tracking-tight text-[#4A2E0A]">
+            <h1 className="mb-4 font-display text-3xl md:text-8xl font-extrabold leading-tight tracking-tight text-[#4A2E0A]">
               Find your next <br />
-              <span className="relative text-white">
+              <span className="relative text-2xl md:text-7xl text-white">
                 opportunity
                 <span className="absolute bottom-1 left-0 h-1.5 w-full bg-white/30 rounded-full" />
               </span>
             </h1>
 
-            <p className="mb-8 text-base font-medium text-[#4A2E0A]/85 leading-relaxed max-w-sm">
+            <p className="mb-8 text-lg font-medium text-[#4A2E0A]/85 leading-relaxed max-w-sm">
               Build your profile once and apply to jobs from employers we&apos;ve reviewed before they go live.
             </p>
 
-            <button className="group relative inline-flex items-center justify-center overflow-hidden rounded-2xl bg-ink px-8 py-4 text-base font-bold text-mist shadow-lg shadow-black/10 transition-all hover:bg-ink/90 active:scale-95">
+            <button className="group relative inline-flex items-center justify-center overflow-hidden rounded-2xl bg-ink px-8 py-4 text-base font-bold text-mist shadow-lg shadow-black/10 transition-all hover:bg-ink/90 active:scale-95 cursor-pointer">
               I&apos;m looking for work
-              <ArrowLeft className="ml-2.5 h-5 w-5 transition-transform duration-300 group-hover:translate-x-1" />
+              <ArrowRight className="ml-2.5 h-5 w-5 transition-transform duration-300 group-hover:translate-x-1" />
             </button>
-
-            <div className="mt-12 flex flex-col gap-4 max-w-[280px]">
-              {illustrativeJobs.map((job, idx) => (
-                <div
-                  key={job.title}
-                  className={idx % 2 === 0 ? "animate-float-card" : "animate-float-card-reverse"}
-                  style={{ animationDelay: `${idx * 0.4}s` }}
-                >
-                  <div
-                    ref={(el) => { if (el) floatCardsRef.current[idx] = el; }}
-                    onMouseMove={(e) => handleCardMouseMove(e, idx)}
-                    onMouseLeave={() => handleCardMouseLeave(idx)}
-                    className="glass-panel cursor-pointer rounded-2xl border border-white/30 px-5 py-4 transition-all duration-300"
-                    style={{ willChange: "transform, box-shadow" }}
-                  >
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-white/30 text-white">
-                        <Briefcase className="h-3.5 w-3.5 text-[#4A2E0A]" />
-                      </div>
-                      <span className="font-display text-xs font-bold text-[#4A2E0A]">{job.type}</span>
-                    </div>
-                    <div className="font-display text-sm font-extrabold text-[#4A2E0A]">{job.title}</div>
-                    <div className="mt-1 font-data text-xs font-semibold text-[#4A2E0A]/70">{job.pay}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
           </div>
         </div>
 
         {/* Employer side */}
         <div className="absolute inset-y-0 right-16 z-[2] flex w-[38%] flex-col items-end justify-center text-right">
           <div ref={rightContentRef} className="origin-right transition-all duration-500 flex flex-col items-end">
-            <h2 className="mb-4 font-display text-5xl font-extrabold leading-tight tracking-tight text-[#E6F5EF]">
+            <h2 className="mb-4 font-display text-3xl md:text-8xl font-extrabold leading-tight tracking-tight text-[#E6F5EF]">
               Find your next <br />
-              <span className="relative text-white">
+              <span className="relative text-2xl md:text-7xl text-white">
                 hire
                 <span className="absolute bottom-1 right-0 h-1.5 w-full bg-white/30 rounded-full" />
               </span>
             </h2>
 
-            <p className="mb-8 text-base font-medium text-[#E6F5EF]/85 leading-relaxed max-w-sm">
+            <p className="mb-8 text-lg font-medium text-[#E6F5EF]/85 leading-relaxed max-w-sm">
               Post your job openings and review applicants directly, all in one place.
             </p>
 
-            <button className="group relative inline-flex items-center justify-center overflow-hidden rounded-2xl bg-mist px-8 py-4 text-base font-bold text-teal shadow-lg shadow-black/10 transition-all hover:bg-mist/95 active:scale-95">
+            <button className="group relative inline-flex items-center justify-center overflow-hidden rounded-2xl bg-mist px-8 py-4 text-base font-bold text-teal shadow-lg shadow-black/10 transition-all hover:bg-mist/95 active:scale-95 cursor-pointer">
               I&apos;m hiring
               <ArrowRight className="ml-2.5 h-5 w-5 transition-transform duration-300 group-hover:translate-x-1" />
             </button>
@@ -279,12 +214,12 @@ export default function Hero() {
           <div className="absolute -right-12 -bottom-12 h-56 w-56 rounded-full bg-white/10 blur-3xl animate-pulse" />
 
           <div className="relative z-10 max-w-md flex flex-col items-center">
-            <h2 className="mb-4 font-display text-3xl font-extrabold leading-tight tracking-tight text-[#4A2E0A]">
+            <h2 className="mb-2.5 font-display text-4xl md:text-8xl font-extrabold leading-tight tracking-tight text-[#4A2E0A]">
               Find your next <br />
-              <span className="text-white">opportunity</span>
+              <span className="text-2xl md:text-7xl text-white">opportunity</span>
             </h2>
 
-            <p className="mb-6 text-sm font-medium text-[#4A2E0A]/85 leading-relaxed">
+            <p className="mb-6 text-base font-medium text-[#4A2E0A]/85 leading-relaxed">
               Browse verified VA jobs, build your profile once, and apply with a single click.
             </p>
 
@@ -292,34 +227,24 @@ export default function Hero() {
               I&apos;m looking for work
               <ArrowRight className="mb-0.5 ml-2.5 inline h-4 w-4" />
             </button>
-
-            <div className="mt-8 w-full space-y-3">
-              {illustrativeJobs.map((job) => (
-                <div key={job.title} className="glass-panel text-left rounded-xl border border-white/30 p-4">
-                  <span className="font-display text-[10px] font-bold text-[#4A2E0A]">{job.type}</span>
-                  <div className="font-display text-xs font-extrabold text-[#4A2E0A]">{job.title}</div>
-                  <div className="font-data text-[10px] text-[#4A2E0A]/70">{job.pay}</div>
-                </div>
-              ))}
-            </div>
           </div>
         </div>
 
-        <div className="relative flex flex-col items-center justify-center bg-gradient-to-br from-[#2BA897] via-teal to-navy px-6 py-20 text-center overflow-hidden h-[45vh]">
-          <div className="absolute -right-12 -bottom-12 h-56 w-56 rounded-full bg-navy/40 blur-3xl animate-pulse" />
+        <div className="relative flex flex-col items-center justify-center bg-gradient-to-br from-[#2BA897] via-teal to-navy px-6 py-20 text-center overflow-hidden">
+           <div className="absolute -right-12 -bottom-12 h-56 w-56 rounded-full bg-navy/40 blur-3xl animate-pulse" />
           <div className="absolute -left-12 -top-12 h-56 w-56 rounded-full bg-white/10 blur-3xl animate-pulse" />
 
-          <div className="relative z-10 max-w-md flex flex-col items-center">
-            <h2 className="mb-4 font-display text-3xl font-extrabold leading-tight tracking-tight text-[#E6F5EF]">
+           <div className="relative z-10 max-w-md flex flex-col items-center">
+             <h2 className="mb-2.5 font-display text-4xl md:text-8xl font-extrabold leading-tight tracking-tight text-[#E6F5EF]">
               Find your next <br />
-              <span className="text-white">hire</span>
+              <span className="text-2xl md:text-7xl text-white">hire</span>
             </h2>
 
-            <p className="mb-6 text-sm font-medium text-[#E6F5EF]/85 leading-relaxed">
+            <p className="mb-6 text-base font-medium text-[#E6F5EF]/85 leading-relaxed">
               Post jobs and review applicants directly, all in one place.
             </p>
 
-            <button className="w-full max-w-xs rounded-xl bg-mist py-3 text-sm font-bold text-teal shadow-lg transition-transform active:scale-95">
+            <button className="w-full max-w-xs rounded-xl bg-mist py-3 text-sm font-bold text-teal shadow-lg transition-transform active:scale-95 cursor-pointer">
               I&apos;m hiring
               <ArrowRight className="mb-0.5 ml-2.5 inline h-4 w-4" />
             </button>
