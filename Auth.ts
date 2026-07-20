@@ -1,58 +1,90 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
+import Google from "next-auth/providers/google";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { authConfig } from "./auth.config";
 
 // This file runs in the Node.js runtime only (API routes, Server Components,
-// Server Actions) — never imported directly by middleware.ts.
+// Server Actions) — never imported directly by middleware.ts / proxy.ts.
 export const { handlers, signIn, signOut, auth } = NextAuth({
   ...authConfig,
   trustHost: true, // Allow localhost in development
   session: { strategy: "jwt" },
   providers: [
+    Google({
+      clientId: process.env.GOOGLE_ID,
+      clientSecret: process.env.GOOGLE_SECRET,
+      // Left false on purpose: there's no email verification in this app yet,
+      // so auto-linking a Google sign-in to an existing Credentials account
+      // (matched only by email) would let someone hijack an account they
+      // don't actually control. Revisit once email verification exists.
+      allowDangerousEmailAccountLinking: false,
+      async profile(profile) {
+        let user = await prisma.user.findUnique({
+          where: { email: profile.email! },
+          include: { seekerProfile: true },
+        });
+
+        if (!user) {
+          // New Google sign-ins default to SEEKER and get a linked
+          // SeekerProfile created in the same step — matching what
+          // /api/register already does for Credentials sign-up.
+          user = await prisma.user.create({
+            data: {
+              email: profile.email!,
+              role: "SEEKER",
+              passwordHash: null,
+              seekerProfile: {
+                create: { fullName: profile.name || "" },
+              },
+            },
+            include: { seekerProfile: true },
+          });
+        }
+
+        return {
+          id: user.id,
+          email: user.email,
+          image: profile.picture,
+          role: user.role,
+        };
+      },
+    }),
     Credentials({
       name: "Credentials",
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
-async authorize(credentials) {
-  console.log("Attempting login for:", credentials?.email);
+      async authorize(credentials) {
+        if (!credentials?.email || !credentials?.password) {
+          return null;
+        }
 
-  if (!credentials?.email || !credentials?.password) {
-    console.log("Missing email or password");
-    return null;
-  }
+        const user = await prisma.user.findUnique({
+          where: { email: credentials.email as string },
+        });
 
-  const user = await prisma.user.findUnique({
-    where: { email: credentials.email as string },
-  });
+        if (!user || !user.passwordHash) {
+          return null;
+        }
 
-  console.log("User found:", user ? user.email : "NOT FOUND");
+        const isValid = await bcrypt.compare(
+          credentials.password as string,
+          user.passwordHash
+        );
 
-  if (!user || !user.passwordHash) {
-    console.log("No user or no passwordHash set");
-    return null;
-  }
+        if (!isValid) {
+          return null;
+        }
 
-  const isValid = await bcrypt.compare(
-    credentials.password as string,
-    user.passwordHash
-  );
-
-  console.log("Password valid:", isValid);
-
-  if (!isValid) {
-    return null;
-  }
-
-  return {
-    id: user.id,
-    email: user.email,
-    role: user.role,
-  };
-},
+        return {
+          id: user.id,
+          email: user.email,
+          role: user.role,
+        };
+      },
     }),
   ],
 });

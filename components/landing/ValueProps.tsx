@@ -210,6 +210,7 @@ export default function ValueProps() {
 
   return (
     <section
+      id="ValueProps"
       ref={sectionRef}
       className="relative w-full bg-gradient-to-b from-mist via-mist/95 to-mist overflow-hidden px-6 py-20 md:py-24 lg:py-32"
     >
@@ -245,7 +246,7 @@ export default function ValueProps() {
           {/* Main Heading - Large & Premium */}
           <h2
             ref={headingRef}
-            className="font-display text-7xl md:text-7xl lg:text-7xl font-extrabold tracking-tight text-ink leading-[1.15] mb-6"
+            className="font-display text-4xl md:text-7xl lg:text-7xl font-extrabold tracking-tight text-ink leading-[1.15] mb-6"
           >
             A safer, faster <br className="hidden md:block" />
             recruitment experience
@@ -254,7 +255,7 @@ export default function ValueProps() {
           {/* Subtitle */}
           <p
             ref={subtitleRef}
-            className="mx-auto max-w-2xl text-lg md:text-sm text-ink/65 leading-relaxed font-medium"
+            className="mx-auto max-w-2xl text-sm md:text-base lg:text-lg text-ink/65 leading-relaxed font-medium"
           >
             EasyHire eliminates the friction of traditional job boards, building trust
             and transparency on both sides of the hiring loop.
@@ -303,12 +304,12 @@ export default function ValueProps() {
                   </div>
 
                   {/* Heading */}
-                  <h3 className="font-display text-2xl md:text-xl lg:text-2xl font-bold tracking-tight text-ink mb-4 leading-tight">
+                  <h3 className="font-display text-lg md:text-xl lg:text-2xl font-bold tracking-tight text-ink mb-4 leading-tight">
                     {feature.heading}
                   </h3>
 
                   {/* Description */}
-                  <p className="text-base md:text-sm lg:text-base leading-relaxed text-ink/70 font-medium">
+                  <p className="text-sm md:text-sm lg:text-base leading-relaxed text-ink/70 font-medium">
                     {feature.description}
                   </p>
                 </div>

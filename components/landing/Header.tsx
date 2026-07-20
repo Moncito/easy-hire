@@ -6,9 +6,9 @@ import { Search, Briefcase, HelpCircle, Zap, LogIn } from "lucide-react";
 import { gsap, ScrollTrigger } from "@/lib/gsap";
 
 const navItems = [
-  { label: "Browse jobs", icon: Search, href: "/jobs" },
-  { label: "For employers", icon: Briefcase, href: "/employer" },
-  { label: "How it works", icon: HelpCircle, href: "/#how-it-works" },
+  { label: "Value", icon: Search, href: "#ValueProps" },
+  { label: "How it works", icon: Briefcase, href: "#HowItWorks" },
+  { label: "FAQ", icon: HelpCircle, href: "#FAQ" },
 ];
 
 export default function Header() {

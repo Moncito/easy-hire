@@ -1149,7 +1149,9 @@ export const SeekerProfileScalarFieldEnum = {
   desiredSalaryMax: 'desiredSalaryMax',
   profileVisibility: 'profileVisibility',
   createdAt: 'createdAt',
-  updatedAt: 'updatedAt'
+  updatedAt: 'updatedAt',
+  availability: 'availability',
+  yearsExperience: 'yearsExperience'
 } as const
 
 export type SeekerProfileScalarFieldEnum = (typeof SeekerProfileScalarFieldEnum)[keyof typeof SeekerProfileScalarFieldEnum]
@@ -1165,7 +1167,8 @@ export const CompanyScalarFieldEnum = {
   industry: 'industry',
   verifiedStatus: 'verifiedStatus',
   createdAt: 'createdAt',
-  updatedAt: 'updatedAt'
+  updatedAt: 'updatedAt',
+  teamSize: 'teamSize'
 } as const
 
 export type CompanyScalarFieldEnum = (typeof CompanyScalarFieldEnum)[keyof typeof CompanyScalarFieldEnum]
