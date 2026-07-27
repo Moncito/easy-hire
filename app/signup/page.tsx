@@ -1,14 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams} from "next/navigation";
 import RoleStep from "@/components/signup/RoleStep";
 import CredentialsStep from "@/components/signup/CredentialsStep";
 import SeekerProfileStep from "@/components/signup/SeekerProfileStep";
 import EmployerProfileStep from "@/components/signup/EmployerProfileStep";
 import SuccessStep from "@/components/signup/SuccessStep";
+
 import {
   Role,
   CredentialsData,
@@ -20,10 +21,26 @@ type Step = "role" | "credentials" | "profile" | "success";
 
 export default function SignupPage() {
   const router = useRouter();
-  const [step, setStep] = useState<Step>("role");
+  const searchParams = useSearchParams();
+  
+  // Initialize state without assuming URL params are available yet
+  // (handles hydration mismatch in App Router)
   const [role, setRole] = useState<Role | null>(null);
+  const [step, setStep] = useState<Step>("role");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  // Effect: Sync URL query parameter to component state
+  // This runs after hydration and ensures query params are respected
+  useEffect(() => {
+    const roleParam = searchParams.get("role");
+    
+    if (roleParam === "SEEKER" || roleParam === "EMPLOYER") {
+      setRole(roleParam);
+      setStep("credentials");
+    }
+    // If no role param, keep step as "role" (user needs to select)
+  }, [searchParams]);
 
   async function handleCredentialsSubmit(data: CredentialsData) {
     setError("");
@@ -62,21 +79,35 @@ export default function SignupPage() {
 
   async function handleSeekerProfileComplete(data: SeekerProfileData) {
     setLoading(true);
-    await fetch("/api/profile/seeker", {
+    setError("");
+    const res = await fetch("/api/profile/seeker", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
+    if (!res.ok) {
+      const result = await res.json();
+      setError(result.error || "Failed to save profile. You can update it from your dashboard.");
+      setLoading(false);
+      return;
+    }
     finishSignup();
   }
 
   async function handleEmployerProfileComplete(data: EmployerProfileData) {
     setLoading(true);
-    await fetch("/api/profile/employer", {
+    setError("");
+    const res = await fetch("/api/profile/employer", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
+    if (!res.ok) {
+      const result = await res.json();
+      setError(result.error || "Failed to save company profile. You can update it from your dashboard.");
+      setLoading(false);
+      return;
+    }
     finishSignup();
   }
 
@@ -133,19 +164,25 @@ export default function SignupPage() {
           )}
 
           {step === "profile" && role === "SEEKER" && (
-            <SeekerProfileStep
-              loading={loading}
-              onComplete={handleSeekerProfileComplete}
-              onSkip={handleSkip}
-            />
+            <>
+              {error && <p className="mb-4 text-center text-sm text-ember">{error}</p>}
+              <SeekerProfileStep
+                loading={loading}
+                onComplete={handleSeekerProfileComplete}
+                onSkip={handleSkip}
+              />
+            </>
           )}
 
           {step === "profile" && role === "EMPLOYER" && (
-            <EmployerProfileStep
-              loading={loading}
-              onComplete={handleEmployerProfileComplete}
-              onSkip={handleSkip}
-            />
+            <>
+              {error && <p className="mb-4 text-center text-sm text-ember">{error}</p>}
+              <EmployerProfileStep
+                loading={loading}
+                onComplete={handleEmployerProfileComplete}
+                onSkip={handleSkip}
+              />
+            </>
           )}
 
           {step === "success" && role && <SuccessStep role={role} />}

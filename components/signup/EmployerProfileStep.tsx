@@ -26,6 +26,7 @@ export default function EmployerProfileStep({ loading, onComplete, onSkip }: Pro
       <div className="mb-6 flex flex-wrap gap-2 ">
         {industryOptions.map((opt) => (
           <button
+            type="button"
             key={opt}
             onClick={() => setIndustry(opt)}
             className={`rounded-full border px-4 py-2 text-sm transition-colors cursor-pointer ${
@@ -41,6 +42,7 @@ export default function EmployerProfileStep({ loading, onComplete, onSkip }: Pro
       <div className="mb-8 flex flex-wrap gap-2">
         {teamSizeOptions.map((opt) => (
           <button
+            type="button"
             key={opt}
             onClick={() => setTeamSize(opt)}
             className={`rounded-full border px-4 py-2 text-sm transition-colors cursor-pointer ${
@@ -61,6 +63,7 @@ export default function EmployerProfileStep({ loading, onComplete, onSkip }: Pro
           Complete sign-up
         </button>
         <button
+          type="button"
           onClick={onSkip}
           disabled={loading}
           className="rounded-xl border border-ink/20 px-6 py-3 text-sm font-semibold text-ink/70 cursor-pointer"

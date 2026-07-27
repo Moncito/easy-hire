@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ArrowRight, Sparkles } from "lucide-react";
 import { gsap } from "@/lib/gsap";
+import Link from "next/link";
 
 
 
@@ -170,10 +171,12 @@ export default function Hero() {
               Build your profile once and apply to jobs from employers we&apos;ve reviewed before they go live.
             </p>
 
+          <Link href="/signup?role=SEEKER">
             <button className="group relative inline-flex items-center justify-center overflow-hidden rounded-2xl bg-ink px-8 py-4 text-base font-bold text-mist shadow-lg shadow-black/10 transition-all hover:bg-ink/90 active:scale-95 cursor-pointer">
               I&apos;m looking for work
               <ArrowRight className="ml-2.5 h-5 w-5 transition-transform duration-300 group-hover:translate-x-1" />
             </button>
+          </Link>
           </div>
         </div>
 
@@ -192,11 +195,13 @@ export default function Hero() {
               Post your job openings and review applicants directly, all in one place.
             </p>
 
+            <Link href="/signup?role=EMPLOYER">
+
             <button className="group relative inline-flex items-center justify-center overflow-hidden rounded-2xl bg-mist px-8 py-4 text-base font-bold text-teal shadow-lg shadow-black/10 transition-all hover:bg-mist/95 active:scale-95 cursor-pointer">
               I&apos;m hiring
               <ArrowRight className="ml-2.5 h-5 w-5 transition-transform duration-300 group-hover:translate-x-1" />
             </button>
-
+          </Link>
             <div className="mt-10 text-right">
               <p className="font-data text-2xl font-bold tracking-tight text-[#E6F5EF]">
                 {statCount.toLocaleString()}+
@@ -224,7 +229,8 @@ export default function Hero() {
             </p>
 
             <button className="w-full max-w-xs rounded-xl bg-ink py-3 text-sm font-bold text-mist shadow-lg transition-transform active:scale-95">
-              I&apos;m looking for work
+              I&apos;m 
+              ng for work
               <ArrowRight className="mb-0.5 ml-2.5 inline h-4 w-4" />
             </button>
           </div>
