@@ -1,0 +1,33 @@
+import { z } from "zod";
+
+export const seekerUpdateSchema = z.object({
+  fullName: z.string().min(1, "Full name is required").optional(),
+  phone: z.string().max(30).optional().nullable(),
+  location: z.string().max(120).optional().nullable(),
+  headline: z.string().max(120).optional().nullable(),
+  bio: z.string().max(2000).optional().nullable(),
+  skills: z.array(z.string()).optional(),
+  availability: z.string().optional().nullable(),
+  yearsExperience: z.string().optional().nullable(),
+  desiredSalaryMin: z.number().int().positive().optional().nullable(),
+  desiredSalaryMax: z.number().int().positive().optional().nullable(),
+  resumeUrl: z.string().url().optional().nullable(),
+});
+
+export type SeekerUpdate = z.infer<typeof seekerUpdateSchema>;
+
+export function seekerInputToData(input: SeekerUpdate) {
+  return {
+    ...(input.fullName !== undefined ? { fullName: input.fullName } : {}),
+    ...(input.phone !== undefined ? { phone: input.phone || null } : {}),
+    ...(input.location !== undefined ? { location: input.location || null } : {}),
+    ...(input.headline !== undefined ? { headline: input.headline || null } : {}),
+    ...(input.bio !== undefined ? { bio: input.bio || null } : {}),
+    ...(input.skills !== undefined ? { skills: input.skills } : {}),
+    ...(input.availability !== undefined ? { availability: input.availability || null } : {}),
+    ...(input.yearsExperience !== undefined ? { yearsExperience: input.yearsExperience || null } : {}),
+    ...(input.desiredSalaryMin !== undefined ? { desiredSalaryMin: input.desiredSalaryMin } : {}),
+    ...(input.desiredSalaryMax !== undefined ? { desiredSalaryMax: input.desiredSalaryMax } : {}),
+    ...(input.resumeUrl !== undefined ? { resumeUrl: input.resumeUrl || null } : {}),
+  };
+}

@@ -1,25 +1,41 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/Auth";
-import { prisma } from "@/lib/prisma";
+import { errorResponse } from "@/lib/api-error";
+import { getSeekerProfile, updateSeekerProfile } from "@/lib/seekers";
+import { ZodError } from "zod";
+
+export async function GET() {
+  try {
+    const session = await auth();
+    if (!session?.user || session.user.role !== "SEEKER") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const profile = await getSeekerProfile(session.user.id);
+    if (!profile) {
+      return NextResponse.json({ error: "Profile not found" }, { status: 404 });
+    }
+
+    return NextResponse.json(profile);
+  } catch (error) {
+    return errorResponse(error);
+  }
+}
 
 export async function PATCH(req: Request) {
-  const session = await auth();
+  try {
+    const session = await auth();
+    if (!session?.user || session.user.role !== "SEEKER") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
-  if (!session?.user || session.user.role !== "SEEKER") {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const body = await req.json();
+    const updated = await updateSeekerProfile(session.user.id, body);
+    return NextResponse.json(updated);
+  } catch (error) {
+    if (error instanceof ZodError) {
+      return NextResponse.json({ error: error.issues[0]?.message ?? "Invalid input" }, { status: 400 });
+    }
+    return errorResponse(error);
   }
-
-  const body = await req.json();
-  const { skills, availability, yearsExperience } = body;
-
-  const updated = await prisma.seekerProfile.update({
-    where: { userId: session.user.id },
-    data: {
-      ...(skills !== undefined && { skills }),
-      ...(availability !== undefined && { availability }),
-      ...(yearsExperience !== undefined && { yearsExperience }),
-    },
-  });
-
-  return NextResponse.json({ id: updated.id });
 }

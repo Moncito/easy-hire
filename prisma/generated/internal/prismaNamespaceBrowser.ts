@@ -121,7 +121,14 @@ export const CompanyScalarFieldEnum = {
   verifiedStatus: 'verifiedStatus',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
-  teamSize: 'teamSize'
+  teamSize: 'teamSize',
+  foundedYear: 'foundedYear',
+  headquarters: 'headquarters',
+  highlights: 'highlights',
+  linkedinUrl: 'linkedinUrl',
+  facebookUrl: 'facebookUrl',
+  instagramUrl: 'instagramUrl',
+  xUrl: 'xUrl'
 } as const
 
 export type CompanyScalarFieldEnum = (typeof CompanyScalarFieldEnum)[keyof typeof CompanyScalarFieldEnum]
@@ -132,6 +139,8 @@ export const JobScalarFieldEnum = {
   companyId: 'companyId',
   title: 'title',
   description: 'description',
+  requirements: 'requirements',
+  benefits: 'benefits',
   category: 'category',
   employmentType: 'employmentType',
   salaryMin: 'salaryMin',
@@ -139,6 +148,7 @@ export const JobScalarFieldEnum = {
   location: 'location',
   remoteType: 'remoteType',
   status: 'status',
+  publishedAt: 'publishedAt',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
   expiresAt: 'expiresAt'
@@ -153,6 +163,9 @@ export const ApplicationScalarFieldEnum = {
   seekerId: 'seekerId',
   status: 'status',
   coverNote: 'coverNote',
+  internalNotes: 'internalNotes',
+  rating: 'rating',
+  rejectionReason: 'rejectionReason',
   appliedAt: 'appliedAt',
   updatedAt: 'updatedAt'
 } as const

@@ -115,7 +115,7 @@ export default function CredentialsStep({ role, loading, serverError, onSubmit }
             <div className="flex-1 border-t border-ink/15" />
           </div>
           <button
-            onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
+            onClick={() => signIn("google", { callbackUrl: "/seeker/dashboard" })}
             className="w-full rounded-xl border border-ink/15 px-4 py-3 text-sm font-semibold text-ink transition-colors hover:bg-ink/5 active:scale-95 cursor-pointer"
           >
             <div className="flex items-center justify-center gap-2">

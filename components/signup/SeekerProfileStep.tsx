@@ -32,6 +32,7 @@ export default function SeekerProfileStep({ loading, onComplete, onSkip }: Props
       <div className="mb-6 flex flex-wrap gap-2">
         {seekerSkills.map((skill) => (
           <button
+            type="button"
             key={skill}
             onClick={() => toggleSkill(skill)}
             className={`rounded-full border px-4 py-2 text-sm transition-colors cursor-pointer ${
@@ -47,6 +48,7 @@ export default function SeekerProfileStep({ loading, onComplete, onSkip }: Props
       <div className="mb-6 flex flex-wrap gap-2">
         {availabilityOptions.map((opt) => (
           <button
+            type="button"
             key={opt}
             onClick={() => setAvailability(opt)}
             className={`rounded-full border px-4 py-2 text-sm transition-colors cursor-pointer ${
@@ -62,6 +64,7 @@ export default function SeekerProfileStep({ loading, onComplete, onSkip }: Props
       <div className="mb-8 flex flex-wrap gap-2">
         {experienceOptions.map((opt) => (
           <button
+            type="button"
             key={opt}
             onClick={() => setYearsExperience(opt)}
             className={`rounded-full border px-4 py-2 text-sm transition-colors cursor-pointer ${
@@ -82,6 +85,7 @@ export default function SeekerProfileStep({ loading, onComplete, onSkip }: Props
           Complete sign-up
         </button>
         <button
+          type="button"
           onClick={onSkip}
           disabled={loading}
           className="rounded-xl border border-ink/20 px-6 py-3 text-sm font-semibold text-ink/70 cursor-pointer"

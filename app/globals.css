@@ -264,3 +264,28 @@ backdrop-filter:blur(6px);
     background:#1E3A5F;
 
 }
+
+/* Kanban horizontal scroll — thin, subtle (avoids heavy global bar) */
+.kanban-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(32, 36, 43, 0.18) transparent;
+}
+
+.kanban-scroll::-webkit-scrollbar {
+  height: 6px;
+  width: 6px;
+}
+
+.kanban-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.kanban-scroll::-webkit-scrollbar-thumb {
+  background: rgba(32, 36, 43, 0.15);
+  border: none;
+  border-radius: 999px;
+}
+
+.kanban-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(30, 58, 95, 0.35);
+}

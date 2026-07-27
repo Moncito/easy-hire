@@ -11,6 +11,39 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   ...authConfig,
   trustHost: true, // Allow localhost in development
   session: { strategy: "jwt" },
+  callbacks: {
+    async jwt({ token, user }) {
+      if (user) {
+        token.id = user.id;
+        token.role = (user as { role?: string }).role;
+      }
+
+      // Keep role in sync with the database so manual ADMIN promotion works
+      // without forcing a sign-out (Prisma Studio / SQL updates).
+      const userId = token.id as string | undefined;
+      const email = token.email as string | undefined;
+
+      const dbUser = userId
+        ? await prisma.user.findUnique({ where: { id: userId }, select: { id: true, role: true } })
+        : email
+          ? await prisma.user.findUnique({ where: { email }, select: { id: true, role: true } })
+          : null;
+
+      if (dbUser) {
+        token.id = dbUser.id;
+        token.role = dbUser.role;
+      }
+
+      return token;
+    },
+    async session({ session, token }) {
+      if (session.user) {
+        session.user.id = token.id as string;
+        session.user.role = token.role as "SEEKER" | "EMPLOYER" | "ADMIN";
+      }
+      return session;
+    },
+  },
   providers: [
     Google({
       clientId: process.env.GOOGLE_ID,
