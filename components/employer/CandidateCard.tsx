@@ -18,6 +18,9 @@ type Application = {
 
 type Props = {
   application: Application;
+  selected?: boolean;
+  selectionMode?: boolean;
+  onToggleSelect?: (id: string) => void;
   onClick: () => void;
 };
 
@@ -34,7 +37,13 @@ function formatAppliedAt(iso: string) {
   return `Applied ${date.toLocaleDateString(undefined, { month: "short", day: "numeric" })}`;
 }
 
-export default function CandidateCard({ application, onClick }: Props) {
+export default function CandidateCard({
+  application,
+  selected = false,
+  selectionMode = false,
+  onToggleSelect,
+  onClick,
+}: Props) {
   const initials = application.seeker.fullName
     ? application.seeker.fullName
         .split(" ")
@@ -44,56 +53,84 @@ export default function CandidateCard({ application, onClick }: Props) {
         .toUpperCase()
     : "VA";
 
+  function handleClick() {
+    if (selectionMode && onToggleSelect) {
+      onToggleSelect(application.id);
+      return;
+    }
+    onClick();
+  }
+
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="group w-full rounded-xl border border-ink/8 bg-white p-3.5 text-left shadow-xs transition-all duration-200 hover:border-teal/25 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal/30"
+    <div
+      className={`group w-full rounded-xl border bg-white p-3.5 text-left shadow-xs transition-all duration-200 hover:shadow-md focus-within:ring-2 focus-within:ring-teal/30 ${
+        selected ? "border-teal/40 bg-teal/3 ring-2 ring-teal/20" : "border-ink/8 hover:border-teal/25"
+      }`}
     >
-      <div className="flex items-start gap-3">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-teal/10 font-display text-sm font-bold text-teal transition-transform group-hover:scale-105">
-          {initials}
-        </div>
-        <div className="min-w-0 flex-1">
-          <h4 className="truncate font-display text-sm font-bold text-ink group-hover:text-teal">
-            {application.seeker.fullName}
-          </h4>
-          <p className="mt-0.5 truncate text-xs text-ink/50">
-            {application.seeker.headline || "Virtual Assistant"}
-          </p>
-        </div>
-      </div>
-
-      {application.seeker.skills.length > 0 && (
-        <div className="mt-2.5 flex flex-wrap gap-1">
-          {application.seeker.skills.slice(0, 3).map((skill) => (
-            <span
-              key={skill}
-              className="rounded-md bg-ink/4 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-ink/60"
-            >
-              {skill}
-            </span>
-          ))}
-          {application.seeker.skills.length > 3 && (
-            <span className="rounded-md bg-ink/4 px-1.5 py-0.5 text-[9px] font-semibold text-ink/40">
-              +{application.seeker.skills.length - 3}
-            </span>
-          )}
-        </div>
-      )}
-
-      <div className="mt-3 flex items-center justify-between border-t border-ink/5 pt-2.5">
-        <span className="text-[10px] font-medium text-ink/40">{formatAppliedAt(application.appliedAt)}</span>
-        {application.seeker.resumeUrl && (
-          <span
-            className="inline-flex items-center gap-1 rounded-md bg-teal/8 px-1.5 py-0.5 text-[9px] font-semibold text-teal"
-            title="Resume attached"
-          >
-            <Paperclip className="h-3 w-3" aria-hidden="true" />
-            Resume
-          </span>
+      <div className="flex items-start gap-2">
+        {selectionMode && (
+          <input
+            type="checkbox"
+            checked={selected}
+            onChange={() => onToggleSelect?.(application.id)}
+            onClick={(e) => e.stopPropagation()}
+            className="mt-1 h-4 w-4 shrink-0 rounded border-ink/20 text-teal focus:ring-teal/30"
+            aria-label={`Select ${application.seeker.fullName}`}
+          />
         )}
+        <button
+          type="button"
+          onClick={handleClick}
+          className="min-w-0 flex-1 text-left focus-visible:outline-none"
+        >
+          <div className="flex items-start gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-teal/10 font-display text-sm font-bold text-teal transition-transform group-hover:scale-105">
+              {initials}
+            </div>
+            <div className="min-w-0 flex-1">
+              <h4 className="truncate font-display text-sm font-bold text-ink group-hover:text-teal">
+                {application.seeker.fullName}
+              </h4>
+              <p className="mt-0.5 truncate text-xs text-ink/50">
+                {application.seeker.headline || "Virtual Assistant"}
+              </p>
+            </div>
+          </div>
+
+          {application.seeker.skills.length > 0 && (
+            <div className="mt-2.5 flex flex-wrap gap-1">
+              {application.seeker.skills.slice(0, 3).map((skill) => (
+                <span
+                  key={skill}
+                  className="rounded-md bg-ink/4 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-ink/60"
+                >
+                  {skill}
+                </span>
+              ))}
+              {application.seeker.skills.length > 3 && (
+                <span className="rounded-md bg-ink/4 px-1.5 py-0.5 text-[9px] font-semibold text-ink/40">
+                  +{application.seeker.skills.length - 3}
+                </span>
+              )}
+            </div>
+          )}
+
+          <div className="mt-3 flex items-center justify-between border-t border-ink/5 pt-2.5">
+            <span className="text-[10px] font-medium text-ink/40">
+              {formatAppliedAt(application.appliedAt)}
+            </span>
+            {application.seeker.resumeUrl && (
+              <span
+                className="inline-flex items-center gap-1 rounded-md bg-teal/8 px-1.5 py-0.5 text-[9px] font-semibold text-teal"
+                title="Resume attached"
+              >
+                <Paperclip className="h-3 w-3" aria-hidden="true" />
+                Resume
+              </span>
+            )}
+          </div>
+        </button>
       </div>
-    </button>
+    </div>
   );
 }

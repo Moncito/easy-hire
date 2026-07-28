@@ -27,8 +27,10 @@ type JobContext = {
 type Props = {
   applications: Application[];
   job: JobContext;
-  onStatusChange: (id: string, newStatus: string) => void;
   onCardClick: (application: Application) => void;
+  selectionMode?: boolean;
+  selectedIds?: Set<string>;
+  onToggleSelect?: (id: string) => void;
 };
 
 const primaryColumns = [
@@ -65,7 +67,14 @@ const rejectedColumn = {
   emptyHint: "Candidates you passed on.",
 };
 
-export default function KanbanBoard({ applications, job, onStatusChange, onCardClick }: Props) {
+export default function KanbanBoard({
+  applications,
+  job,
+  onCardClick,
+  selectionMode = false,
+  selectedIds,
+  onToggleSelect,
+}: Props) {
   const [showRejected, setShowRejected] = useState(false);
   const isEmpty = applications.length === 0;
 
@@ -86,6 +95,9 @@ export default function KanbanBoard({ applications, job, onStatusChange, onCardC
               emptyHint={col.emptyHint}
               applications={applications.filter((app) => app.status === col.status)}
               onCardClick={onCardClick}
+              selectionMode={selectionMode}
+              selectedIds={selectedIds}
+              onToggleSelect={onToggleSelect}
             />
           ))}
 
@@ -117,6 +129,9 @@ export default function KanbanBoard({ applications, job, onStatusChange, onCardC
                 applications={rejectedApps}
                 onCardClick={onCardClick}
                 hideHeader
+                selectionMode={selectionMode}
+                selectedIds={selectedIds}
+                onToggleSelect={onToggleSelect}
               />
             )}
           </div>

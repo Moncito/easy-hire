@@ -57,7 +57,10 @@ export const ModelName = {
   SavedJob: 'SavedJob',
   JobAlert: 'JobAlert',
   Notification: 'Notification',
-  Subscription: 'Subscription'
+  Subscription: 'Subscription',
+  Conversation: 'Conversation',
+  Message: 'Message',
+  SavedSeeker: 'SavedSeeker'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -220,6 +223,40 @@ export const SubscriptionScalarFieldEnum = {
 } as const
 
 export type SubscriptionScalarFieldEnum = (typeof SubscriptionScalarFieldEnum)[keyof typeof SubscriptionScalarFieldEnum]
+
+
+export const ConversationScalarFieldEnum = {
+  id: 'id',
+  companyId: 'companyId',
+  seekerId: 'seekerId',
+  jobId: 'jobId',
+  lastMessageAt: 'lastMessageAt',
+  createdAt: 'createdAt'
+} as const
+
+export type ConversationScalarFieldEnum = (typeof ConversationScalarFieldEnum)[keyof typeof ConversationScalarFieldEnum]
+
+
+export const MessageScalarFieldEnum = {
+  id: 'id',
+  conversationId: 'conversationId',
+  senderUserId: 'senderUserId',
+  body: 'body',
+  readAt: 'readAt',
+  createdAt: 'createdAt'
+} as const
+
+export type MessageScalarFieldEnum = (typeof MessageScalarFieldEnum)[keyof typeof MessageScalarFieldEnum]
+
+
+export const SavedSeekerScalarFieldEnum = {
+  id: 'id',
+  companyId: 'companyId',
+  seekerId: 'seekerId',
+  savedAt: 'savedAt'
+} as const
+
+export type SavedSeekerScalarFieldEnum = (typeof SavedSeekerScalarFieldEnum)[keyof typeof SavedSeekerScalarFieldEnum]
 
 
 export const SortOrder = {

@@ -3,11 +3,12 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
-import { LayoutDashboard, User, Briefcase, LogOut } from "lucide-react";
+import { LayoutDashboard, User, Briefcase, LogOut, MessageSquare } from "lucide-react";
 
 const navItems = [
   { label: "Dashboard", href: "/seeker/dashboard", icon: LayoutDashboard },
   { label: "My Profile", href: "/seeker/profile", icon: User },
+  { label: "Messages", href: "/seeker/messages", icon: MessageSquare },
   { label: "Browse Jobs", href: "/jobs", icon: Briefcase },
 ];
 

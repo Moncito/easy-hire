@@ -308,6 +308,8 @@ export type SeekerProfileWhereInput = {
   applications?: Prisma.ApplicationListRelationFilter
   savedJobs?: Prisma.SavedJobListRelationFilter
   jobAlerts?: Prisma.JobAlertListRelationFilter
+  conversations?: Prisma.ConversationListRelationFilter
+  savedBy?: Prisma.SavedSeekerListRelationFilter
 }
 
 export type SeekerProfileOrderByWithRelationInput = {
@@ -331,6 +333,8 @@ export type SeekerProfileOrderByWithRelationInput = {
   applications?: Prisma.ApplicationOrderByRelationAggregateInput
   savedJobs?: Prisma.SavedJobOrderByRelationAggregateInput
   jobAlerts?: Prisma.JobAlertOrderByRelationAggregateInput
+  conversations?: Prisma.ConversationOrderByRelationAggregateInput
+  savedBy?: Prisma.SavedSeekerOrderByRelationAggregateInput
 }
 
 export type SeekerProfileWhereUniqueInput = Prisma.AtLeast<{
@@ -357,6 +361,8 @@ export type SeekerProfileWhereUniqueInput = Prisma.AtLeast<{
   applications?: Prisma.ApplicationListRelationFilter
   savedJobs?: Prisma.SavedJobListRelationFilter
   jobAlerts?: Prisma.JobAlertListRelationFilter
+  conversations?: Prisma.ConversationListRelationFilter
+  savedBy?: Prisma.SavedSeekerListRelationFilter
 }, "id" | "userId">
 
 export type SeekerProfileOrderByWithAggregationInput = {
@@ -425,6 +431,8 @@ export type SeekerProfileCreateInput = {
   applications?: Prisma.ApplicationCreateNestedManyWithoutSeekerInput
   savedJobs?: Prisma.SavedJobCreateNestedManyWithoutSeekerInput
   jobAlerts?: Prisma.JobAlertCreateNestedManyWithoutSeekerInput
+  conversations?: Prisma.ConversationCreateNestedManyWithoutSeekerInput
+  savedBy?: Prisma.SavedSeekerCreateNestedManyWithoutSeekerInput
 }
 
 export type SeekerProfileUncheckedCreateInput = {
@@ -447,6 +455,8 @@ export type SeekerProfileUncheckedCreateInput = {
   applications?: Prisma.ApplicationUncheckedCreateNestedManyWithoutSeekerInput
   savedJobs?: Prisma.SavedJobUncheckedCreateNestedManyWithoutSeekerInput
   jobAlerts?: Prisma.JobAlertUncheckedCreateNestedManyWithoutSeekerInput
+  conversations?: Prisma.ConversationUncheckedCreateNestedManyWithoutSeekerInput
+  savedBy?: Prisma.SavedSeekerUncheckedCreateNestedManyWithoutSeekerInput
 }
 
 export type SeekerProfileUpdateInput = {
@@ -469,6 +479,8 @@ export type SeekerProfileUpdateInput = {
   applications?: Prisma.ApplicationUpdateManyWithoutSeekerNestedInput
   savedJobs?: Prisma.SavedJobUpdateManyWithoutSeekerNestedInput
   jobAlerts?: Prisma.JobAlertUpdateManyWithoutSeekerNestedInput
+  conversations?: Prisma.ConversationUpdateManyWithoutSeekerNestedInput
+  savedBy?: Prisma.SavedSeekerUpdateManyWithoutSeekerNestedInput
 }
 
 export type SeekerProfileUncheckedUpdateInput = {
@@ -491,6 +503,8 @@ export type SeekerProfileUncheckedUpdateInput = {
   applications?: Prisma.ApplicationUncheckedUpdateManyWithoutSeekerNestedInput
   savedJobs?: Prisma.SavedJobUncheckedUpdateManyWithoutSeekerNestedInput
   jobAlerts?: Prisma.JobAlertUncheckedUpdateManyWithoutSeekerNestedInput
+  conversations?: Prisma.ConversationUncheckedUpdateManyWithoutSeekerNestedInput
+  savedBy?: Prisma.SavedSeekerUncheckedUpdateManyWithoutSeekerNestedInput
 }
 
 export type SeekerProfileCreateManyInput = {
@@ -727,6 +741,34 @@ export type SeekerProfileUpdateOneRequiredWithoutJobAlertsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.SeekerProfileUpdateToOneWithWhereWithoutJobAlertsInput, Prisma.SeekerProfileUpdateWithoutJobAlertsInput>, Prisma.SeekerProfileUncheckedUpdateWithoutJobAlertsInput>
 }
 
+export type SeekerProfileCreateNestedOneWithoutConversationsInput = {
+  create?: Prisma.XOR<Prisma.SeekerProfileCreateWithoutConversationsInput, Prisma.SeekerProfileUncheckedCreateWithoutConversationsInput>
+  connectOrCreate?: Prisma.SeekerProfileCreateOrConnectWithoutConversationsInput
+  connect?: Prisma.SeekerProfileWhereUniqueInput
+}
+
+export type SeekerProfileUpdateOneRequiredWithoutConversationsNestedInput = {
+  create?: Prisma.XOR<Prisma.SeekerProfileCreateWithoutConversationsInput, Prisma.SeekerProfileUncheckedCreateWithoutConversationsInput>
+  connectOrCreate?: Prisma.SeekerProfileCreateOrConnectWithoutConversationsInput
+  upsert?: Prisma.SeekerProfileUpsertWithoutConversationsInput
+  connect?: Prisma.SeekerProfileWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.SeekerProfileUpdateToOneWithWhereWithoutConversationsInput, Prisma.SeekerProfileUpdateWithoutConversationsInput>, Prisma.SeekerProfileUncheckedUpdateWithoutConversationsInput>
+}
+
+export type SeekerProfileCreateNestedOneWithoutSavedByInput = {
+  create?: Prisma.XOR<Prisma.SeekerProfileCreateWithoutSavedByInput, Prisma.SeekerProfileUncheckedCreateWithoutSavedByInput>
+  connectOrCreate?: Prisma.SeekerProfileCreateOrConnectWithoutSavedByInput
+  connect?: Prisma.SeekerProfileWhereUniqueInput
+}
+
+export type SeekerProfileUpdateOneRequiredWithoutSavedByNestedInput = {
+  create?: Prisma.XOR<Prisma.SeekerProfileCreateWithoutSavedByInput, Prisma.SeekerProfileUncheckedCreateWithoutSavedByInput>
+  connectOrCreate?: Prisma.SeekerProfileCreateOrConnectWithoutSavedByInput
+  upsert?: Prisma.SeekerProfileUpsertWithoutSavedByInput
+  connect?: Prisma.SeekerProfileWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.SeekerProfileUpdateToOneWithWhereWithoutSavedByInput, Prisma.SeekerProfileUpdateWithoutSavedByInput>, Prisma.SeekerProfileUncheckedUpdateWithoutSavedByInput>
+}
+
 export type SeekerProfileCreateWithoutUserInput = {
   id?: string
   fullName: string
@@ -746,6 +788,8 @@ export type SeekerProfileCreateWithoutUserInput = {
   applications?: Prisma.ApplicationCreateNestedManyWithoutSeekerInput
   savedJobs?: Prisma.SavedJobCreateNestedManyWithoutSeekerInput
   jobAlerts?: Prisma.JobAlertCreateNestedManyWithoutSeekerInput
+  conversations?: Prisma.ConversationCreateNestedManyWithoutSeekerInput
+  savedBy?: Prisma.SavedSeekerCreateNestedManyWithoutSeekerInput
 }
 
 export type SeekerProfileUncheckedCreateWithoutUserInput = {
@@ -767,6 +811,8 @@ export type SeekerProfileUncheckedCreateWithoutUserInput = {
   applications?: Prisma.ApplicationUncheckedCreateNestedManyWithoutSeekerInput
   savedJobs?: Prisma.SavedJobUncheckedCreateNestedManyWithoutSeekerInput
   jobAlerts?: Prisma.JobAlertUncheckedCreateNestedManyWithoutSeekerInput
+  conversations?: Prisma.ConversationUncheckedCreateNestedManyWithoutSeekerInput
+  savedBy?: Prisma.SavedSeekerUncheckedCreateNestedManyWithoutSeekerInput
 }
 
 export type SeekerProfileCreateOrConnectWithoutUserInput = {
@@ -804,6 +850,8 @@ export type SeekerProfileUpdateWithoutUserInput = {
   applications?: Prisma.ApplicationUpdateManyWithoutSeekerNestedInput
   savedJobs?: Prisma.SavedJobUpdateManyWithoutSeekerNestedInput
   jobAlerts?: Prisma.JobAlertUpdateManyWithoutSeekerNestedInput
+  conversations?: Prisma.ConversationUpdateManyWithoutSeekerNestedInput
+  savedBy?: Prisma.SavedSeekerUpdateManyWithoutSeekerNestedInput
 }
 
 export type SeekerProfileUncheckedUpdateWithoutUserInput = {
@@ -825,6 +873,8 @@ export type SeekerProfileUncheckedUpdateWithoutUserInput = {
   applications?: Prisma.ApplicationUncheckedUpdateManyWithoutSeekerNestedInput
   savedJobs?: Prisma.SavedJobUncheckedUpdateManyWithoutSeekerNestedInput
   jobAlerts?: Prisma.JobAlertUncheckedUpdateManyWithoutSeekerNestedInput
+  conversations?: Prisma.ConversationUncheckedUpdateManyWithoutSeekerNestedInput
+  savedBy?: Prisma.SavedSeekerUncheckedUpdateManyWithoutSeekerNestedInput
 }
 
 export type SeekerProfileCreateWithoutApplicationsInput = {
@@ -846,6 +896,8 @@ export type SeekerProfileCreateWithoutApplicationsInput = {
   user: Prisma.UserCreateNestedOneWithoutSeekerProfileInput
   savedJobs?: Prisma.SavedJobCreateNestedManyWithoutSeekerInput
   jobAlerts?: Prisma.JobAlertCreateNestedManyWithoutSeekerInput
+  conversations?: Prisma.ConversationCreateNestedManyWithoutSeekerInput
+  savedBy?: Prisma.SavedSeekerCreateNestedManyWithoutSeekerInput
 }
 
 export type SeekerProfileUncheckedCreateWithoutApplicationsInput = {
@@ -867,6 +919,8 @@ export type SeekerProfileUncheckedCreateWithoutApplicationsInput = {
   yearsExperience?: string | null
   savedJobs?: Prisma.SavedJobUncheckedCreateNestedManyWithoutSeekerInput
   jobAlerts?: Prisma.JobAlertUncheckedCreateNestedManyWithoutSeekerInput
+  conversations?: Prisma.ConversationUncheckedCreateNestedManyWithoutSeekerInput
+  savedBy?: Prisma.SavedSeekerUncheckedCreateNestedManyWithoutSeekerInput
 }
 
 export type SeekerProfileCreateOrConnectWithoutApplicationsInput = {
@@ -904,6 +958,8 @@ export type SeekerProfileUpdateWithoutApplicationsInput = {
   user?: Prisma.UserUpdateOneRequiredWithoutSeekerProfileNestedInput
   savedJobs?: Prisma.SavedJobUpdateManyWithoutSeekerNestedInput
   jobAlerts?: Prisma.JobAlertUpdateManyWithoutSeekerNestedInput
+  conversations?: Prisma.ConversationUpdateManyWithoutSeekerNestedInput
+  savedBy?: Prisma.SavedSeekerUpdateManyWithoutSeekerNestedInput
 }
 
 export type SeekerProfileUncheckedUpdateWithoutApplicationsInput = {
@@ -925,6 +981,8 @@ export type SeekerProfileUncheckedUpdateWithoutApplicationsInput = {
   yearsExperience?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   savedJobs?: Prisma.SavedJobUncheckedUpdateManyWithoutSeekerNestedInput
   jobAlerts?: Prisma.JobAlertUncheckedUpdateManyWithoutSeekerNestedInput
+  conversations?: Prisma.ConversationUncheckedUpdateManyWithoutSeekerNestedInput
+  savedBy?: Prisma.SavedSeekerUncheckedUpdateManyWithoutSeekerNestedInput
 }
 
 export type SeekerProfileCreateWithoutSavedJobsInput = {
@@ -946,6 +1004,8 @@ export type SeekerProfileCreateWithoutSavedJobsInput = {
   user: Prisma.UserCreateNestedOneWithoutSeekerProfileInput
   applications?: Prisma.ApplicationCreateNestedManyWithoutSeekerInput
   jobAlerts?: Prisma.JobAlertCreateNestedManyWithoutSeekerInput
+  conversations?: Prisma.ConversationCreateNestedManyWithoutSeekerInput
+  savedBy?: Prisma.SavedSeekerCreateNestedManyWithoutSeekerInput
 }
 
 export type SeekerProfileUncheckedCreateWithoutSavedJobsInput = {
@@ -967,6 +1027,8 @@ export type SeekerProfileUncheckedCreateWithoutSavedJobsInput = {
   yearsExperience?: string | null
   applications?: Prisma.ApplicationUncheckedCreateNestedManyWithoutSeekerInput
   jobAlerts?: Prisma.JobAlertUncheckedCreateNestedManyWithoutSeekerInput
+  conversations?: Prisma.ConversationUncheckedCreateNestedManyWithoutSeekerInput
+  savedBy?: Prisma.SavedSeekerUncheckedCreateNestedManyWithoutSeekerInput
 }
 
 export type SeekerProfileCreateOrConnectWithoutSavedJobsInput = {
@@ -1004,6 +1066,8 @@ export type SeekerProfileUpdateWithoutSavedJobsInput = {
   user?: Prisma.UserUpdateOneRequiredWithoutSeekerProfileNestedInput
   applications?: Prisma.ApplicationUpdateManyWithoutSeekerNestedInput
   jobAlerts?: Prisma.JobAlertUpdateManyWithoutSeekerNestedInput
+  conversations?: Prisma.ConversationUpdateManyWithoutSeekerNestedInput
+  savedBy?: Prisma.SavedSeekerUpdateManyWithoutSeekerNestedInput
 }
 
 export type SeekerProfileUncheckedUpdateWithoutSavedJobsInput = {
@@ -1025,6 +1089,8 @@ export type SeekerProfileUncheckedUpdateWithoutSavedJobsInput = {
   yearsExperience?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   applications?: Prisma.ApplicationUncheckedUpdateManyWithoutSeekerNestedInput
   jobAlerts?: Prisma.JobAlertUncheckedUpdateManyWithoutSeekerNestedInput
+  conversations?: Prisma.ConversationUncheckedUpdateManyWithoutSeekerNestedInput
+  savedBy?: Prisma.SavedSeekerUncheckedUpdateManyWithoutSeekerNestedInput
 }
 
 export type SeekerProfileCreateWithoutJobAlertsInput = {
@@ -1046,6 +1112,8 @@ export type SeekerProfileCreateWithoutJobAlertsInput = {
   user: Prisma.UserCreateNestedOneWithoutSeekerProfileInput
   applications?: Prisma.ApplicationCreateNestedManyWithoutSeekerInput
   savedJobs?: Prisma.SavedJobCreateNestedManyWithoutSeekerInput
+  conversations?: Prisma.ConversationCreateNestedManyWithoutSeekerInput
+  savedBy?: Prisma.SavedSeekerCreateNestedManyWithoutSeekerInput
 }
 
 export type SeekerProfileUncheckedCreateWithoutJobAlertsInput = {
@@ -1067,6 +1135,8 @@ export type SeekerProfileUncheckedCreateWithoutJobAlertsInput = {
   yearsExperience?: string | null
   applications?: Prisma.ApplicationUncheckedCreateNestedManyWithoutSeekerInput
   savedJobs?: Prisma.SavedJobUncheckedCreateNestedManyWithoutSeekerInput
+  conversations?: Prisma.ConversationUncheckedCreateNestedManyWithoutSeekerInput
+  savedBy?: Prisma.SavedSeekerUncheckedCreateNestedManyWithoutSeekerInput
 }
 
 export type SeekerProfileCreateOrConnectWithoutJobAlertsInput = {
@@ -1104,6 +1174,8 @@ export type SeekerProfileUpdateWithoutJobAlertsInput = {
   user?: Prisma.UserUpdateOneRequiredWithoutSeekerProfileNestedInput
   applications?: Prisma.ApplicationUpdateManyWithoutSeekerNestedInput
   savedJobs?: Prisma.SavedJobUpdateManyWithoutSeekerNestedInput
+  conversations?: Prisma.ConversationUpdateManyWithoutSeekerNestedInput
+  savedBy?: Prisma.SavedSeekerUpdateManyWithoutSeekerNestedInput
 }
 
 export type SeekerProfileUncheckedUpdateWithoutJobAlertsInput = {
@@ -1125,6 +1197,224 @@ export type SeekerProfileUncheckedUpdateWithoutJobAlertsInput = {
   yearsExperience?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   applications?: Prisma.ApplicationUncheckedUpdateManyWithoutSeekerNestedInput
   savedJobs?: Prisma.SavedJobUncheckedUpdateManyWithoutSeekerNestedInput
+  conversations?: Prisma.ConversationUncheckedUpdateManyWithoutSeekerNestedInput
+  savedBy?: Prisma.SavedSeekerUncheckedUpdateManyWithoutSeekerNestedInput
+}
+
+export type SeekerProfileCreateWithoutConversationsInput = {
+  id?: string
+  fullName: string
+  phone?: string | null
+  location?: string | null
+  headline?: string | null
+  bio?: string | null
+  resumeUrl?: string | null
+  skills?: Prisma.SeekerProfileCreateskillsInput | string[]
+  desiredSalaryMin?: number | null
+  desiredSalaryMax?: number | null
+  profileVisibility?: boolean
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  availability?: string | null
+  yearsExperience?: string | null
+  user: Prisma.UserCreateNestedOneWithoutSeekerProfileInput
+  applications?: Prisma.ApplicationCreateNestedManyWithoutSeekerInput
+  savedJobs?: Prisma.SavedJobCreateNestedManyWithoutSeekerInput
+  jobAlerts?: Prisma.JobAlertCreateNestedManyWithoutSeekerInput
+  savedBy?: Prisma.SavedSeekerCreateNestedManyWithoutSeekerInput
+}
+
+export type SeekerProfileUncheckedCreateWithoutConversationsInput = {
+  id?: string
+  userId: string
+  fullName: string
+  phone?: string | null
+  location?: string | null
+  headline?: string | null
+  bio?: string | null
+  resumeUrl?: string | null
+  skills?: Prisma.SeekerProfileCreateskillsInput | string[]
+  desiredSalaryMin?: number | null
+  desiredSalaryMax?: number | null
+  profileVisibility?: boolean
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  availability?: string | null
+  yearsExperience?: string | null
+  applications?: Prisma.ApplicationUncheckedCreateNestedManyWithoutSeekerInput
+  savedJobs?: Prisma.SavedJobUncheckedCreateNestedManyWithoutSeekerInput
+  jobAlerts?: Prisma.JobAlertUncheckedCreateNestedManyWithoutSeekerInput
+  savedBy?: Prisma.SavedSeekerUncheckedCreateNestedManyWithoutSeekerInput
+}
+
+export type SeekerProfileCreateOrConnectWithoutConversationsInput = {
+  where: Prisma.SeekerProfileWhereUniqueInput
+  create: Prisma.XOR<Prisma.SeekerProfileCreateWithoutConversationsInput, Prisma.SeekerProfileUncheckedCreateWithoutConversationsInput>
+}
+
+export type SeekerProfileUpsertWithoutConversationsInput = {
+  update: Prisma.XOR<Prisma.SeekerProfileUpdateWithoutConversationsInput, Prisma.SeekerProfileUncheckedUpdateWithoutConversationsInput>
+  create: Prisma.XOR<Prisma.SeekerProfileCreateWithoutConversationsInput, Prisma.SeekerProfileUncheckedCreateWithoutConversationsInput>
+  where?: Prisma.SeekerProfileWhereInput
+}
+
+export type SeekerProfileUpdateToOneWithWhereWithoutConversationsInput = {
+  where?: Prisma.SeekerProfileWhereInput
+  data: Prisma.XOR<Prisma.SeekerProfileUpdateWithoutConversationsInput, Prisma.SeekerProfileUncheckedUpdateWithoutConversationsInput>
+}
+
+export type SeekerProfileUpdateWithoutConversationsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  fullName?: Prisma.StringFieldUpdateOperationsInput | string
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  location?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  headline?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  bio?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resumeUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  skills?: Prisma.SeekerProfileUpdateskillsInput | string[]
+  desiredSalaryMin?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  desiredSalaryMax?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  profileVisibility?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  availability?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  yearsExperience?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  user?: Prisma.UserUpdateOneRequiredWithoutSeekerProfileNestedInput
+  applications?: Prisma.ApplicationUpdateManyWithoutSeekerNestedInput
+  savedJobs?: Prisma.SavedJobUpdateManyWithoutSeekerNestedInput
+  jobAlerts?: Prisma.JobAlertUpdateManyWithoutSeekerNestedInput
+  savedBy?: Prisma.SavedSeekerUpdateManyWithoutSeekerNestedInput
+}
+
+export type SeekerProfileUncheckedUpdateWithoutConversationsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  userId?: Prisma.StringFieldUpdateOperationsInput | string
+  fullName?: Prisma.StringFieldUpdateOperationsInput | string
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  location?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  headline?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  bio?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resumeUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  skills?: Prisma.SeekerProfileUpdateskillsInput | string[]
+  desiredSalaryMin?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  desiredSalaryMax?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  profileVisibility?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  availability?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  yearsExperience?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  applications?: Prisma.ApplicationUncheckedUpdateManyWithoutSeekerNestedInput
+  savedJobs?: Prisma.SavedJobUncheckedUpdateManyWithoutSeekerNestedInput
+  jobAlerts?: Prisma.JobAlertUncheckedUpdateManyWithoutSeekerNestedInput
+  savedBy?: Prisma.SavedSeekerUncheckedUpdateManyWithoutSeekerNestedInput
+}
+
+export type SeekerProfileCreateWithoutSavedByInput = {
+  id?: string
+  fullName: string
+  phone?: string | null
+  location?: string | null
+  headline?: string | null
+  bio?: string | null
+  resumeUrl?: string | null
+  skills?: Prisma.SeekerProfileCreateskillsInput | string[]
+  desiredSalaryMin?: number | null
+  desiredSalaryMax?: number | null
+  profileVisibility?: boolean
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  availability?: string | null
+  yearsExperience?: string | null
+  user: Prisma.UserCreateNestedOneWithoutSeekerProfileInput
+  applications?: Prisma.ApplicationCreateNestedManyWithoutSeekerInput
+  savedJobs?: Prisma.SavedJobCreateNestedManyWithoutSeekerInput
+  jobAlerts?: Prisma.JobAlertCreateNestedManyWithoutSeekerInput
+  conversations?: Prisma.ConversationCreateNestedManyWithoutSeekerInput
+}
+
+export type SeekerProfileUncheckedCreateWithoutSavedByInput = {
+  id?: string
+  userId: string
+  fullName: string
+  phone?: string | null
+  location?: string | null
+  headline?: string | null
+  bio?: string | null
+  resumeUrl?: string | null
+  skills?: Prisma.SeekerProfileCreateskillsInput | string[]
+  desiredSalaryMin?: number | null
+  desiredSalaryMax?: number | null
+  profileVisibility?: boolean
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  availability?: string | null
+  yearsExperience?: string | null
+  applications?: Prisma.ApplicationUncheckedCreateNestedManyWithoutSeekerInput
+  savedJobs?: Prisma.SavedJobUncheckedCreateNestedManyWithoutSeekerInput
+  jobAlerts?: Prisma.JobAlertUncheckedCreateNestedManyWithoutSeekerInput
+  conversations?: Prisma.ConversationUncheckedCreateNestedManyWithoutSeekerInput
+}
+
+export type SeekerProfileCreateOrConnectWithoutSavedByInput = {
+  where: Prisma.SeekerProfileWhereUniqueInput
+  create: Prisma.XOR<Prisma.SeekerProfileCreateWithoutSavedByInput, Prisma.SeekerProfileUncheckedCreateWithoutSavedByInput>
+}
+
+export type SeekerProfileUpsertWithoutSavedByInput = {
+  update: Prisma.XOR<Prisma.SeekerProfileUpdateWithoutSavedByInput, Prisma.SeekerProfileUncheckedUpdateWithoutSavedByInput>
+  create: Prisma.XOR<Prisma.SeekerProfileCreateWithoutSavedByInput, Prisma.SeekerProfileUncheckedCreateWithoutSavedByInput>
+  where?: Prisma.SeekerProfileWhereInput
+}
+
+export type SeekerProfileUpdateToOneWithWhereWithoutSavedByInput = {
+  where?: Prisma.SeekerProfileWhereInput
+  data: Prisma.XOR<Prisma.SeekerProfileUpdateWithoutSavedByInput, Prisma.SeekerProfileUncheckedUpdateWithoutSavedByInput>
+}
+
+export type SeekerProfileUpdateWithoutSavedByInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  fullName?: Prisma.StringFieldUpdateOperationsInput | string
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  location?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  headline?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  bio?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resumeUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  skills?: Prisma.SeekerProfileUpdateskillsInput | string[]
+  desiredSalaryMin?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  desiredSalaryMax?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  profileVisibility?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  availability?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  yearsExperience?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  user?: Prisma.UserUpdateOneRequiredWithoutSeekerProfileNestedInput
+  applications?: Prisma.ApplicationUpdateManyWithoutSeekerNestedInput
+  savedJobs?: Prisma.SavedJobUpdateManyWithoutSeekerNestedInput
+  jobAlerts?: Prisma.JobAlertUpdateManyWithoutSeekerNestedInput
+  conversations?: Prisma.ConversationUpdateManyWithoutSeekerNestedInput
+}
+
+export type SeekerProfileUncheckedUpdateWithoutSavedByInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  userId?: Prisma.StringFieldUpdateOperationsInput | string
+  fullName?: Prisma.StringFieldUpdateOperationsInput | string
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  location?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  headline?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  bio?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resumeUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  skills?: Prisma.SeekerProfileUpdateskillsInput | string[]
+  desiredSalaryMin?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  desiredSalaryMax?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  profileVisibility?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  availability?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  yearsExperience?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  applications?: Prisma.ApplicationUncheckedUpdateManyWithoutSeekerNestedInput
+  savedJobs?: Prisma.SavedJobUncheckedUpdateManyWithoutSeekerNestedInput
+  jobAlerts?: Prisma.JobAlertUncheckedUpdateManyWithoutSeekerNestedInput
+  conversations?: Prisma.ConversationUncheckedUpdateManyWithoutSeekerNestedInput
 }
 
 
@@ -1136,12 +1426,16 @@ export type SeekerProfileCountOutputType = {
   applications: number
   savedJobs: number
   jobAlerts: number
+  conversations: number
+  savedBy: number
 }
 
 export type SeekerProfileCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   applications?: boolean | SeekerProfileCountOutputTypeCountApplicationsArgs
   savedJobs?: boolean | SeekerProfileCountOutputTypeCountSavedJobsArgs
   jobAlerts?: boolean | SeekerProfileCountOutputTypeCountJobAlertsArgs
+  conversations?: boolean | SeekerProfileCountOutputTypeCountConversationsArgs
+  savedBy?: boolean | SeekerProfileCountOutputTypeCountSavedByArgs
 }
 
 /**
@@ -1175,6 +1469,20 @@ export type SeekerProfileCountOutputTypeCountJobAlertsArgs<ExtArgs extends runti
   where?: Prisma.JobAlertWhereInput
 }
 
+/**
+ * SeekerProfileCountOutputType without action
+ */
+export type SeekerProfileCountOutputTypeCountConversationsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.ConversationWhereInput
+}
+
+/**
+ * SeekerProfileCountOutputType without action
+ */
+export type SeekerProfileCountOutputTypeCountSavedByArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.SavedSeekerWhereInput
+}
+
 
 export type SeekerProfileSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -1197,6 +1505,8 @@ export type SeekerProfileSelect<ExtArgs extends runtime.Types.Extensions.Interna
   applications?: boolean | Prisma.SeekerProfile$applicationsArgs<ExtArgs>
   savedJobs?: boolean | Prisma.SeekerProfile$savedJobsArgs<ExtArgs>
   jobAlerts?: boolean | Prisma.SeekerProfile$jobAlertsArgs<ExtArgs>
+  conversations?: boolean | Prisma.SeekerProfile$conversationsArgs<ExtArgs>
+  savedBy?: boolean | Prisma.SeekerProfile$savedByArgs<ExtArgs>
   _count?: boolean | Prisma.SeekerProfileCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["seekerProfile"]>
 
@@ -1265,6 +1575,8 @@ export type SeekerProfileInclude<ExtArgs extends runtime.Types.Extensions.Intern
   applications?: boolean | Prisma.SeekerProfile$applicationsArgs<ExtArgs>
   savedJobs?: boolean | Prisma.SeekerProfile$savedJobsArgs<ExtArgs>
   jobAlerts?: boolean | Prisma.SeekerProfile$jobAlertsArgs<ExtArgs>
+  conversations?: boolean | Prisma.SeekerProfile$conversationsArgs<ExtArgs>
+  savedBy?: boolean | Prisma.SeekerProfile$savedByArgs<ExtArgs>
   _count?: boolean | Prisma.SeekerProfileCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type SeekerProfileIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1281,6 +1593,8 @@ export type $SeekerProfilePayload<ExtArgs extends runtime.Types.Extensions.Inter
     applications: Prisma.$ApplicationPayload<ExtArgs>[]
     savedJobs: Prisma.$SavedJobPayload<ExtArgs>[]
     jobAlerts: Prisma.$JobAlertPayload<ExtArgs>[]
+    conversations: Prisma.$ConversationPayload<ExtArgs>[]
+    savedBy: Prisma.$SavedSeekerPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -1697,6 +2011,8 @@ export interface Prisma__SeekerProfileClient<T, Null = never, ExtArgs extends ru
   applications<T extends Prisma.SeekerProfile$applicationsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.SeekerProfile$applicationsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ApplicationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   savedJobs<T extends Prisma.SeekerProfile$savedJobsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.SeekerProfile$savedJobsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SavedJobPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   jobAlerts<T extends Prisma.SeekerProfile$jobAlertsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.SeekerProfile$jobAlertsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$JobAlertPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  conversations<T extends Prisma.SeekerProfile$conversationsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.SeekerProfile$conversationsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ConversationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  savedBy<T extends Prisma.SeekerProfile$savedByArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.SeekerProfile$savedByArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SavedSeekerPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -2207,6 +2523,54 @@ export type SeekerProfile$jobAlertsArgs<ExtArgs extends runtime.Types.Extensions
   take?: number
   skip?: number
   distinct?: Prisma.JobAlertScalarFieldEnum | Prisma.JobAlertScalarFieldEnum[]
+}
+
+/**
+ * SeekerProfile.conversations
+ */
+export type SeekerProfile$conversationsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Conversation
+   */
+  select?: Prisma.ConversationSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Conversation
+   */
+  omit?: Prisma.ConversationOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.ConversationInclude<ExtArgs> | null
+  where?: Prisma.ConversationWhereInput
+  orderBy?: Prisma.ConversationOrderByWithRelationInput | Prisma.ConversationOrderByWithRelationInput[]
+  cursor?: Prisma.ConversationWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.ConversationScalarFieldEnum | Prisma.ConversationScalarFieldEnum[]
+}
+
+/**
+ * SeekerProfile.savedBy
+ */
+export type SeekerProfile$savedByArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the SavedSeeker
+   */
+  select?: Prisma.SavedSeekerSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the SavedSeeker
+   */
+  omit?: Prisma.SavedSeekerOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.SavedSeekerInclude<ExtArgs> | null
+  where?: Prisma.SavedSeekerWhereInput
+  orderBy?: Prisma.SavedSeekerOrderByWithRelationInput | Prisma.SavedSeekerOrderByWithRelationInput[]
+  cursor?: Prisma.SavedSeekerWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.SavedSeekerScalarFieldEnum | Prisma.SavedSeekerScalarFieldEnum[]
 }
 
 /**

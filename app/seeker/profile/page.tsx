@@ -1,17 +1,15 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/Auth";
-import { prisma } from "@/lib/prisma";
+import { ensureSeekerProfile } from "@/lib/seekers";
 import SeekerProfileEditor from "@/components/seeker/SeekerProfileEditor";
 
 export default async function SeekerProfilePage() {
   const session = await auth();
   if (!session?.user) redirect("/login");
 
-  const profile = await prisma.seekerProfile.findUnique({
-    where: { userId: session.user.id },
+  const profile = await ensureSeekerProfile(session.user.id, {
+    fullName: session.user.name ?? "",
   });
-
-  if (!profile) redirect("/seeker/dashboard");
 
   return (
     <>

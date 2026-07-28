@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from "react";
 import KanbanBoard from "./KanbanBoard";
-import { X, Paperclip, MapPin, DollarSign, CheckCircle, XCircle, Star } from "lucide-react";
+import RejectCandidateModal from "./RejectCandidateModal";
+import BulkApplicantActionsBar from "./BulkApplicantActionsBar";
+import { X, Paperclip, MapPin, DollarSign, CheckCircle, XCircle, Star, CheckSquare, MessageSquare } from "lucide-react";
 import { formatPesoRange } from "@/lib/format";
 
 type SeekerSummary = {
@@ -36,11 +38,24 @@ type Props = {
   initialApplications: Application[];
 };
 
+type PendingReject = {
+  ids: string[];
+  candidateName: string;
+};
+
 export default function ApplicantsBoard({ job, initialApplications }: Props) {
   const [applications, setApplications] = useState<Application[]>(initialApplications);
   const [selectedApp, setSelectedApp] = useState<Application | null>(null);
   const [noteInput, setNoteInput] = useState("");
   const [savingNotes, setSavingNotes] = useState(false);
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkLoading, setBulkLoading] = useState(false);
+  const [rejectLoading, setRejectLoading] = useState(false);
+  const [pendingReject, setPendingReject] = useState<PendingReject | null>(null);
+  const [messageLoading, setMessageLoading] = useState(false);
+  const [messageError, setMessageError] = useState("");
+  const [rejectError, setRejectError] = useState("");
 
   useEffect(() => {
     if (selectedApp) {
@@ -63,7 +78,30 @@ export default function ApplicantsBoard({ job, initialApplications }: Props) {
     return res.json() as Promise<Application>;
   }
 
-  async function handleStatusChange(id: string, newStatus: string) {
+  function toggleSelect(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function clearSelection() {
+    setSelectedIds(new Set());
+    setSelectionMode(false);
+  }
+
+  async function handleStatusChange(id: string, newStatus: string, rejectionReason?: string | null) {
+    if (newStatus === "REJECTED") {
+      const app = applications.find((a) => a.id === id);
+      setPendingReject({
+        ids: [id],
+        candidateName: app?.seeker.fullName || "this candidate",
+      });
+      return;
+    }
+
     const previous = applications;
     setApplications((prev) => prev.map((app) => (app.id === id ? { ...app, status: newStatus } : app)));
     if (selectedApp?.id === id) {
@@ -81,6 +119,89 @@ export default function ApplicantsBoard({ job, initialApplications }: Props) {
       if (selectedApp?.id === id) {
         setSelectedApp(previous.find((a) => a.id === id) || null);
       }
+    }
+  }
+
+  async function confirmReject(reason: string) {
+    if (!pendingReject) return;
+    setRejectLoading(true);
+    setRejectError("");
+
+    const previous = applications;
+    const ids = pendingReject.ids;
+
+    setApplications((prev) =>
+      prev.map((app) => (ids.includes(app.id) ? { ...app, status: "REJECTED" } : app))
+    );
+
+    try {
+      const results = await Promise.all(
+        ids.map((id) =>
+          patchApplication(id, {
+            status: "REJECTED",
+            rejectionReason: reason || null,
+          })
+        )
+      );
+
+      setApplications((prev) =>
+        prev.map((app) => {
+          const updated = results.find((r) => r.id === app.id);
+          return updated ? { ...app, ...updated } : app;
+        })
+      );
+
+      if (selectedApp && ids.includes(selectedApp.id)) {
+        const updated = results.find((r) => r.id === selectedApp.id);
+        if (updated) setSelectedApp((prev) => (prev ? { ...prev, ...updated } : null));
+      }
+
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        ids.forEach((id) => next.delete(id));
+        return next;
+      });
+      setPendingReject(null);
+    } catch (err) {
+      setApplications(previous);
+      setRejectError(err instanceof Error ? err.message : "Rejection failed");
+    } finally {
+      setRejectLoading(false);
+    }
+  }
+
+  async function handleBulkMove(status: string) {
+    if (selectedIds.size === 0) return;
+
+    if (status === "REJECTED") {
+      setPendingReject({
+        ids: Array.from(selectedIds),
+        candidateName: `${selectedIds.size} candidates`,
+      });
+      return;
+    }
+
+    setBulkLoading(true);
+    const ids = Array.from(selectedIds);
+    const previous = applications;
+
+    setApplications((prev) =>
+      prev.map((app) => (ids.includes(app.id) ? { ...app, status } : app))
+    );
+
+    try {
+      const results = await Promise.all(ids.map((id) => patchApplication(id, { status })));
+      setApplications((prev) =>
+        prev.map((app) => {
+          const updated = results.find((r) => r.id === app.id);
+          return updated ? { ...app, ...updated } : app;
+        })
+      );
+      clearSelection();
+    } catch {
+      setApplications(previous);
+    } finally {
+      setBulkLoading(false);
     }
   }
 
@@ -104,13 +225,89 @@ export default function ApplicantsBoard({ job, initialApplications }: Props) {
     setSelectedApp((prev) => (prev ? { ...prev, ...updated } : null));
   }
 
+  async function handleMessageCandidate() {
+    if (!selectedApp) return;
+    setMessageError("");
+    setMessageLoading(true);
+
+    try {
+      const res = await fetch("/api/conversations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ seekerId: selectedApp.seeker.id, jobId: job.id }),
+      });
+
+      const result = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        setMessageError((result as { error?: string }).error || "Could not start conversation");
+        return;
+      }
+
+      window.location.href = `/employer/messages?c=${(result as { id: string }).id}`;
+    } catch {
+      setMessageError("Could not start conversation");
+    } finally {
+      setMessageLoading(false);
+    }
+  }
+
   return (
     <div className="relative">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <button
+          type="button"
+          onClick={() => {
+            setSelectionMode((v) => !v);
+            if (selectionMode) clearSelection();
+          }}
+          className={`inline-flex items-center gap-2 rounded-xl border px-3.5 py-2 text-xs font-semibold transition-colors ${
+            selectionMode
+              ? "border-teal/30 bg-teal/8 text-teal"
+              : "border-ink/10 bg-white text-ink/70 hover:border-ink/20"
+          }`}
+        >
+          <CheckSquare className="h-3.5 w-3.5" aria-hidden="true" />
+          {selectionMode ? "Exit selection" : "Select candidates"}
+        </button>
+      </div>
+
+      <BulkApplicantActionsBar
+        selectedCount={selectedIds.size}
+        loading={bulkLoading || rejectLoading}
+        onClear={clearSelection}
+        onMove={handleBulkMove}
+        onReject={() => {
+          if (selectedIds.size > 0) {
+            setPendingReject({
+              ids: Array.from(selectedIds),
+              candidateName: `${selectedIds.size} candidates`,
+            });
+          }
+        }}
+      />
+
       <KanbanBoard
         applications={applications}
         job={job}
-        onStatusChange={handleStatusChange}
-        onCardClick={(app) => setSelectedApp(app as Application)}
+        onCardClick={(app) => {
+          if (!selectionMode) setSelectedApp(app as Application);
+        }}
+        selectionMode={selectionMode}
+        selectedIds={selectedIds}
+        onToggleSelect={toggleSelect}
+      />
+
+      <RejectCandidateModal
+        open={!!pendingReject}
+        candidateName={pendingReject?.candidateName || ""}
+        loading={rejectLoading}
+        error={rejectError}
+        onCancel={() => {
+          setPendingReject(null);
+          setRejectError("");
+        }}
+        onConfirm={confirmReject}
       />
 
       {selectedApp && (
@@ -173,6 +370,15 @@ export default function ApplicantsBoard({ job, initialApplications }: Props) {
                   </select>
                 </div>
                 <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={handleMessageCandidate}
+                    disabled={messageLoading}
+                    className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-teal/20 px-3 py-1.5 text-xs font-bold text-teal transition-colors hover:bg-teal/5 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    <MessageSquare className="h-4 w-4" />
+                    {messageLoading ? "Opening..." : "Message"}
+                  </button>
                   {selectedApp.status !== "REJECTED" && (
                     <button
                       type="button"
@@ -195,6 +401,9 @@ export default function ApplicantsBoard({ job, initialApplications }: Props) {
                   )}
                 </div>
               </div>
+              {messageError && (
+                <p className="mt-2 text-xs text-ember">{messageError}</p>
+              )}
 
               <div className="space-y-4">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-ink/45">Candidate Profile</h4>

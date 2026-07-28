@@ -3,12 +3,14 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
-import { LayoutDashboard, Briefcase, Building2, Users, BarChart3, LogOut } from "lucide-react";
+import { LayoutDashboard, Briefcase, Building2, Users, BarChart3, LogOut, MessageSquare, Search } from "lucide-react";
 
 const navItems = [
   { label: "Dashboard", href: "/employer/dashboard", icon: LayoutDashboard },
   { label: "Job Postings", href: "/employer/jobs", icon: Briefcase },
   { label: "Applicants", href: "/employer/applicants", icon: Users },
+  { label: "Messages", href: "/employer/messages", icon: MessageSquare },
+  { label: "Talent Search", href: "/employer/talent", icon: Search },
   { label: "Company Profile", href: "/employer/company-profile", icon: Building2 },
   { label: "Reports", href: "/employer/reports", icon: BarChart3, disabled: true },
 ];

@@ -22,6 +22,7 @@ export default function Footer() {
       links: [
         { label: "Privacy", href: "/privacy" },
         { label: "Terms", href: "/terms" },
+        { label: "Pricing", href: "/pricing" },
       ],
     },
   ];

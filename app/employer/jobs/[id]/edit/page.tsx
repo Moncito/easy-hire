@@ -4,12 +4,14 @@ import { redirect } from "next/navigation";
 import EditJobForm from "@/components/employer/EditJobForm";
 import JobFormPageShell from "@/components/employer/JobFormPageShell";
 
-export default async function EditJobPage({ params }: { params: { id: string } }) {
+export default async function EditJobPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
 
   if (!session?.user || session.user.role !== "EMPLOYER") {
     redirect("/login");
   }
+
+  const { id } = await params;
 
   const company = await prisma.company.findUnique({
     where: { userId: session.user.id },
@@ -17,7 +19,7 @@ export default async function EditJobPage({ params }: { params: { id: string } }
 
   const job = company
     ? await prisma.job.findFirst({
-        where: { id: params.id, companyId: company.id },
+        where: { id, companyId: company.id },
       })
     : null;
 

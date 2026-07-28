@@ -289,3 +289,14 @@ backdrop-filter:blur(6px);
 .kanban-scroll::-webkit-scrollbar-thumb:hover {
   background: rgba(30, 58, 95, 0.35);
 }
+
+/* Fixed public header clearance — full pill at top (~20px offset + 56px bar + pill padding) */
+.public-header-offset {
+  padding-top: 7.5rem;
+}
+
+@media (min-width: 768px) {
+  .public-header-offset {
+    padding-top: 8rem;
+  }
+}

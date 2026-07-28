@@ -62,3 +62,18 @@ export type Notification = Prisma.NotificationModel
  * 
  */
 export type Subscription = Prisma.SubscriptionModel
+/**
+ * Model Conversation
+ * 
+ */
+export type Conversation = Prisma.ConversationModel
+/**
+ * Model Message
+ * 
+ */
+export type Message = Prisma.MessageModel
+/**
+ * Model SavedSeeker
+ * 
+ */
+export type SavedSeeker = Prisma.SavedSeekerModel

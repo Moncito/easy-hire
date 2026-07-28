@@ -3,6 +3,7 @@ import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
+import { ensureSeekerProfile } from "@/lib/seekers";
 import { authConfig } from "./auth.config";
 
 // This file runs in the Node.js runtime only (API routes, Server Components,
@@ -18,15 +19,17 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.role = (user as { role?: string }).role;
       }
 
-      // Keep role in sync with the database so manual ADMIN promotion works
-      // without forcing a sign-out (Prisma Studio / SQL updates).
-      const userId = token.id as string | undefined;
+      // Auth.js replaces OAuth user.id with a random UUID (see getUserAndAccount
+      // in @auth/core). Always resolve to the real DB user — email is reliable
+      // for Google sign-in; id lookup covers credentials sign-in.
       const email = token.email as string | undefined;
-
-      const dbUser = userId
-        ? await prisma.user.findUnique({ where: { id: userId }, select: { id: true, role: true } })
-        : email
-          ? await prisma.user.findUnique({ where: { email }, select: { id: true, role: true } })
+      const dbUser = email
+        ? await prisma.user.findUnique({ where: { email }, select: { id: true, role: true } })
+        : token.id
+          ? await prisma.user.findUnique({
+              where: { id: token.id as string },
+              select: { id: true, role: true },
+            })
           : null;
 
       if (dbUser) {
@@ -72,6 +75,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                 create: { fullName: profile.name || "" },
               },
             },
+            include: { seekerProfile: true },
+          });
+        } else if (user.role === "SEEKER" && !user.seekerProfile) {
+          // Older accounts (or partial sign-ups) may be SEEKER without a row.
+          await ensureSeekerProfile(user.id, { fullName: profile.name || "" });
+          user = await prisma.user.findUniqueOrThrow({
+            where: { email: profile.email! },
             include: { seekerProfile: true },
           });
         }
