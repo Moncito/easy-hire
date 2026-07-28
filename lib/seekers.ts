@@ -76,3 +76,11 @@ export async function getSeekerApplicationForJob(userId: string, jobId: string) 
     select: { id: true, status: true, appliedAt: true },
   });
 }
+
+export async function listSeekerAppliedJobIds(userId: string) {
+  const apps = await prisma.application.findMany({
+    where: { seeker: { userId } },
+    select: { jobId: true },
+  });
+  return apps.map((a) => a.jobId);
+}

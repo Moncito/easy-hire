@@ -26,7 +26,7 @@ export default async function CompanyPage({ params }: { params: Promise<{ id: st
   return (
     <div className="min-h-screen bg-mist">
       <PublicJobsHeader />
-      <div className="mx-auto max-w-5xl px-6 py-10">
+      <div className="mx-auto max-w-5xl px-6 pb-10 pt-28">
         <div className="overflow-hidden rounded-2xl border border-ink/5 bg-white shadow-xs">
           <div className="h-28 bg-gradient-to-r from-teal/50 via-navy/40 to-teal/30" />
           <div className="relative px-6 pb-6 sm:px-8">

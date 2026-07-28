@@ -1,5 +1,10 @@
 import { z } from "zod";
 
+const optionalUrl = z
+  .union([z.string().url(), z.literal("")])
+  .optional()
+  .nullable();
+
 export const seekerUpdateSchema = z.object({
   fullName: z.string().min(1, "Full name is required").optional(),
   phone: z.string().max(30).optional().nullable(),
@@ -12,6 +17,11 @@ export const seekerUpdateSchema = z.object({
   desiredSalaryMin: z.number().int().positive().optional().nullable(),
   desiredSalaryMax: z.number().int().positive().optional().nullable(),
   resumeUrl: z.string().url().optional().nullable(),
+  linkedinUrl: optionalUrl,
+  portfolioUrl: optionalUrl,
+  certifications: z.array(z.string()).optional(),
+  photoUrl: z.string().url().optional().nullable(),
+  profileVisibility: z.boolean().optional(),
 });
 
 export type SeekerUpdate = z.infer<typeof seekerUpdateSchema>;
@@ -29,5 +39,10 @@ export function seekerInputToData(input: SeekerUpdate) {
     ...(input.desiredSalaryMin !== undefined ? { desiredSalaryMin: input.desiredSalaryMin } : {}),
     ...(input.desiredSalaryMax !== undefined ? { desiredSalaryMax: input.desiredSalaryMax } : {}),
     ...(input.resumeUrl !== undefined ? { resumeUrl: input.resumeUrl || null } : {}),
+    ...(input.linkedinUrl !== undefined ? { linkedinUrl: input.linkedinUrl || null } : {}),
+    ...(input.portfolioUrl !== undefined ? { portfolioUrl: input.portfolioUrl || null } : {}),
+    ...(input.certifications !== undefined ? { certifications: input.certifications } : {}),
+    ...(input.photoUrl !== undefined ? { photoUrl: input.photoUrl || null } : {}),
+    ...(input.profileVisibility !== undefined ? { profileVisibility: input.profileVisibility } : {}),
   };
 }

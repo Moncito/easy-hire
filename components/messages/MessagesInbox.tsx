@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { toast } from "sonner";
 import { MessageSquare, Send } from "lucide-react";
 
 type Conversation = {
@@ -101,7 +103,9 @@ export default function MessagesInbox({ role }: Props) {
   const activeIdRef = useRef<string | null>(activeId);
   const pollingRef = useRef(false);
 
-  activeIdRef.current = activeId;
+  useEffect(() => {
+    activeIdRef.current = activeId;
+  }, [activeId]);
 
   const syncCursor = useCallback((messages: ThreadMessage[]) => {
     lastMessageIdRef.current = lastConfirmedMessage(messages)?.id ?? null;
@@ -186,7 +190,10 @@ export default function MessagesInbox({ role }: Props) {
   }, []);
 
   useEffect(() => {
-    loadConversations();
+    const id = window.setTimeout(() => {
+      void loadConversations();
+    }, 0);
+    return () => window.clearTimeout(id);
   }, [loadConversations]);
 
   useEffect(() => {
@@ -196,11 +203,17 @@ export default function MessagesInbox({ role }: Props) {
 
   useEffect(() => {
     if (activeId) {
-      loadThread(activeId);
-    } else {
+      const id = window.setTimeout(() => {
+        void loadThread(activeId);
+      }, 0);
+      return () => window.clearTimeout(id);
+    }
+
+    const id = window.setTimeout(() => {
       setThread(null);
       lastMessageIdRef.current = null;
-    }
+    }, 0);
+    return () => window.clearTimeout(id);
   }, [activeId, loadThread]);
 
   useEffect(() => {
@@ -263,7 +276,9 @@ export default function MessagesInbox({ role }: Props) {
       const result = await res.json().catch(() => ({}));
 
       if (!res.ok) {
-        setSendError((result as { error?: string }).error || "Failed to send message");
+        const msg = (result as { error?: string }).error || "Failed to send message";
+        setSendError(msg);
+        toast.error(msg);
         setThread((prev) =>
           prev ? { ...prev, messages: prev.messages.filter((m) => m.id !== optimisticId) } : prev
         );
@@ -286,12 +301,29 @@ export default function MessagesInbox({ role }: Props) {
       );
     } catch {
       setSendError("Failed to send message");
+      toast.error("Failed to send message");
       setThread((prev) =>
         prev ? { ...prev, messages: prev.messages.filter((m) => m.id !== optimisticId) } : prev
       );
       setDraft(text);
     }
   }
+
+  const isSeeker = role === "SEEKER";
+  const accentDot = isSeeker ? "bg-marigold" : "bg-teal";
+  const activeRow = isSeeker ? "bg-marigold/8" : "bg-teal/5";
+  const avatarBg = isSeeker ? "bg-navy/10 text-navy" : "bg-teal/10 text-teal";
+  const unreadBadge = isSeeker ? "bg-marigold text-ink" : "bg-teal text-white";
+  const mineBubble = isSeeker
+    ? "bg-navy text-mist"
+    : "bg-teal text-white";
+  const minePending = isSeeker ? "bg-navy/75 text-mist" : "bg-teal/75 text-white";
+  const sendBtn = isSeeker
+    ? "bg-marigold text-ink hover:bg-marigold/90"
+    : "bg-teal text-white hover:bg-teal/95";
+  const focusRing = isSeeker
+    ? "focus:border-marigold focus:ring-1 focus:ring-marigold/20"
+    : "focus:border-teal focus:ring-1 focus:ring-teal/20";
 
   function selectConversation(id: string) {
     router.push(`${role === "EMPLOYER" ? "/employer" : "/seeker"}/messages?c=${id}`);
@@ -308,7 +340,7 @@ export default function MessagesInbox({ role }: Props) {
   }
 
   return (
-    <div className="flex min-h-[calc(100vh-8rem)] overflow-hidden rounded-2xl border border-ink/8 bg-white shadow-xs">
+    <div className="flex min-h-[calc(100vh-10rem)] overflow-hidden rounded-2xl border border-navy/8 bg-white shadow-[0_8px_30px_rgba(30,58,95,0.04)]">
       <aside
         className={`flex w-full flex-col border-r border-ink/8 md:w-80 lg:w-96 ${
           activeId ? "hidden md:flex" : "flex"
@@ -331,6 +363,14 @@ export default function MessagesInbox({ role }: Props) {
                   ? "Message candidates from your applicant board or talent search."
                   : "Employers will appear here when they message you."}
               </p>
+              {isSeeker && (
+                <Link
+                  href="/jobs"
+                  className="mt-4 cursor-pointer rounded-xl bg-marigold px-4 py-2 text-sm font-semibold text-ink"
+                >
+                  Browse jobs
+                </Link>
+              )}
             </div>
           ) : (
             conversations.map((conv) => (
@@ -338,17 +378,30 @@ export default function MessagesInbox({ role }: Props) {
                 key={conv.id}
                 type="button"
                 onClick={() => selectConversation(conv.id)}
-                className={`flex w-full gap-3 border-b border-ink/5 px-4 py-3 text-left transition-colors hover:bg-mist/80 ${
-                  activeId === conv.id ? "bg-teal/5" : ""
+                className={`flex w-full cursor-pointer gap-3 border-b border-ink/5 px-4 py-3 text-left transition-colors hover:bg-mist/80 ${
+                  activeId === conv.id ? activeRow : ""
                 }`}
               >
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-teal/10 font-display text-sm font-bold text-teal">
+                <div
+                  className={`relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl font-display text-sm font-bold ${avatarBg}`}
+                >
                   {peerLabel(conv).slice(0, 2).toUpperCase()}
+                  {conv.unreadCount > 0 && (
+                    <span
+                      className={`absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full ${accentDot} ring-2 ring-white`}
+                    />
+                  )}
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-baseline justify-between gap-2">
-                    <span className="truncate text-sm font-semibold text-ink">{peerLabel(conv)}</span>
-                    <span className="shrink-0 text-[10px] text-ink/40">
+                    <span
+                      className={`truncate text-sm ${
+                        conv.unreadCount > 0 ? "font-bold text-ink" : "font-semibold text-ink"
+                      }`}
+                    >
+                      {peerLabel(conv)}
+                    </span>
+                    <span className="shrink-0 font-data text-[10px] text-ink/40">
                       {formatTime(conv.lastMessageAt)}
                     </span>
                   </div>
@@ -358,7 +411,9 @@ export default function MessagesInbox({ role }: Props) {
                   )}
                 </div>
                 {conv.unreadCount > 0 && (
-                  <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-teal px-1.5 text-[10px] font-bold text-white">
+                  <span
+                    className={`flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-bold ${unreadBadge}`}
+                  >
                     {conv.unreadCount}
                   </span>
                 )}
@@ -383,8 +438,12 @@ export default function MessagesInbox({ role }: Props) {
             <div className="flex items-center gap-3 border-b border-ink/8 px-4 py-3">
               <button
                 type="button"
-                className="text-xs font-semibold text-teal md:hidden"
-                onClick={() => router.push(`${role === "EMPLOYER" ? "/employer" : "/seeker"}/messages`)}
+                className={`cursor-pointer text-xs font-semibold md:hidden ${
+                  isSeeker ? "text-marigold" : "text-teal"
+                }`}
+                onClick={() =>
+                  router.push(`${role === "EMPLOYER" ? "/employer" : "/seeker"}/messages`)
+                }
               >
                 ← Back
               </button>
@@ -393,7 +452,15 @@ export default function MessagesInbox({ role }: Props) {
                   {role === "EMPLOYER" ? thread.seeker.fullName : thread.company.companyName}
                 </h2>
                 {thread.job && (
-                  <p className="text-xs text-ink/45">Re: {thread.job.title}</p>
+                  <p className="text-xs text-ink/45">
+                    Re:{" "}
+                    <Link
+                      href={`/jobs/${thread.job.id}`}
+                      className="cursor-pointer font-medium text-navy hover:underline"
+                    >
+                      {thread.job.title}
+                    </Link>
+                  </p>
                 )}
               </div>
             </div>
@@ -412,14 +479,16 @@ export default function MessagesInbox({ role }: Props) {
                     className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
                       msg.isMine
                         ? msg.pending
-                          ? "bg-teal/75 text-white"
-                          : "bg-teal text-white"
+                          ? minePending
+                          : mineBubble
                         : "border border-ink/8 bg-mist text-ink"
                     }`}
                   >
                     <p>{msg.body}</p>
                     <p
-                      className={`mt-1 text-[10px] ${msg.isMine ? "text-white/70" : "text-ink/40"}`}
+                      className={`mt-1 font-data text-[10px] ${
+                        msg.isMine ? "text-white/70" : "text-ink/40"
+                      }`}
                     >
                       {msg.pending ? "Sending…" : formatTime(msg.createdAt)}
                     </p>
@@ -430,9 +499,7 @@ export default function MessagesInbox({ role }: Props) {
             </div>
 
             <form onSubmit={handleSend} className="border-t border-ink/8 p-4">
-              {sendError && (
-                <p className="mb-2 text-xs text-ember">{sendError}</p>
-              )}
+              {sendError && <p className="mb-2 text-xs text-ember">{sendError}</p>}
               <div className="flex gap-2">
                 <label htmlFor="message-draft" className="sr-only">
                   Message
@@ -444,17 +511,18 @@ export default function MessagesInbox({ role }: Props) {
                   onChange={(e) => setDraft(e.target.value)}
                   placeholder="Write a message..."
                   aria-label="Write a message"
-                  className="flex-1 rounded-xl border border-ink/10 px-4 py-2.5 text-sm text-ink outline-none focus:border-teal focus:ring-1 focus:ring-teal/20"
+                  className={`flex-1 rounded-xl border border-ink/10 px-4 py-3 text-sm text-ink outline-none ${focusRing}`}
                 />
                 <button
                   type="submit"
                   disabled={!draft.trim()}
-                  className="flex items-center gap-1.5 rounded-xl bg-teal px-4 py-2.5 text-sm font-semibold text-white hover:bg-teal/95 disabled:opacity-60"
+                  className={`flex cursor-pointer items-center gap-1.5 rounded-xl px-4 py-3 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60 ${sendBtn}`}
                 >
                   <Send className="h-4 w-4" />
                   Send
                 </button>
               </div>
+              <p className="mt-2 text-[11px] text-ink/35">Press Enter to send</p>
             </form>
           </>
         )}

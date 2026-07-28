@@ -3,6 +3,7 @@ import { getPublicStorageUrl, getSupabaseAdmin } from "@/lib/supabase";
 
 const RESUME_BUCKET = "resumes";
 const LOGO_BUCKET = "logos";
+const PHOTO_BUCKET = "photos";
 
 const RESUME_MIME_TYPES = new Set([
   "application/pdf",
@@ -11,9 +12,11 @@ const RESUME_MIME_TYPES = new Set([
 ]);
 
 const LOGO_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
+const PHOTO_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 const MAX_RESUME_BYTES = 5 * 1024 * 1024;
 const MAX_LOGO_BYTES = 2 * 1024 * 1024;
+const MAX_PHOTO_BYTES = 2 * 1024 * 1024;
 
 function sanitizeFilename(name: string) {
   return name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 120);
@@ -62,4 +65,14 @@ export async function uploadCompanyLogo(userId: string, file: File) {
 
   const path = `${userId}/${Date.now()}-${sanitizeFilename(file.name)}`;
   return uploadObject(LOGO_BUCKET, path, file);
+}
+
+export async function uploadSeekerPhoto(userId: string, file: File) {
+  assertFile(file, PHOTO_MIME_TYPES, MAX_PHOTO_BYTES, "Photo");
+
+  const ext =
+    file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
+  const path = `${userId}/photo.${ext}`;
+  const url = await uploadObject(PHOTO_BUCKET, path, file);
+  return `${url}?v=${Date.now()}`;
 }

@@ -1376,7 +1376,11 @@ export const SeekerProfileScalarFieldEnum = {
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
   availability: 'availability',
-  yearsExperience: 'yearsExperience'
+  yearsExperience: 'yearsExperience',
+  linkedinUrl: 'linkedinUrl',
+  portfolioUrl: 'portfolioUrl',
+  certifications: 'certifications',
+  photoUrl: 'photoUrl'
 } as const
 
 export type SeekerProfileScalarFieldEnum = (typeof SeekerProfileScalarFieldEnum)[keyof typeof SeekerProfileScalarFieldEnum]

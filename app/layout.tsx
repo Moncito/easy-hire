@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Space_Grotesk, Inter, IBM_Plex_Mono } from "next/font/google";
+import { Toaster } from "sonner";
 import AuthProvider from "@/components/providers/AuthProvider";
 import "./globals.css";
 
@@ -32,7 +33,16 @@ export default function RootLayout({
   return (
     <html lang="en" className={`scroll-smooth ${spaceGrotesk.variable} ${inter.variable} ${ibmPlexMono.variable}`}>
       <body className="font-body antialiased">
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          {children}
+          <Toaster
+            position="top-right"
+            toastOptions={{
+              className: "font-body",
+              style: { background: "#20242B", color: "#F5F6F4", border: "1px solid rgba(245,246,244,0.12)" },
+            }}
+          />
+        </AuthProvider>
       </body>
     </html>
   );
