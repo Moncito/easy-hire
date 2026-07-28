@@ -13,10 +13,10 @@ export default async function SeekerProfilePage() {
 
   return (
     <>
-      <div className="mb-8">
+      <div className="mb-8 animate-fade-in">
         <h1 className="font-display text-3xl font-bold text-ink">My profile</h1>
         <p className="mt-2 text-sm text-ink/60">
-          Keep your profile up to date so employers can review your application.
+          Build a complete profile — employers review this when you apply and in talent search.
         </p>
       </div>
       <SeekerProfileEditor
@@ -32,6 +32,11 @@ export default async function SeekerProfilePage() {
           desiredSalaryMin: profile.desiredSalaryMin,
           desiredSalaryMax: profile.desiredSalaryMax,
           resumeUrl: profile.resumeUrl,
+          linkedinUrl: profile.linkedinUrl,
+          portfolioUrl: profile.portfolioUrl,
+          certifications: profile.certifications ?? [],
+          photoUrl: profile.photoUrl,
+          profileVisibility: profile.profileVisibility,
         }}
       />
     </>

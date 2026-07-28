@@ -5,7 +5,7 @@ export default function JobsLayout({ children }: { children: React.ReactNode }) 
   return (
     <div className="min-h-screen bg-mist">
       <PublicJobsHeader />
-      {children}
+      <div className="pt-24">{children}</div>
       <Footer />
     </div>
   );

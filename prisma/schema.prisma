@@ -57,6 +57,10 @@ model SeekerProfile {
   updatedAt         DateTime @updatedAt @map("updated_at")
   availability      String?  @map("availability")
   yearsExperience   String?  @map("years_experience")
+  linkedinUrl       String?  @map("linkedin_url")
+  portfolioUrl      String?  @map("portfolio_url")
+  certifications    String[] @default([])
+  photoUrl          String?  @map("photo_url")
 
   // Relations
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)

@@ -15,6 +15,10 @@ export type TalentListItem = {
   desiredSalaryMin: number | null;
   desiredSalaryMax: number | null;
   resumeUrl: string | null;
+  linkedinUrl: string | null;
+  portfolioUrl: string | null;
+  certifications: string[];
+  photoUrl: string | null;
   saved: boolean;
 };
 
@@ -35,6 +39,10 @@ function mapSeeker(
     desiredSalaryMin: number | null;
     desiredSalaryMax: number | null;
     resumeUrl: string | null;
+    linkedinUrl?: string | null;
+    portfolioUrl?: string | null;
+    certifications?: string[];
+    photoUrl?: string | null;
   },
   savedIds: Set<string>
 ): TalentListItem {
@@ -49,6 +57,10 @@ function mapSeeker(
     desiredSalaryMin: seeker.desiredSalaryMin,
     desiredSalaryMax: seeker.desiredSalaryMax,
     resumeUrl: seeker.resumeUrl,
+    linkedinUrl: seeker.linkedinUrl ?? null,
+    portfolioUrl: seeker.portfolioUrl ?? null,
+    certifications: seeker.certifications ?? [],
+    photoUrl: seeker.photoUrl ?? null,
     saved: savedIds.has(seeker.id),
   };
 }
@@ -97,6 +109,10 @@ async function searchSeekersFts(
     desired_salary_min: number | null;
     desired_salary_max: number | null;
     resume_url: string | null;
+    linkedin_url: string | null;
+    portfolio_url: string | null;
+    certifications: string[];
+    photo_url: string | null;
     created_at: Date;
   };
 
@@ -112,6 +128,10 @@ async function searchSeekersFts(
       sp.desired_salary_min,
       sp.desired_salary_max,
       sp.resume_url,
+      sp.linkedin_url,
+      sp.portfolio_url,
+      sp.certifications,
+      sp.photo_url,
       sp.created_at
     FROM seeker_profiles sp
     WHERE sp.profile_visibility = true
@@ -137,6 +157,10 @@ async function searchSeekersFts(
           desiredSalaryMin: r.desired_salary_min,
           desiredSalaryMax: r.desired_salary_max,
           resumeUrl: r.resume_url,
+          linkedinUrl: r.linkedin_url,
+          portfolioUrl: r.portfolio_url,
+          certifications: r.certifications,
+          photoUrl: r.photo_url,
         },
         savedIds
       )
@@ -194,6 +218,10 @@ export async function searchTalent(employerUserId: string, raw: unknown): Promis
       desiredSalaryMin: true,
       desiredSalaryMax: true,
       resumeUrl: true,
+      linkedinUrl: true,
+      portfolioUrl: true,
+      certifications: true,
+      photoUrl: true,
     },
   });
 
@@ -234,6 +262,10 @@ export async function listSavedSeekers(employerUserId: string) {
           desiredSalaryMin: true,
           desiredSalaryMax: true,
           resumeUrl: true,
+          linkedinUrl: true,
+          portfolioUrl: true,
+          certifications: true,
+          photoUrl: true,
         },
       },
     },
