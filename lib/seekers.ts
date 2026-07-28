@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "../prisma/gen/client";
 import { seekerInputToData, seekerUpdateSchema } from "@/lib/validations/seeker";
 
 export async function ensureSeekerProfile(
@@ -13,13 +14,23 @@ export async function ensureSeekerProfile(
     throw new Error(`Cannot create seeker profile: user ${userId} not found`);
   }
 
-  return prisma.seekerProfile.create({
-    data: {
-      userId,
-      fullName: defaults.fullName?.trim() || "",
-      skills: [],
-    },
-  });
+  try {
+    return await prisma.seekerProfile.create({
+      data: {
+        userId,
+        fullName: defaults.fullName?.trim() || "",
+        skills: [],
+      },
+    });
+  } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002"
+    ) {
+      return prisma.seekerProfile.findUniqueOrThrow({ where: { userId } });
+    }
+    throw error;
+  }
 }
 
 export async function getSeekerProfile(userId: string) {

@@ -32,6 +32,10 @@ async function requireConversationAccess(userId: string, role: string, conversat
     throw new ApiError("Conversation not found", 404);
   }
 
+  if (role !== "EMPLOYER" && role !== "SEEKER") {
+    throw new ApiError("Forbidden", 403);
+  }
+
   if (role === "EMPLOYER" && conversation.company.userId !== userId) {
     throw new ApiError("Forbidden", 403);
   }
@@ -43,28 +47,19 @@ async function requireConversationAccess(userId: string, role: string, conversat
     }
   }
 
-  if (role !== "EMPLOYER" && role !== "SEEKER") {
-    throw new ApiError("Forbidden", 403);
-  }
-
   return conversation;
 }
 
-function mapConversationListItem(
-  conv: {
-    id: string;
-    lastMessageAt: Date;
-    company: { id: string; companyName: string; logoUrl: string | null };
-    seeker: { id: string; fullName: string; headline: string | null };
-    job: { id: string; title: string } | null;
-    messages: { body: string; createdAt: Date; senderUserId: string; readAt: Date | null }[];
-  },
-  currentUserId: string
-): ConversationListItem {
+function mapConversationListItem(conv: {
+  id: string;
+  lastMessageAt: Date;
+  company: { id: string; companyName: string; logoUrl: string | null };
+  seeker: { id: string; fullName: string; headline: string | null };
+  job: { id: string; title: string } | null;
+  messages: { body: string; createdAt: Date; senderUserId: string }[];
+  _count: { messages: number };
+}): ConversationListItem {
   const last = conv.messages[0] ?? null;
-  const unreadCount = conv.messages.filter(
-    (m) => m.senderUserId !== currentUserId && !m.readAt
-  ).length;
 
   return {
     id: conv.id,
@@ -75,7 +70,7 @@ function mapConversationListItem(
     lastMessage: last
       ? { body: last.body, createdAt: last.createdAt.toISOString(), senderUserId: last.senderUserId }
       : null,
-    unreadCount,
+    unreadCount: conv._count.messages,
   };
 }
 
@@ -102,13 +97,23 @@ export async function listConversationsForUser(userId: string, role: string) {
       job: { select: { id: true, title: true } },
       messages: {
         orderBy: { createdAt: "desc" },
-        take: 10,
-        select: { body: true, createdAt: true, senderUserId: true, readAt: true },
+        take: 1,
+        select: { body: true, createdAt: true, senderUserId: true },
+      },
+      _count: {
+        select: {
+          messages: {
+            where: {
+              senderUserId: { not: userId },
+              readAt: null,
+            },
+          },
+        },
       },
     },
   });
 
-  return conversations.map((c) => mapConversationListItem(c, userId));
+  return conversations.map((c) => mapConversationListItem(c));
 }
 
 export async function getConversationThread(userId: string, role: string, conversationId: string) {
@@ -160,28 +165,43 @@ export async function getMessagesAfter(
 ) {
   await requireConversationAccess(userId, role, conversationId);
 
-  let createdAfter: Date | undefined;
+  let messages;
   if (afterMessageId) {
     const cursor = await prisma.message.findFirst({
       where: { id: afterMessageId, conversationId },
-      select: { createdAt: true },
+      select: { createdAt: true, id: true },
     });
-    if (cursor) createdAfter = cursor.createdAt;
-  }
 
-  const messages = await prisma.message.findMany({
-    where: {
-      conversationId,
-      ...(createdAfter ? { createdAt: { gt: createdAfter } } : {}),
-    },
-    orderBy: { createdAt: "asc" },
-    select: {
-      id: true,
-      body: true,
-      createdAt: true,
-      senderUserId: true,
-    },
-  });
+    messages = cursor
+      ? await prisma.message.findMany({
+          where: {
+            conversationId,
+            OR: [
+              { createdAt: { gt: cursor.createdAt } },
+              { createdAt: cursor.createdAt, id: { gt: cursor.id } },
+            ],
+          },
+          orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+          select: {
+            id: true,
+            body: true,
+            createdAt: true,
+            senderUserId: true,
+          },
+        })
+      : [];
+  } else {
+    messages = await prisma.message.findMany({
+      where: { conversationId },
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+      select: {
+        id: true,
+        body: true,
+        createdAt: true,
+        senderUserId: true,
+      },
+    });
+  }
 
   if (messages.some((m) => m.senderUserId !== userId)) {
     await prisma.message.updateMany({
@@ -240,28 +260,48 @@ export async function createOrGetConversation(employerUserId: string, raw: unkno
     },
   });
 
+  const conversationInclude = {
+    company: { select: { id: true, companyName: true, logoUrl: true } },
+    seeker: { select: { id: true, fullName: true, headline: true } },
+    job: { select: { id: true, title: true } },
+  } as const;
+
   if (!conversation) {
-    conversation = await prisma.conversation.create({
-      data: {
-        companyId: company.id,
-        seekerId: seeker.id,
-        jobId: input.jobId ?? null,
-      },
-      include: {
-        company: { select: { id: true, companyName: true, logoUrl: true } },
-        seeker: { select: { id: true, fullName: true, headline: true } },
-        job: { select: { id: true, title: true } },
-      },
-    });
-  } else if (input.jobId && !conversation.jobId) {
+    try {
+      conversation = await prisma.conversation.create({
+        data: {
+          companyId: company.id,
+          seekerId: seeker.id,
+          jobId: input.jobId ?? null,
+        },
+        include: conversationInclude,
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === "P2002"
+      ) {
+        conversation = await prisma.conversation.findUnique({
+          where: {
+            companyId_seekerId: { companyId: company.id, seekerId: seeker.id },
+          },
+          include: conversationInclude,
+        });
+      } else {
+        throw error;
+      }
+    }
+  }
+
+  if (!conversation) {
+    throw new ApiError("Could not create conversation", 500);
+  }
+
+  if (input.jobId && !conversation.jobId) {
     conversation = await prisma.conversation.update({
       where: { id: conversation.id },
       data: { jobId: input.jobId },
-      include: {
-        company: { select: { id: true, companyName: true, logoUrl: true } },
-        seeker: { select: { id: true, fullName: true, headline: true } },
-        job: { select: { id: true, title: true } },
-      },
+      include: conversationInclude,
     });
   }
 
@@ -306,7 +346,7 @@ export async function sendMessage(
       recipientUserId,
       "NEW_MESSAGE",
       `${senderName} sent you a message.`
-    );
+    ).catch((err) => console.error("[messages] notification failed:", err));
   }
 
   return {

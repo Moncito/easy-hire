@@ -80,7 +80,6 @@ function buildSeekerWhere(input: ReturnType<typeof talentSearchSchema.parse>): P
 }
 
 async function searchSeekersFts(
-  companyId: string,
   input: ReturnType<typeof talentSearchSchema.parse>,
   savedIds: Set<string>
 ): Promise<TalentSearchResult> {
@@ -142,7 +141,7 @@ async function searchSeekersFts(
         savedIds
       )
     ),
-    nextCursor: hasMore ? slice[slice.length - 1]?.id ?? null : null,
+    nextCursor: null,
   };
 }
 
@@ -150,17 +149,31 @@ export async function searchTalent(employerUserId: string, raw: unknown): Promis
   const input = talentSearchSchema.parse(raw);
   const company = await requireEmployerCompany(employerUserId);
 
-  const saved = await prisma.savedSeeker.findMany({
-    where: { companyId: company.id },
-    select: { seekerId: true },
-  });
-  const savedIds = new Set(saved.map((s) => s.seekerId));
+  const useFts =
+    input.q &&
+    !input.skill &&
+    !input.location &&
+    !input.availability &&
+    !input.cursor;
 
-  if (input.q) {
+  if (useFts) {
     try {
-      return await searchSeekersFts(company.id, input, savedIds);
-    } catch {
-      // Fall back if search_vector migration is not applied yet.
+      const ftsResult = await searchSeekersFts(input, new Set());
+      const pageIds = ftsResult.seekers.map((s) => s.id);
+      const saved =
+        pageIds.length > 0
+          ? await prisma.savedSeeker.findMany({
+              where: { companyId: company.id, seekerId: { in: pageIds } },
+              select: { seekerId: true },
+            })
+          : [];
+      const savedIds = new Set(saved.map((s) => s.seekerId));
+      return {
+        seekers: ftsResult.seekers.map((s) => ({ ...s, saved: savedIds.has(s.id) })),
+        nextCursor: null,
+      };
+    } catch (error) {
+      console.error("[talent] FTS search failed, falling back to Prisma:", error);
     }
   }
 
@@ -186,6 +199,15 @@ export async function searchTalent(employerUserId: string, raw: unknown): Promis
 
   const hasMore = seekers.length > input.limit;
   const page = hasMore ? seekers.slice(0, input.limit) : seekers;
+  const pageIds = page.map((s) => s.id);
+  const saved =
+    pageIds.length > 0
+      ? await prisma.savedSeeker.findMany({
+          where: { companyId: company.id, seekerId: { in: pageIds } },
+          select: { seekerId: true },
+        })
+      : [];
+  const savedIds = new Set(saved.map((s) => s.seekerId));
 
   return {
     seekers: page.map((s) => mapSeeker(s, savedIds)),

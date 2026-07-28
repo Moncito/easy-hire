@@ -25,30 +25,53 @@ export default function TalentSearchBoard() {
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
   const [showSaved, setShowSaved] = useState(false);
+  const [error, setError] = useState("");
+  const [messagingId, setMessagingId] = useState<string | null>(null);
+  const [messageError, setMessageError] = useState("");
 
   const loadSaved = useCallback(async () => {
     setLoading(true);
-    const res = await fetch("/api/employer/saved-seekers");
-    if (res.ok) {
+    setError("");
+    try {
+      const res = await fetch("/api/employer/saved-seekers");
+      if (!res.ok) {
+        setSeekers([]);
+        setError("Could not load saved candidates");
+        return;
+      }
       const data = await res.json();
       setSeekers(data.seekers);
+    } catch {
+      setSeekers([]);
+      setError("Could not load saved candidates");
+    } finally {
+      setLoading(false);
+      setSearched(true);
     }
-    setLoading(false);
-    setSearched(true);
   }, []);
 
   const search = useCallback(async () => {
     setLoading(true);
     setShowSaved(false);
-    const params = new URLSearchParams();
-    if (query.trim()) params.set("q", query.trim());
-    const res = await fetch(`/api/employer/talent/search?${params}`);
-    if (res.ok) {
+    setError("");
+    try {
+      const params = new URLSearchParams();
+      if (query.trim()) params.set("q", query.trim());
+      const res = await fetch(`/api/employer/talent/search?${params}`);
+      if (!res.ok) {
+        setSeekers([]);
+        setError("Search failed");
+        return;
+      }
       const data = await res.json();
       setSeekers(data.seekers);
+    } catch {
+      setSeekers([]);
+      setError("Search failed");
+    } finally {
+      setLoading(false);
+      setSearched(true);
     }
-    setLoading(false);
-    setSearched(true);
   }, [query]);
 
   useEffect(() => {
@@ -72,15 +95,27 @@ export default function TalentSearchBoard() {
   }
 
   async function startConversation(seekerId: string) {
-    const res = await fetch("/api/conversations", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ seekerId }),
-    });
+    setMessageError("");
+    setMessagingId(seekerId);
+    try {
+      const res = await fetch("/api/conversations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ seekerId }),
+      });
 
-    if (res.ok) {
-      const conv = await res.json();
-      window.location.href = `/employer/messages?c=${conv.id}`;
+      const result = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        setMessageError((result as { error?: string }).error || "Could not start conversation");
+        return;
+      }
+
+      window.location.href = `/employer/messages?c=${(result as { id: string }).id}`;
+    } catch {
+      setMessageError("Could not start conversation");
+    } finally {
+      setMessagingId(null);
     }
   }
 
@@ -128,6 +163,9 @@ export default function TalentSearchBoard() {
           Saved
         </button>
       </div>
+
+      {error && <p className="mb-4 text-sm text-ember">{error}</p>}
+      {messageError && <p className="mb-4 text-sm text-ember">{messageError}</p>}
 
       {loading ? (
         <p className="text-sm text-ink/45">Searching...</p>
@@ -197,10 +235,11 @@ export default function TalentSearchBoard() {
                 <button
                   type="button"
                   onClick={() => startConversation(seeker.id)}
-                  className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-teal px-3 py-2 text-xs font-semibold text-white hover:bg-teal/95"
+                  disabled={messagingId === seeker.id}
+                  className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-teal px-3 py-2 text-xs font-semibold text-white hover:bg-teal/95 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   <MessageSquare className="h-3.5 w-3.5" />
-                  Message
+                  {messagingId === seeker.id ? "Opening..." : "Message"}
                 </button>
                 {seeker.resumeUrl && (
                   <Link

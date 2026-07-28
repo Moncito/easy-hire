@@ -12,7 +12,7 @@ const included = [
   "Unlimited job postings (admin-reviewed)",
   "Full applicant pipeline (Kanban ATS)",
   "Company profile page",
-  "In-platform messaging (coming Sprint 5)",
+  "In-platform messaging",
   "Email notifications on apply and status updates",
   "Never charge job seekers — ever",
 ];

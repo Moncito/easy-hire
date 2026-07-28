@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/Auth";
 import { errorResponse } from "@/lib/api-error";
+import { parseJsonBody } from "@/lib/parse-json-body";
 import { listSavedSeekers, saveSeeker } from "@/lib/talent";
 import { ZodError } from "zod";
 
@@ -25,7 +26,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const body = await req.json();
+    const body = await parseJsonBody(req);
     const result = await saveSeeker(session.user.id, body);
     return NextResponse.json(result, { status: 201 });
   } catch (error) {

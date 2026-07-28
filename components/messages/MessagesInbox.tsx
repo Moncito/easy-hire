@@ -94,9 +94,14 @@ export default function MessagesInbox({ role }: Props) {
   const [loadingThread, setLoadingThread] = useState(false);
   const [draft, setDraft] = useState("");
   const [sendError, setSendError] = useState("");
+  const [listError, setListError] = useState("");
+  const [threadError, setThreadError] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
   const lastMessageIdRef = useRef<string | null>(null);
+  const activeIdRef = useRef<string | null>(activeId);
   const pollingRef = useRef(false);
+
+  activeIdRef.current = activeId;
 
   const syncCursor = useCallback((messages: ThreadMessage[]) => {
     lastMessageIdRef.current = lastConfirmedMessage(messages)?.id ?? null;
@@ -104,58 +109,81 @@ export default function MessagesInbox({ role }: Props) {
 
   const loadConversations = useCallback(async (silent = false) => {
     if (!silent) setLoadingList(true);
-    const res = await fetch("/api/conversations", fetchOpts);
-    if (res.ok) {
+    try {
+      const res = await fetch("/api/conversations", fetchOpts);
+      if (!res.ok) {
+        if (!silent) setListError("Could not load conversations");
+        return;
+      }
       const data = await res.json();
       setConversations(data.conversations);
+      setListError("");
+    } catch {
+      if (!silent) setListError("Could not load conversations");
+    } finally {
+      if (!silent) setLoadingList(false);
     }
-    if (!silent) setLoadingList(false);
   }, []);
 
   const loadThread = useCallback(async (id: string) => {
     setLoadingThread(true);
-    const res = await fetch(`/api/conversations/${id}`, fetchOpts);
-    if (res.ok) {
+    setThreadError("");
+    try {
+      const res = await fetch(`/api/conversations/${id}`, fetchOpts);
+      if (!res.ok) {
+        setThreadError("Could not load conversation");
+        return;
+      }
       const data: Thread = await res.json();
+      if (activeIdRef.current !== id) return;
       setThread(data);
       syncCursor(data.messages);
+    } catch {
+      if (activeIdRef.current === id) setThreadError("Could not load conversation");
+    } finally {
+      if (activeIdRef.current === id) setLoadingThread(false);
     }
-    setLoadingThread(false);
   }, [syncCursor]);
 
-  const pollNewMessages = useCallback(async () => {
-    if (!activeId || pollingRef.current || document.visibilityState === "hidden") return;
+  const pollNewMessages = useCallback(async (signal?: AbortSignal) => {
+    const conversationId = activeIdRef.current;
+    if (!conversationId || pollingRef.current || document.visibilityState === "hidden") return;
 
     pollingRef.current = true;
     try {
       const after = lastMessageIdRef.current;
       const url = after
-        ? `/api/conversations/${activeId}/messages?after=${encodeURIComponent(after)}`
-        : `/api/conversations/${activeId}/messages`;
+        ? `/api/conversations/${conversationId}/messages?after=${encodeURIComponent(after)}`
+        : `/api/conversations/${conversationId}/messages`;
 
-      const res = await fetch(url, fetchOpts);
-      if (!res.ok) return;
+      const res = await fetch(url, { ...fetchOpts, signal });
+      if (!res.ok || activeIdRef.current !== conversationId) return;
 
       const data = await res.json();
       const incoming = (data.messages ?? []) as ThreadMessage[];
-      if (incoming.length === 0) return;
+      if (incoming.length === 0 || activeIdRef.current !== conversationId) return;
 
+      let mergedForCursor: ThreadMessage[] = [];
       setThread((prev) => {
-        if (!prev) return prev;
-        const merged = mergeMessages(
+        if (!prev || activeIdRef.current !== conversationId) return prev;
+        mergedForCursor = mergeMessages(
           prev.messages.filter((m) => !m.pending),
           incoming
         );
-        lastMessageIdRef.current = lastConfirmedMessage(merged)?.id ?? lastMessageIdRef.current;
-        return { ...prev, messages: merged };
+        return { ...prev, messages: mergedForCursor };
       });
 
+      lastMessageIdRef.current =
+        lastConfirmedMessage(mergedForCursor)?.id ?? lastMessageIdRef.current;
+
       const last = incoming[incoming.length - 1];
-      setConversations((prev) => bumpConversationInList(prev, activeId, last.body, last.createdAt));
+      setConversations((prev) => bumpConversationInList(prev, conversationId, last.body, last.createdAt));
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") return;
     } finally {
       pollingRef.current = false;
     }
-  }, [activeId]);
+  }, []);
 
   useEffect(() => {
     loadConversations();
@@ -178,9 +206,13 @@ export default function MessagesInbox({ role }: Props) {
   useEffect(() => {
     if (!activeId || loadingThread) return;
 
-    void pollNewMessages();
-    const id = setInterval(() => void pollNewMessages(), THREAD_POLL_MS);
-    return () => clearInterval(id);
+    const controller = new AbortController();
+    void pollNewMessages(controller.signal);
+    const id = setInterval(() => void pollNewMessages(controller.signal), THREAD_POLL_MS);
+    return () => {
+      controller.abort();
+      clearInterval(id);
+    };
   }, [activeId, loadingThread, pollNewMessages]);
 
   useEffect(() => {
@@ -240,12 +272,15 @@ export default function MessagesInbox({ role }: Props) {
       }
 
       const message = result as ThreadMessage;
-      setThread((prev) => {
-        if (!prev) return prev;
-        const merged = prev.messages.map((m) => (m.id === optimisticId ? message : m));
-        lastMessageIdRef.current = message.id;
-        return { ...prev, messages: merged };
-      });
+      lastMessageIdRef.current = message.id;
+      setThread((prev) =>
+        prev
+          ? {
+              ...prev,
+              messages: prev.messages.map((m) => (m.id === optimisticId ? message : m)),
+            }
+          : prev
+      );
       setConversations((prev) =>
         bumpConversationInList(prev, activeId, message.body, message.createdAt)
       );
@@ -284,6 +319,7 @@ export default function MessagesInbox({ role }: Props) {
           <p className="mt-0.5 text-xs text-ink/45">In-platform conversations</p>
         </div>
         <div className="flex-1 overflow-y-auto">
+          {listError && <p className="p-4 text-sm text-ember">{listError}</p>}
           {loadingList ? (
             <p className="p-4 text-sm text-ink/45">Loading...</p>
           ) : conversations.length === 0 ? (
@@ -339,7 +375,9 @@ export default function MessagesInbox({ role }: Props) {
             <p className="text-sm text-ink/45">Select a conversation</p>
           </div>
         ) : loadingThread || !thread ? (
-          <div className="flex flex-1 items-center justify-center text-sm text-ink/45">Loading...</div>
+          <div className="flex flex-1 items-center justify-center text-sm text-ink/45">
+            {threadError || "Loading..."}
+          </div>
         ) : (
           <>
             <div className="flex items-center gap-3 border-b border-ink/8 px-4 py-3">
@@ -360,7 +398,11 @@ export default function MessagesInbox({ role }: Props) {
               </div>
             </div>
 
-            <div className="flex-1 space-y-3 overflow-y-auto p-4">
+            <div
+              className="flex-1 space-y-3 overflow-y-auto p-4"
+              aria-live="polite"
+              aria-relevant="additions"
+            >
               {thread.messages.map((msg) => (
                 <div
                   key={msg.id}
@@ -392,11 +434,16 @@ export default function MessagesInbox({ role }: Props) {
                 <p className="mb-2 text-xs text-ember">{sendError}</p>
               )}
               <div className="flex gap-2">
+                <label htmlFor="message-draft" className="sr-only">
+                  Message
+                </label>
                 <input
+                  id="message-draft"
                   type="text"
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}
                   placeholder="Write a message..."
+                  aria-label="Write a message"
                   className="flex-1 rounded-xl border border-ink/10 px-4 py-2.5 text-sm text-ink outline-none focus:border-teal focus:ring-1 focus:ring-teal/20"
                 />
                 <button

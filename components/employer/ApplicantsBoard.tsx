@@ -55,6 +55,7 @@ export default function ApplicantsBoard({ job, initialApplications }: Props) {
   const [pendingReject, setPendingReject] = useState<PendingReject | null>(null);
   const [messageLoading, setMessageLoading] = useState(false);
   const [messageError, setMessageError] = useState("");
+  const [rejectError, setRejectError] = useState("");
 
   useEffect(() => {
     if (selectedApp) {
@@ -124,6 +125,7 @@ export default function ApplicantsBoard({ job, initialApplications }: Props) {
   async function confirmReject(reason: string) {
     if (!pendingReject) return;
     setRejectLoading(true);
+    setRejectError("");
 
     const previous = applications;
     const ids = pendingReject.ids;
@@ -160,8 +162,9 @@ export default function ApplicantsBoard({ job, initialApplications }: Props) {
         return next;
       });
       setPendingReject(null);
-    } catch {
+    } catch (err) {
       setApplications(previous);
+      setRejectError(err instanceof Error ? err.message : "Rejection failed");
     } finally {
       setRejectLoading(false);
     }
@@ -242,6 +245,8 @@ export default function ApplicantsBoard({ job, initialApplications }: Props) {
       }
 
       window.location.href = `/employer/messages?c=${(result as { id: string }).id}`;
+    } catch {
+      setMessageError("Could not start conversation");
     } finally {
       setMessageLoading(false);
     }
@@ -297,7 +302,11 @@ export default function ApplicantsBoard({ job, initialApplications }: Props) {
         open={!!pendingReject}
         candidateName={pendingReject?.candidateName || ""}
         loading={rejectLoading}
-        onCancel={() => setPendingReject(null)}
+        error={rejectError}
+        onCancel={() => {
+          setPendingReject(null);
+          setRejectError("");
+        }}
         onConfirm={confirmReject}
       />
 
@@ -391,10 +400,10 @@ export default function ApplicantsBoard({ job, initialApplications }: Props) {
                     </button>
                   )}
                 </div>
-                {messageError && (
-                  <p className="text-xs text-ember">{messageError}</p>
-                )}
               </div>
+              {messageError && (
+                <p className="mt-2 text-xs text-ember">{messageError}</p>
+              )}
 
               <div className="space-y-4">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-ink/45">Candidate Profile</h4>

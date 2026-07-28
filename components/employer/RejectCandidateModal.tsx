@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { X } from "lucide-react";
 
 type Props = {
   open: boolean;
   candidateName: string;
   loading?: boolean;
+  error?: string;
   onCancel: () => void;
   onConfirm: (reason: string) => void;
 };
@@ -15,16 +16,20 @@ export default function RejectCandidateModal({
   open,
   candidateName,
   loading = false,
+  error = "",
   onCancel,
   onConfirm,
 }: Props) {
   const [reason, setReason] = useState("");
 
+  useEffect(() => {
+    if (!open) setReason("");
+  }, [open]);
+
   if (!open) return null;
 
   function handleConfirm() {
     onConfirm(reason.trim());
-    setReason("");
   }
 
   function handleCancel() {
@@ -70,6 +75,8 @@ export default function RejectCandidateModal({
           className="mt-2 w-full rounded-xl border border-ink/10 p-3 text-sm text-ink outline-none focus:border-teal focus:ring-1 focus:ring-teal/20"
         />
         <p className="mt-1 text-right font-data text-[10px] text-ink/40">{reason.length}/500</p>
+
+        {error && <p className="mt-3 text-sm text-ember">{error}</p>}
 
         <div className="mt-5 flex justify-end gap-2">
           <button

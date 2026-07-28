@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/Auth";
 import { errorResponse } from "@/lib/api-error";
+import { parseJsonBody } from "@/lib/parse-json-body";
 import { getMessagesAfter, sendMessage } from "@/lib/messages";
 import { ZodError } from "zod";
 
@@ -33,7 +34,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     }
 
     const { id } = await params;
-    const body = await req.json();
+    const body = await parseJsonBody(req);
     const message = await sendMessage(session.user.id, session.user.role, id, body);
     return NextResponse.json(message, { status: 201 });
   } catch (error) {

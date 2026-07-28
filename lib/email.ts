@@ -1,5 +1,6 @@
 import { Resend } from "resend";
 import { prisma } from "@/lib/prisma";
+import { escapeHtml } from "@/lib/escape-html";
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 const fromAddress = process.env.EMAIL_FROM ?? "EasyHire <onboarding@resend.dev>";
@@ -70,7 +71,7 @@ export async function notifyApplicationRejected(ctx: {
   rejectionReason: string | null;
 }) {
   const reasonBlock = ctx.rejectionReason
-    ? `<p><strong>Feedback from the employer:</strong></p><p>${ctx.rejectionReason}</p>`
+    ? `<p><strong>Feedback from the employer:</strong></p><p>${escapeHtml(ctx.rejectionReason)}</p>`
     : `<p>The employer did not include additional feedback.</p>`;
 
   await Promise.all([

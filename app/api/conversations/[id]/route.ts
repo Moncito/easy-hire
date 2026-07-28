@@ -14,7 +14,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
     const { id } = await params;
     const thread = await getConversationThread(session.user.id, session.user.role, id);
-    return NextResponse.json(thread);
+    return NextResponse.json(thread, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     return errorResponse(error);
   }

@@ -124,14 +124,14 @@ export async function updateApplication(applicationId: string, raw: unknown) {
   const becameRejected = data.status === "REJECTED" && existing.status !== "REJECTED";
 
   if (becameRejected) {
-    await notifyApplicationRejected({
+    void notifyApplicationRejected({
       seekerUserId: existing.seeker.user.id,
       seekerEmail: existing.seeker.user.email,
       seekerName: existing.seeker.fullName,
       jobTitle: existing.job.title,
       companyName: existing.job.company.companyName,
       rejectionReason: data.rejectionReason ?? updated.rejectionReason ?? null,
-    });
+    }).catch((err) => console.error("[applications] rejection notify failed:", err));
   }
 
   return updated;

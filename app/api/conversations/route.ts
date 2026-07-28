@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/Auth";
 import { errorResponse } from "@/lib/api-error";
+import { parseJsonBody } from "@/lib/parse-json-body";
 import { listConversationsForUser, createOrGetConversation } from "@/lib/messages";
 import { ZodError } from "zod";
 
@@ -30,7 +31,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const body = await req.json();
+    const body = await parseJsonBody(req);
     const conversation = await createOrGetConversation(session.user.id, body);
     return NextResponse.json(conversation, { status: 201 });
   } catch (error) {
