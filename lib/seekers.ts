@@ -78,11 +78,8 @@ export async function getSeekerApplicationForJob(userId: string, jobId: string) 
 }
 
 export async function listSeekerAppliedJobIds(userId: string) {
-  const profile = await prisma.seekerProfile.findUnique({ where: { userId } });
-  if (!profile) return [] as string[];
-
   const apps = await prisma.application.findMany({
-    where: { seekerId: profile.id },
+    where: { seeker: { userId } },
     select: { jobId: true },
   });
   return apps.map((a) => a.jobId);

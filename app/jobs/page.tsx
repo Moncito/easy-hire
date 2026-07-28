@@ -2,7 +2,7 @@ import JobSearchPanel from "@/components/jobs/JobSearchPanel";
 
 export default function JobsPage() {
   return (
-    <div className="relative overflow-hidden">
+    <div className="relative">
       <div
         className="pointer-events-none absolute inset-x-0 top-0 h-72 bg-[radial-gradient(ellipse_at_top,_rgba(242,169,59,0.12),_transparent_60%)]"
         aria-hidden="true"

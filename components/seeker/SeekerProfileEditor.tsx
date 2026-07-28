@@ -57,7 +57,15 @@ function completenessScore(form: FormData, resumeUrl: string | null, photoUrl: s
     form.certifications.length > 0,
     form.profileVisibility,
   ];
-  return checks.filter(Boolean).length;
+  return { score: checks.filter(Boolean).length, total: checks.length };
+}
+
+async function parseJsonResponse(res: Response) {
+  try {
+    return await res.json();
+  } catch {
+    return {};
+  }
 }
 
 export default function SeekerProfileEditor({ initialData }: Props) {
@@ -103,17 +111,20 @@ export default function SeekerProfileEditor({ initialData }: Props) {
     setError("");
     const body = new FormData();
     body.append("file", file);
-    const res = await fetch("/api/upload/resume", { method: "POST", body });
-    const result = await res.json();
-    setUploading(false);
-    if (!res.ok) {
-      const msg = result.error || "Resume upload failed";
-      setError(msg);
-      toast.error(msg);
-      return;
+    try {
+      const res = await fetch("/api/upload/resume", { method: "POST", body });
+      const result = await parseJsonResponse(res);
+      if (!res.ok) {
+        const msg = (result as { error?: string }).error || "Resume upload failed";
+        setError(msg);
+        toast.error(msg);
+        return;
+      }
+      setResumeUrl((result as { resumeUrl?: string }).resumeUrl ?? null);
+      toast.success("Resume uploaded");
+    } finally {
+      setUploading(false);
     }
-    setResumeUrl(result.resumeUrl);
-    toast.success("Resume uploaded");
   }
 
   async function handlePhotoUpload(file: File) {
@@ -121,17 +132,20 @@ export default function SeekerProfileEditor({ initialData }: Props) {
     setError("");
     const body = new FormData();
     body.append("file", file);
-    const res = await fetch("/api/upload/photo", { method: "POST", body });
-    const result = await res.json();
-    setPhotoUploading(false);
-    if (!res.ok) {
-      const msg = result.error || "Photo upload failed";
-      setError(msg);
-      toast.error(msg);
-      return;
+    try {
+      const res = await fetch("/api/upload/photo", { method: "POST", body });
+      const result = await parseJsonResponse(res);
+      if (!res.ok) {
+        const msg = (result as { error?: string }).error || "Photo upload failed";
+        setError(msg);
+        toast.error(msg);
+        return;
+      }
+      setPhotoUrl((result as { photoUrl?: string }).photoUrl ?? null);
+      toast.success("Photo uploaded");
+    } finally {
+      setPhotoUploading(false);
     }
-    setPhotoUrl(result.photoUrl);
-    toast.success("Photo uploaded");
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -145,36 +159,38 @@ export default function SeekerProfileEditor({ initialData }: Props) {
 
     setLoading(true);
 
-    const res = await fetch("/api/profile/seeker", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ...form,
-        resumeUrl,
-        photoUrl,
-        linkedinUrl: form.linkedinUrl || "",
-        portfolioUrl: form.portfolioUrl || "",
-        desiredSalaryMin: form.desiredSalaryMin || null,
-        desiredSalaryMax: form.desiredSalaryMax || null,
-      }),
-    });
+    try {
+      const res = await fetch("/api/profile/seeker", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...form,
+          resumeUrl,
+          photoUrl,
+          linkedinUrl: form.linkedinUrl || "",
+          portfolioUrl: form.portfolioUrl || "",
+          desiredSalaryMin: form.desiredSalaryMin || null,
+          desiredSalaryMax: form.desiredSalaryMax || null,
+        }),
+      });
 
-    const result = await res.json();
-    setLoading(false);
+      const result = await parseJsonResponse(res);
 
-    if (!res.ok) {
-      const msg = result.error || "Failed to save profile";
-      setError(msg);
-      toast.error(msg);
-      return;
+      if (!res.ok) {
+        const msg = (result as { error?: string }).error || "Failed to save profile";
+        setError(msg);
+        toast.error(msg);
+        return;
+      }
+
+      toast.success("Profile saved");
+      router.refresh();
+    } finally {
+      setLoading(false);
     }
-
-    toast.success("Profile saved");
-    router.refresh();
   }
 
-  const score = completenessScore(form, resumeUrl, photoUrl);
-  const scoreTotal = 10;
+  const { score, total: scoreTotal } = completenessScore(form, resumeUrl, photoUrl);
 
   return (
     <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">

@@ -46,10 +46,10 @@ function Chip({
 export default function JobSearchPanel() {
   const { data: session } = useSession();
   const [query, setQuery] = useState("");
+  const [committedQuery, setCommittedQuery] = useState("");
   const [category, setCategory] = useState("");
   const [employmentType, setEmploymentType] = useState("");
   const [remoteType, setRemoteType] = useState("");
-  const [verifiedOnly, setVerifiedOnly] = useState(false);
   const [jobs, setJobs] = useState<JobCardData[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
@@ -61,9 +61,10 @@ export default function JobSearchPanel() {
   const [appliedIds, setAppliedIds] = useState<Set<string>>(new Set());
 
   const fetchJobs = useCallback(
-    async (opts: { append?: boolean; searchCursor?: string | null } = {}) => {
+    async (opts: { append?: boolean; searchCursor?: string | null; q?: string } = {}) => {
+      const searchQ = opts.q ?? committedQuery;
       const params = new URLSearchParams();
-      if (query.trim()) params.set("q", query.trim());
+      if (searchQ) params.set("q", searchQ);
       if (category) params.set("category", category);
       if (employmentType) params.set("employmentType", employmentType);
       if (remoteType) params.set("remoteType", remoteType);
@@ -76,16 +77,13 @@ export default function JobSearchPanel() {
         throw new Error(data.error || "Failed to load jobs");
       }
 
-      let nextJobs: JobCardData[] = data.jobs ?? [];
-      if (verifiedOnly) {
-        nextJobs = nextJobs.filter((j) => j.company.verifiedStatus === "APPROVED");
-      }
+      const nextJobs: JobCardData[] = data.jobs ?? [];
 
       setCategories(data.categories ?? []);
       setNextCursor(data.nextCursor ?? null);
       setJobs((prev) => (opts.append ? [...prev, ...nextJobs] : nextJobs));
     },
-    [query, category, employmentType, remoteType, verifiedOnly]
+    [committedQuery, category, employmentType, remoteType]
   );
 
   useEffect(() => {
@@ -123,10 +121,12 @@ export default function JobSearchPanel() {
 
   async function handleSearch(e: React.FormEvent) {
     e.preventDefault();
+    const nextQuery = query.trim();
+    setCommittedQuery(nextQuery);
     setLoading(true);
     setError("");
     try {
-      await fetchJobs();
+      await fetchJobs({ q: nextQuery });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Search failed");
     } finally {
@@ -193,9 +193,6 @@ export default function JobSearchPanel() {
             {opt.label}
           </Chip>
         ))}
-        <Chip active={verifiedOnly} onClick={() => setVerifiedOnly((v) => !v)}>
-          Verified only
-        </Chip>
       </div>
 
       <button

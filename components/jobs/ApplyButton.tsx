@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -12,6 +12,14 @@ type Props = {
   companyName: string;
 };
 
+async function parseJsonResponse(res: Response) {
+  try {
+    return await res.json();
+  } catch {
+    return {};
+  }
+}
+
 export default function ApplyButton({ jobId, jobTitle, companyName }: Props) {
   const { data: session, status } = useSession();
   const [open, setOpen] = useState(false);
@@ -22,6 +30,8 @@ export default function ApplyButton({ jobId, jobTitle, companyName }: Props) {
   const [applied, setApplied] = useState(false);
   const [justSubmitted, setJustSubmitted] = useState(false);
   const [hasResume, setHasResume] = useState<boolean | null>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (session?.user?.role !== "SEEKER") return;
@@ -33,6 +43,46 @@ export default function ApplyButton({ jobId, jobTitle, companyName }: Props) {
       .catch(() => {});
   }, [jobId, session?.user?.role]);
 
+  useEffect(() => {
+    if (!open) return;
+
+    dialogRef.current?.focus();
+
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        setOpen(false);
+        triggerRef.current?.focus();
+        return;
+      }
+
+      if (e.key !== "Tab" || !dialogRef.current) return;
+
+      const focusable = dialogRef.current.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])'
+      );
+      if (focusable.length === 0) return;
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    }
+
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [open]);
+
+  function closeModal() {
+    setOpen(false);
+    triggerRef.current?.focus();
+  }
+
   async function openApplyModal() {
     if (session?.user?.role !== "SEEKER") return;
     setOpen(true);
@@ -40,9 +90,18 @@ export default function ApplyButton({ jobId, jobTitle, companyName }: Props) {
     setError("");
 
     try {
+      const [appsRes, profileRes] = await Promise.all([
+        fetch(`/api/applications?jobId=${jobId}`),
+        fetch("/api/profile/seeker"),
+      ]);
+
+      if (!appsRes.ok || !profileRes.ok) {
+        throw new Error("Could not load your application details. Please try again.");
+      }
+
       const [apps, profile] = await Promise.all([
-        fetch(`/api/applications?jobId=${jobId}`).then((r) => r.json()),
-        fetch("/api/profile/seeker").then((r) => r.json()),
+        parseJsonResponse(appsRes),
+        parseJsonResponse(profileRes),
       ]);
 
       if (apps.application) {
@@ -52,6 +111,12 @@ export default function ApplyButton({ jobId, jobTitle, companyName }: Props) {
         }
       }
       setHasResume(!!profile.resumeUrl);
+    } catch (err) {
+      const msg =
+        err instanceof Error ? err.message : "Could not load your application details.";
+      setError(msg);
+      toast.error(msg);
+      setHasResume(false);
     } finally {
       setChecking(false);
     }
@@ -61,26 +126,33 @@ export default function ApplyButton({ jobId, jobTitle, companyName }: Props) {
     setError("");
     setLoading(true);
 
-    const res = await fetch("/api/applications", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ jobId, coverNote: coverNote.trim() || null }),
-    });
+    try {
+      const res = await fetch("/api/applications", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jobId, coverNote: coverNote.trim() || null }),
+      });
 
-    const result = await res.json();
-    setLoading(false);
+      const result = await parseJsonResponse(res);
 
-    if (!res.ok) {
-      const msg = result.error || "Application failed";
+      if (!res.ok) {
+        const msg = (result as { error?: string }).error || "Application failed";
+        setError(msg);
+        toast.error(msg);
+        if (res.status === 409) setApplied(true);
+        return;
+      }
+
+      setApplied(true);
+      setJustSubmitted(true);
+      toast.success("Application submitted — check your email for confirmation");
+    } catch {
+      const msg = "Network error — please try again.";
       setError(msg);
       toast.error(msg);
-      if (res.status === 409) setApplied(true);
-      return;
+    } finally {
+      setLoading(false);
     }
-
-    setApplied(true);
-    setJustSubmitted(true);
-    toast.success("Application submitted — check your email for confirmation");
   }
 
   const btnBase =
@@ -132,6 +204,7 @@ export default function ApplyButton({ jobId, jobTitle, companyName }: Props) {
   return (
     <>
       <button
+        ref={triggerRef}
         type="button"
         onClick={() => void openApplyModal()}
         className={`${btnBase} bg-marigold text-ink shadow-sm hover:bg-marigold/90`}
@@ -142,7 +215,9 @@ export default function ApplyButton({ jobId, jobTitle, companyName }: Props) {
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/45 p-4 backdrop-blur-sm">
           <div
-            className="relative w-full max-w-md overflow-hidden rounded-2xl border border-ink/5 bg-white shadow-2xl animate-scale-in"
+            ref={dialogRef}
+            tabIndex={-1}
+            className="relative w-full max-w-md overflow-hidden rounded-2xl border border-ink/5 bg-white shadow-2xl animate-scale-in outline-none"
             role="dialog"
             aria-modal="true"
             aria-labelledby="apply-modal-title"
@@ -158,7 +233,7 @@ export default function ApplyButton({ jobId, jobTitle, companyName }: Props) {
                 </div>
                 <button
                   type="button"
-                  onClick={() => setOpen(false)}
+                  onClick={closeModal}
                   className="cursor-pointer rounded-lg p-1 text-ink/40 hover:bg-ink/5 hover:text-ink"
                   aria-label="Close"
                 >
@@ -188,7 +263,7 @@ export default function ApplyButton({ jobId, jobTitle, companyName }: Props) {
                     </Link>
                     <button
                       type="button"
-                      onClick={() => setOpen(false)}
+                      onClick={closeModal}
                       className="cursor-pointer rounded-xl border border-ink/10 px-4 py-2.5 text-sm font-semibold text-ink/70 hover:bg-ink/4"
                     >
                       Done
@@ -225,7 +300,7 @@ export default function ApplyButton({ jobId, jobTitle, companyName }: Props) {
                   <div className="mt-5 flex gap-3">
                     <button
                       type="button"
-                      onClick={() => setOpen(false)}
+                      onClick={closeModal}
                       className="flex-1 cursor-pointer rounded-xl border border-ink/10 py-2.5 text-sm font-semibold text-ink/70 hover:bg-ink/4"
                     >
                       Cancel

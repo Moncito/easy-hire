@@ -22,7 +22,7 @@ const STATUS_FILTERS = [
 
 function statusTone(status: string) {
   if (status === "REJECTED") return "bg-ember/10 text-ember";
-  if (status === "HIRED") return "bg-teal/10 text-teal";
+  if (status === "HIRED") return "bg-marigold/15 text-marigold";
   if (status === "INTERVIEW") return "bg-marigold/15 text-[#8a5a10]";
   if (status === "SHORTLISTED") return "bg-navy/10 text-navy";
   return "bg-ink/5 text-ink/60";
@@ -71,7 +71,6 @@ export default async function SeekerDashboardPage({
           },
         },
       },
-      jobAlerts: { take: 1 },
       conversations: {
         orderBy: { lastMessageAt: "desc" },
         take: 3,
@@ -85,6 +84,10 @@ export default async function SeekerDashboardPage({
       },
     },
   });
+
+  const jobAlertCount = profile
+    ? await prisma.jobAlert.count({ where: { seekerId: profile.id } })
+    : 0;
 
   const strengthChecks = [
     !!profile?.fullName,
@@ -266,10 +269,10 @@ export default async function SeekerDashboardPage({
             <Bell className="h-4 w-4 text-navy/60" />
             <h2 className="font-display text-lg font-bold text-ink">Job alerts</h2>
           </div>
-          {(profile?.jobAlerts.length ?? 0) > 0 ? (
+          {jobAlertCount > 0 ? (
             <p className="mt-3 text-sm text-ink/60">
-              You have {profile!.jobAlerts.length} alert
-              {profile!.jobAlerts.length === 1 ? "" : "s"} set up.
+              You have {jobAlertCount} alert
+              {jobAlertCount === 1 ? "" : "s"} set up.
             </p>
           ) : (
             <p className="mt-3 text-sm text-ink/50">

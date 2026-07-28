@@ -70,6 +70,9 @@ export async function uploadCompanyLogo(userId: string, file: File) {
 export async function uploadSeekerPhoto(userId: string, file: File) {
   assertFile(file, PHOTO_MIME_TYPES, MAX_PHOTO_BYTES, "Photo");
 
-  const path = `${userId}/${Date.now()}-${sanitizeFilename(file.name)}`;
-  return uploadObject(PHOTO_BUCKET, path, file);
+  const ext =
+    file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
+  const path = `${userId}/photo.${ext}`;
+  const url = await uploadObject(PHOTO_BUCKET, path, file);
+  return `${url}?v=${Date.now()}`;
 }

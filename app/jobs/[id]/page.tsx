@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { MapPin, Briefcase, Building2, Globe, ArrowLeft } from "lucide-react";
+import { MapPin, Wallet, Building2, Globe, ArrowLeft } from "lucide-react";
 import { getPublicJob } from "@/lib/public-jobs";
 import { formatEnumLabel, formatPesoRange } from "@/lib/format";
 import ApplyButton from "@/components/jobs/ApplyButton";
@@ -63,7 +63,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
                   {job.location}
                 </span>
                 <span className="inline-flex items-center gap-1.5 font-data font-semibold text-ink/75">
-                  <Briefcase className="h-4 w-4 text-navy/50" aria-hidden="true" />
+                  <Wallet className="h-4 w-4 text-navy/50" aria-hidden="true" />
                   {formatPesoRange(job.salaryMin, job.salaryMax)}
                 </span>
               </div>
