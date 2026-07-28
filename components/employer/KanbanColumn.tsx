@@ -22,6 +22,9 @@ type Props = {
   applications: Application[];
   onCardClick: (application: Application) => void;
   hideHeader?: boolean;
+  selectionMode?: boolean;
+  selectedIds?: Set<string>;
+  onToggleSelect?: (id: string) => void;
 };
 
 export default function KanbanColumn({
@@ -31,6 +34,9 @@ export default function KanbanColumn({
   applications,
   onCardClick,
   hideHeader = false,
+  selectionMode = false,
+  selectedIds,
+  onToggleSelect,
 }: Props) {
   return (
     <div className="flex w-80 shrink-0 flex-col">
@@ -57,6 +63,9 @@ export default function KanbanColumn({
             <CandidateCard
               key={app.id}
               application={app}
+              selectionMode={selectionMode}
+              selected={selectedIds?.has(app.id)}
+              onToggleSelect={onToggleSelect}
               onClick={() => onCardClick(app)}
             />
           ))

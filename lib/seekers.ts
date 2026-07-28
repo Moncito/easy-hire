@@ -1,6 +1,27 @@
 import { prisma } from "@/lib/prisma";
 import { seekerInputToData, seekerUpdateSchema } from "@/lib/validations/seeker";
 
+export async function ensureSeekerProfile(
+  userId: string,
+  defaults: { fullName?: string } = {}
+) {
+  const existing = await prisma.seekerProfile.findUnique({ where: { userId } });
+  if (existing) return existing;
+
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) {
+    throw new Error(`Cannot create seeker profile: user ${userId} not found`);
+  }
+
+  return prisma.seekerProfile.create({
+    data: {
+      userId,
+      fullName: defaults.fullName?.trim() || "",
+      skills: [],
+    },
+  });
+}
+
 export async function getSeekerProfile(userId: string) {
   return prisma.seekerProfile.findUnique({
     where: { userId },
@@ -26,6 +47,8 @@ export async function getSeekerProfile(userId: string) {
 
 export async function updateSeekerProfile(userId: string, raw: unknown) {
   const input = seekerUpdateSchema.parse(raw);
+
+  await ensureSeekerProfile(userId);
 
   return prisma.seekerProfile.update({
     where: { userId },

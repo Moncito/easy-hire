@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/Auth";
 import { errorResponse } from "@/lib/api-error";
-import { getSeekerProfile, updateSeekerProfile } from "@/lib/seekers";
+import { getSeekerProfile, updateSeekerProfile, ensureSeekerProfile } from "@/lib/seekers";
 import { ZodError } from "zod";
 
 export async function GET() {
@@ -11,6 +11,7 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    await ensureSeekerProfile(session.user.id);
     const profile = await getSeekerProfile(session.user.id);
     if (!profile) {
       return NextResponse.json({ error: "Profile not found" }, { status: 404 });

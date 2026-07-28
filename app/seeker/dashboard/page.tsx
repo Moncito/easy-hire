@@ -1,10 +1,15 @@
 import Link from "next/link";
 import { auth } from "@/Auth";
 import { prisma } from "@/lib/prisma";
+import { ensureSeekerProfile } from "@/lib/seekers";
 import { Briefcase, FileText, User } from "lucide-react";
 
 export default async function SeekerDashboardPage() {
   const session = await auth();
+  await ensureSeekerProfile(session!.user!.id, {
+    fullName: session?.user?.name ?? "",
+  });
+
   const profile = await prisma.seekerProfile.findUnique({
     where: { userId: session!.user!.id },
     include: {

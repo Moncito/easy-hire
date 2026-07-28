@@ -42,7 +42,7 @@ export { Prisma }
 
 // file annotations for bundling tools to include these files
 path.join(__dirname, "query_engine-windows.dll.node")
-path.join(process.cwd(), "prisma/generated/query_engine-windows.dll.node")
+path.join(process.cwd(), "prisma/gen/query_engine-windows.dll.node")
 
 /**
  * Model User
@@ -89,3 +89,18 @@ export type Notification = Prisma.NotificationModel
  * 
  */
 export type Subscription = Prisma.SubscriptionModel
+/**
+ * Model Conversation
+ * 
+ */
+export type Conversation = Prisma.ConversationModel
+/**
+ * Model Message
+ * 
+ */
+export type Message = Prisma.MessageModel
+/**
+ * Model SavedSeeker
+ * 
+ */
+export type SavedSeeker = Prisma.SavedSeekerModel

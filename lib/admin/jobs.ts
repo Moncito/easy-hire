@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { Prisma } from "@/prisma/generated/client";
+import { Prisma } from "@/prisma/gen/client";
 import { ApiError } from "@/lib/api-error";
 import { adminJobReviewSchema } from "@/lib/validations/admin";
 

@@ -60,3 +60,33 @@ export async function notifyApplicationSubmitted(ctx: ApplicationEmailContext) {
     ),
   ]);
 }
+
+export async function notifyApplicationRejected(ctx: {
+  seekerUserId: string;
+  seekerEmail: string;
+  seekerName: string;
+  jobTitle: string;
+  companyName: string;
+  rejectionReason: string | null;
+}) {
+  const reasonBlock = ctx.rejectionReason
+    ? `<p><strong>Feedback from the employer:</strong></p><p>${ctx.rejectionReason}</p>`
+    : `<p>The employer did not include additional feedback.</p>`;
+
+  await Promise.all([
+    createNotification(
+      ctx.seekerUserId,
+      "APPLICATION_REJECTED",
+      `Your application to ${ctx.companyName} for "${ctx.jobTitle}" was not selected.`
+    ),
+    sendEmail(
+      ctx.seekerEmail,
+      `Update on your application — ${ctx.jobTitle}`,
+      `<p>Hi ${ctx.seekerName},</p>
+       <p>Thank you for applying to <strong>${ctx.companyName}</strong> for the <strong>${ctx.jobTitle}</strong> role.</p>
+       <p>After review, the employer has decided not to move forward with your application at this time.</p>
+       ${reasonBlock}
+       <p>You can continue browsing other opportunities on <a href="${appUrl}/jobs">EasyHire</a>.</p>`
+    ),
+  ]);
+}

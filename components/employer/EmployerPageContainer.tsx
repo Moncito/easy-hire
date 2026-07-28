@@ -6,6 +6,7 @@ type ContentWidth = "full" | "7xl" | "6xl";
 
 function getContentWidth(pathname: string): ContentWidth {
   if (pathname.match(/\/employer\/jobs\/[^/]+\/applicants$/)) return "full";
+  if (pathname.startsWith("/employer/messages")) return "full";
   if (pathname === "/employer/jobs/new") return "6xl";
   if (pathname.match(/\/employer\/jobs\/[^/]+\/edit$/)) return "6xl";
   return "7xl";
@@ -20,6 +21,13 @@ const widthClasses: Record<ContentWidth, string> = {
 export default function EmployerPageContainer({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const width = getContentWidth(pathname);
+  const isMessages = pathname.startsWith("/employer/messages");
 
-  return <div className={`px-8 py-8 pb-28 ${widthClasses[width]}`}>{children}</div>;
+  return (
+    <div
+      className={`${isMessages ? "px-4 py-4 pb-6" : "px-8 py-8 pb-28"} ${widthClasses[width]}`}
+    >
+      {children}
+    </div>
+  );
 }

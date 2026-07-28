@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { Prisma } from "../prisma/generated/client";
+import { Prisma } from "../prisma/gen/client";
 import type { JobSearchInput } from "@/lib/validations/job-search";
 import { ApiError } from "@/lib/api-error";
 

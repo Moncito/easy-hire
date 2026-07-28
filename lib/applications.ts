@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
-import { Prisma } from "../prisma/generated/client";
+import { Prisma } from "../prisma/gen/client";
 import { ApiError } from "@/lib/api-error";
-import { notifyApplicationSubmitted } from "@/lib/email";
+import { notifyApplicationSubmitted, notifyApplicationRejected } from "@/lib/email";
 import { applicationCreateSchema, applicationUpdateSchema } from "@/lib/validations/application";
 
 export async function createApplication(seekerUserId: string, raw: unknown) {
@@ -77,7 +77,27 @@ export async function createApplication(seekerUserId: string, raw: unknown) {
 export async function updateApplication(applicationId: string, raw: unknown) {
   const data = applicationUpdateSchema.parse(raw);
 
-  return prisma.application.update({
+  const existing = await prisma.application.findUnique({
+    where: { id: applicationId },
+    include: {
+      seeker: {
+        include: {
+          user: { select: { id: true, email: true } },
+        },
+      },
+      job: {
+        include: {
+          company: { select: { companyName: true } },
+        },
+      },
+    },
+  });
+
+  if (!existing) {
+    throw new ApiError("Application not found", 404);
+  }
+
+  const updated = await prisma.application.update({
     where: { id: applicationId },
     data: {
       ...(data.status !== undefined ? { status: data.status } : {}),
@@ -100,6 +120,21 @@ export async function updateApplication(applicationId: string, raw: unknown) {
       },
     },
   });
+
+  const becameRejected = data.status === "REJECTED" && existing.status !== "REJECTED";
+
+  if (becameRejected) {
+    await notifyApplicationRejected({
+      seekerUserId: existing.seeker.user.id,
+      seekerEmail: existing.seeker.user.email,
+      seekerName: existing.seeker.fullName,
+      jobTitle: existing.job.title,
+      companyName: existing.job.company.companyName,
+      rejectionReason: data.rejectionReason ?? updated.rejectionReason ?? null,
+    });
+  }
+
+  return updated;
 }
 
 export async function listJobApplications(jobId: string) {
