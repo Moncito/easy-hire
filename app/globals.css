@@ -290,15 +290,23 @@ backdrop-filter:blur(6px);
   background: rgba(30, 58, 95, 0.35);
 }
 
-/* Fixed public header clearance — full pill at top (~20px offset + 56px bar + pill padding) */
-.public-header-offset {
-  padding-top: 7.5rem;
+/* Fixed public header clearance — single source of truth for the floating
+   pill nav (20px top offset + 56px row height + a little breathing room).
+   Every layout sitting under PublicJobsHeader / SeekerPillNav / landing
+   Header should use `.header-offset` instead of ad-hoc pt-* utilities so
+   the gap below the pill is consistent across pages. */
+:root {
+  --header-clearance: 6rem;
 }
 
-@media (min-width: 768px) {
-  .public-header-offset {
-    padding-top: 8rem;
-  }
+.header-offset {
+  padding-top: var(--header-clearance);
+}
+
+/* Deprecated alias, kept so any remaining references don't break. Use
+   `.header-offset` for new code. */
+.public-header-offset {
+  padding-top: var(--header-clearance);
 }
 
 /* TipTap WYSIWYG editor (job post form) */

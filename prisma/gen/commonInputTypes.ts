@@ -220,6 +220,13 @@ export type EnumEmploymentTypeFilter<$PrismaModel = never> = {
   not?: Prisma.NestedEnumEmploymentTypeFilter<$PrismaModel> | $Enums.EmploymentType
 }
 
+export type EnumSalaryPeriodFilter<$PrismaModel = never> = {
+  equals?: $Enums.SalaryPeriod | Prisma.EnumSalaryPeriodFieldRefInput<$PrismaModel>
+  in?: $Enums.SalaryPeriod[] | Prisma.ListEnumSalaryPeriodFieldRefInput<$PrismaModel>
+  notIn?: $Enums.SalaryPeriod[] | Prisma.ListEnumSalaryPeriodFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumSalaryPeriodFilter<$PrismaModel> | $Enums.SalaryPeriod
+}
+
 export type EnumRemoteTypeFilter<$PrismaModel = never> = {
   equals?: $Enums.RemoteType | Prisma.EnumRemoteTypeFieldRefInput<$PrismaModel>
   in?: $Enums.RemoteType[] | Prisma.ListEnumRemoteTypeFieldRefInput<$PrismaModel>
@@ -242,6 +249,16 @@ export type EnumEmploymentTypeWithAggregatesFilter<$PrismaModel = never> = {
   _count?: Prisma.NestedIntFilter<$PrismaModel>
   _min?: Prisma.NestedEnumEmploymentTypeFilter<$PrismaModel>
   _max?: Prisma.NestedEnumEmploymentTypeFilter<$PrismaModel>
+}
+
+export type EnumSalaryPeriodWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.SalaryPeriod | Prisma.EnumSalaryPeriodFieldRefInput<$PrismaModel>
+  in?: $Enums.SalaryPeriod[] | Prisma.ListEnumSalaryPeriodFieldRefInput<$PrismaModel>
+  notIn?: $Enums.SalaryPeriod[] | Prisma.ListEnumSalaryPeriodFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumSalaryPeriodWithAggregatesFilter<$PrismaModel> | $Enums.SalaryPeriod
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumSalaryPeriodFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumSalaryPeriodFilter<$PrismaModel>
 }
 
 export type EnumRemoteTypeWithAggregatesFilter<$PrismaModel = never> = {
@@ -547,6 +564,13 @@ export type NestedEnumEmploymentTypeFilter<$PrismaModel = never> = {
   not?: Prisma.NestedEnumEmploymentTypeFilter<$PrismaModel> | $Enums.EmploymentType
 }
 
+export type NestedEnumSalaryPeriodFilter<$PrismaModel = never> = {
+  equals?: $Enums.SalaryPeriod | Prisma.EnumSalaryPeriodFieldRefInput<$PrismaModel>
+  in?: $Enums.SalaryPeriod[] | Prisma.ListEnumSalaryPeriodFieldRefInput<$PrismaModel>
+  notIn?: $Enums.SalaryPeriod[] | Prisma.ListEnumSalaryPeriodFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumSalaryPeriodFilter<$PrismaModel> | $Enums.SalaryPeriod
+}
+
 export type NestedEnumRemoteTypeFilter<$PrismaModel = never> = {
   equals?: $Enums.RemoteType | Prisma.EnumRemoteTypeFieldRefInput<$PrismaModel>
   in?: $Enums.RemoteType[] | Prisma.ListEnumRemoteTypeFieldRefInput<$PrismaModel>
@@ -569,6 +593,16 @@ export type NestedEnumEmploymentTypeWithAggregatesFilter<$PrismaModel = never> =
   _count?: Prisma.NestedIntFilter<$PrismaModel>
   _min?: Prisma.NestedEnumEmploymentTypeFilter<$PrismaModel>
   _max?: Prisma.NestedEnumEmploymentTypeFilter<$PrismaModel>
+}
+
+export type NestedEnumSalaryPeriodWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.SalaryPeriod | Prisma.EnumSalaryPeriodFieldRefInput<$PrismaModel>
+  in?: $Enums.SalaryPeriod[] | Prisma.ListEnumSalaryPeriodFieldRefInput<$PrismaModel>
+  notIn?: $Enums.SalaryPeriod[] | Prisma.ListEnumSalaryPeriodFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumSalaryPeriodWithAggregatesFilter<$PrismaModel> | $Enums.SalaryPeriod
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumSalaryPeriodFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumSalaryPeriodFilter<$PrismaModel>
 }
 
 export type NestedEnumRemoteTypeWithAggregatesFilter<$PrismaModel = never> = {

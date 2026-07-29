@@ -139,9 +139,11 @@ model Job {
   requirements   String?
   benefits       String?
   category       String
+  industry       String?
   employmentType EmploymentType @map("employment_type")
   salaryMin      Int?           @map("salary_min")
   salaryMax      Int?           @map("salary_max")
+  salaryPeriod   SalaryPeriod   @default(MONTHLY) @map("salary_period")
   location       String
   remoteType     RemoteType     @default(REMOTE) @map("remote_type")
   status         JobStatus      @default(DRAFT)
@@ -157,6 +159,7 @@ model Job {
   conversations Conversation[]
 
   @@index([companyId])
+  @@index([industry])
   @@map("jobs")
 }
 
@@ -170,6 +173,12 @@ enum RemoteType {
   REMOTE
   ONSITE
   HYBRID
+}
+
+enum SalaryPeriod {
+  HOURLY
+  MONTHLY
+  ANNUAL
 }
 
 enum JobStatus {

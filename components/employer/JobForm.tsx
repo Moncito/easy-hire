@@ -4,8 +4,9 @@ import { useState } from "react";
 import { HelpCircle, MapPin } from "lucide-react";
 import RichTextEditor from "@/components/ui/RichTextEditor";
 import EmployerActionBar from "@/components/employer/EmployerActionBar";
+import { INDUSTRIES, ROLE_TYPES } from "@/lib/constants/job-categories";
+import { periodSuffix, type SalaryPeriod } from "@/lib/format";
 
-const categories = ["Admin", "Social Media", "Customer Service", "Tech/IT", "Content Writing", "Bookkeeping", "Other"];
 const employmentTypes = [
   { value: "FULL_TIME", label: "Full-Time" },
   { value: "PART_TIME", label: "Part-Time" },
@@ -16,6 +17,11 @@ const remoteTypes = [
   { value: "ONSITE", label: "On-site" },
   { value: "HYBRID", label: "Hybrid" },
 ];
+const salaryPeriods: { value: SalaryPeriod; label: string }[] = [
+  { value: "HOURLY", label: "Hourly" },
+  { value: "MONTHLY", label: "Monthly" },
+  { value: "ANNUAL", label: "Annual" },
+];
 
 export type JobFormData = {
   title: string;
@@ -23,9 +29,11 @@ export type JobFormData = {
   requirements: string;
   benefits: string;
   category: string;
+  industry: string;
   employmentType: string;
   salaryMin: string;
   salaryMax: string;
+  salaryPeriod: string;
   location: string;
   remoteType: string;
 };
@@ -64,9 +72,13 @@ export default function JobForm({ initialData, loading, onSubmit }: Props) {
   const [requirements, setRequirements] = useState(initialData?.requirements || "");
   const [benefits, setBenefits] = useState(initialData?.benefits || "");
   const [category, setCategory] = useState(initialData?.category || "");
+  const [industry, setIndustry] = useState(initialData?.industry || "");
   const [employmentType, setEmploymentType] = useState(initialData?.employmentType || "FULL_TIME");
   const [salaryMin, setSalaryMin] = useState(initialData?.salaryMin || "");
   const [salaryMax, setSalaryMax] = useState(initialData?.salaryMax || "");
+  const [salaryPeriod, setSalaryPeriod] = useState<SalaryPeriod>(
+    (initialData?.salaryPeriod as SalaryPeriod) || "MONTHLY"
+  );
   const [location, setLocation] = useState(initialData?.location || "");
   const [remoteType, setRemoteType] = useState(initialData?.remoteType || "REMOTE");
   const [error, setError] = useState("");
@@ -78,9 +90,11 @@ export default function JobForm({ initialData, loading, onSubmit }: Props) {
       requirements,
       benefits,
       category,
+      industry,
       employmentType,
       salaryMin,
       salaryMax,
+      salaryPeriod,
       location,
       remoteType,
     };
@@ -129,19 +143,42 @@ export default function JobForm({ initialData, loading, onSubmit }: Props) {
               className="w-full border-none bg-transparent py-1 font-display text-2xl font-bold tracking-tight text-ink outline-none placeholder:text-ink/30"
             />
             <div className="mt-4 h-px bg-ink/10" />
-            <div className="mt-4">
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-ink/40">Category</p>
-              <div className="flex flex-wrap gap-1.5">
-                {categories.map((cat) => (
-                  <button
-                    key={cat}
-                    type="button"
-                    onClick={() => setCategory(cat)}
-                    className={chipClass(category === cat)}
-                  >
-                    {cat}
-                  </button>
-                ))}
+            <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-ink/40">
+                  Role type
+                </label>
+                <select
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                  className="w-full rounded-xl border border-ink/10 bg-white px-3 py-2.5 text-sm text-ink outline-none focus:border-teal"
+                >
+                  <option value="">Select a role type</option>
+                  {ROLE_TYPES.map((rt) => (
+                    <option key={rt.slug} value={rt.label}>
+                      {rt.label}
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-1.5 text-[11px] text-ink/40">The specific VA function you&apos;re hiring for.</p>
+              </div>
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-ink/40">
+                  Industry
+                </label>
+                <select
+                  value={industry}
+                  onChange={(e) => setIndustry(e.target.value)}
+                  className="w-full rounded-xl border border-ink/10 bg-white px-3 py-2.5 text-sm text-ink outline-none focus:border-teal"
+                >
+                  <option value="">Select an industry (optional)</option>
+                  {INDUSTRIES.map((ind) => (
+                    <option key={ind.slug} value={ind.label}>
+                      {ind.label}
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-1.5 text-[11px] text-ink/40">The business domain this role supports.</p>
               </div>
             </div>
           </SectionCard>
@@ -182,11 +219,26 @@ export default function JobForm({ initialData, loading, onSubmit }: Props) {
             />
           </SectionCard>
 
-          <SectionCard title="Compensation" description="Set an expected monthly salary range in Philippine Peso (PHP).">
+          <SectionCard title="Compensation" description="Set an expected salary range in Philippine Peso (PHP) and how it's paid out.">
+            <div className="mb-4">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-ink/40">Pay period</p>
+              <div className="flex flex-wrap gap-1.5">
+                {salaryPeriods.map((p) => (
+                  <button
+                    key={p.value}
+                    type="button"
+                    onClick={() => setSalaryPeriod(p.value)}
+                    className={chipClass(salaryPeriod === p.value)}
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+            </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-ink/45">
-                  Minimum (PHP/mo)
+                  Minimum (PHP{periodSuffix(salaryPeriod)})
                 </label>
                 <input
                   type="number"
@@ -198,7 +250,7 @@ export default function JobForm({ initialData, loading, onSubmit }: Props) {
               </div>
               <div>
                 <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-ink/45">
-                  Maximum (PHP/mo)
+                  Maximum (PHP{periodSuffix(salaryPeriod)})
                 </label>
                 <input
                   type="number"

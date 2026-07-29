@@ -54,6 +54,15 @@ export const RemoteType = {
 export type RemoteType = (typeof RemoteType)[keyof typeof RemoteType]
 
 
+export const SalaryPeriod = {
+  HOURLY: 'HOURLY',
+  MONTHLY: 'MONTHLY',
+  ANNUAL: 'ANNUAL'
+} as const
+
+export type SalaryPeriod = (typeof SalaryPeriod)[keyof typeof SalaryPeriod]
+
+
 export const JobStatus = {
   DRAFT: 'DRAFT',
   PENDING_REVIEW: 'PENDING_REVIEW',

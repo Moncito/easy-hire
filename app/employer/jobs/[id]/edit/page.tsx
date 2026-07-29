@@ -44,9 +44,11 @@ export default async function EditJobPage({ params }: { params: Promise<{ id: st
           requirements: job.requirements ?? "",
           benefits: job.benefits ?? "",
           category: job.category,
+          industry: job.industry ?? "",
           employmentType: job.employmentType,
           salaryMin: job.salaryMin?.toString() || "",
           salaryMax: job.salaryMax?.toString() || "",
+          salaryPeriod: job.salaryPeriod,
           location: job.location,
           remoteType: job.remoteType,
         }}

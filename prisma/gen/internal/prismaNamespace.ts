@@ -1426,9 +1426,11 @@ export const JobScalarFieldEnum = {
   requirements: 'requirements',
   benefits: 'benefits',
   category: 'category',
+  industry: 'industry',
   employmentType: 'employmentType',
   salaryMin: 'salaryMin',
   salaryMax: 'salaryMax',
+  salaryPeriod: 'salaryPeriod',
   location: 'location',
   remoteType: 'remoteType',
   status: 'status',
@@ -1665,6 +1667,20 @@ export type EnumEmploymentTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$P
  * Reference to a field of type 'EmploymentType[]'
  */
 export type ListEnumEmploymentTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'EmploymentType[]'>
+    
+
+
+/**
+ * Reference to a field of type 'SalaryPeriod'
+ */
+export type EnumSalaryPeriodFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'SalaryPeriod'>
+    
+
+
+/**
+ * Reference to a field of type 'SalaryPeriod[]'
+ */
+export type ListEnumSalaryPeriodFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'SalaryPeriod[]'>
     
 
 

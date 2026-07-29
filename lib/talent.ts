@@ -310,3 +310,50 @@ export async function unsaveSeeker(employerUserId: string, seekerId: string) {
 
   return { ok: true };
 }
+
+/**
+ * Full profile view for the employer-facing seeker page. Access is only
+ * granted when the seeker is discoverable in talent search OR has applied
+ * to one of this employer's jobs — mirrors the visibility rule already
+ * enforced by `saveSeeker`.
+ */
+export async function getSeekerProfileForEmployer(employerUserId: string, seekerId: string) {
+  const company = await requireEmployerCompany(employerUserId);
+
+  const seeker = await prisma.seekerProfile.findUnique({
+    where: { id: seekerId },
+  });
+
+  if (!seeker) {
+    throw new ApiError("Seeker not found", 404);
+  }
+
+  const applications = await prisma.application.findMany({
+    where: { seekerId, job: { companyId: company.id } },
+    orderBy: { appliedAt: "desc" },
+    include: { job: { select: { id: true, title: true } } },
+  });
+
+  const discoverable = seeker.visibility === "STANDARD" || seeker.visibility === "PUBLIC";
+  const hasApplied = applications.length > 0;
+
+  if (!discoverable && !hasApplied) {
+    throw new ApiError("This profile is not available", 403);
+  }
+
+  const saved = await prisma.savedSeeker.findUnique({
+    where: { companyId_seekerId: { companyId: company.id, seekerId } },
+  });
+
+  return {
+    profile: seeker,
+    applications: applications.map((a) => ({
+      id: a.id,
+      status: a.status,
+      appliedAt: a.appliedAt.toISOString(),
+      job: a.job,
+    })),
+    saved: !!saved,
+    canDownloadResume: discoverable || hasApplied,
+  };
+}

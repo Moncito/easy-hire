@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Space_Grotesk, Inter, IBM_Plex_Mono } from "next/font/google";
 import { Toaster } from "sonner";
 import AuthProvider from "@/components/providers/AuthProvider";
+import CommandPalette from "@/components/CommandPalette";
 import "./globals.css";
 
 const spaceGrotesk = Space_Grotesk({
@@ -35,6 +36,7 @@ export default function RootLayout({
       <body className="font-body antialiased">
         <AuthProvider>
           {children}
+          <CommandPalette />
           <Toaster
             position="top-right"
             toastOptions={{

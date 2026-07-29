@@ -35,7 +35,7 @@ export default async function PublicSeekerPage({ params }: { params: Promise<{ i
   return (
     <div className="min-h-screen bg-mist">
       <PublicJobsHeader />
-      <div className="mx-auto max-w-4xl px-4 pb-16 pt-28 sm:px-6">
+      <div className="header-offset mx-auto max-w-4xl px-4 pb-16 sm:px-6">
         <div className="overflow-hidden rounded-2xl border border-navy/8 bg-white shadow-[0_8px_30px_rgba(30,58,95,0.04)]">
           <div className="h-24 bg-gradient-to-r from-marigold/30 via-navy/20 to-teal/25 sm:h-28" />
           <div className="relative px-6 pb-8 sm:px-8">

@@ -9,6 +9,8 @@ import {
   User,
   MessageSquare,
   Briefcase,
+  Bookmark,
+  Bell,
   LogOut,
 } from "lucide-react";
 import { gsap, ScrollTrigger } from "@/lib/gsap";
@@ -18,6 +20,8 @@ const navItems = [
   { label: "Profile", href: "/seeker/profile", icon: User },
   { label: "Messages", href: "/seeker/messages", icon: MessageSquare },
   { label: "Jobs", href: "/jobs", icon: Briefcase },
+  { label: "Saved", href: "/seeker/saved-jobs", icon: Bookmark },
+  { label: "Alerts", href: "/seeker/job-alerts", icon: Bell },
 ];
 
 type Props = {
