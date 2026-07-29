@@ -3,6 +3,7 @@ import { getPublicStorageUrl, getSupabaseAdmin } from "@/lib/supabase";
 
 const RESUME_BUCKET = "resumes";
 const LOGO_BUCKET = "logos";
+const BANNER_BUCKET = "banners";
 const PHOTO_BUCKET = "photos";
 
 const RESUME_MIME_TYPES = new Set([
@@ -12,10 +13,12 @@ const RESUME_MIME_TYPES = new Set([
 ]);
 
 const LOGO_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
+const BANNER_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 const PHOTO_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 const MAX_RESUME_BYTES = 5 * 1024 * 1024;
 const MAX_LOGO_BYTES = 2 * 1024 * 1024;
+const MAX_BANNER_BYTES = 3 * 1024 * 1024;
 const MAX_PHOTO_BYTES = 2 * 1024 * 1024;
 
 function sanitizeFilename(name: string) {
@@ -37,8 +40,33 @@ function assertFile(file: File, allowedTypes: Set<string>, maxBytes: number, lab
   }
 }
 
+async function ensurePublicBucket(bucket: string) {
+  const supabase = getSupabaseAdmin();
+  const { data: buckets, error: listError } = await supabase.storage.listBuckets();
+
+  if (listError) {
+    throw new ApiError(`Storage setup failed: ${listError.message}`, 500);
+  }
+
+  if (buckets?.some((b) => b.name === bucket)) {
+    return;
+  }
+
+  const { error: createError } = await supabase.storage.createBucket(bucket, {
+    public: true,
+  });
+
+  if (createError && !createError.message.toLowerCase().includes("already exists")) {
+    throw new ApiError(
+      `Storage bucket "${bucket}" is missing. Create a public "${bucket}" bucket in Supabase Storage, or check service role permissions. (${createError.message})`,
+      500
+    );
+  }
+}
+
 async function uploadObject(bucket: string, path: string, file: File) {
   const supabase = getSupabaseAdmin();
+  await ensurePublicBucket(bucket);
   const buffer = Buffer.from(await file.arrayBuffer());
 
   const { error } = await supabase.storage.from(bucket).upload(path, buffer, {
@@ -65,6 +93,16 @@ export async function uploadCompanyLogo(userId: string, file: File) {
 
   const path = `${userId}/${Date.now()}-${sanitizeFilename(file.name)}`;
   return uploadObject(LOGO_BUCKET, path, file);
+}
+
+export async function uploadCompanyBanner(userId: string, file: File) {
+  assertFile(file, BANNER_MIME_TYPES, MAX_BANNER_BYTES, "Banner");
+
+  const ext =
+    file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
+  const path = `${userId}/banner.${ext}`;
+  const url = await uploadObject(BANNER_BUCKET, path, file);
+  return `${url}?v=${Date.now()}`;
 }
 
 export async function uploadSeekerPhoto(userId: string, file: File) {

@@ -74,6 +74,7 @@ type Props = {
     instagramUrl: string | null;
     xUrl: string | null;
     logoUrl: string | null;
+    bannerUrl: string | null;
     verificationStatus: "pending" | "verified" | "rejected" | null;
   };
   stats: {
@@ -89,7 +90,7 @@ function getProfileStrengthLabel(percentage: number) {
   return "Getting Started";
 }
 
-function buildChecklist(data: FormState & { logoUrl: string | null }) {
+function buildChecklist(data: FormState & { logoUrl: string | null; bannerUrl: string | null }) {
   const hasSocial = !!(data.linkedinUrl || data.facebookUrl || data.instagramUrl || data.xUrl);
 
   return [
@@ -98,7 +99,8 @@ function buildChecklist(data: FormState & { logoUrl: string | null }) {
     { label: "Industry", done: !!data.industry },
     { label: "Company Description", done: !!data.description },
     { label: "Company Benefits", done: data.highlights.length > 0 },
-    { label: "Company Photos", done: !!data.logoUrl },
+    { label: "Company logo", done: !!data.logoUrl },
+    { label: "Cover banner", done: !!data.bannerUrl },
     { label: "Headquarters", done: !!data.headquarters },
     { label: "Social Links", done: hasSocial },
   ];
@@ -181,8 +183,11 @@ const chipClassName = (selected: boolean) =>
 export default function CompanyProfileEditor({ initialData, stats }: Props) {
   const router = useRouter();
   const logoInputRef = useRef<HTMLInputElement>(null);
+  const bannerInputRef = useRef<HTMLInputElement>(null);
   const [logoUrl, setLogoUrl] = useState(initialData.logoUrl);
+  const [bannerUrl, setBannerUrl] = useState(initialData.bannerUrl);
   const [logoUploading, setLogoUploading] = useState(false);
+  const [bannerUploading, setBannerUploading] = useState(false);
   const [form, setForm] = useState<FormState>({
     companyName: initialData.companyName,
     description: initialData.description || "",
@@ -223,8 +228,8 @@ export default function CompanyProfileEditor({ initialData, stats }: Props) {
   }, [form, initialData]);
 
   const liveData = useMemo(
-    () => ({ ...form, logoUrl }),
-    [form, logoUrl]
+    () => ({ ...form, logoUrl, bannerUrl }),
+    [form, logoUrl, bannerUrl]
   );
 
   const checklist = useMemo(() => buildChecklist(liveData), [liveData]);
@@ -276,6 +281,27 @@ export default function CompanyProfileEditor({ initialData, stats }: Props) {
     });
     setError("");
     setSaved(false);
+  }
+
+  async function handleBannerUpload(file: File) {
+    setBannerUploading(true);
+    setError("");
+
+    const body = new FormData();
+    body.append("file", file);
+
+    const res = await fetch("/api/upload/banner", { method: "POST", body });
+    const result = await res.json();
+    setBannerUploading(false);
+
+    if (!res.ok) {
+      setError(result.error || "Banner upload failed");
+      return;
+    }
+
+    setBannerUrl(result.bannerUrl);
+    setSaved(false);
+    router.refresh();
   }
 
   async function handleLogoUpload(file: File) {
@@ -422,16 +448,32 @@ export default function CompanyProfileEditor({ initialData, stats }: Props) {
     <form onSubmit={handleSubmit}>
       {/* Hero identity card */}
       <section className="mb-8 overflow-hidden rounded-3xl border border-ink/5 bg-white shadow-xs transition-shadow duration-300 hover:shadow-sm">
-        <div className="group relative h-36 w-full bg-gradient-to-r from-teal/60 via-navy/50 to-teal/40">
-          <div className="absolute inset-0 bg-black/10 transition-opacity duration-300 group-hover:opacity-75" />
+        <div className="group relative h-40 w-full overflow-hidden sm:h-44">
+          {bannerUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={bannerUrl} alt="" className="h-full w-full object-cover" />
+          ) : (
+            <div className="h-full w-full bg-gradient-to-r from-teal/60 via-navy/50 to-teal/40" />
+          )}
+          <div className="absolute inset-0 bg-black/10 transition-opacity duration-300 group-hover:opacity-60" />
+          <input
+            ref={bannerInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) void handleBannerUpload(file);
+            }}
+          />
           <button
             type="button"
-            disabled
-            className="absolute bottom-3 right-3 flex items-center gap-1.5 rounded-xl border border-white/30 bg-white/15 px-3 py-1.5 text-xs font-semibold text-white opacity-0 backdrop-blur-sm transition-all duration-300 group-hover:opacity-100"
-            aria-label="Cover photo upload coming soon"
+            disabled={bannerUploading}
+            onClick={() => bannerInputRef.current?.click()}
+            className="absolute bottom-3 right-3 flex cursor-pointer items-center gap-1.5 rounded-xl border border-white/30 bg-white/15 px-3 py-1.5 text-xs font-semibold text-white opacity-0 backdrop-blur-sm transition-all duration-300 hover:bg-white/25 group-hover:opacity-100 disabled:opacity-50"
           >
             <Camera className="h-3.5 w-3.5" aria-hidden="true" />
-            Cover photo
+            {bannerUploading ? "Uploading..." : bannerUrl ? "Change banner" : "Upload banner"}
           </button>
         </div>
 
@@ -754,6 +796,7 @@ export default function CompanyProfileEditor({ initialData, stats }: Props) {
           <PublicCompanyPreview
             logoInitials={logoInitials}
             logoUrl={logoUrl}
+            bannerUrl={bannerUrl}
             companyName={form.companyName}
             industry={form.industry}
             description={form.description}

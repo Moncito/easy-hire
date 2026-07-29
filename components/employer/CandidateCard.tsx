@@ -1,6 +1,7 @@
 "use client";
 
 import { Paperclip } from "lucide-react";
+import { displaySkill } from "@/lib/seeker-profile-format";
 
 type Application = {
   id: string;
@@ -104,7 +105,7 @@ export default function CandidateCard({
                   key={skill}
                   className="rounded-md bg-ink/4 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-ink/60"
                 >
-                  {skill}
+                  {displaySkill(skill)}
                 </span>
               ))}
               {application.seeker.skills.length > 3 && (

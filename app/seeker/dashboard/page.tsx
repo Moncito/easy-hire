@@ -99,7 +99,8 @@ export default async function SeekerDashboardPage({
     !!profile?.linkedinUrl,
     !!profile?.photoUrl,
     (profile?.certifications?.length ?? 0) > 0,
-    profile?.profileVisibility !== false,
+    (profile?.languages?.length ?? 0) > 0,
+    profile?.visibility !== "HIDDEN",
   ];
   const strength = strengthChecks.filter(Boolean).length;
   const strengthTotal = strengthChecks.length;

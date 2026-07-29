@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { Prisma } from "../prisma/gen/client";
 import { ApiError } from "@/lib/api-error";
 import { requireEmployerCompany } from "@/lib/employer-auth";
+import { encodedSkillVariants } from "@/lib/seeker-profile-format";
 import { talentSearchSchema, savedSeekerSchema } from "@/lib/validations/talent-search";
 
 export type TalentListItem = {
@@ -66,10 +67,12 @@ function mapSeeker(
 }
 
 function buildSeekerWhere(input: ReturnType<typeof talentSearchSchema.parse>): Prisma.SeekerProfileWhereInput {
-  const and: Prisma.SeekerProfileWhereInput[] = [{ profileVisibility: true }];
+  const and: Prisma.SeekerProfileWhereInput[] = [
+    { visibility: { in: ["STANDARD", "PUBLIC"] } },
+  ];
 
   if (input.skill) {
-    and.push({ skills: { has: input.skill } });
+    and.push({ skills: { hasSome: encodedSkillVariants(input.skill) } });
   }
   if (input.location) {
     and.push({ location: { contains: input.location, mode: "insensitive" } });
@@ -134,7 +137,7 @@ async function searchSeekersFts(
       sp.photo_url,
       sp.created_at
     FROM seeker_profiles sp
-    WHERE sp.profile_visibility = true
+    WHERE sp.visibility IN ('STANDARD', 'PUBLIC')
       AND sp.search_vector @@ plainto_tsquery('english', ${q})
     ORDER BY ts_rank(sp.search_vector, plainto_tsquery('english', ${q})) DESC, sp.created_at DESC
     LIMIT ${limit + 1}
@@ -280,7 +283,7 @@ export async function saveSeeker(employerUserId: string, raw: unknown) {
   const company = await requireEmployerCompany(employerUserId);
 
   const seeker = await prisma.seekerProfile.findFirst({
-    where: { id: input.seekerId, profileVisibility: true },
+    where: { id: input.seekerId, visibility: { in: ["STANDARD", "PUBLIC"] } },
   });
 
   if (!seeker) {

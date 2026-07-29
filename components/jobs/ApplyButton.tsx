@@ -12,6 +12,8 @@ type Props = {
   companyName: string;
 };
 
+const COVER_NOTE_MAX = 2000;
+
 async function parseJsonResponse(res: Response) {
   try {
     return await res.json();
@@ -213,21 +215,22 @@ export default function ApplyButton({ jobId, jobTitle, companyName }: Props) {
       </button>
 
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/45 p-4 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/50 p-0 backdrop-blur-sm sm:items-center sm:p-6">
           <div
             ref={dialogRef}
             tabIndex={-1}
-            className="relative w-full max-w-md overflow-hidden rounded-2xl border border-ink/5 bg-white shadow-2xl animate-scale-in outline-none"
+            className="relative flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-t-2xl border border-ink/5 bg-white shadow-2xl animate-scale-in outline-none sm:rounded-2xl"
             role="dialog"
             aria-modal="true"
             aria-labelledby="apply-modal-title"
           >
-            <div className="h-1.5 w-full bg-marigold" />
-            <div className="p-6">
-              <div className="mb-4 flex items-start justify-between gap-3">
+            <div className="h-1.5 w-full shrink-0 bg-marigold" />
+            <div className="overflow-y-auto p-6 sm:p-8">
+              <div className="mb-6 flex items-start justify-between gap-4">
                 <div>
-                  <h2 id="apply-modal-title" className="font-display text-lg font-bold text-ink">
-                    Apply to {jobTitle}
+                  <p className="text-xs font-semibold uppercase tracking-wider text-marigold">Apply for this role</p>
+                  <h2 id="apply-modal-title" className="mt-1 font-display text-xl font-bold text-ink sm:text-2xl">
+                    {jobTitle}
                   </h2>
                   <p className="mt-1 text-sm text-ink/55">{companyName}</p>
                 </div>
@@ -285,23 +288,45 @@ export default function ApplyButton({ jobId, jobTitle, companyName }: Props) {
                 </div>
               ) : (
                 <>
-                  <label htmlFor="coverNote" className="mb-2 block text-sm font-medium text-ink">
-                    Cover note <span className="text-ink/40">(optional)</span>
+                  <div className="rounded-xl border border-navy/10 bg-mist/50 p-4 text-sm text-ink/65">
+                    <p className="font-semibold text-ink">Your application includes</p>
+                    <ul className="mt-2 space-y-1 text-xs">
+                      <li>• Profile photo, headline, and skills</li>
+                      <li>• Resume on file</li>
+                      <li>• Cover letter below (recommended)</li>
+                    </ul>
+                  </div>
+
+                  <label htmlFor="coverNote" className="mb-2 mt-6 block text-sm font-semibold text-ink">
+                    Cover letter
                   </label>
+                  <p className="mb-3 text-xs text-ink/50">
+                    Tell the employer why you&apos;re a strong fit — experience, tools, timezone, and availability.
+                  </p>
                   <textarea
                     id="coverNote"
-                    rows={4}
+                    rows={12}
+                    maxLength={COVER_NOTE_MAX}
                     value={coverNote}
                     onChange={(e) => setCoverNote(e.target.value)}
-                    placeholder="Why are you a great fit for this role?"
-                    className="w-full resize-y rounded-xl border border-ink/10 px-4 py-3 text-sm text-ink outline-none focus:border-marigold focus:ring-2 focus:ring-marigold/20"
+                    placeholder="Dear hiring team,
+
+I'm excited to apply because...
+
+• Relevant experience:
+• Tools I use daily:
+• Why this role fits me:"
+                    className="w-full resize-y rounded-xl border border-ink/10 px-4 py-3.5 text-sm leading-relaxed text-ink outline-none focus:border-marigold focus:ring-2 focus:ring-marigold/20"
                   />
+                  <p className="mt-2 text-right font-data text-xs text-ink/40">
+                    {coverNote.length}/{COVER_NOTE_MAX}
+                  </p>
                   {error && <p className="mt-3 text-sm text-ember">{error}</p>}
-                  <div className="mt-5 flex gap-3">
+                  <div className="mt-6 flex flex-col gap-3 sm:flex-row">
                     <button
                       type="button"
                       onClick={closeModal}
-                      className="flex-1 cursor-pointer rounded-xl border border-ink/10 py-2.5 text-sm font-semibold text-ink/70 hover:bg-ink/4"
+                      className="flex-1 cursor-pointer rounded-xl border border-ink/10 py-3 text-sm font-semibold text-ink/70 hover:bg-ink/4"
                     >
                       Cancel
                     </button>
@@ -309,7 +334,7 @@ export default function ApplyButton({ jobId, jobTitle, companyName }: Props) {
                       type="button"
                       disabled={loading}
                       onClick={() => void submitApplication()}
-                      className="flex-1 cursor-pointer rounded-xl bg-marigold py-2.5 text-sm font-semibold text-ink hover:bg-marigold/90 disabled:opacity-60"
+                      className="flex-1 cursor-pointer rounded-xl bg-marigold py-3 text-sm font-semibold text-ink shadow-sm hover:bg-marigold/90 disabled:opacity-60"
                     >
                       {loading ? "Submitting..." : "Submit application"}
                     </button>

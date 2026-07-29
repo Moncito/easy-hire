@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { isDiscoverableInTalentSearch } from "@/lib/seeker-profile-format";
 import { Prisma } from "../prisma/gen/client";
 import { ApiError } from "@/lib/api-error";
 import { createNotification } from "@/lib/email";
@@ -236,7 +237,7 @@ export async function createOrGetConversation(employerUserId: string, raw: unkno
     throw new ApiError("Seeker not found", 404);
   }
 
-  if (!seeker.profileVisibility) {
+  if (!isDiscoverableInTalentSearch(seeker.visibility)) {
     throw new ApiError("This seeker profile is not visible", 403);
   }
 

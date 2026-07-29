@@ -43,6 +43,15 @@ function Chip({
   );
 }
 
+function FilterGroup({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-ink/40">{label}</p>
+      <div className="flex flex-wrap gap-2">{children}</div>
+    </div>
+  );
+}
+
 export default function JobSearchPanel() {
   const { data: session } = useSession();
   const [query, setQuery] = useState("");
@@ -147,8 +156,10 @@ export default function JobSearchPanel() {
     }
   }
 
-  const filterRail = (
-    <form onSubmit={handleSearch} className="space-y-4">
+  const activeFilterCount = [category, employmentType, remoteType].filter(Boolean).length;
+
+  const filterForm = (
+    <form onSubmit={handleSearch} className="space-y-5">
       <div className="relative">
         <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/35" />
         <input
@@ -156,22 +167,22 @@ export default function JobSearchPanel() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Role, skill, company..."
-          className="w-full rounded-full border border-navy/10 bg-white py-3 pl-10 pr-4 text-sm outline-none transition focus:border-marigold focus:ring-2 focus:ring-marigold/20"
+          className="w-full rounded-xl border border-navy/10 bg-white py-3 pl-10 pr-4 text-sm outline-none transition focus:border-marigold focus:ring-2 focus:ring-marigold/20"
         />
       </div>
 
-      <div className="flex flex-wrap gap-2">
+      <FilterGroup label="Category">
         <Chip active={!category} onClick={() => setCategory("")}>
-          All categories
+          All
         </Chip>
         {categories.map((cat) => (
           <Chip key={cat} active={category === cat} onClick={() => setCategory(cat)}>
             {cat}
           </Chip>
         ))}
-      </div>
+      </FilterGroup>
 
-      <div className="flex flex-wrap gap-2">
+      <FilterGroup label="Employment type">
         {employmentOptions.map((opt) => (
           <Chip
             key={opt.value || "any-emp"}
@@ -181,9 +192,9 @@ export default function JobSearchPanel() {
             {opt.label}
           </Chip>
         ))}
-      </div>
+      </FilterGroup>
 
-      <div className="flex flex-wrap gap-2">
+      <FilterGroup label="Work setup">
         {remoteOptions.map((opt) => (
           <Chip
             key={opt.value || "any-remote"}
@@ -193,12 +204,12 @@ export default function JobSearchPanel() {
             {opt.label}
           </Chip>
         ))}
-      </div>
+      </FilterGroup>
 
       <button
         type="submit"
         disabled={loading}
-        className="cursor-pointer rounded-full bg-marigold px-6 py-2.5 text-sm font-semibold text-ink shadow-sm transition hover:bg-marigold/90 disabled:opacity-60"
+        className="w-full cursor-pointer rounded-xl bg-marigold py-3 text-sm font-semibold text-ink shadow-sm transition hover:bg-marigold/90 disabled:opacity-60"
       >
         {loading ? "Searching..." : "Search jobs"}
       </button>
@@ -206,59 +217,70 @@ export default function JobSearchPanel() {
   );
 
   return (
-    <div className="space-y-8">
-      <div className="sticky top-24 z-20 rounded-2xl border border-navy/8 bg-white/90 p-4 shadow-[0_8px_30px_rgba(30,58,95,0.04)] backdrop-blur-md sm:p-5">
-        <div className="mb-3 flex items-center justify-between md:hidden">
-          <p className="text-sm font-semibold text-ink">Filters</p>
-          <button
-            type="button"
-            onClick={() => setFiltersOpen((o) => !o)}
-            className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-navy/10 px-3 py-1.5 text-xs font-semibold text-ink/70"
-          >
-            {filtersOpen ? <X className="h-3.5 w-3.5" /> : <SlidersHorizontal className="h-3.5 w-3.5" />}
-            {filtersOpen ? "Close" : "Open"}
-          </button>
+    <div className="lg:grid lg:grid-cols-[minmax(280px,320px)_minmax(0,1fr)] lg:items-start lg:gap-10 xl:gap-12">
+      {/* Sticky filter sidebar */}
+      <aside className="lg:sticky lg:top-[5.75rem] lg:z-20 lg:self-start">
+        <div className="rounded-2xl border border-navy/8 bg-white/95 p-5 shadow-[0_8px_30px_rgba(30,58,95,0.05)] backdrop-blur-md sm:p-6">
+          <div className="mb-4 flex items-center justify-between">
+            <div>
+              <h2 className="font-display text-base font-bold text-ink">Filters</h2>
+              {activeFilterCount > 0 && (
+                <p className="mt-0.5 text-xs text-ink/45">
+                  {activeFilterCount} active filter{activeFilterCount === 1 ? "" : "s"}
+                </p>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => setFiltersOpen((o) => !o)}
+              className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-navy/10 px-3 py-1.5 text-xs font-semibold text-ink/70 lg:hidden"
+            >
+              {filtersOpen ? <X className="h-3.5 w-3.5" /> : <SlidersHorizontal className="h-3.5 w-3.5" />}
+              {filtersOpen ? "Close" : "Open"}
+            </button>
+          </div>
+          <div className={`${filtersOpen ? "block" : "hidden"} lg:block`}>{filterForm}</div>
         </div>
-        <div className={`${filtersOpen ? "block" : "hidden"} md:block`}>{filterRail}</div>
-      </div>
+      </aside>
 
-      <div>
+      {/* Job results */}
+      <div className="mt-8 min-w-0 lg:mt-0">
         {error && (
-          <div className="mb-4 rounded-xl border border-ember/20 bg-ember/5 px-4 py-3 text-sm text-ember">
+          <div className="mb-5 rounded-xl border border-ember/20 bg-ember/5 px-4 py-3 text-sm text-ember">
             {error}
           </div>
         )}
 
         {loading ? (
-          <div className="flex items-center justify-center py-20 text-ink/45">
+          <div className="flex items-center justify-center py-24 text-ink/45">
             <Loader2 className="mr-2 h-5 w-5 animate-spin" aria-hidden="true" />
             Loading jobs...
           </div>
         ) : jobs.length === 0 ? (
-          <div className="rounded-2xl border border-navy/8 bg-white p-12 text-center">
-            <h2 className="font-display text-lg font-bold text-ink">No jobs found</h2>
+          <div className="rounded-2xl border border-navy/8 bg-white p-14 text-center sm:p-16">
+            <h2 className="font-display text-xl font-bold text-ink">No jobs found</h2>
             <p className="mt-2 text-sm text-ink/50">
               Try different filters or check back soon for new VA roles.
             </p>
           </div>
         ) : (
           <>
-            <p className="mb-4 font-data text-sm text-ink/50">
+            <p className="mb-5 font-data text-sm text-ink/50">
               {jobs.length} {jobs.length === 1 ? "job" : "jobs"} found
               {cursor ? " (showing more)" : ""}
             </p>
-            <div className="grid grid-cols-1 gap-4">
+            <div className="grid grid-cols-1 gap-5 xl:gap-6">
               {jobs.map((job) => (
                 <JobListingCard key={job.id} job={job} applied={appliedIds.has(job.id)} />
               ))}
             </div>
             {nextCursor && (
-              <div className="mt-8 text-center">
+              <div className="mt-10 text-center">
                 <button
                   type="button"
                   onClick={loadMore}
                   disabled={loadingMore}
-                  className="cursor-pointer rounded-full border border-navy/15 bg-white px-6 py-2.5 text-sm font-semibold text-ink/70 transition hover:border-navy/30 hover:bg-mist disabled:opacity-60"
+                  className="cursor-pointer rounded-full border border-navy/15 bg-white px-8 py-3 text-sm font-semibold text-ink/70 transition hover:border-navy/30 hover:bg-mist disabled:opacity-60"
                 >
                   {loadingMore ? "Loading..." : "Load more jobs"}
                 </button>

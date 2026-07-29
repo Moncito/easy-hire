@@ -52,6 +52,7 @@ export default async function CompanyProfilePage() {
           instagramUrl: company.instagramUrl,
           xUrl: company.xUrl,
           logoUrl: company.logoUrl,
+          bannerUrl: company.bannerUrl,
           verificationStatus: verificationStatusMap[company.verifiedStatus] || "pending",
         }}
         stats={{

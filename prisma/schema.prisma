@@ -36,31 +36,44 @@ enum Role {
   ADMIN
 }
 
+enum ProfileVisibility {
+  HIDDEN
+  STANDARD
+  PUBLIC
+}
+
 // ============================================================================
 // SEEKER PROFILES
 // ============================================================================
 
 model SeekerProfile {
-  id                String   @id @default(cuid())
-  userId            String   @unique @map("user_id")
-  fullName          String   @map("full_name")
+  id                String             @id @default(cuid())
+  userId            String             @unique @map("user_id")
+  fullName          String             @map("full_name")
   phone             String?
   location          String?
   headline          String?
   bio               String?
-  resumeUrl         String?  @map("resume_url")
+  resumeUrl         String?            @map("resume_url")
   skills            String[]
-  desiredSalaryMin  Int?     @map("desired_salary_min")
-  desiredSalaryMax  Int?     @map("desired_salary_max")
-  profileVisibility Boolean  @default(true) @map("profile_visibility")
-  createdAt         DateTime @default(now()) @map("created_at")
-  updatedAt         DateTime @updatedAt @map("updated_at")
-  availability      String?  @map("availability")
-  yearsExperience   String?  @map("years_experience")
-  linkedinUrl       String?  @map("linkedin_url")
-  portfolioUrl      String?  @map("portfolio_url")
-  certifications    String[] @default([])
-  photoUrl          String?  @map("photo_url")
+  desiredSalaryMin  Int?               @map("desired_salary_min")
+  desiredSalaryMax  Int?               @map("desired_salary_max")
+  visibility        ProfileVisibility  @default(STANDARD)
+  createdAt         DateTime           @default(now()) @map("created_at")
+  updatedAt         DateTime           @updatedAt @map("updated_at")
+  availability      String?            @map("availability")
+  yearsExperience   String?            @map("years_experience")
+  linkedinUrl       String?            @map("linkedin_url")
+  portfolioUrl      String?            @map("portfolio_url")
+  certifications    String[]           @default([])
+  photoUrl          String?            @map("photo_url")
+  languages         String[]           @default([])
+  timezone          String?            @default("Asia/Manila")
+  workExperience    String[]           @default([]) @map("work_experience")
+  education         String[]           @default([])
+  resumeLabel       String?            @map("resume_label")
+  resumeUpdatedAt   DateTime?          @map("resume_updated_at")
+  resumes           String[]           @default([])
 
   // Relations
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -82,6 +95,7 @@ model Company {
   userId         String              @unique @map("user_id")
   companyName    String              @map("company_name")
   logoUrl        String?             @map("logo_url")
+  bannerUrl      String?             @map("banner_url")
   description    String?
   website        String?
   industry       String?

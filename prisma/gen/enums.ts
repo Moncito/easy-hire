@@ -18,6 +18,15 @@ export const Role = {
 export type Role = (typeof Role)[keyof typeof Role]
 
 
+export const ProfileVisibility = {
+  HIDDEN: 'HIDDEN',
+  STANDARD: 'STANDARD',
+  PUBLIC: 'PUBLIC'
+} as const
+
+export type ProfileVisibility = (typeof ProfileVisibility)[keyof typeof ProfileVisibility]
+
+
 export const VerificationStatus = {
   PENDING: 'PENDING',
   APPROVED: 'APPROVED',

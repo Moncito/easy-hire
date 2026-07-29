@@ -5,6 +5,7 @@ import { Briefcase, Globe, MapPin } from "lucide-react";
 type Props = {
   logoInitials: string;
   logoUrl: string | null;
+  bannerUrl?: string | null;
   companyName: string;
   industry: string;
   description: string;
@@ -19,6 +20,7 @@ type Props = {
 export default function PublicCompanyPreview({
   logoInitials,
   logoUrl,
+  bannerUrl = null,
   companyName,
   industry,
   description,
@@ -48,7 +50,14 @@ export default function PublicCompanyPreview({
       </div>
 
       <div className="overflow-hidden rounded-2xl border border-ink/8 bg-white shadow-xs transition-transform duration-300 hover:scale-[1.01]">
-        <div className="h-16 bg-gradient-to-r from-teal/50 via-navy/40 to-teal/30" />
+        <div className="h-16 overflow-hidden">
+          {bannerUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={bannerUrl} alt="" className="h-full w-full object-cover" />
+          ) : (
+            <div className="h-full bg-gradient-to-r from-teal/50 via-navy/40 to-teal/30" />
+          )}
+        </div>
 
         <div className="relative px-4 pb-4">
           <div className="-mt-8 mb-3 flex items-end gap-3">

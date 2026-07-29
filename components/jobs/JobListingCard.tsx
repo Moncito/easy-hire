@@ -38,7 +38,7 @@ export default function JobListingCard({ job, applied }: Props) {
   return (
     <Link
       href={`/jobs/${job.id}`}
-      className="group block cursor-pointer rounded-2xl border border-navy/8 bg-white p-5 transition-all duration-300 animate-slide-up hover:-translate-y-0.5 hover:border-navy/20 hover:shadow-[0_8px_30px_rgba(30,58,95,0.06)]"
+      className="group block cursor-pointer rounded-2xl border border-navy/8 bg-white p-6 transition-all duration-300 animate-slide-up hover:-translate-y-0.5 hover:border-navy/20 hover:shadow-[0_8px_30px_rgba(30,58,95,0.06)] sm:p-7"
     >
       <div className="flex items-start gap-4">
         {job.company.logoUrl ? (
@@ -51,7 +51,7 @@ export default function JobListingCard({ job, applied }: Props) {
         )}
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h2 className="font-display text-lg font-bold text-ink transition-colors group-hover:text-navy">
+            <h2 className="font-display text-xl font-bold text-ink transition-colors group-hover:text-navy sm:text-[1.35rem]">
               {job.title}
             </h2>
             {job.company.verifiedStatus === "APPROVED" && (

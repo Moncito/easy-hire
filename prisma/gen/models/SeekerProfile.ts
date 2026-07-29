@@ -47,7 +47,7 @@ export type SeekerProfileMinAggregateOutputType = {
   resumeUrl: string | null
   desiredSalaryMin: number | null
   desiredSalaryMax: number | null
-  profileVisibility: boolean | null
+  visibility: $Enums.ProfileVisibility | null
   createdAt: Date | null
   updatedAt: Date | null
   availability: string | null
@@ -55,6 +55,9 @@ export type SeekerProfileMinAggregateOutputType = {
   linkedinUrl: string | null
   portfolioUrl: string | null
   photoUrl: string | null
+  timezone: string | null
+  resumeLabel: string | null
+  resumeUpdatedAt: Date | null
 }
 
 export type SeekerProfileMaxAggregateOutputType = {
@@ -68,7 +71,7 @@ export type SeekerProfileMaxAggregateOutputType = {
   resumeUrl: string | null
   desiredSalaryMin: number | null
   desiredSalaryMax: number | null
-  profileVisibility: boolean | null
+  visibility: $Enums.ProfileVisibility | null
   createdAt: Date | null
   updatedAt: Date | null
   availability: string | null
@@ -76,6 +79,9 @@ export type SeekerProfileMaxAggregateOutputType = {
   linkedinUrl: string | null
   portfolioUrl: string | null
   photoUrl: string | null
+  timezone: string | null
+  resumeLabel: string | null
+  resumeUpdatedAt: Date | null
 }
 
 export type SeekerProfileCountAggregateOutputType = {
@@ -90,7 +96,7 @@ export type SeekerProfileCountAggregateOutputType = {
   skills: number
   desiredSalaryMin: number
   desiredSalaryMax: number
-  profileVisibility: number
+  visibility: number
   createdAt: number
   updatedAt: number
   availability: number
@@ -99,6 +105,13 @@ export type SeekerProfileCountAggregateOutputType = {
   portfolioUrl: number
   certifications: number
   photoUrl: number
+  languages: number
+  timezone: number
+  workExperience: number
+  education: number
+  resumeLabel: number
+  resumeUpdatedAt: number
+  resumes: number
   _all: number
 }
 
@@ -124,7 +137,7 @@ export type SeekerProfileMinAggregateInputType = {
   resumeUrl?: true
   desiredSalaryMin?: true
   desiredSalaryMax?: true
-  profileVisibility?: true
+  visibility?: true
   createdAt?: true
   updatedAt?: true
   availability?: true
@@ -132,6 +145,9 @@ export type SeekerProfileMinAggregateInputType = {
   linkedinUrl?: true
   portfolioUrl?: true
   photoUrl?: true
+  timezone?: true
+  resumeLabel?: true
+  resumeUpdatedAt?: true
 }
 
 export type SeekerProfileMaxAggregateInputType = {
@@ -145,7 +161,7 @@ export type SeekerProfileMaxAggregateInputType = {
   resumeUrl?: true
   desiredSalaryMin?: true
   desiredSalaryMax?: true
-  profileVisibility?: true
+  visibility?: true
   createdAt?: true
   updatedAt?: true
   availability?: true
@@ -153,6 +169,9 @@ export type SeekerProfileMaxAggregateInputType = {
   linkedinUrl?: true
   portfolioUrl?: true
   photoUrl?: true
+  timezone?: true
+  resumeLabel?: true
+  resumeUpdatedAt?: true
 }
 
 export type SeekerProfileCountAggregateInputType = {
@@ -167,7 +186,7 @@ export type SeekerProfileCountAggregateInputType = {
   skills?: true
   desiredSalaryMin?: true
   desiredSalaryMax?: true
-  profileVisibility?: true
+  visibility?: true
   createdAt?: true
   updatedAt?: true
   availability?: true
@@ -176,6 +195,13 @@ export type SeekerProfileCountAggregateInputType = {
   portfolioUrl?: true
   certifications?: true
   photoUrl?: true
+  languages?: true
+  timezone?: true
+  workExperience?: true
+  education?: true
+  resumeLabel?: true
+  resumeUpdatedAt?: true
+  resumes?: true
   _all?: true
 }
 
@@ -277,7 +303,7 @@ export type SeekerProfileGroupByOutputType = {
   skills: string[]
   desiredSalaryMin: number | null
   desiredSalaryMax: number | null
-  profileVisibility: boolean
+  visibility: $Enums.ProfileVisibility
   createdAt: Date
   updatedAt: Date
   availability: string | null
@@ -286,6 +312,13 @@ export type SeekerProfileGroupByOutputType = {
   portfolioUrl: string | null
   certifications: string[]
   photoUrl: string | null
+  languages: string[]
+  timezone: string | null
+  workExperience: string[]
+  education: string[]
+  resumeLabel: string | null
+  resumeUpdatedAt: Date | null
+  resumes: string[]
   _count: SeekerProfileCountAggregateOutputType | null
   _avg: SeekerProfileAvgAggregateOutputType | null
   _sum: SeekerProfileSumAggregateOutputType | null
@@ -323,7 +356,7 @@ export type SeekerProfileWhereInput = {
   skills?: Prisma.StringNullableListFilter<"SeekerProfile">
   desiredSalaryMin?: Prisma.IntNullableFilter<"SeekerProfile"> | number | null
   desiredSalaryMax?: Prisma.IntNullableFilter<"SeekerProfile"> | number | null
-  profileVisibility?: Prisma.BoolFilter<"SeekerProfile"> | boolean
+  visibility?: Prisma.EnumProfileVisibilityFilter<"SeekerProfile"> | $Enums.ProfileVisibility
   createdAt?: Prisma.DateTimeFilter<"SeekerProfile"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"SeekerProfile"> | Date | string
   availability?: Prisma.StringNullableFilter<"SeekerProfile"> | string | null
@@ -332,6 +365,13 @@ export type SeekerProfileWhereInput = {
   portfolioUrl?: Prisma.StringNullableFilter<"SeekerProfile"> | string | null
   certifications?: Prisma.StringNullableListFilter<"SeekerProfile">
   photoUrl?: Prisma.StringNullableFilter<"SeekerProfile"> | string | null
+  languages?: Prisma.StringNullableListFilter<"SeekerProfile">
+  timezone?: Prisma.StringNullableFilter<"SeekerProfile"> | string | null
+  workExperience?: Prisma.StringNullableListFilter<"SeekerProfile">
+  education?: Prisma.StringNullableListFilter<"SeekerProfile">
+  resumeLabel?: Prisma.StringNullableFilter<"SeekerProfile"> | string | null
+  resumeUpdatedAt?: Prisma.DateTimeNullableFilter<"SeekerProfile"> | Date | string | null
+  resumes?: Prisma.StringNullableListFilter<"SeekerProfile">
   user?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
   applications?: Prisma.ApplicationListRelationFilter
   savedJobs?: Prisma.SavedJobListRelationFilter
@@ -352,7 +392,7 @@ export type SeekerProfileOrderByWithRelationInput = {
   skills?: Prisma.SortOrder
   desiredSalaryMin?: Prisma.SortOrderInput | Prisma.SortOrder
   desiredSalaryMax?: Prisma.SortOrderInput | Prisma.SortOrder
-  profileVisibility?: Prisma.SortOrder
+  visibility?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   availability?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -361,6 +401,13 @@ export type SeekerProfileOrderByWithRelationInput = {
   portfolioUrl?: Prisma.SortOrderInput | Prisma.SortOrder
   certifications?: Prisma.SortOrder
   photoUrl?: Prisma.SortOrderInput | Prisma.SortOrder
+  languages?: Prisma.SortOrder
+  timezone?: Prisma.SortOrderInput | Prisma.SortOrder
+  workExperience?: Prisma.SortOrder
+  education?: Prisma.SortOrder
+  resumeLabel?: Prisma.SortOrderInput | Prisma.SortOrder
+  resumeUpdatedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  resumes?: Prisma.SortOrder
   user?: Prisma.UserOrderByWithRelationInput
   applications?: Prisma.ApplicationOrderByRelationAggregateInput
   savedJobs?: Prisma.SavedJobOrderByRelationAggregateInput
@@ -384,7 +431,7 @@ export type SeekerProfileWhereUniqueInput = Prisma.AtLeast<{
   skills?: Prisma.StringNullableListFilter<"SeekerProfile">
   desiredSalaryMin?: Prisma.IntNullableFilter<"SeekerProfile"> | number | null
   desiredSalaryMax?: Prisma.IntNullableFilter<"SeekerProfile"> | number | null
-  profileVisibility?: Prisma.BoolFilter<"SeekerProfile"> | boolean
+  visibility?: Prisma.EnumProfileVisibilityFilter<"SeekerProfile"> | $Enums.ProfileVisibility
   createdAt?: Prisma.DateTimeFilter<"SeekerProfile"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"SeekerProfile"> | Date | string
   availability?: Prisma.StringNullableFilter<"SeekerProfile"> | string | null
@@ -393,6 +440,13 @@ export type SeekerProfileWhereUniqueInput = Prisma.AtLeast<{
   portfolioUrl?: Prisma.StringNullableFilter<"SeekerProfile"> | string | null
   certifications?: Prisma.StringNullableListFilter<"SeekerProfile">
   photoUrl?: Prisma.StringNullableFilter<"SeekerProfile"> | string | null
+  languages?: Prisma.StringNullableListFilter<"SeekerProfile">
+  timezone?: Prisma.StringNullableFilter<"SeekerProfile"> | string | null
+  workExperience?: Prisma.StringNullableListFilter<"SeekerProfile">
+  education?: Prisma.StringNullableListFilter<"SeekerProfile">
+  resumeLabel?: Prisma.StringNullableFilter<"SeekerProfile"> | string | null
+  resumeUpdatedAt?: Prisma.DateTimeNullableFilter<"SeekerProfile"> | Date | string | null
+  resumes?: Prisma.StringNullableListFilter<"SeekerProfile">
   user?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
   applications?: Prisma.ApplicationListRelationFilter
   savedJobs?: Prisma.SavedJobListRelationFilter
@@ -413,7 +467,7 @@ export type SeekerProfileOrderByWithAggregationInput = {
   skills?: Prisma.SortOrder
   desiredSalaryMin?: Prisma.SortOrderInput | Prisma.SortOrder
   desiredSalaryMax?: Prisma.SortOrderInput | Prisma.SortOrder
-  profileVisibility?: Prisma.SortOrder
+  visibility?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   availability?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -422,6 +476,13 @@ export type SeekerProfileOrderByWithAggregationInput = {
   portfolioUrl?: Prisma.SortOrderInput | Prisma.SortOrder
   certifications?: Prisma.SortOrder
   photoUrl?: Prisma.SortOrderInput | Prisma.SortOrder
+  languages?: Prisma.SortOrder
+  timezone?: Prisma.SortOrderInput | Prisma.SortOrder
+  workExperience?: Prisma.SortOrder
+  education?: Prisma.SortOrder
+  resumeLabel?: Prisma.SortOrderInput | Prisma.SortOrder
+  resumeUpdatedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  resumes?: Prisma.SortOrder
   _count?: Prisma.SeekerProfileCountOrderByAggregateInput
   _avg?: Prisma.SeekerProfileAvgOrderByAggregateInput
   _max?: Prisma.SeekerProfileMaxOrderByAggregateInput
@@ -444,7 +505,7 @@ export type SeekerProfileScalarWhereWithAggregatesInput = {
   skills?: Prisma.StringNullableListFilter<"SeekerProfile">
   desiredSalaryMin?: Prisma.IntNullableWithAggregatesFilter<"SeekerProfile"> | number | null
   desiredSalaryMax?: Prisma.IntNullableWithAggregatesFilter<"SeekerProfile"> | number | null
-  profileVisibility?: Prisma.BoolWithAggregatesFilter<"SeekerProfile"> | boolean
+  visibility?: Prisma.EnumProfileVisibilityWithAggregatesFilter<"SeekerProfile"> | $Enums.ProfileVisibility
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"SeekerProfile"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"SeekerProfile"> | Date | string
   availability?: Prisma.StringNullableWithAggregatesFilter<"SeekerProfile"> | string | null
@@ -453,6 +514,13 @@ export type SeekerProfileScalarWhereWithAggregatesInput = {
   portfolioUrl?: Prisma.StringNullableWithAggregatesFilter<"SeekerProfile"> | string | null
   certifications?: Prisma.StringNullableListFilter<"SeekerProfile">
   photoUrl?: Prisma.StringNullableWithAggregatesFilter<"SeekerProfile"> | string | null
+  languages?: Prisma.StringNullableListFilter<"SeekerProfile">
+  timezone?: Prisma.StringNullableWithAggregatesFilter<"SeekerProfile"> | string | null
+  workExperience?: Prisma.StringNullableListFilter<"SeekerProfile">
+  education?: Prisma.StringNullableListFilter<"SeekerProfile">
+  resumeLabel?: Prisma.StringNullableWithAggregatesFilter<"SeekerProfile"> | string | null
+  resumeUpdatedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"SeekerProfile"> | Date | string | null
+  resumes?: Prisma.StringNullableListFilter<"SeekerProfile">
 }
 
 export type SeekerProfileCreateInput = {
@@ -466,7 +534,7 @@ export type SeekerProfileCreateInput = {
   skills?: Prisma.SeekerProfileCreateskillsInput | string[]
   desiredSalaryMin?: number | null
   desiredSalaryMax?: number | null
-  profileVisibility?: boolean
+  visibility?: $Enums.ProfileVisibility
   createdAt?: Date | string
   updatedAt?: Date | string
   availability?: string | null
@@ -475,6 +543,13 @@ export type SeekerProfileCreateInput = {
   portfolioUrl?: string | null
   certifications?: Prisma.SeekerProfileCreatecertificationsInput | string[]
   photoUrl?: string | null
+  languages?: Prisma.SeekerProfileCreatelanguagesInput | string[]
+  timezone?: string | null
+  workExperience?: Prisma.SeekerProfileCreateworkExperienceInput | string[]
+  education?: Prisma.SeekerProfileCreateeducationInput | string[]
+  resumeLabel?: string | null
+  resumeUpdatedAt?: Date | string | null
+  resumes?: Prisma.SeekerProfileCreateresumesInput | string[]
   user: Prisma.UserCreateNestedOneWithoutSeekerProfileInput
   applications?: Prisma.ApplicationCreateNestedManyWithoutSeekerInput
   savedJobs?: Prisma.SavedJobCreateNestedManyWithoutSeekerInput
@@ -495,7 +570,7 @@ export type SeekerProfileUncheckedCreateInput = {
   skills?: Prisma.SeekerProfileCreateskillsInput | string[]
   desiredSalaryMin?: number | null
   desiredSalaryMax?: number | null
-  profileVisibility?: boolean
+  visibility?: $Enums.ProfileVisibility
   createdAt?: Date | string
   updatedAt?: Date | string
   availability?: string | null
@@ -504,6 +579,13 @@ export type SeekerProfileUncheckedCreateInput = {
   portfolioUrl?: string | null
   certifications?: Prisma.SeekerProfileCreatecertificationsInput | string[]
   photoUrl?: string | null
+  languages?: Prisma.SeekerProfileCreatelanguagesInput | string[]
+  timezone?: string | null
+  workExperience?: Prisma.SeekerProfileCreateworkExperienceInput | string[]
+  education?: Prisma.SeekerProfileCreateeducationInput | string[]
+  resumeLabel?: string | null
+  resumeUpdatedAt?: Date | string | null
+  resumes?: Prisma.SeekerProfileCreateresumesInput | string[]
   applications?: Prisma.ApplicationUncheckedCreateNestedManyWithoutSeekerInput
   savedJobs?: Prisma.SavedJobUncheckedCreateNestedManyWithoutSeekerInput
   jobAlerts?: Prisma.JobAlertUncheckedCreateNestedManyWithoutSeekerInput
@@ -522,7 +604,7 @@ export type SeekerProfileUpdateInput = {
   skills?: Prisma.SeekerProfileUpdateskillsInput | string[]
   desiredSalaryMin?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   desiredSalaryMax?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
-  profileVisibility?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  visibility?: Prisma.EnumProfileVisibilityFieldUpdateOperationsInput | $Enums.ProfileVisibility
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   availability?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -531,6 +613,13 @@ export type SeekerProfileUpdateInput = {
   portfolioUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   certifications?: Prisma.SeekerProfileUpdatecertificationsInput | string[]
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  languages?: Prisma.SeekerProfileUpdatelanguagesInput | string[]
+  timezone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  workExperience?: Prisma.SeekerProfileUpdateworkExperienceInput | string[]
+  education?: Prisma.SeekerProfileUpdateeducationInput | string[]
+  resumeLabel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resumeUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  resumes?: Prisma.SeekerProfileUpdateresumesInput | string[]
   user?: Prisma.UserUpdateOneRequiredWithoutSeekerProfileNestedInput
   applications?: Prisma.ApplicationUpdateManyWithoutSeekerNestedInput
   savedJobs?: Prisma.SavedJobUpdateManyWithoutSeekerNestedInput
@@ -551,7 +640,7 @@ export type SeekerProfileUncheckedUpdateInput = {
   skills?: Prisma.SeekerProfileUpdateskillsInput | string[]
   desiredSalaryMin?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   desiredSalaryMax?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
-  profileVisibility?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  visibility?: Prisma.EnumProfileVisibilityFieldUpdateOperationsInput | $Enums.ProfileVisibility
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   availability?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -560,6 +649,13 @@ export type SeekerProfileUncheckedUpdateInput = {
   portfolioUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   certifications?: Prisma.SeekerProfileUpdatecertificationsInput | string[]
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  languages?: Prisma.SeekerProfileUpdatelanguagesInput | string[]
+  timezone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  workExperience?: Prisma.SeekerProfileUpdateworkExperienceInput | string[]
+  education?: Prisma.SeekerProfileUpdateeducationInput | string[]
+  resumeLabel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resumeUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  resumes?: Prisma.SeekerProfileUpdateresumesInput | string[]
   applications?: Prisma.ApplicationUncheckedUpdateManyWithoutSeekerNestedInput
   savedJobs?: Prisma.SavedJobUncheckedUpdateManyWithoutSeekerNestedInput
   jobAlerts?: Prisma.JobAlertUncheckedUpdateManyWithoutSeekerNestedInput
@@ -579,7 +675,7 @@ export type SeekerProfileCreateManyInput = {
   skills?: Prisma.SeekerProfileCreateskillsInput | string[]
   desiredSalaryMin?: number | null
   desiredSalaryMax?: number | null
-  profileVisibility?: boolean
+  visibility?: $Enums.ProfileVisibility
   createdAt?: Date | string
   updatedAt?: Date | string
   availability?: string | null
@@ -588,6 +684,13 @@ export type SeekerProfileCreateManyInput = {
   portfolioUrl?: string | null
   certifications?: Prisma.SeekerProfileCreatecertificationsInput | string[]
   photoUrl?: string | null
+  languages?: Prisma.SeekerProfileCreatelanguagesInput | string[]
+  timezone?: string | null
+  workExperience?: Prisma.SeekerProfileCreateworkExperienceInput | string[]
+  education?: Prisma.SeekerProfileCreateeducationInput | string[]
+  resumeLabel?: string | null
+  resumeUpdatedAt?: Date | string | null
+  resumes?: Prisma.SeekerProfileCreateresumesInput | string[]
 }
 
 export type SeekerProfileUpdateManyMutationInput = {
@@ -601,7 +704,7 @@ export type SeekerProfileUpdateManyMutationInput = {
   skills?: Prisma.SeekerProfileUpdateskillsInput | string[]
   desiredSalaryMin?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   desiredSalaryMax?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
-  profileVisibility?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  visibility?: Prisma.EnumProfileVisibilityFieldUpdateOperationsInput | $Enums.ProfileVisibility
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   availability?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -610,6 +713,13 @@ export type SeekerProfileUpdateManyMutationInput = {
   portfolioUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   certifications?: Prisma.SeekerProfileUpdatecertificationsInput | string[]
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  languages?: Prisma.SeekerProfileUpdatelanguagesInput | string[]
+  timezone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  workExperience?: Prisma.SeekerProfileUpdateworkExperienceInput | string[]
+  education?: Prisma.SeekerProfileUpdateeducationInput | string[]
+  resumeLabel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resumeUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  resumes?: Prisma.SeekerProfileUpdateresumesInput | string[]
 }
 
 export type SeekerProfileUncheckedUpdateManyInput = {
@@ -624,7 +734,7 @@ export type SeekerProfileUncheckedUpdateManyInput = {
   skills?: Prisma.SeekerProfileUpdateskillsInput | string[]
   desiredSalaryMin?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   desiredSalaryMax?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
-  profileVisibility?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  visibility?: Prisma.EnumProfileVisibilityFieldUpdateOperationsInput | $Enums.ProfileVisibility
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   availability?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -633,6 +743,13 @@ export type SeekerProfileUncheckedUpdateManyInput = {
   portfolioUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   certifications?: Prisma.SeekerProfileUpdatecertificationsInput | string[]
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  languages?: Prisma.SeekerProfileUpdatelanguagesInput | string[]
+  timezone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  workExperience?: Prisma.SeekerProfileUpdateworkExperienceInput | string[]
+  education?: Prisma.SeekerProfileUpdateeducationInput | string[]
+  resumeLabel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resumeUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  resumes?: Prisma.SeekerProfileUpdateresumesInput | string[]
 }
 
 export type SeekerProfileNullableScalarRelationFilter = {
@@ -660,7 +777,7 @@ export type SeekerProfileCountOrderByAggregateInput = {
   skills?: Prisma.SortOrder
   desiredSalaryMin?: Prisma.SortOrder
   desiredSalaryMax?: Prisma.SortOrder
-  profileVisibility?: Prisma.SortOrder
+  visibility?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   availability?: Prisma.SortOrder
@@ -669,6 +786,13 @@ export type SeekerProfileCountOrderByAggregateInput = {
   portfolioUrl?: Prisma.SortOrder
   certifications?: Prisma.SortOrder
   photoUrl?: Prisma.SortOrder
+  languages?: Prisma.SortOrder
+  timezone?: Prisma.SortOrder
+  workExperience?: Prisma.SortOrder
+  education?: Prisma.SortOrder
+  resumeLabel?: Prisma.SortOrder
+  resumeUpdatedAt?: Prisma.SortOrder
+  resumes?: Prisma.SortOrder
 }
 
 export type SeekerProfileAvgOrderByAggregateInput = {
@@ -687,7 +811,7 @@ export type SeekerProfileMaxOrderByAggregateInput = {
   resumeUrl?: Prisma.SortOrder
   desiredSalaryMin?: Prisma.SortOrder
   desiredSalaryMax?: Prisma.SortOrder
-  profileVisibility?: Prisma.SortOrder
+  visibility?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   availability?: Prisma.SortOrder
@@ -695,6 +819,9 @@ export type SeekerProfileMaxOrderByAggregateInput = {
   linkedinUrl?: Prisma.SortOrder
   portfolioUrl?: Prisma.SortOrder
   photoUrl?: Prisma.SortOrder
+  timezone?: Prisma.SortOrder
+  resumeLabel?: Prisma.SortOrder
+  resumeUpdatedAt?: Prisma.SortOrder
 }
 
 export type SeekerProfileMinOrderByAggregateInput = {
@@ -708,7 +835,7 @@ export type SeekerProfileMinOrderByAggregateInput = {
   resumeUrl?: Prisma.SortOrder
   desiredSalaryMin?: Prisma.SortOrder
   desiredSalaryMax?: Prisma.SortOrder
-  profileVisibility?: Prisma.SortOrder
+  visibility?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   availability?: Prisma.SortOrder
@@ -716,6 +843,9 @@ export type SeekerProfileMinOrderByAggregateInput = {
   linkedinUrl?: Prisma.SortOrder
   portfolioUrl?: Prisma.SortOrder
   photoUrl?: Prisma.SortOrder
+  timezone?: Prisma.SortOrder
+  resumeLabel?: Prisma.SortOrder
+  resumeUpdatedAt?: Prisma.SortOrder
 }
 
 export type SeekerProfileSumOrderByAggregateInput = {
@@ -768,6 +898,22 @@ export type SeekerProfileCreatecertificationsInput = {
   set: string[]
 }
 
+export type SeekerProfileCreatelanguagesInput = {
+  set: string[]
+}
+
+export type SeekerProfileCreateworkExperienceInput = {
+  set: string[]
+}
+
+export type SeekerProfileCreateeducationInput = {
+  set: string[]
+}
+
+export type SeekerProfileCreateresumesInput = {
+  set: string[]
+}
+
 export type SeekerProfileUpdateskillsInput = {
   set?: string[]
   push?: string | string[]
@@ -781,11 +927,35 @@ export type NullableIntFieldUpdateOperationsInput = {
   divide?: number
 }
 
-export type BoolFieldUpdateOperationsInput = {
-  set?: boolean
+export type EnumProfileVisibilityFieldUpdateOperationsInput = {
+  set?: $Enums.ProfileVisibility
 }
 
 export type SeekerProfileUpdatecertificationsInput = {
+  set?: string[]
+  push?: string | string[]
+}
+
+export type SeekerProfileUpdatelanguagesInput = {
+  set?: string[]
+  push?: string | string[]
+}
+
+export type SeekerProfileUpdateworkExperienceInput = {
+  set?: string[]
+  push?: string | string[]
+}
+
+export type SeekerProfileUpdateeducationInput = {
+  set?: string[]
+  push?: string | string[]
+}
+
+export type NullableDateTimeFieldUpdateOperationsInput = {
+  set?: Date | string | null
+}
+
+export type SeekerProfileUpdateresumesInput = {
   set?: string[]
   push?: string | string[]
 }
@@ -871,7 +1041,7 @@ export type SeekerProfileCreateWithoutUserInput = {
   skills?: Prisma.SeekerProfileCreateskillsInput | string[]
   desiredSalaryMin?: number | null
   desiredSalaryMax?: number | null
-  profileVisibility?: boolean
+  visibility?: $Enums.ProfileVisibility
   createdAt?: Date | string
   updatedAt?: Date | string
   availability?: string | null
@@ -880,6 +1050,13 @@ export type SeekerProfileCreateWithoutUserInput = {
   portfolioUrl?: string | null
   certifications?: Prisma.SeekerProfileCreatecertificationsInput | string[]
   photoUrl?: string | null
+  languages?: Prisma.SeekerProfileCreatelanguagesInput | string[]
+  timezone?: string | null
+  workExperience?: Prisma.SeekerProfileCreateworkExperienceInput | string[]
+  education?: Prisma.SeekerProfileCreateeducationInput | string[]
+  resumeLabel?: string | null
+  resumeUpdatedAt?: Date | string | null
+  resumes?: Prisma.SeekerProfileCreateresumesInput | string[]
   applications?: Prisma.ApplicationCreateNestedManyWithoutSeekerInput
   savedJobs?: Prisma.SavedJobCreateNestedManyWithoutSeekerInput
   jobAlerts?: Prisma.JobAlertCreateNestedManyWithoutSeekerInput
@@ -898,7 +1075,7 @@ export type SeekerProfileUncheckedCreateWithoutUserInput = {
   skills?: Prisma.SeekerProfileCreateskillsInput | string[]
   desiredSalaryMin?: number | null
   desiredSalaryMax?: number | null
-  profileVisibility?: boolean
+  visibility?: $Enums.ProfileVisibility
   createdAt?: Date | string
   updatedAt?: Date | string
   availability?: string | null
@@ -907,6 +1084,13 @@ export type SeekerProfileUncheckedCreateWithoutUserInput = {
   portfolioUrl?: string | null
   certifications?: Prisma.SeekerProfileCreatecertificationsInput | string[]
   photoUrl?: string | null
+  languages?: Prisma.SeekerProfileCreatelanguagesInput | string[]
+  timezone?: string | null
+  workExperience?: Prisma.SeekerProfileCreateworkExperienceInput | string[]
+  education?: Prisma.SeekerProfileCreateeducationInput | string[]
+  resumeLabel?: string | null
+  resumeUpdatedAt?: Date | string | null
+  resumes?: Prisma.SeekerProfileCreateresumesInput | string[]
   applications?: Prisma.ApplicationUncheckedCreateNestedManyWithoutSeekerInput
   savedJobs?: Prisma.SavedJobUncheckedCreateNestedManyWithoutSeekerInput
   jobAlerts?: Prisma.JobAlertUncheckedCreateNestedManyWithoutSeekerInput
@@ -941,7 +1125,7 @@ export type SeekerProfileUpdateWithoutUserInput = {
   skills?: Prisma.SeekerProfileUpdateskillsInput | string[]
   desiredSalaryMin?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   desiredSalaryMax?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
-  profileVisibility?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  visibility?: Prisma.EnumProfileVisibilityFieldUpdateOperationsInput | $Enums.ProfileVisibility
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   availability?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -950,6 +1134,13 @@ export type SeekerProfileUpdateWithoutUserInput = {
   portfolioUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   certifications?: Prisma.SeekerProfileUpdatecertificationsInput | string[]
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  languages?: Prisma.SeekerProfileUpdatelanguagesInput | string[]
+  timezone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  workExperience?: Prisma.SeekerProfileUpdateworkExperienceInput | string[]
+  education?: Prisma.SeekerProfileUpdateeducationInput | string[]
+  resumeLabel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resumeUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  resumes?: Prisma.SeekerProfileUpdateresumesInput | string[]
   applications?: Prisma.ApplicationUpdateManyWithoutSeekerNestedInput
   savedJobs?: Prisma.SavedJobUpdateManyWithoutSeekerNestedInput
   jobAlerts?: Prisma.JobAlertUpdateManyWithoutSeekerNestedInput
@@ -968,7 +1159,7 @@ export type SeekerProfileUncheckedUpdateWithoutUserInput = {
   skills?: Prisma.SeekerProfileUpdateskillsInput | string[]
   desiredSalaryMin?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   desiredSalaryMax?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
-  profileVisibility?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  visibility?: Prisma.EnumProfileVisibilityFieldUpdateOperationsInput | $Enums.ProfileVisibility
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   availability?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -977,6 +1168,13 @@ export type SeekerProfileUncheckedUpdateWithoutUserInput = {
   portfolioUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   certifications?: Prisma.SeekerProfileUpdatecertificationsInput | string[]
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  languages?: Prisma.SeekerProfileUpdatelanguagesInput | string[]
+  timezone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  workExperience?: Prisma.SeekerProfileUpdateworkExperienceInput | string[]
+  education?: Prisma.SeekerProfileUpdateeducationInput | string[]
+  resumeLabel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resumeUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  resumes?: Prisma.SeekerProfileUpdateresumesInput | string[]
   applications?: Prisma.ApplicationUncheckedUpdateManyWithoutSeekerNestedInput
   savedJobs?: Prisma.SavedJobUncheckedUpdateManyWithoutSeekerNestedInput
   jobAlerts?: Prisma.JobAlertUncheckedUpdateManyWithoutSeekerNestedInput
@@ -995,7 +1193,7 @@ export type SeekerProfileCreateWithoutApplicationsInput = {
   skills?: Prisma.SeekerProfileCreateskillsInput | string[]
   desiredSalaryMin?: number | null
   desiredSalaryMax?: number | null
-  profileVisibility?: boolean
+  visibility?: $Enums.ProfileVisibility
   createdAt?: Date | string
   updatedAt?: Date | string
   availability?: string | null
@@ -1004,6 +1202,13 @@ export type SeekerProfileCreateWithoutApplicationsInput = {
   portfolioUrl?: string | null
   certifications?: Prisma.SeekerProfileCreatecertificationsInput | string[]
   photoUrl?: string | null
+  languages?: Prisma.SeekerProfileCreatelanguagesInput | string[]
+  timezone?: string | null
+  workExperience?: Prisma.SeekerProfileCreateworkExperienceInput | string[]
+  education?: Prisma.SeekerProfileCreateeducationInput | string[]
+  resumeLabel?: string | null
+  resumeUpdatedAt?: Date | string | null
+  resumes?: Prisma.SeekerProfileCreateresumesInput | string[]
   user: Prisma.UserCreateNestedOneWithoutSeekerProfileInput
   savedJobs?: Prisma.SavedJobCreateNestedManyWithoutSeekerInput
   jobAlerts?: Prisma.JobAlertCreateNestedManyWithoutSeekerInput
@@ -1023,7 +1228,7 @@ export type SeekerProfileUncheckedCreateWithoutApplicationsInput = {
   skills?: Prisma.SeekerProfileCreateskillsInput | string[]
   desiredSalaryMin?: number | null
   desiredSalaryMax?: number | null
-  profileVisibility?: boolean
+  visibility?: $Enums.ProfileVisibility
   createdAt?: Date | string
   updatedAt?: Date | string
   availability?: string | null
@@ -1032,6 +1237,13 @@ export type SeekerProfileUncheckedCreateWithoutApplicationsInput = {
   portfolioUrl?: string | null
   certifications?: Prisma.SeekerProfileCreatecertificationsInput | string[]
   photoUrl?: string | null
+  languages?: Prisma.SeekerProfileCreatelanguagesInput | string[]
+  timezone?: string | null
+  workExperience?: Prisma.SeekerProfileCreateworkExperienceInput | string[]
+  education?: Prisma.SeekerProfileCreateeducationInput | string[]
+  resumeLabel?: string | null
+  resumeUpdatedAt?: Date | string | null
+  resumes?: Prisma.SeekerProfileCreateresumesInput | string[]
   savedJobs?: Prisma.SavedJobUncheckedCreateNestedManyWithoutSeekerInput
   jobAlerts?: Prisma.JobAlertUncheckedCreateNestedManyWithoutSeekerInput
   conversations?: Prisma.ConversationUncheckedCreateNestedManyWithoutSeekerInput
@@ -1065,7 +1277,7 @@ export type SeekerProfileUpdateWithoutApplicationsInput = {
   skills?: Prisma.SeekerProfileUpdateskillsInput | string[]
   desiredSalaryMin?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   desiredSalaryMax?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
-  profileVisibility?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  visibility?: Prisma.EnumProfileVisibilityFieldUpdateOperationsInput | $Enums.ProfileVisibility
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   availability?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1074,6 +1286,13 @@ export type SeekerProfileUpdateWithoutApplicationsInput = {
   portfolioUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   certifications?: Prisma.SeekerProfileUpdatecertificationsInput | string[]
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  languages?: Prisma.SeekerProfileUpdatelanguagesInput | string[]
+  timezone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  workExperience?: Prisma.SeekerProfileUpdateworkExperienceInput | string[]
+  education?: Prisma.SeekerProfileUpdateeducationInput | string[]
+  resumeLabel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resumeUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  resumes?: Prisma.SeekerProfileUpdateresumesInput | string[]
   user?: Prisma.UserUpdateOneRequiredWithoutSeekerProfileNestedInput
   savedJobs?: Prisma.SavedJobUpdateManyWithoutSeekerNestedInput
   jobAlerts?: Prisma.JobAlertUpdateManyWithoutSeekerNestedInput
@@ -1093,7 +1312,7 @@ export type SeekerProfileUncheckedUpdateWithoutApplicationsInput = {
   skills?: Prisma.SeekerProfileUpdateskillsInput | string[]
   desiredSalaryMin?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   desiredSalaryMax?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
-  profileVisibility?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  visibility?: Prisma.EnumProfileVisibilityFieldUpdateOperationsInput | $Enums.ProfileVisibility
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   availability?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1102,6 +1321,13 @@ export type SeekerProfileUncheckedUpdateWithoutApplicationsInput = {
   portfolioUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   certifications?: Prisma.SeekerProfileUpdatecertificationsInput | string[]
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  languages?: Prisma.SeekerProfileUpdatelanguagesInput | string[]
+  timezone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  workExperience?: Prisma.SeekerProfileUpdateworkExperienceInput | string[]
+  education?: Prisma.SeekerProfileUpdateeducationInput | string[]
+  resumeLabel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resumeUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  resumes?: Prisma.SeekerProfileUpdateresumesInput | string[]
   savedJobs?: Prisma.SavedJobUncheckedUpdateManyWithoutSeekerNestedInput
   jobAlerts?: Prisma.JobAlertUncheckedUpdateManyWithoutSeekerNestedInput
   conversations?: Prisma.ConversationUncheckedUpdateManyWithoutSeekerNestedInput
@@ -1119,7 +1345,7 @@ export type SeekerProfileCreateWithoutSavedJobsInput = {
   skills?: Prisma.SeekerProfileCreateskillsInput | string[]
   desiredSalaryMin?: number | null
   desiredSalaryMax?: number | null
-  profileVisibility?: boolean
+  visibility?: $Enums.ProfileVisibility
   createdAt?: Date | string
   updatedAt?: Date | string
   availability?: string | null
@@ -1128,6 +1354,13 @@ export type SeekerProfileCreateWithoutSavedJobsInput = {
   portfolioUrl?: string | null
   certifications?: Prisma.SeekerProfileCreatecertificationsInput | string[]
   photoUrl?: string | null
+  languages?: Prisma.SeekerProfileCreatelanguagesInput | string[]
+  timezone?: string | null
+  workExperience?: Prisma.SeekerProfileCreateworkExperienceInput | string[]
+  education?: Prisma.SeekerProfileCreateeducationInput | string[]
+  resumeLabel?: string | null
+  resumeUpdatedAt?: Date | string | null
+  resumes?: Prisma.SeekerProfileCreateresumesInput | string[]
   user: Prisma.UserCreateNestedOneWithoutSeekerProfileInput
   applications?: Prisma.ApplicationCreateNestedManyWithoutSeekerInput
   jobAlerts?: Prisma.JobAlertCreateNestedManyWithoutSeekerInput
@@ -1147,7 +1380,7 @@ export type SeekerProfileUncheckedCreateWithoutSavedJobsInput = {
   skills?: Prisma.SeekerProfileCreateskillsInput | string[]
   desiredSalaryMin?: number | null
   desiredSalaryMax?: number | null
-  profileVisibility?: boolean
+  visibility?: $Enums.ProfileVisibility
   createdAt?: Date | string
   updatedAt?: Date | string
   availability?: string | null
@@ -1156,6 +1389,13 @@ export type SeekerProfileUncheckedCreateWithoutSavedJobsInput = {
   portfolioUrl?: string | null
   certifications?: Prisma.SeekerProfileCreatecertificationsInput | string[]
   photoUrl?: string | null
+  languages?: Prisma.SeekerProfileCreatelanguagesInput | string[]
+  timezone?: string | null
+  workExperience?: Prisma.SeekerProfileCreateworkExperienceInput | string[]
+  education?: Prisma.SeekerProfileCreateeducationInput | string[]
+  resumeLabel?: string | null
+  resumeUpdatedAt?: Date | string | null
+  resumes?: Prisma.SeekerProfileCreateresumesInput | string[]
   applications?: Prisma.ApplicationUncheckedCreateNestedManyWithoutSeekerInput
   jobAlerts?: Prisma.JobAlertUncheckedCreateNestedManyWithoutSeekerInput
   conversations?: Prisma.ConversationUncheckedCreateNestedManyWithoutSeekerInput
@@ -1189,7 +1429,7 @@ export type SeekerProfileUpdateWithoutSavedJobsInput = {
   skills?: Prisma.SeekerProfileUpdateskillsInput | string[]
   desiredSalaryMin?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   desiredSalaryMax?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
-  profileVisibility?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  visibility?: Prisma.EnumProfileVisibilityFieldUpdateOperationsInput | $Enums.ProfileVisibility
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   availability?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1198,6 +1438,13 @@ export type SeekerProfileUpdateWithoutSavedJobsInput = {
   portfolioUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   certifications?: Prisma.SeekerProfileUpdatecertificationsInput | string[]
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  languages?: Prisma.SeekerProfileUpdatelanguagesInput | string[]
+  timezone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  workExperience?: Prisma.SeekerProfileUpdateworkExperienceInput | string[]
+  education?: Prisma.SeekerProfileUpdateeducationInput | string[]
+  resumeLabel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resumeUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  resumes?: Prisma.SeekerProfileUpdateresumesInput | string[]
   user?: Prisma.UserUpdateOneRequiredWithoutSeekerProfileNestedInput
   applications?: Prisma.ApplicationUpdateManyWithoutSeekerNestedInput
   jobAlerts?: Prisma.JobAlertUpdateManyWithoutSeekerNestedInput
@@ -1217,7 +1464,7 @@ export type SeekerProfileUncheckedUpdateWithoutSavedJobsInput = {
   skills?: Prisma.SeekerProfileUpdateskillsInput | string[]
   desiredSalaryMin?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   desiredSalaryMax?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
-  profileVisibility?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  visibility?: Prisma.EnumProfileVisibilityFieldUpdateOperationsInput | $Enums.ProfileVisibility
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   availability?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1226,6 +1473,13 @@ export type SeekerProfileUncheckedUpdateWithoutSavedJobsInput = {
   portfolioUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   certifications?: Prisma.SeekerProfileUpdatecertificationsInput | string[]
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  languages?: Prisma.SeekerProfileUpdatelanguagesInput | string[]
+  timezone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  workExperience?: Prisma.SeekerProfileUpdateworkExperienceInput | string[]
+  education?: Prisma.SeekerProfileUpdateeducationInput | string[]
+  resumeLabel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resumeUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  resumes?: Prisma.SeekerProfileUpdateresumesInput | string[]
   applications?: Prisma.ApplicationUncheckedUpdateManyWithoutSeekerNestedInput
   jobAlerts?: Prisma.JobAlertUncheckedUpdateManyWithoutSeekerNestedInput
   conversations?: Prisma.ConversationUncheckedUpdateManyWithoutSeekerNestedInput
@@ -1243,7 +1497,7 @@ export type SeekerProfileCreateWithoutJobAlertsInput = {
   skills?: Prisma.SeekerProfileCreateskillsInput | string[]
   desiredSalaryMin?: number | null
   desiredSalaryMax?: number | null
-  profileVisibility?: boolean
+  visibility?: $Enums.ProfileVisibility
   createdAt?: Date | string
   updatedAt?: Date | string
   availability?: string | null
@@ -1252,6 +1506,13 @@ export type SeekerProfileCreateWithoutJobAlertsInput = {
   portfolioUrl?: string | null
   certifications?: Prisma.SeekerProfileCreatecertificationsInput | string[]
   photoUrl?: string | null
+  languages?: Prisma.SeekerProfileCreatelanguagesInput | string[]
+  timezone?: string | null
+  workExperience?: Prisma.SeekerProfileCreateworkExperienceInput | string[]
+  education?: Prisma.SeekerProfileCreateeducationInput | string[]
+  resumeLabel?: string | null
+  resumeUpdatedAt?: Date | string | null
+  resumes?: Prisma.SeekerProfileCreateresumesInput | string[]
   user: Prisma.UserCreateNestedOneWithoutSeekerProfileInput
   applications?: Prisma.ApplicationCreateNestedManyWithoutSeekerInput
   savedJobs?: Prisma.SavedJobCreateNestedManyWithoutSeekerInput
@@ -1271,7 +1532,7 @@ export type SeekerProfileUncheckedCreateWithoutJobAlertsInput = {
   skills?: Prisma.SeekerProfileCreateskillsInput | string[]
   desiredSalaryMin?: number | null
   desiredSalaryMax?: number | null
-  profileVisibility?: boolean
+  visibility?: $Enums.ProfileVisibility
   createdAt?: Date | string
   updatedAt?: Date | string
   availability?: string | null
@@ -1280,6 +1541,13 @@ export type SeekerProfileUncheckedCreateWithoutJobAlertsInput = {
   portfolioUrl?: string | null
   certifications?: Prisma.SeekerProfileCreatecertificationsInput | string[]
   photoUrl?: string | null
+  languages?: Prisma.SeekerProfileCreatelanguagesInput | string[]
+  timezone?: string | null
+  workExperience?: Prisma.SeekerProfileCreateworkExperienceInput | string[]
+  education?: Prisma.SeekerProfileCreateeducationInput | string[]
+  resumeLabel?: string | null
+  resumeUpdatedAt?: Date | string | null
+  resumes?: Prisma.SeekerProfileCreateresumesInput | string[]
   applications?: Prisma.ApplicationUncheckedCreateNestedManyWithoutSeekerInput
   savedJobs?: Prisma.SavedJobUncheckedCreateNestedManyWithoutSeekerInput
   conversations?: Prisma.ConversationUncheckedCreateNestedManyWithoutSeekerInput
@@ -1313,7 +1581,7 @@ export type SeekerProfileUpdateWithoutJobAlertsInput = {
   skills?: Prisma.SeekerProfileUpdateskillsInput | string[]
   desiredSalaryMin?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   desiredSalaryMax?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
-  profileVisibility?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  visibility?: Prisma.EnumProfileVisibilityFieldUpdateOperationsInput | $Enums.ProfileVisibility
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   availability?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1322,6 +1590,13 @@ export type SeekerProfileUpdateWithoutJobAlertsInput = {
   portfolioUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   certifications?: Prisma.SeekerProfileUpdatecertificationsInput | string[]
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  languages?: Prisma.SeekerProfileUpdatelanguagesInput | string[]
+  timezone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  workExperience?: Prisma.SeekerProfileUpdateworkExperienceInput | string[]
+  education?: Prisma.SeekerProfileUpdateeducationInput | string[]
+  resumeLabel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resumeUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  resumes?: Prisma.SeekerProfileUpdateresumesInput | string[]
   user?: Prisma.UserUpdateOneRequiredWithoutSeekerProfileNestedInput
   applications?: Prisma.ApplicationUpdateManyWithoutSeekerNestedInput
   savedJobs?: Prisma.SavedJobUpdateManyWithoutSeekerNestedInput
@@ -1341,7 +1616,7 @@ export type SeekerProfileUncheckedUpdateWithoutJobAlertsInput = {
   skills?: Prisma.SeekerProfileUpdateskillsInput | string[]
   desiredSalaryMin?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   desiredSalaryMax?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
-  profileVisibility?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  visibility?: Prisma.EnumProfileVisibilityFieldUpdateOperationsInput | $Enums.ProfileVisibility
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   availability?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1350,6 +1625,13 @@ export type SeekerProfileUncheckedUpdateWithoutJobAlertsInput = {
   portfolioUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   certifications?: Prisma.SeekerProfileUpdatecertificationsInput | string[]
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  languages?: Prisma.SeekerProfileUpdatelanguagesInput | string[]
+  timezone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  workExperience?: Prisma.SeekerProfileUpdateworkExperienceInput | string[]
+  education?: Prisma.SeekerProfileUpdateeducationInput | string[]
+  resumeLabel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resumeUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  resumes?: Prisma.SeekerProfileUpdateresumesInput | string[]
   applications?: Prisma.ApplicationUncheckedUpdateManyWithoutSeekerNestedInput
   savedJobs?: Prisma.SavedJobUncheckedUpdateManyWithoutSeekerNestedInput
   conversations?: Prisma.ConversationUncheckedUpdateManyWithoutSeekerNestedInput
@@ -1367,7 +1649,7 @@ export type SeekerProfileCreateWithoutConversationsInput = {
   skills?: Prisma.SeekerProfileCreateskillsInput | string[]
   desiredSalaryMin?: number | null
   desiredSalaryMax?: number | null
-  profileVisibility?: boolean
+  visibility?: $Enums.ProfileVisibility
   createdAt?: Date | string
   updatedAt?: Date | string
   availability?: string | null
@@ -1376,6 +1658,13 @@ export type SeekerProfileCreateWithoutConversationsInput = {
   portfolioUrl?: string | null
   certifications?: Prisma.SeekerProfileCreatecertificationsInput | string[]
   photoUrl?: string | null
+  languages?: Prisma.SeekerProfileCreatelanguagesInput | string[]
+  timezone?: string | null
+  workExperience?: Prisma.SeekerProfileCreateworkExperienceInput | string[]
+  education?: Prisma.SeekerProfileCreateeducationInput | string[]
+  resumeLabel?: string | null
+  resumeUpdatedAt?: Date | string | null
+  resumes?: Prisma.SeekerProfileCreateresumesInput | string[]
   user: Prisma.UserCreateNestedOneWithoutSeekerProfileInput
   applications?: Prisma.ApplicationCreateNestedManyWithoutSeekerInput
   savedJobs?: Prisma.SavedJobCreateNestedManyWithoutSeekerInput
@@ -1395,7 +1684,7 @@ export type SeekerProfileUncheckedCreateWithoutConversationsInput = {
   skills?: Prisma.SeekerProfileCreateskillsInput | string[]
   desiredSalaryMin?: number | null
   desiredSalaryMax?: number | null
-  profileVisibility?: boolean
+  visibility?: $Enums.ProfileVisibility
   createdAt?: Date | string
   updatedAt?: Date | string
   availability?: string | null
@@ -1404,6 +1693,13 @@ export type SeekerProfileUncheckedCreateWithoutConversationsInput = {
   portfolioUrl?: string | null
   certifications?: Prisma.SeekerProfileCreatecertificationsInput | string[]
   photoUrl?: string | null
+  languages?: Prisma.SeekerProfileCreatelanguagesInput | string[]
+  timezone?: string | null
+  workExperience?: Prisma.SeekerProfileCreateworkExperienceInput | string[]
+  education?: Prisma.SeekerProfileCreateeducationInput | string[]
+  resumeLabel?: string | null
+  resumeUpdatedAt?: Date | string | null
+  resumes?: Prisma.SeekerProfileCreateresumesInput | string[]
   applications?: Prisma.ApplicationUncheckedCreateNestedManyWithoutSeekerInput
   savedJobs?: Prisma.SavedJobUncheckedCreateNestedManyWithoutSeekerInput
   jobAlerts?: Prisma.JobAlertUncheckedCreateNestedManyWithoutSeekerInput
@@ -1437,7 +1733,7 @@ export type SeekerProfileUpdateWithoutConversationsInput = {
   skills?: Prisma.SeekerProfileUpdateskillsInput | string[]
   desiredSalaryMin?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   desiredSalaryMax?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
-  profileVisibility?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  visibility?: Prisma.EnumProfileVisibilityFieldUpdateOperationsInput | $Enums.ProfileVisibility
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   availability?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1446,6 +1742,13 @@ export type SeekerProfileUpdateWithoutConversationsInput = {
   portfolioUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   certifications?: Prisma.SeekerProfileUpdatecertificationsInput | string[]
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  languages?: Prisma.SeekerProfileUpdatelanguagesInput | string[]
+  timezone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  workExperience?: Prisma.SeekerProfileUpdateworkExperienceInput | string[]
+  education?: Prisma.SeekerProfileUpdateeducationInput | string[]
+  resumeLabel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resumeUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  resumes?: Prisma.SeekerProfileUpdateresumesInput | string[]
   user?: Prisma.UserUpdateOneRequiredWithoutSeekerProfileNestedInput
   applications?: Prisma.ApplicationUpdateManyWithoutSeekerNestedInput
   savedJobs?: Prisma.SavedJobUpdateManyWithoutSeekerNestedInput
@@ -1465,7 +1768,7 @@ export type SeekerProfileUncheckedUpdateWithoutConversationsInput = {
   skills?: Prisma.SeekerProfileUpdateskillsInput | string[]
   desiredSalaryMin?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   desiredSalaryMax?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
-  profileVisibility?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  visibility?: Prisma.EnumProfileVisibilityFieldUpdateOperationsInput | $Enums.ProfileVisibility
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   availability?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1474,6 +1777,13 @@ export type SeekerProfileUncheckedUpdateWithoutConversationsInput = {
   portfolioUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   certifications?: Prisma.SeekerProfileUpdatecertificationsInput | string[]
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  languages?: Prisma.SeekerProfileUpdatelanguagesInput | string[]
+  timezone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  workExperience?: Prisma.SeekerProfileUpdateworkExperienceInput | string[]
+  education?: Prisma.SeekerProfileUpdateeducationInput | string[]
+  resumeLabel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resumeUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  resumes?: Prisma.SeekerProfileUpdateresumesInput | string[]
   applications?: Prisma.ApplicationUncheckedUpdateManyWithoutSeekerNestedInput
   savedJobs?: Prisma.SavedJobUncheckedUpdateManyWithoutSeekerNestedInput
   jobAlerts?: Prisma.JobAlertUncheckedUpdateManyWithoutSeekerNestedInput
@@ -1491,7 +1801,7 @@ export type SeekerProfileCreateWithoutSavedByInput = {
   skills?: Prisma.SeekerProfileCreateskillsInput | string[]
   desiredSalaryMin?: number | null
   desiredSalaryMax?: number | null
-  profileVisibility?: boolean
+  visibility?: $Enums.ProfileVisibility
   createdAt?: Date | string
   updatedAt?: Date | string
   availability?: string | null
@@ -1500,6 +1810,13 @@ export type SeekerProfileCreateWithoutSavedByInput = {
   portfolioUrl?: string | null
   certifications?: Prisma.SeekerProfileCreatecertificationsInput | string[]
   photoUrl?: string | null
+  languages?: Prisma.SeekerProfileCreatelanguagesInput | string[]
+  timezone?: string | null
+  workExperience?: Prisma.SeekerProfileCreateworkExperienceInput | string[]
+  education?: Prisma.SeekerProfileCreateeducationInput | string[]
+  resumeLabel?: string | null
+  resumeUpdatedAt?: Date | string | null
+  resumes?: Prisma.SeekerProfileCreateresumesInput | string[]
   user: Prisma.UserCreateNestedOneWithoutSeekerProfileInput
   applications?: Prisma.ApplicationCreateNestedManyWithoutSeekerInput
   savedJobs?: Prisma.SavedJobCreateNestedManyWithoutSeekerInput
@@ -1519,7 +1836,7 @@ export type SeekerProfileUncheckedCreateWithoutSavedByInput = {
   skills?: Prisma.SeekerProfileCreateskillsInput | string[]
   desiredSalaryMin?: number | null
   desiredSalaryMax?: number | null
-  profileVisibility?: boolean
+  visibility?: $Enums.ProfileVisibility
   createdAt?: Date | string
   updatedAt?: Date | string
   availability?: string | null
@@ -1528,6 +1845,13 @@ export type SeekerProfileUncheckedCreateWithoutSavedByInput = {
   portfolioUrl?: string | null
   certifications?: Prisma.SeekerProfileCreatecertificationsInput | string[]
   photoUrl?: string | null
+  languages?: Prisma.SeekerProfileCreatelanguagesInput | string[]
+  timezone?: string | null
+  workExperience?: Prisma.SeekerProfileCreateworkExperienceInput | string[]
+  education?: Prisma.SeekerProfileCreateeducationInput | string[]
+  resumeLabel?: string | null
+  resumeUpdatedAt?: Date | string | null
+  resumes?: Prisma.SeekerProfileCreateresumesInput | string[]
   applications?: Prisma.ApplicationUncheckedCreateNestedManyWithoutSeekerInput
   savedJobs?: Prisma.SavedJobUncheckedCreateNestedManyWithoutSeekerInput
   jobAlerts?: Prisma.JobAlertUncheckedCreateNestedManyWithoutSeekerInput
@@ -1561,7 +1885,7 @@ export type SeekerProfileUpdateWithoutSavedByInput = {
   skills?: Prisma.SeekerProfileUpdateskillsInput | string[]
   desiredSalaryMin?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   desiredSalaryMax?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
-  profileVisibility?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  visibility?: Prisma.EnumProfileVisibilityFieldUpdateOperationsInput | $Enums.ProfileVisibility
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   availability?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1570,6 +1894,13 @@ export type SeekerProfileUpdateWithoutSavedByInput = {
   portfolioUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   certifications?: Prisma.SeekerProfileUpdatecertificationsInput | string[]
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  languages?: Prisma.SeekerProfileUpdatelanguagesInput | string[]
+  timezone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  workExperience?: Prisma.SeekerProfileUpdateworkExperienceInput | string[]
+  education?: Prisma.SeekerProfileUpdateeducationInput | string[]
+  resumeLabel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resumeUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  resumes?: Prisma.SeekerProfileUpdateresumesInput | string[]
   user?: Prisma.UserUpdateOneRequiredWithoutSeekerProfileNestedInput
   applications?: Prisma.ApplicationUpdateManyWithoutSeekerNestedInput
   savedJobs?: Prisma.SavedJobUpdateManyWithoutSeekerNestedInput
@@ -1589,7 +1920,7 @@ export type SeekerProfileUncheckedUpdateWithoutSavedByInput = {
   skills?: Prisma.SeekerProfileUpdateskillsInput | string[]
   desiredSalaryMin?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   desiredSalaryMax?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
-  profileVisibility?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  visibility?: Prisma.EnumProfileVisibilityFieldUpdateOperationsInput | $Enums.ProfileVisibility
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   availability?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1598,6 +1929,13 @@ export type SeekerProfileUncheckedUpdateWithoutSavedByInput = {
   portfolioUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   certifications?: Prisma.SeekerProfileUpdatecertificationsInput | string[]
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  languages?: Prisma.SeekerProfileUpdatelanguagesInput | string[]
+  timezone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  workExperience?: Prisma.SeekerProfileUpdateworkExperienceInput | string[]
+  education?: Prisma.SeekerProfileUpdateeducationInput | string[]
+  resumeLabel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resumeUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  resumes?: Prisma.SeekerProfileUpdateresumesInput | string[]
   applications?: Prisma.ApplicationUncheckedUpdateManyWithoutSeekerNestedInput
   savedJobs?: Prisma.SavedJobUncheckedUpdateManyWithoutSeekerNestedInput
   jobAlerts?: Prisma.JobAlertUncheckedUpdateManyWithoutSeekerNestedInput
@@ -1683,7 +2021,7 @@ export type SeekerProfileSelect<ExtArgs extends runtime.Types.Extensions.Interna
   skills?: boolean
   desiredSalaryMin?: boolean
   desiredSalaryMax?: boolean
-  profileVisibility?: boolean
+  visibility?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   availability?: boolean
@@ -1692,6 +2030,13 @@ export type SeekerProfileSelect<ExtArgs extends runtime.Types.Extensions.Interna
   portfolioUrl?: boolean
   certifications?: boolean
   photoUrl?: boolean
+  languages?: boolean
+  timezone?: boolean
+  workExperience?: boolean
+  education?: boolean
+  resumeLabel?: boolean
+  resumeUpdatedAt?: boolean
+  resumes?: boolean
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   applications?: boolean | Prisma.SeekerProfile$applicationsArgs<ExtArgs>
   savedJobs?: boolean | Prisma.SeekerProfile$savedJobsArgs<ExtArgs>
@@ -1713,7 +2058,7 @@ export type SeekerProfileSelectCreateManyAndReturn<ExtArgs extends runtime.Types
   skills?: boolean
   desiredSalaryMin?: boolean
   desiredSalaryMax?: boolean
-  profileVisibility?: boolean
+  visibility?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   availability?: boolean
@@ -1722,6 +2067,13 @@ export type SeekerProfileSelectCreateManyAndReturn<ExtArgs extends runtime.Types
   portfolioUrl?: boolean
   certifications?: boolean
   photoUrl?: boolean
+  languages?: boolean
+  timezone?: boolean
+  workExperience?: boolean
+  education?: boolean
+  resumeLabel?: boolean
+  resumeUpdatedAt?: boolean
+  resumes?: boolean
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["seekerProfile"]>
 
@@ -1737,7 +2089,7 @@ export type SeekerProfileSelectUpdateManyAndReturn<ExtArgs extends runtime.Types
   skills?: boolean
   desiredSalaryMin?: boolean
   desiredSalaryMax?: boolean
-  profileVisibility?: boolean
+  visibility?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   availability?: boolean
@@ -1746,6 +2098,13 @@ export type SeekerProfileSelectUpdateManyAndReturn<ExtArgs extends runtime.Types
   portfolioUrl?: boolean
   certifications?: boolean
   photoUrl?: boolean
+  languages?: boolean
+  timezone?: boolean
+  workExperience?: boolean
+  education?: boolean
+  resumeLabel?: boolean
+  resumeUpdatedAt?: boolean
+  resumes?: boolean
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["seekerProfile"]>
 
@@ -1761,7 +2120,7 @@ export type SeekerProfileSelectScalar = {
   skills?: boolean
   desiredSalaryMin?: boolean
   desiredSalaryMax?: boolean
-  profileVisibility?: boolean
+  visibility?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   availability?: boolean
@@ -1770,9 +2129,16 @@ export type SeekerProfileSelectScalar = {
   portfolioUrl?: boolean
   certifications?: boolean
   photoUrl?: boolean
+  languages?: boolean
+  timezone?: boolean
+  workExperience?: boolean
+  education?: boolean
+  resumeLabel?: boolean
+  resumeUpdatedAt?: boolean
+  resumes?: boolean
 }
 
-export type SeekerProfileOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "userId" | "fullName" | "phone" | "location" | "headline" | "bio" | "resumeUrl" | "skills" | "desiredSalaryMin" | "desiredSalaryMax" | "profileVisibility" | "createdAt" | "updatedAt" | "availability" | "yearsExperience" | "linkedinUrl" | "portfolioUrl" | "certifications" | "photoUrl", ExtArgs["result"]["seekerProfile"]>
+export type SeekerProfileOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "userId" | "fullName" | "phone" | "location" | "headline" | "bio" | "resumeUrl" | "skills" | "desiredSalaryMin" | "desiredSalaryMax" | "visibility" | "createdAt" | "updatedAt" | "availability" | "yearsExperience" | "linkedinUrl" | "portfolioUrl" | "certifications" | "photoUrl" | "languages" | "timezone" | "workExperience" | "education" | "resumeLabel" | "resumeUpdatedAt" | "resumes", ExtArgs["result"]["seekerProfile"]>
 export type SeekerProfileInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   applications?: boolean | Prisma.SeekerProfile$applicationsArgs<ExtArgs>
@@ -1811,7 +2177,7 @@ export type $SeekerProfilePayload<ExtArgs extends runtime.Types.Extensions.Inter
     skills: string[]
     desiredSalaryMin: number | null
     desiredSalaryMax: number | null
-    profileVisibility: boolean
+    visibility: $Enums.ProfileVisibility
     createdAt: Date
     updatedAt: Date
     availability: string | null
@@ -1820,6 +2186,13 @@ export type $SeekerProfilePayload<ExtArgs extends runtime.Types.Extensions.Inter
     portfolioUrl: string | null
     certifications: string[]
     photoUrl: string | null
+    languages: string[]
+    timezone: string | null
+    workExperience: string[]
+    education: string[]
+    resumeLabel: string | null
+    resumeUpdatedAt: Date | null
+    resumes: string[]
   }, ExtArgs["result"]["seekerProfile"]>
   composites: {}
 }
@@ -2260,7 +2633,7 @@ export interface SeekerProfileFieldRefs {
   readonly skills: Prisma.FieldRef<"SeekerProfile", 'String[]'>
   readonly desiredSalaryMin: Prisma.FieldRef<"SeekerProfile", 'Int'>
   readonly desiredSalaryMax: Prisma.FieldRef<"SeekerProfile", 'Int'>
-  readonly profileVisibility: Prisma.FieldRef<"SeekerProfile", 'Boolean'>
+  readonly visibility: Prisma.FieldRef<"SeekerProfile", 'ProfileVisibility'>
   readonly createdAt: Prisma.FieldRef<"SeekerProfile", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"SeekerProfile", 'DateTime'>
   readonly availability: Prisma.FieldRef<"SeekerProfile", 'String'>
@@ -2269,6 +2642,13 @@ export interface SeekerProfileFieldRefs {
   readonly portfolioUrl: Prisma.FieldRef<"SeekerProfile", 'String'>
   readonly certifications: Prisma.FieldRef<"SeekerProfile", 'String[]'>
   readonly photoUrl: Prisma.FieldRef<"SeekerProfile", 'String'>
+  readonly languages: Prisma.FieldRef<"SeekerProfile", 'String[]'>
+  readonly timezone: Prisma.FieldRef<"SeekerProfile", 'String'>
+  readonly workExperience: Prisma.FieldRef<"SeekerProfile", 'String[]'>
+  readonly education: Prisma.FieldRef<"SeekerProfile", 'String[]'>
+  readonly resumeLabel: Prisma.FieldRef<"SeekerProfile", 'String'>
+  readonly resumeUpdatedAt: Prisma.FieldRef<"SeekerProfile", 'DateTime'>
+  readonly resumes: Prisma.FieldRef<"SeekerProfile", 'String[]'>
 }
     
 

@@ -1,9 +1,14 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/Auth";
-import { errorResponse } from "@/lib/api-error";
+import { errorResponse, ApiError } from "@/lib/api-error";
 import { requireSeekerProfile } from "@/lib/seeker-auth";
 import { updateSeekerProfile } from "@/lib/seekers";
 import { uploadResume } from "@/lib/storage";
+import {
+  formatResume,
+  MAX_RESUMES,
+  resumeFilenameFromUrl,
+} from "@/lib/seeker-profile-format";
 
 export async function POST(req: Request) {
   try {
@@ -12,7 +17,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    await requireSeekerProfile(session.user.id);
+    const profile = await requireSeekerProfile(session.user.id);
+
+    if (profile.resumes.length >= MAX_RESUMES) {
+      throw new ApiError(`You can store up to ${MAX_RESUMES} resumes. Remove one to upload another.`, 400);
+    }
 
     const formData = await req.formData();
     const file = formData.get("file");
@@ -22,9 +31,29 @@ export async function POST(req: Request) {
     }
 
     const resumeUrl = await uploadResume(session.user.id, file);
-    const profile = await updateSeekerProfile(session.user.id, { resumeUrl });
+    const label = resumeFilenameFromUrl(resumeUrl);
+    const updatedAt = new Date().toISOString();
+    const entry = formatResume({ label, url: resumeUrl, updatedAt });
+    const resumes = [...profile.resumes, entry];
+    const isFirst = !profile.resumeUrl;
 
-    return NextResponse.json({ resumeUrl: profile.resumeUrl });
+    const updated = await updateSeekerProfile(session.user.id, {
+      resumes,
+      ...(isFirst
+        ? {
+            resumeUrl,
+            resumeLabel: label,
+          }
+        : {}),
+    });
+
+    return NextResponse.json({
+      resumeUrl: updated.resumeUrl,
+      resumeLabel: updated.resumeLabel,
+      resumeUpdatedAt: updated.resumeUpdatedAt?.toISOString() ?? updatedAt,
+      resumes: updated.resumes,
+      entry,
+    });
   } catch (error) {
     return errorResponse(error);
   }

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { HelpCircle, MapPin } from "lucide-react";
+import RichTextEditor from "@/components/ui/RichTextEditor";
 import EmployerActionBar from "@/components/employer/EmployerActionBar";
 
 const categories = ["Admin", "Social Media", "Customer Service", "Tech/IT", "Content Writing", "Bookkeeping", "Other"];
@@ -149,12 +150,11 @@ export default function JobForm({ initialData, loading, onSubmit }: Props) {
             title="Description"
             description="Describe responsibilities, day-to-day work, and what success looks like in this role."
           >
-            <textarea
+            <RichTextEditor
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={10}
+              onChange={setDescription}
+              minHeight="280px"
               placeholder="Describe the role responsibilities, team context, and day-to-day work..."
-              className="w-full resize-none rounded-xl border border-ink/10 bg-white p-4 text-sm leading-relaxed text-ink outline-none focus:border-teal focus:ring-1 focus:ring-teal/20"
             />
           </SectionCard>
 
@@ -162,12 +162,11 @@ export default function JobForm({ initialData, loading, onSubmit }: Props) {
             title="Requirements"
             description="List required skills, tools, experience level, and language expectations."
           >
-            <textarea
+            <RichTextEditor
               value={requirements}
-              onChange={(e) => setRequirements(e.target.value)}
-              rows={5}
-              placeholder="e.g. 2+ years VA experience, fluent English, HubSpot, Google Workspace..."
-              className="w-full resize-none rounded-xl border border-ink/10 bg-white p-4 text-sm leading-relaxed text-ink outline-none focus:border-teal focus:ring-1 focus:ring-teal/20"
+              onChange={setRequirements}
+              minHeight="200px"
+              placeholder="e.g. 2+ years VA experience, fluent English, HubSpot..."
             />
           </SectionCard>
 
@@ -175,12 +174,11 @@ export default function JobForm({ initialData, loading, onSubmit }: Props) {
             title="Benefits"
             description="Highlight perks candidates care about — training, equipment, flexible hours, or growth opportunities."
           >
-            <textarea
+            <RichTextEditor
               value={benefits}
-              onChange={(e) => setBenefits(e.target.value)}
-              rows={5}
-              placeholder="e.g. Paid training, equipment provided, flexible schedule, performance bonuses..."
-              className="w-full resize-none rounded-xl border border-ink/10 bg-white p-4 text-sm leading-relaxed text-ink outline-none focus:border-teal focus:ring-1 focus:ring-teal/20"
+              onChange={setBenefits}
+              minHeight="200px"
+              placeholder="e.g. Paid training, equipment provided, flexible schedule..."
             />
           </SectionCard>
 
