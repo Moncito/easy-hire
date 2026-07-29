@@ -3,6 +3,7 @@ import { z } from "zod";
 export const companyUpdateSchema = z.object({
   companyName: z.string().min(1, "Company name is required"),
   logoUrl: z.string().url().optional().nullable(),
+  bannerUrl: z.string().url().optional().nullable(),
   description: z.string().optional().nullable(),
   website: z.string().optional().nullable(),
   industry: z.string().optional().nullable(),
@@ -30,6 +31,7 @@ export function companyInputToData(input: CompanyUpdate) {
   return {
     companyName: input.companyName,
     ...(input.logoUrl !== undefined ? { logoUrl: input.logoUrl || null } : {}),
+    ...(input.bannerUrl !== undefined ? { bannerUrl: input.bannerUrl || null } : {}),
     description: input.description || null,
     website: emptyToNull(input.website ?? null),
     industry: input.industry || null,

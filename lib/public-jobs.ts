@@ -267,6 +267,7 @@ export async function getPublicJob(jobId: string) {
           id: true,
           companyName: true,
           logoUrl: true,
+          bannerUrl: true,
           description: true,
           website: true,
           industry: true,

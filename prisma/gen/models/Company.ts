@@ -39,6 +39,7 @@ export type CompanyMinAggregateOutputType = {
   userId: string | null
   companyName: string | null
   logoUrl: string | null
+  bannerUrl: string | null
   description: string | null
   website: string | null
   industry: string | null
@@ -59,6 +60,7 @@ export type CompanyMaxAggregateOutputType = {
   userId: string | null
   companyName: string | null
   logoUrl: string | null
+  bannerUrl: string | null
   description: string | null
   website: string | null
   industry: string | null
@@ -79,6 +81,7 @@ export type CompanyCountAggregateOutputType = {
   userId: number
   companyName: number
   logoUrl: number
+  bannerUrl: number
   description: number
   website: number
   industry: number
@@ -110,6 +113,7 @@ export type CompanyMinAggregateInputType = {
   userId?: true
   companyName?: true
   logoUrl?: true
+  bannerUrl?: true
   description?: true
   website?: true
   industry?: true
@@ -130,6 +134,7 @@ export type CompanyMaxAggregateInputType = {
   userId?: true
   companyName?: true
   logoUrl?: true
+  bannerUrl?: true
   description?: true
   website?: true
   industry?: true
@@ -150,6 +155,7 @@ export type CompanyCountAggregateInputType = {
   userId?: true
   companyName?: true
   logoUrl?: true
+  bannerUrl?: true
   description?: true
   website?: true
   industry?: true
@@ -258,6 +264,7 @@ export type CompanyGroupByOutputType = {
   userId: string
   companyName: string
   logoUrl: string | null
+  bannerUrl: string | null
   description: string | null
   website: string | null
   industry: string | null
@@ -302,6 +309,7 @@ export type CompanyWhereInput = {
   userId?: Prisma.StringFilter<"Company"> | string
   companyName?: Prisma.StringFilter<"Company"> | string
   logoUrl?: Prisma.StringNullableFilter<"Company"> | string | null
+  bannerUrl?: Prisma.StringNullableFilter<"Company"> | string | null
   description?: Prisma.StringNullableFilter<"Company"> | string | null
   website?: Prisma.StringNullableFilter<"Company"> | string | null
   industry?: Prisma.StringNullableFilter<"Company"> | string | null
@@ -328,6 +336,7 @@ export type CompanyOrderByWithRelationInput = {
   userId?: Prisma.SortOrder
   companyName?: Prisma.SortOrder
   logoUrl?: Prisma.SortOrderInput | Prisma.SortOrder
+  bannerUrl?: Prisma.SortOrderInput | Prisma.SortOrder
   description?: Prisma.SortOrderInput | Prisma.SortOrder
   website?: Prisma.SortOrderInput | Prisma.SortOrder
   industry?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -357,6 +366,7 @@ export type CompanyWhereUniqueInput = Prisma.AtLeast<{
   NOT?: Prisma.CompanyWhereInput | Prisma.CompanyWhereInput[]
   companyName?: Prisma.StringFilter<"Company"> | string
   logoUrl?: Prisma.StringNullableFilter<"Company"> | string | null
+  bannerUrl?: Prisma.StringNullableFilter<"Company"> | string | null
   description?: Prisma.StringNullableFilter<"Company"> | string | null
   website?: Prisma.StringNullableFilter<"Company"> | string | null
   industry?: Prisma.StringNullableFilter<"Company"> | string | null
@@ -383,6 +393,7 @@ export type CompanyOrderByWithAggregationInput = {
   userId?: Prisma.SortOrder
   companyName?: Prisma.SortOrder
   logoUrl?: Prisma.SortOrderInput | Prisma.SortOrder
+  bannerUrl?: Prisma.SortOrderInput | Prisma.SortOrder
   description?: Prisma.SortOrderInput | Prisma.SortOrder
   website?: Prisma.SortOrderInput | Prisma.SortOrder
   industry?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -412,6 +423,7 @@ export type CompanyScalarWhereWithAggregatesInput = {
   userId?: Prisma.StringWithAggregatesFilter<"Company"> | string
   companyName?: Prisma.StringWithAggregatesFilter<"Company"> | string
   logoUrl?: Prisma.StringNullableWithAggregatesFilter<"Company"> | string | null
+  bannerUrl?: Prisma.StringNullableWithAggregatesFilter<"Company"> | string | null
   description?: Prisma.StringNullableWithAggregatesFilter<"Company"> | string | null
   website?: Prisma.StringNullableWithAggregatesFilter<"Company"> | string | null
   industry?: Prisma.StringNullableWithAggregatesFilter<"Company"> | string | null
@@ -432,6 +444,7 @@ export type CompanyCreateInput = {
   id?: string
   companyName: string
   logoUrl?: string | null
+  bannerUrl?: string | null
   description?: string | null
   website?: string | null
   industry?: string | null
@@ -458,6 +471,7 @@ export type CompanyUncheckedCreateInput = {
   userId: string
   companyName: string
   logoUrl?: string | null
+  bannerUrl?: string | null
   description?: string | null
   website?: string | null
   industry?: string | null
@@ -482,6 +496,7 @@ export type CompanyUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   companyName?: Prisma.StringFieldUpdateOperationsInput | string
   logoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  bannerUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   industry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -508,6 +523,7 @@ export type CompanyUncheckedUpdateInput = {
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   companyName?: Prisma.StringFieldUpdateOperationsInput | string
   logoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  bannerUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   industry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -533,6 +549,7 @@ export type CompanyCreateManyInput = {
   userId: string
   companyName: string
   logoUrl?: string | null
+  bannerUrl?: string | null
   description?: string | null
   website?: string | null
   industry?: string | null
@@ -553,6 +570,7 @@ export type CompanyUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   companyName?: Prisma.StringFieldUpdateOperationsInput | string
   logoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  bannerUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   industry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -574,6 +592,7 @@ export type CompanyUncheckedUpdateManyInput = {
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   companyName?: Prisma.StringFieldUpdateOperationsInput | string
   logoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  bannerUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   industry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -600,6 +619,7 @@ export type CompanyCountOrderByAggregateInput = {
   userId?: Prisma.SortOrder
   companyName?: Prisma.SortOrder
   logoUrl?: Prisma.SortOrder
+  bannerUrl?: Prisma.SortOrder
   description?: Prisma.SortOrder
   website?: Prisma.SortOrder
   industry?: Prisma.SortOrder
@@ -625,6 +645,7 @@ export type CompanyMaxOrderByAggregateInput = {
   userId?: Prisma.SortOrder
   companyName?: Prisma.SortOrder
   logoUrl?: Prisma.SortOrder
+  bannerUrl?: Prisma.SortOrder
   description?: Prisma.SortOrder
   website?: Prisma.SortOrder
   industry?: Prisma.SortOrder
@@ -645,6 +666,7 @@ export type CompanyMinOrderByAggregateInput = {
   userId?: Prisma.SortOrder
   companyName?: Prisma.SortOrder
   logoUrl?: Prisma.SortOrder
+  bannerUrl?: Prisma.SortOrder
   description?: Prisma.SortOrder
   website?: Prisma.SortOrder
   industry?: Prisma.SortOrder
@@ -774,6 +796,7 @@ export type CompanyCreateWithoutUserInput = {
   id?: string
   companyName: string
   logoUrl?: string | null
+  bannerUrl?: string | null
   description?: string | null
   website?: string | null
   industry?: string | null
@@ -798,6 +821,7 @@ export type CompanyUncheckedCreateWithoutUserInput = {
   id?: string
   companyName: string
   logoUrl?: string | null
+  bannerUrl?: string | null
   description?: string | null
   website?: string | null
   industry?: string | null
@@ -838,6 +862,7 @@ export type CompanyUpdateWithoutUserInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   companyName?: Prisma.StringFieldUpdateOperationsInput | string
   logoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  bannerUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   industry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -862,6 +887,7 @@ export type CompanyUncheckedUpdateWithoutUserInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   companyName?: Prisma.StringFieldUpdateOperationsInput | string
   logoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  bannerUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   industry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -886,6 +912,7 @@ export type CompanyCreateWithoutJobsInput = {
   id?: string
   companyName: string
   logoUrl?: string | null
+  bannerUrl?: string | null
   description?: string | null
   website?: string | null
   industry?: string | null
@@ -911,6 +938,7 @@ export type CompanyUncheckedCreateWithoutJobsInput = {
   userId: string
   companyName: string
   logoUrl?: string | null
+  bannerUrl?: string | null
   description?: string | null
   website?: string | null
   industry?: string | null
@@ -950,6 +978,7 @@ export type CompanyUpdateWithoutJobsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   companyName?: Prisma.StringFieldUpdateOperationsInput | string
   logoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  bannerUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   industry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -975,6 +1004,7 @@ export type CompanyUncheckedUpdateWithoutJobsInput = {
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   companyName?: Prisma.StringFieldUpdateOperationsInput | string
   logoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  bannerUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   industry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -998,6 +1028,7 @@ export type CompanyCreateWithoutSubscriptionsInput = {
   id?: string
   companyName: string
   logoUrl?: string | null
+  bannerUrl?: string | null
   description?: string | null
   website?: string | null
   industry?: string | null
@@ -1023,6 +1054,7 @@ export type CompanyUncheckedCreateWithoutSubscriptionsInput = {
   userId: string
   companyName: string
   logoUrl?: string | null
+  bannerUrl?: string | null
   description?: string | null
   website?: string | null
   industry?: string | null
@@ -1062,6 +1094,7 @@ export type CompanyUpdateWithoutSubscriptionsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   companyName?: Prisma.StringFieldUpdateOperationsInput | string
   logoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  bannerUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   industry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1087,6 +1120,7 @@ export type CompanyUncheckedUpdateWithoutSubscriptionsInput = {
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   companyName?: Prisma.StringFieldUpdateOperationsInput | string
   logoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  bannerUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   industry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1110,6 +1144,7 @@ export type CompanyCreateWithoutConversationsInput = {
   id?: string
   companyName: string
   logoUrl?: string | null
+  bannerUrl?: string | null
   description?: string | null
   website?: string | null
   industry?: string | null
@@ -1135,6 +1170,7 @@ export type CompanyUncheckedCreateWithoutConversationsInput = {
   userId: string
   companyName: string
   logoUrl?: string | null
+  bannerUrl?: string | null
   description?: string | null
   website?: string | null
   industry?: string | null
@@ -1174,6 +1210,7 @@ export type CompanyUpdateWithoutConversationsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   companyName?: Prisma.StringFieldUpdateOperationsInput | string
   logoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  bannerUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   industry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1199,6 +1236,7 @@ export type CompanyUncheckedUpdateWithoutConversationsInput = {
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   companyName?: Prisma.StringFieldUpdateOperationsInput | string
   logoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  bannerUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   industry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1222,6 +1260,7 @@ export type CompanyCreateWithoutSavedSeekersInput = {
   id?: string
   companyName: string
   logoUrl?: string | null
+  bannerUrl?: string | null
   description?: string | null
   website?: string | null
   industry?: string | null
@@ -1247,6 +1286,7 @@ export type CompanyUncheckedCreateWithoutSavedSeekersInput = {
   userId: string
   companyName: string
   logoUrl?: string | null
+  bannerUrl?: string | null
   description?: string | null
   website?: string | null
   industry?: string | null
@@ -1286,6 +1326,7 @@ export type CompanyUpdateWithoutSavedSeekersInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   companyName?: Prisma.StringFieldUpdateOperationsInput | string
   logoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  bannerUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   industry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1311,6 +1352,7 @@ export type CompanyUncheckedUpdateWithoutSavedSeekersInput = {
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   companyName?: Prisma.StringFieldUpdateOperationsInput | string
   logoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  bannerUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   industry?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1393,6 +1435,7 @@ export type CompanySelect<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   userId?: boolean
   companyName?: boolean
   logoUrl?: boolean
+  bannerUrl?: boolean
   description?: boolean
   website?: boolean
   industry?: boolean
@@ -1420,6 +1463,7 @@ export type CompanySelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exten
   userId?: boolean
   companyName?: boolean
   logoUrl?: boolean
+  bannerUrl?: boolean
   description?: boolean
   website?: boolean
   industry?: boolean
@@ -1442,6 +1486,7 @@ export type CompanySelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exten
   userId?: boolean
   companyName?: boolean
   logoUrl?: boolean
+  bannerUrl?: boolean
   description?: boolean
   website?: boolean
   industry?: boolean
@@ -1464,6 +1509,7 @@ export type CompanySelectScalar = {
   userId?: boolean
   companyName?: boolean
   logoUrl?: boolean
+  bannerUrl?: boolean
   description?: boolean
   website?: boolean
   industry?: boolean
@@ -1480,7 +1526,7 @@ export type CompanySelectScalar = {
   xUrl?: boolean
 }
 
-export type CompanyOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "userId" | "companyName" | "logoUrl" | "description" | "website" | "industry" | "verifiedStatus" | "createdAt" | "updatedAt" | "teamSize" | "foundedYear" | "headquarters" | "highlights" | "linkedinUrl" | "facebookUrl" | "instagramUrl" | "xUrl", ExtArgs["result"]["company"]>
+export type CompanyOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "userId" | "companyName" | "logoUrl" | "bannerUrl" | "description" | "website" | "industry" | "verifiedStatus" | "createdAt" | "updatedAt" | "teamSize" | "foundedYear" | "headquarters" | "highlights" | "linkedinUrl" | "facebookUrl" | "instagramUrl" | "xUrl", ExtArgs["result"]["company"]>
 export type CompanyInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   jobs?: boolean | Prisma.Company$jobsArgs<ExtArgs>
@@ -1510,6 +1556,7 @@ export type $CompanyPayload<ExtArgs extends runtime.Types.Extensions.InternalArg
     userId: string
     companyName: string
     logoUrl: string | null
+    bannerUrl: string | null
     description: string | null
     website: string | null
     industry: string | null
@@ -1956,6 +2003,7 @@ export interface CompanyFieldRefs {
   readonly userId: Prisma.FieldRef<"Company", 'String'>
   readonly companyName: Prisma.FieldRef<"Company", 'String'>
   readonly logoUrl: Prisma.FieldRef<"Company", 'String'>
+  readonly bannerUrl: Prisma.FieldRef<"Company", 'String'>
   readonly description: Prisma.FieldRef<"Company", 'String'>
   readonly website: Prisma.FieldRef<"Company", 'String'>
   readonly industry: Prisma.FieldRef<"Company", 'String'>

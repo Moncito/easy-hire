@@ -103,7 +103,7 @@ export const SeekerProfileScalarFieldEnum = {
   skills: 'skills',
   desiredSalaryMin: 'desiredSalaryMin',
   desiredSalaryMax: 'desiredSalaryMax',
-  profileVisibility: 'profileVisibility',
+  visibility: 'visibility',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
   availability: 'availability',
@@ -111,7 +111,14 @@ export const SeekerProfileScalarFieldEnum = {
   linkedinUrl: 'linkedinUrl',
   portfolioUrl: 'portfolioUrl',
   certifications: 'certifications',
-  photoUrl: 'photoUrl'
+  photoUrl: 'photoUrl',
+  languages: 'languages',
+  timezone: 'timezone',
+  workExperience: 'workExperience',
+  education: 'education',
+  resumeLabel: 'resumeLabel',
+  resumeUpdatedAt: 'resumeUpdatedAt',
+  resumes: 'resumes'
 } as const
 
 export type SeekerProfileScalarFieldEnum = (typeof SeekerProfileScalarFieldEnum)[keyof typeof SeekerProfileScalarFieldEnum]
@@ -122,6 +129,7 @@ export const CompanyScalarFieldEnum = {
   userId: 'userId',
   companyName: 'companyName',
   logoUrl: 'logoUrl',
+  bannerUrl: 'bannerUrl',
   description: 'description',
   website: 'website',
   industry: 'industry',

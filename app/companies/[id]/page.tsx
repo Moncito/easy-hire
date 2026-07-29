@@ -28,7 +28,14 @@ export default async function CompanyPage({ params }: { params: Promise<{ id: st
       <PublicJobsHeader />
       <div className="mx-auto max-w-5xl px-6 pb-10 pt-28">
         <div className="overflow-hidden rounded-2xl border border-ink/5 bg-white shadow-xs">
-          <div className="h-28 bg-gradient-to-r from-teal/50 via-navy/40 to-teal/30" />
+          <div className="h-28 overflow-hidden sm:h-32">
+            {company.bannerUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={company.bannerUrl} alt="" className="h-full w-full object-cover" />
+            ) : (
+              <div className="h-full bg-gradient-to-r from-teal/50 via-navy/40 to-teal/30" />
+            )}
+          </div>
           <div className="relative px-6 pb-6 sm:px-8">
             <div className="-mt-10 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
               <div className="flex items-end gap-4">
