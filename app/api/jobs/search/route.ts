@@ -10,10 +10,15 @@ export async function GET(req: Request) {
     const input = jobSearchSchema.parse({
       q: searchParams.get("q") || undefined,
       category: searchParams.get("category") || undefined,
+      industry: searchParams.get("industry") || undefined,
+      location: searchParams.get("location") || undefined,
       employmentType: searchParams.get("employmentType") || undefined,
       remoteType: searchParams.get("remoteType") || undefined,
       salaryMin: searchParams.get("salaryMin") || undefined,
       salaryMax: searchParams.get("salaryMax") || undefined,
+      salaryPeriod: searchParams.get("salaryPeriod") || undefined,
+      postedWithin: searchParams.get("postedWithin") || undefined,
+      sort: searchParams.get("sort") || undefined,
       cursor: searchParams.get("cursor") || undefined,
       limit: searchParams.get("limit") || undefined,
     });

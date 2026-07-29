@@ -3,6 +3,7 @@ import { z } from "zod";
 export const employmentTypeSchema = z.enum(["FULL_TIME", "PART_TIME", "CONTRACT"]);
 export const remoteTypeSchema = z.enum(["REMOTE", "ONSITE", "HYBRID"]);
 export const jobStatusSchema = z.enum(["DRAFT", "PENDING_REVIEW", "ACTIVE", "CLOSED"]);
+export const salaryPeriodSchema = z.enum(["HOURLY", "MONTHLY", "ANNUAL"]);
 
 export const jobInputSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -10,9 +11,11 @@ export const jobInputSchema = z.object({
   requirements: z.string().optional().nullable(),
   benefits: z.string().optional().nullable(),
   category: z.string().min(1, "Category is required"),
+  industry: z.string().optional().nullable(),
   employmentType: employmentTypeSchema,
   salaryMin: z.union([z.string(), z.number()]).optional().nullable(),
   salaryMax: z.union([z.string(), z.number()]).optional().nullable(),
+  salaryPeriod: salaryPeriodSchema.default("MONTHLY"),
   location: z.string().min(1, "Location is required"),
   remoteType: remoteTypeSchema.default("REMOTE"),
 });
@@ -36,9 +39,11 @@ export function jobInputToData(input: JobInput) {
     requirements: input.requirements || null,
     benefits: input.benefits || null,
     category: input.category,
+    industry: input.industry || null,
     employmentType: input.employmentType,
     salaryMin: parseSalary(input.salaryMin),
     salaryMax: parseSalary(input.salaryMax),
+    salaryPeriod: input.salaryPeriod,
     location: input.location,
     remoteType: input.remoteType,
   };

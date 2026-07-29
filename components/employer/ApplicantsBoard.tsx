@@ -339,6 +339,12 @@ export default function ApplicantsBoard({ job, initialApplications }: Props) {
                   <p className="mt-0.5 text-xs text-ink/50">
                     {selectedApp.seeker.headline || "Virtual Assistant"}
                   </p>
+                  <a
+                    href={`/employer/talent/${selectedApp.seeker.id}`}
+                    className="mt-1 inline-block cursor-pointer text-[11px] font-semibold text-teal hover:underline"
+                  >
+                    View full profile
+                  </a>
                 </div>
               </div>
               <button
@@ -480,15 +486,13 @@ export default function ApplicantsBoard({ job, initialApplications }: Props) {
                 <h4 className="text-xs font-bold uppercase tracking-wider text-ink/45">Resume</h4>
                 {selectedApp.seeker.resumeUrl ? (
                   <a
-                    href={selectedApp.seeker.resumeUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                    href={`/api/employer/talent/${selectedApp.seeker.id}/resume`}
                     className="flex cursor-pointer items-center gap-2 rounded-xl border border-ink/10 p-3 transition-all hover:border-teal/30 hover:bg-teal/5"
                   >
                     <Paperclip className="h-4 w-4 text-teal" aria-hidden="true" />
                     <div className="min-w-0">
-                      <p className="truncate text-xs font-semibold text-ink">View resume</p>
-                      <p className="mt-0.5 text-[9px] text-ink/40">Opens in a new tab</p>
+                      <p className="truncate text-xs font-semibold text-ink">Download resume</p>
+                      <p className="mt-0.5 text-[9px] text-ink/40">PDF/DOCX file</p>
                     </div>
                   </a>
                 ) : (

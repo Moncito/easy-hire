@@ -2,8 +2,10 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Bookmark, BookmarkCheck, MessageSquare, Search } from "lucide-react";
+import { Search, SlidersHorizontal, Download } from "lucide-react";
 import { formatPesoRange } from "@/lib/format";
+import SaveSeekerButton from "@/components/employer/SaveSeekerButton";
+import MessageSeekerButton from "@/components/employer/MessageSeekerButton";
 
 type TalentItem = {
   id: string;
@@ -19,15 +21,24 @@ type TalentItem = {
   saved: boolean;
 };
 
+const availabilityOptions = [
+  { value: "", label: "Any availability" },
+  { value: "Full-time", label: "Full-time" },
+  { value: "Part-time", label: "Part-time" },
+  { value: "Project-based", label: "Project-based" },
+];
+
 export default function TalentSearchBoard() {
   const [query, setQuery] = useState("");
+  const [skill, setSkill] = useState("");
+  const [location, setLocation] = useState("");
+  const [availability, setAvailability] = useState("");
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [seekers, setSeekers] = useState<TalentItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
   const [showSaved, setShowSaved] = useState(false);
   const [error, setError] = useState("");
-  const [messagingId, setMessagingId] = useState<string | null>(null);
-  const [messageError, setMessageError] = useState("");
 
   const loadSaved = useCallback(async () => {
     setLoading(true);
@@ -57,6 +68,9 @@ export default function TalentSearchBoard() {
     try {
       const params = new URLSearchParams();
       if (query.trim()) params.set("q", query.trim());
+      if (skill.trim()) params.set("skill", skill.trim());
+      if (location.trim()) params.set("location", location.trim());
+      if (availability) params.set("availability", availability);
       const res = await fetch(`/api/employer/talent/search?${params}`);
       if (!res.ok) {
         setSeekers([]);
@@ -72,52 +86,18 @@ export default function TalentSearchBoard() {
       setLoading(false);
       setSearched(true);
     }
-  }, [query]);
+  }, [query, skill, location, availability]);
 
   useEffect(() => {
     search();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function toggleSave(seekerId: string, currentlySaved: boolean) {
-    const res = currentlySaved
-      ? await fetch(`/api/employer/saved-seekers/${seekerId}`, { method: "DELETE" })
-      : await fetch("/api/employer/saved-seekers", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ seekerId }),
-        });
-
-    if (res.ok) {
-      setSeekers((prev) =>
-        prev.map((s) => (s.id === seekerId ? { ...s, saved: !currentlySaved } : s))
-      );
-    }
+  function handleToggleSaved(seekerId: string, nextSaved: boolean) {
+    setSeekers((prev) => prev.map((s) => (s.id === seekerId ? { ...s, saved: nextSaved } : s)));
   }
 
-  async function startConversation(seekerId: string) {
-    setMessageError("");
-    setMessagingId(seekerId);
-    try {
-      const res = await fetch("/api/conversations", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ seekerId }),
-      });
-
-      const result = await res.json().catch(() => ({}));
-
-      if (!res.ok) {
-        setMessageError((result as { error?: string }).error || "Could not start conversation");
-        return;
-      }
-
-      window.location.href = `/employer/messages?c=${(result as { id: string }).id}`;
-    } catch {
-      setMessageError("Could not start conversation");
-    } finally {
-      setMessagingId(null);
-    }
-  }
+  const activeFilterCount = [skill, location, availability].filter(Boolean).length;
 
   return (
     <div>
@@ -128,7 +108,7 @@ export default function TalentSearchBoard() {
         </p>
       </div>
 
-      <div className="mb-6 flex flex-col gap-3 sm:flex-row">
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/35" />
           <input
@@ -150,6 +130,19 @@ export default function TalentSearchBoard() {
         </button>
         <button
           type="button"
+          onClick={() => setFiltersOpen((o) => !o)}
+          className={`inline-flex items-center gap-1.5 rounded-xl border px-4 py-2.5 text-sm font-semibold transition-colors ${
+            filtersOpen || activeFilterCount > 0
+              ? "border-teal/30 bg-teal/8 text-teal"
+              : "border-ink/10 text-ink/70 hover:bg-ink/3"
+          }`}
+        >
+          <SlidersHorizontal className="h-4 w-4" />
+          Filters
+          {activeFilterCount > 0 && ` (${activeFilterCount})`}
+        </button>
+        <button
+          type="button"
           onClick={() => {
             setShowSaved(true);
             loadSaved();
@@ -164,8 +157,44 @@ export default function TalentSearchBoard() {
         </button>
       </div>
 
+      {filtersOpen && (
+        <div className="mb-6 grid grid-cols-1 gap-3 rounded-2xl border border-ink/8 bg-white p-4 sm:grid-cols-3">
+          <input
+            value={skill}
+            onChange={(e) => setSkill(e.target.value)}
+            placeholder="Skill (e.g. Bookkeeping)"
+            className="rounded-xl border border-ink/10 px-3 py-2 text-sm text-ink outline-none focus:border-teal"
+          />
+          <input
+            value={location}
+            onChange={(e) => setLocation(e.target.value)}
+            placeholder="Location (e.g. Cebu)"
+            className="rounded-xl border border-ink/10 px-3 py-2 text-sm text-ink outline-none focus:border-teal"
+          />
+          <select
+            value={availability}
+            onChange={(e) => setAvailability(e.target.value)}
+            className="rounded-xl border border-ink/10 px-3 py-2 text-sm text-ink outline-none focus:border-teal"
+          >
+            {availabilityOptions.map((opt) => (
+              <option key={opt.value || "any-avail"} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+          <div className="sm:col-span-3">
+            <button
+              type="button"
+              onClick={search}
+              className="rounded-xl bg-ink px-4 py-2 text-xs font-semibold text-white hover:bg-ink/90"
+            >
+              Apply filters
+            </button>
+          </div>
+        </div>
+      )}
+
       {error && <p className="mb-4 text-sm text-ember">{error}</p>}
-      {messageError && <p className="mb-4 text-sm text-ember">{messageError}</p>}
 
       {loading ? (
         <p className="text-sm text-ink/45">Searching...</p>
@@ -192,32 +221,26 @@ export default function TalentSearchBoard() {
                       .toUpperCase()}
                   </div>
                   <div>
-                    <h3 className="font-display text-base font-bold text-ink">{seeker.fullName}</h3>
+                    <Link
+                      href={`/employer/talent/${seeker.id}`}
+                      className="font-display text-base font-bold text-ink hover:text-teal"
+                    >
+                      {seeker.fullName}
+                    </Link>
                     <p className="text-xs text-ink/50">{seeker.headline || "Virtual Assistant"}</p>
                   </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => toggleSave(seeker.id, seeker.saved)}
-                  className="rounded-lg p-2 text-ink/40 hover:bg-ink/5 hover:text-teal"
-                  aria-label={seeker.saved ? "Remove bookmark" : "Save candidate"}
-                >
-                  {seeker.saved ? (
-                    <BookmarkCheck className="h-4 w-4 text-teal" />
-                  ) : (
-                    <Bookmark className="h-4 w-4" />
-                  )}
-                </button>
+                <SaveSeekerButton seekerId={seeker.id} saved={seeker.saved} onToggle={handleToggleSaved} />
               </div>
 
               {seeker.skills.length > 0 && (
                 <div className="mt-3 flex flex-wrap gap-1">
-                  {seeker.skills.slice(0, 5).map((skill) => (
+                  {seeker.skills.slice(0, 5).map((s) => (
                     <span
-                      key={skill}
+                      key={s}
                       className="rounded-md bg-ink/5 px-2 py-0.5 text-[10px] font-semibold text-ink/65"
                     >
-                      {skill}
+                      {s}
                     </span>
                   ))}
                 </div>
@@ -232,24 +255,21 @@ export default function TalentSearchBoard() {
               </div>
 
               <div className="mt-4 flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => startConversation(seeker.id)}
-                  disabled={messagingId === seeker.id}
-                  className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-teal px-3 py-2 text-xs font-semibold text-white hover:bg-teal/95 disabled:cursor-not-allowed disabled:opacity-60"
+                <Link
+                  href={`/employer/talent/${seeker.id}`}
+                  className="inline-flex flex-1 items-center justify-center rounded-xl border border-ink/10 px-3 py-2 text-xs font-semibold text-ink/70 hover:bg-ink/3"
                 >
-                  <MessageSquare className="h-3.5 w-3.5" />
-                  {messagingId === seeker.id ? "Opening..." : "Message"}
-                </button>
+                  View profile
+                </Link>
+                <MessageSeekerButton seekerId={seeker.id} />
                 {seeker.resumeUrl && (
-                  <Link
-                    href={seeker.resumeUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="rounded-xl border border-ink/10 px-3 py-2 text-xs font-semibold text-ink/70 hover:bg-ink/3"
+                  <a
+                    href={`/api/employer/talent/${seeker.id}/resume`}
+                    className="inline-flex items-center gap-1 rounded-xl border border-ink/10 px-3 py-2 text-xs font-semibold text-ink/70 hover:bg-ink/3"
                   >
+                    <Download className="h-3.5 w-3.5" />
                     Resume
-                  </Link>
+                  </a>
                 )}
               </div>
             </div>

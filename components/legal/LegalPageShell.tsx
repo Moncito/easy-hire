@@ -11,7 +11,7 @@ export default function LegalPageShell({ title, description, children }: Props) 
   return (
     <>
       <Header />
-      <main className="public-header-offset min-h-screen bg-mist px-8 pb-16">
+      <main className="header-offset min-h-screen bg-mist px-8 pb-16">
         <article className="mx-auto max-w-3xl">
           <header className="mb-10 border-b border-ink/10 pb-8">
             <h1 className="font-display text-4xl font-bold tracking-tight text-ink">{title}</h1>

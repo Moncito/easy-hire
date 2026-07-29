@@ -10,6 +10,7 @@ import {
   MessageSquare,
   User,
 } from "lucide-react";
+import { relativeTime } from "@/lib/time-ago";
 
 const STATUS_FILTERS = [
   "ALL",
@@ -216,7 +217,9 @@ export default async function SeekerDashboardPage({
                   >
                     {app.job.title}
                   </Link>
-                  <p className="text-sm text-ink/50">{app.job.company.companyName}</p>
+                  <p className="text-sm text-ink/50">
+                    {app.job.company.companyName} · Applied {relativeTime(app.appliedAt.toISOString())}
+                  </p>
                 </div>
                 <span
                   className={`shrink-0 rounded-lg px-2.5 py-1 text-xs font-semibold ${statusTone(app.status)}`}
@@ -277,15 +280,15 @@ export default async function SeekerDashboardPage({
             </p>
           ) : (
             <p className="mt-3 text-sm text-ink/50">
-              Alerts notify you when matching VA roles go live. Coming soon — for now, keep
-              browsing.
+              Alerts notify you when matching VA roles go live. Save a search on the jobs page to
+              get started.
             </p>
           )}
           <Link
-            href="/jobs"
+            href="/seeker/job-alerts"
             className="mt-4 inline-flex cursor-pointer rounded-xl bg-navy px-4 py-2 text-sm font-semibold text-mist hover:bg-navy/90"
           >
-            Explore open roles
+            {jobAlertCount > 0 ? "Manage alerts" : "Explore open roles"}
           </Link>
         </section>
       </div>
