@@ -290,6 +290,24 @@ backdrop-filter:blur(6px);
   background: rgba(30, 58, 95, 0.35);
 }
 
+.jobs-workspace-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(32, 36, 43, 0.16) transparent;
+}
+
+.jobs-workspace-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.jobs-workspace-scroll::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(32, 36, 43, 0.16);
+}
+
+.jobs-workspace-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(30, 58, 95, 0.28);
+}
+
 /* Fixed public header clearance — single source of truth for the floating
    pill nav (20px top offset + 56px row height + a little breathing room).
    Every layout sitting under PublicJobsHeader / SeekerPillNav / landing

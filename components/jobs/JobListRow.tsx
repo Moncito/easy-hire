@@ -4,7 +4,7 @@ import { MapPin, Wallet } from "lucide-react";
 import { formatEnumLabel, formatPesoRange, type SalaryPeriod } from "@/lib/format";
 import { timeAgo, isClosingSoon, closingLabel } from "@/lib/time-ago";
 import Badge from "@/components/ui/Badge";
-import SaveJobButton from "@/components/jobs/SaveJobButton";
+import JobListQuickActions from "@/components/jobs/JobListQuickActions";
 import type { JobCardData } from "@/components/jobs/JobListingCard";
 
 type Props = {
@@ -24,21 +24,47 @@ export default function JobListRow({ job, active, applied, saved, onToggleSaved,
     .slice(0, 2)
     .toUpperCase();
 
-  function handleClick(e: React.MouseEvent) {
-    if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
-    e.preventDefault();
+  function handleActivate() {
     onSelect(job.id);
   }
 
+  function handleClick(e: React.MouseEvent) {
+    if (e.metaKey || e.ctrlKey || e.shiftKey) return;
+    e.preventDefault();
+    handleActivate();
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      handleActivate();
+    }
+  }
+
   return (
-    <a
-      href={`/jobs/${job.id}`}
+    <div
+      role="option"
+      aria-selected={active}
+      data-job-id={job.id}
+      tabIndex={active ? 0 : -1}
       onClick={handleClick}
-      className={`group block cursor-pointer border-l-2 px-4 py-4 transition-colors ${
-        active ? "border-marigold bg-marigold/6" : "border-transparent hover:bg-ink/3"
+      onKeyDown={handleKeyDown}
+      className={`group relative mb-1.5 cursor-pointer rounded-xl border border-l-[4px] px-3 py-3 outline-none transition-all duration-200 focus-visible:ring-2 focus-visible:ring-marigold/40 ${
+        active
+          ? "z-10 border-marigold/40 border-l-marigold bg-marigold/10 shadow-[0_4px_16px_rgba(242,169,59,0.14)]"
+          : "border-l-transparent hover:border-marigold/30 hover:bg-white/80 hover:shadow-md"
       }`}
     >
-      <div className="flex items-start gap-3">
+      <div className="absolute right-2 top-2.5 z-10">
+        <JobListQuickActions
+          jobId={job.id}
+          jobTitle={job.title}
+          saved={!!saved}
+          onToggleSaved={onToggleSaved}
+        />
+      </div>
+
+      <div className="flex items-start gap-3 pr-16">
         {job.company.logoUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={job.company.logoUrl} alt="" className="h-10 w-10 shrink-0 rounded-lg object-cover" />
@@ -48,12 +74,9 @@ export default function JobListRow({ job, active, applied, saved, onToggleSaved,
           </div>
         )}
         <div className="min-w-0 flex-1">
-          <div className="flex items-start justify-between gap-2">
-            <h3 className="truncate font-display text-sm font-bold text-ink group-hover:text-navy">
-              {job.title}
-            </h3>
-            <SaveJobButton jobId={job.id} saved={!!saved} onToggle={onToggleSaved} className="p-1" />
-          </div>
+          <h3 className="line-clamp-2 font-display text-sm font-bold leading-snug text-ink group-hover:text-navy">
+            {job.title}
+          </h3>
           <p className="truncate text-xs text-ink/50">{job.company.companyName}</p>
           <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
             <Badge tone="marigold" size="sm">
@@ -88,6 +111,6 @@ export default function JobListRow({ job, active, applied, saved, onToggleSaved,
           )}
         </div>
       </div>
-    </a>
+    </div>
   );
 }

@@ -13,6 +13,7 @@ import {
   Bell,
   LogOut,
 } from "lucide-react";
+import NavBackdropShield from "@/components/jobs/NavBackdropShield";
 import { gsap, ScrollTrigger } from "@/lib/gsap";
 
 const navItems = [
@@ -94,7 +95,9 @@ export default function SeekerPillNav({ userName, userEmail }: Props) {
   }, [pathname]);
 
   return (
-    <header ref={headerRef} className="fixed inset-x-0 top-0 z-50" style={{ paddingTop: 20 }}>
+    <>
+      <NavBackdropShield />
+      <header ref={headerRef} className="fixed inset-x-0 top-0 z-50" style={{ paddingTop: 20 }}>
       <div className="relative mx-auto flex h-14 max-w-7xl items-center justify-center px-4 md:px-16 lg:px-24">
         {/* Full pill */}
         <div
@@ -198,5 +201,6 @@ export default function SeekerPillNav({ userName, userEmail }: Props) {
         </div>
       </div>
     </header>
+    </>
   );
 }

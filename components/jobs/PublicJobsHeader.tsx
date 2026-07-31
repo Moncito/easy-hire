@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { Briefcase, LogIn, Zap, LayoutDashboard } from "lucide-react";
+import NavBackdropShield from "@/components/jobs/NavBackdropShield";
 import { gsap, ScrollTrigger } from "@/lib/gsap";
 import SeekerPillNav from "@/components/seeker/SeekerPillNav";
 
@@ -52,7 +53,9 @@ function GuestJobsPillNav() {
   }, [pathname]);
 
   return (
-    <header ref={headerRef} className="fixed inset-x-0 top-0 z-50" style={{ paddingTop: 20 }}>
+    <>
+      <NavBackdropShield />
+      <header ref={headerRef} className="fixed inset-x-0 top-0 z-50" style={{ paddingTop: 20 }}>
       <div className="relative mx-auto flex h-14 max-w-7xl items-center justify-center px-4 md:px-16 lg:px-24">
         <div
           ref={fullNavRef}
@@ -128,6 +131,7 @@ function GuestJobsPillNav() {
         </div>
       </div>
     </header>
+    </>
   );
 }
 
@@ -139,7 +143,9 @@ function RoleDashboardPill({
   label: string;
 }) {
   return (
-    <header className="fixed inset-x-0 top-0 z-50" style={{ paddingTop: 20 }}>
+    <>
+      <NavBackdropShield />
+      <header className="fixed inset-x-0 top-0 z-50" style={{ paddingTop: 20 }}>
       <div className="relative mx-auto flex h-14 max-w-7xl items-center justify-center px-4 md:px-16 lg:px-24">
         <div className="absolute inset-x-4 flex items-center justify-between rounded-full border border-white/30 bg-ink/70 px-3 py-2 shadow-2xl backdrop-blur-xl sm:px-4 md:inset-x-16 lg:inset-x-24">
           <Link href="/" className="flex shrink-0 cursor-pointer items-center gap-2.5 transition-opacity hover:opacity-90">
@@ -165,6 +171,7 @@ function RoleDashboardPill({
         </div>
       </div>
     </header>
+    </>
   );
 }
 

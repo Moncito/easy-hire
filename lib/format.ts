@@ -36,7 +36,11 @@ export function formatPesoRange(
   const fmt = (n: number) => `₱${n.toLocaleString("en-PH")}`;
   const suffix = periodSuffix(period);
 
-  if (min != null && max != null) return `${fmt(min)} – ${fmt(max)}${suffix}`;
+  if (min != null && max != null) {
+    const low = Math.min(min, max);
+    const high = Math.max(min, max);
+    return `${fmt(low)} – ${fmt(high)}${suffix}`;
+  }
   if (min != null) return `From ${fmt(min)}${suffix}`;
   return `Up to ${fmt(max!)}${suffix}`;
 }
