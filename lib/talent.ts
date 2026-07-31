@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { Prisma } from "../prisma/gen/client";
+import { Prisma } from "@prisma/client";
 import { ApiError } from "@/lib/api-error";
 import { requireEmployerCompany } from "@/lib/employer-auth";
 import { encodedSkillVariants } from "@/lib/seeker-profile-format";

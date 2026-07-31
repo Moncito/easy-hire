@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { Prisma } from "../prisma/gen/client";
+import { Prisma } from "@prisma/client";
 import type { JobSearchInput } from "@/lib/validations/job-search";
 import { ApiError } from "@/lib/api-error";
 import { fromMonthlyEquivalent, toMonthlyEquivalent, type SalaryPeriod } from "@/lib/format";

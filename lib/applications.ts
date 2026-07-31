@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { Prisma } from "../prisma/gen/client";
+import { Prisma } from "@prisma/client";
 import { ApiError } from "@/lib/api-error";
 import { notifyApplicationSubmitted, notifyApplicationRejected } from "@/lib/email";
 import { applicationCreateSchema, applicationUpdateSchema } from "@/lib/validations/application";

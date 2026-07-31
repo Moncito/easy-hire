@@ -1,10 +1,11 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Include Prisma query engines in Vercel serverless bundles (custom output path).
+  // Bundle the Linux query engine on Vercel; avoid serverExternalPackages here
+  // because it breaks Turbopack dev resolution of `.prisma/client/default`.
   outputFileTracingIncludes: {
-    "/*": ["./prisma/gen/**/*"],
-    "/api/*": ["./prisma/gen/**/*"],
+    "/api/**/*": ["./node_modules/.prisma/client/**/*"],
+    "/**/*": ["./node_modules/.prisma/client/**/*"],
   },
 };
 

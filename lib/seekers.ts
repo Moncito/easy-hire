@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { Prisma } from "../prisma/gen/client";
+import { Prisma } from "@prisma/client";
 import { seekerInputToData, seekerUpdateSchema } from "@/lib/validations/seeker";
 
 export async function ensureSeekerProfile(

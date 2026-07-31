@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { isDiscoverableInTalentSearch } from "@/lib/seeker-profile-format";
-import { Prisma } from "../prisma/gen/client";
+import { Prisma } from "@prisma/client";
 import { ApiError } from "@/lib/api-error";
 import { createNotification } from "@/lib/email";
 import { requireEmployerCompany } from "@/lib/employer-auth";
