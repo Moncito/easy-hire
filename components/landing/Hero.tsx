@@ -4,10 +4,12 @@ import { useEffect, useRef, useState } from "react";
 import { ArrowRight, Sparkles } from "lucide-react";
 import { gsap } from "@/lib/gsap";
 import Link from "next/link";
+import { useLoginModalOptional } from "@/components/auth/LoginModalProvider";
 
 
 
 export default function Hero() {
+  const loginModal = useLoginModalOptional();
   const containerRef = useRef<HTMLDivElement>(null);
   const leftSideRef = useRef<HTMLDivElement>(null);
   const rightSideRef = useRef<HTMLDivElement>(null);
@@ -127,7 +129,30 @@ export default function Hero() {
     });
   };
 
-
+  function LoginPrompt({ className }: { className: string }) {
+    if (loginModal) {
+      return (
+        <p className={className}>
+          Already have an account?{" "}
+          <button
+            type="button"
+            onClick={() => loginModal.openLogin()}
+            className="cursor-pointer font-semibold underline-offset-2 hover:underline"
+          >
+            Log in
+          </button>
+        </p>
+      );
+    }
+    return (
+      <p className={className}>
+        Already have an account?{" "}
+        <Link href="/login" className="font-semibold underline-offset-2 hover:underline">
+          Log in
+        </Link>
+      </p>
+    );
+  }
 
   return (
     <>
@@ -177,6 +202,7 @@ export default function Hero() {
               <ArrowRight className="ml-2.5 h-5 w-5 transition-transform duration-300 group-hover:translate-x-1" />
             </button>
           </Link>
+          <LoginPrompt className="mt-4 text-sm font-medium text-[#4A2E0A]/85" />
           </div>
         </div>
 
@@ -202,6 +228,7 @@ export default function Hero() {
               <ArrowRight className="ml-2.5 h-5 w-5 transition-transform duration-300 group-hover:translate-x-1" />
             </button>
           </Link>
+            <LoginPrompt className="mt-4 text-sm font-medium text-[#E6F5EF]/85" />
             <div className="mt-10 text-right">
               <p className="font-data text-2xl font-bold tracking-tight text-[#E6F5EF]">
                 {statCount.toLocaleString()}+
@@ -228,11 +255,13 @@ export default function Hero() {
               Browse verified VA jobs, build your profile once, and apply with a single click.
             </p>
 
-            <button className="w-full max-w-xs rounded-xl bg-ink py-3 text-sm font-bold text-mist shadow-lg transition-transform active:scale-95">
-              I&apos;m 
-              ng for work
-              <ArrowRight className="mb-0.5 ml-2.5 inline h-4 w-4" />
-            </button>
+            <Link href="/signup?role=SEEKER" className="w-full max-w-xs">
+              <span className="flex w-full items-center justify-center rounded-xl bg-ink py-3 text-sm font-bold text-mist shadow-lg transition-transform active:scale-95">
+                I&apos;m looking for work
+                <ArrowRight className="mb-0.5 ml-2.5 inline h-4 w-4" />
+              </span>
+            </Link>
+            <LoginPrompt className="mt-4 text-sm font-medium text-[#4A2E0A]/85" />
           </div>
         </div>
 
@@ -250,10 +279,13 @@ export default function Hero() {
               Post jobs and review applicants directly, all in one place.
             </p>
 
-            <button className="w-full max-w-xs rounded-xl bg-mist py-3 text-sm font-bold text-teal shadow-lg transition-transform active:scale-95 cursor-pointer">
-              I&apos;m hiring
-              <ArrowRight className="mb-0.5 ml-2.5 inline h-4 w-4" />
-            </button>
+            <Link href="/signup?role=EMPLOYER" className="w-full max-w-xs">
+              <span className="flex w-full items-center justify-center rounded-xl bg-mist py-3 text-sm font-bold text-teal shadow-lg transition-transform active:scale-95">
+                I&apos;m hiring
+                <ArrowRight className="mb-0.5 ml-2.5 inline h-4 w-4" />
+              </span>
+            </Link>
+            <LoginPrompt className="mt-4 text-sm font-medium text-[#E6F5EF]/85" />
 
             <div className="mt-8 text-center">
               <p className="font-data text-xl font-bold text-[#E6F5EF]">{statCount.toLocaleString()}+</p>

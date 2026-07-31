@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Code, Heart, Mail } from "lucide-react";
+import FooterLoginLink from "@/components/landing/FooterLoginLink";
 
 export default function Footer() {
   const columns = [
@@ -14,7 +15,7 @@ export default function Footer() {
       heading: "For employers",
       links: [
         { label: "Post a job", href: "/signup" },
-        { label: "Employer login", href: "/login" },
+        { label: "Employer login", href: "/login", isLogin: true },
       ],
     },
     {
@@ -68,12 +69,16 @@ export default function Footer() {
               <ul className="flex flex-col gap-2">
                 {col.links.map((link) => (
                   <li key={link.href}>
-                    <Link
-                      href={link.href}
-                      className="text-sm text-ink/70 transition-colors hover:text-ink"
-                    >
-                      {link.label}
-                    </Link>
+                    {"isLogin" in link && link.isLogin ? (
+                      <FooterLoginLink />
+                    ) : (
+                      <Link
+                        href={link.href}
+                        className="text-sm text-ink/70 transition-colors hover:text-ink"
+                      >
+                        {link.label}
+                      </Link>
+                    )}
                   </li>
                 ))}
               </ul>

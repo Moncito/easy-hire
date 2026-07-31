@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef } from "react";
 import { Search, Briefcase, HelpCircle, Zap, LogIn } from "lucide-react";
 import { gsap, ScrollTrigger } from "@/lib/gsap";
+import { useLoginModalOptional } from "@/components/auth/LoginModalProvider";
 
 const navItems = [
   { label: "Value", icon: Search, hash: "#ValueProps" },
@@ -20,6 +21,7 @@ type Props = {
 export default function Header({ variant: _variant }: Props = {}) {
   const pathname = usePathname();
   const isHome = pathname === "/";
+  const loginModal = useLoginModalOptional();
 
   const headerRef = useRef<HTMLElement>(null);
   const fullNavRef = useRef<HTMLDivElement>(null);
@@ -66,6 +68,13 @@ export default function Header({ variant: _variant }: Props = {}) {
     };
   }, [pathname]);
 
+  function handleLoginClick() {
+    loginModal?.openLogin();
+  }
+
+  const loginClassName =
+    "cursor-pointer whitespace-nowrap rounded-full border border-white/25 px-4 py-1.5 text-[14px] font-semibold text-mist transition hover:bg-white/10 sm:border-transparent sm:px-0 sm:py-0 sm:font-medium sm:text-mist/85 sm:hover:text-white";
+
   return (
     <header ref={headerRef} className="fixed inset-x-0 top-0 z-50" style={{ paddingTop: 20 }}>
       <div className="relative mx-auto flex h-14 max-w-7xl items-center justify-center px-4 md:px-32">
@@ -94,16 +103,19 @@ export default function Header({ variant: _variant }: Props = {}) {
             ))}
           </nav>
 
-          <div className="flex shrink-0 items-center gap-3">
-            <Link
-              href="/login"
-              className="hidden whitespace-nowrap text-[15px] font-medium text-mist/75 transition hover:text-white sm:block"
-            >
-              Log in
-            </Link>
+          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+            {isHome && loginModal ? (
+              <button type="button" onClick={handleLoginClick} className={loginClassName}>
+                Log in
+              </button>
+            ) : (
+              <Link href="/login" className={loginClassName}>
+                Log in
+              </Link>
+            )}
             <Link
               href="/signup"
-              className="whitespace-nowrap rounded-full bg-white px-7 py-1.5 text-[15px] font-semibold text-ink shadow-lg transition-all duration-300 hover:scale-105 active:scale-95"
+              className="whitespace-nowrap rounded-full bg-white px-5 py-1.5 text-[14px] font-semibold text-ink shadow-lg transition-all duration-300 hover:scale-105 active:scale-95 sm:px-7"
             >
               Get started
             </Link>
@@ -142,13 +154,24 @@ export default function Header({ variant: _variant }: Props = {}) {
             })}
           </div>
 
-          <Link
-            href="/login"
-            title="Log in"
-            className="hidden h-9 w-9 items-center justify-center rounded-full text-mist/75 transition-colors duration-300 hover:bg-white/10 hover:text-white sm:flex"
-          >
-            <LogIn className="h-4 w-4" />
-          </Link>
+          {isHome && loginModal ? (
+            <button
+              type="button"
+              title="Log in"
+              onClick={handleLoginClick}
+              className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full text-mist/75 transition-colors duration-300 hover:bg-white/10 hover:text-white"
+            >
+              <LogIn className="h-4 w-4" />
+            </button>
+          ) : (
+            <Link
+              href="/login"
+              title="Log in"
+              className="flex h-9 w-9 items-center justify-center rounded-full text-mist/75 transition-colors duration-300 hover:bg-white/10 hover:text-white"
+            >
+              <LogIn className="h-4 w-4" />
+            </Link>
+          )}
 
           <Link
             href="/signup"
