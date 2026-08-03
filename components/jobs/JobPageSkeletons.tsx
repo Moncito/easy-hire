@@ -57,35 +57,31 @@ export function JobDetailPanelSkeleton() {
 
 export function JobSearchSplitSkeleton({ columnWidth = 320 }: { columnWidth?: number }) {
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-navy/10 bg-white shadow-[0_12px_40px_rgba(30,58,95,0.08)]">
-      <div className="h-1 shrink-0 bg-gradient-to-r from-marigold via-teal/70 to-navy" aria-hidden="true" />
-      <div className="flex min-h-0 flex-1">
-        <div
-          className="jobs-workspace-scroll shrink-0 space-y-3 overflow-y-auto border-r border-navy/8 bg-gradient-to-b from-navy/[0.04] to-mist/60 p-5"
-          style={{ width: columnWidth }}
-        >
-          <Bone className="h-8 w-32" />
-          <Bone className="h-10 w-full rounded-lg" />
-          <Bone className="h-24 w-full rounded-lg" />
+    <div className="flex min-h-0 flex-1 overflow-hidden">
+      <div
+        className="jobs-workspace-scroll shrink-0 space-y-3 overflow-y-auto border-r border-ink/[0.06] p-5"
+        style={{ width: columnWidth }}
+      >
+        <Bone className="h-8 w-32" />
+        <Bone className="h-10 w-full rounded-xl" />
+        <Bone className="h-24 w-full rounded-xl" />
+      </div>
+      <div
+        className="flex shrink-0 flex-col border-r border-ink/[0.06]"
+        style={{ width: columnWidth }}
+      >
+        <div className="space-y-3 border-b border-ink/[0.06] bg-mist/55 p-3">
+          <Bone className="h-10 w-full rounded-xl" />
+          <Bone className="h-5 w-48" />
         </div>
-        <div className="flex min-w-0 flex-1 flex-col bg-mist/20">
-          <div className="space-y-3 border-b border-ink/5 bg-white/80 p-3">
-            <Bone className="h-10 w-full rounded-xl" />
-            <Bone className="h-5 w-48" />
-          </div>
-          <div className="flex min-h-0 flex-1">
-            <div className="flex shrink-0 flex-col border-r border-ink/5 bg-white" style={{ width: columnWidth }}>
-              <div className="jobs-workspace-scroll flex-1 overflow-y-auto p-2">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <JobListRowSkeleton key={i} />
-                ))}
-              </div>
-            </div>
-            <div className="jobs-workspace-scroll flex-1 overflow-y-auto">
-              <JobDetailPanelSkeleton />
-            </div>
-          </div>
+        <div className="jobs-workspace-scroll flex-1 overflow-y-auto p-2">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <JobListRowSkeleton key={i} />
+          ))}
         </div>
+      </div>
+      <div className="jobs-workspace-scroll min-w-0 flex-1 overflow-y-auto">
+        <JobDetailPanelSkeleton />
       </div>
     </div>
   );

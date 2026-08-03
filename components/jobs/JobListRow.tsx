@@ -49,10 +49,10 @@ export default function JobListRow({ job, active, applied, saved, onToggleSaved,
       tabIndex={active ? 0 : -1}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
-      className={`group relative mb-1.5 cursor-pointer rounded-xl border border-l-[4px] px-3 py-3 outline-none transition-all duration-200 focus-visible:ring-2 focus-visible:ring-marigold/40 ${
+      className={`group relative mb-0 cursor-pointer border-b border-ink/[0.06] border-l-[3px] px-3 py-3 outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-marigold/40 ${
         active
-          ? "z-10 border-marigold/40 border-l-marigold bg-marigold/10 shadow-[0_4px_16px_rgba(242,169,59,0.14)]"
-          : "border-l-transparent hover:border-marigold/30 hover:bg-white/80 hover:shadow-md"
+          ? "border-l-marigold bg-marigold/[0.06]"
+          : "border-l-transparent hover:bg-ink/[0.03]"
       }`}
     >
       <div className="absolute right-2 top-2.5 z-10">

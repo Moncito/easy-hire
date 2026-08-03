@@ -2,7 +2,9 @@ import { redirect } from "next/navigation";
 import { auth } from "@/Auth";
 import { ensureSeekerProfile } from "@/lib/seekers";
 import SeekerProfileEditor from "@/components/seeker/SeekerProfileEditor";
-import { PROFILE_BUCKETS, type ProfileBucketId } from "@/components/seeker/profile-buckets";
+import { PROFILE_BUCKETS, profileBucketCompletion, type ProfileBucketId } from "@/components/seeker/profile-buckets";
+import { SeekerNavBandBleed } from "@/components/seeker/SeekerNavBand";
+import { User } from "lucide-react";
 
 function parseInitialBucket(value?: string): ProfileBucketId | undefined {
   if (!value) return undefined;
@@ -22,14 +24,45 @@ export default async function SeekerProfilePage({
     fullName: session.user.name ?? "",
   });
 
+  const { completed, total } = profileBucketCompletion({
+    fullName: profile.fullName ?? "",
+    headline: profile.headline ?? "",
+    bio: profile.bio ?? "",
+    skills: profile.skills ?? [],
+    availability: profile.availability,
+    yearsExperience: profile.yearsExperience,
+    desiredSalaryMin: profile.desiredSalaryMin,
+    desiredSalaryMax: profile.desiredSalaryMax,
+    resumeUrl: profile.resumeUrl,
+    linkedinUrl: profile.linkedinUrl ?? "",
+    portfolioUrl: profile.portfolioUrl ?? "",
+    certifications: profile.certifications ?? [],
+    languages: profile.languages ?? [],
+    workExperience: profile.workExperience ?? [],
+    education: profile.education ?? [],
+    timezone: profile.timezone ?? "Asia/Manila",
+    photoUrl: profile.photoUrl,
+    visibility: profile.visibility ?? "STANDARD",
+  });
+
   return (
     <>
+      <SeekerNavBandBleed
+        section="Profile"
+        icon={User}
+        metaLabel={profile.headline?.trim() || null}
+        badge={
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-marigold/15 px-2.5 py-1 font-data text-[10px] font-bold uppercase tracking-wide text-[#8a5a10]">
+            {completed}/{total} sections
+          </span>
+        }
+        hint="Professional presence"
+      />
+
+      <div className="pt-6 sm:pt-8">
       <div className="mb-6 animate-fade-in lg:mb-8">
-        <h1 className="font-display text-3xl font-bold text-ink">My profile</h1>
-        <p className="mt-2 max-w-2xl text-sm text-ink/60">
-          Your profile works for you 24/7 — complete each section so verified employers find you
-          in talent search and trust you when you apply.
-        </p>
+        <h1 className="font-display text-3xl font-bold text-ink sm:text-4xl">My profile</h1>
+        <p className="mt-1.5 text-sm text-ink/50">Manage your professional presence</p>
       </div>
       <SeekerProfileEditor
         profileId={profile.id}
@@ -61,6 +94,7 @@ export default async function SeekerProfilePage({
           visibility: profile.visibility ?? "STANDARD",
         }}
       />
+      </div>
     </>
   );
 }

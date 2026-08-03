@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Search, Briefcase, Building2, User, LayoutDashboard, Bookmark, Loader2 } from "lucide-react";
 
@@ -45,7 +45,10 @@ export default function CommandPalette() {
   const [activeIndex, setActiveIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
+  const pathname = usePathname();
   const { data: session } = useSession();
+
+  const hideFloatingTrigger = pathname.includes("/messages");
 
   const shortcuts = shortcutsForRole(session?.user?.role as string | undefined);
 
@@ -139,6 +142,8 @@ export default function CommandPalette() {
   }
 
   if (!open) {
+    if (hideFloatingTrigger) return null;
+
     return (
       <button
         type="button"

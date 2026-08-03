@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { signOut } from "next-auth/react";
 import {
   LayoutDashboard,
@@ -13,8 +13,6 @@ import {
   Bell,
   LogOut,
 } from "lucide-react";
-import NavBackdropShield from "@/components/jobs/NavBackdropShield";
-import { gsap, ScrollTrigger } from "@/lib/gsap";
 
 const navItems = [
   { label: "Dashboard", href: "/seeker/dashboard", icon: LayoutDashboard },
@@ -30,6 +28,8 @@ type Props = {
   userEmail?: string | null;
 };
 
+type IslandWidths = { compact: number; expanded: number };
+
 function initialsFrom(name?: string | null, email?: string | null) {
   if (name?.trim()) {
     return name
@@ -43,13 +43,35 @@ function initialsFrom(name?: string | null, email?: string | null) {
   return (email?.[0] ?? "S").toUpperCase();
 }
 
+function canHover() {
+  return typeof window !== "undefined" && window.matchMedia("(hover: hover)").matches;
+}
+
+function LogoMark() {
+  return (
+    <div className="relative h-7 w-7 shrink-0 overflow-hidden rounded-full">
+      <div
+        className="absolute inset-0 bg-marigold"
+        style={{ clipPath: "polygon(0 0,100% 0,0 100%)" }}
+      />
+      <div
+        className="absolute inset-0 bg-teal"
+        style={{ clipPath: "polygon(100% 0,100% 100%,0 100%)" }}
+      />
+    </div>
+  );
+}
+
 export default function SeekerPillNav({ userName, userEmail }: Props) {
   const pathname = usePathname();
-  const headerRef = useRef<HTMLElement>(null);
-  const fullNavRef = useRef<HTMLDivElement>(null);
-  const compactNavRef = useRef<HTMLDivElement>(null);
+  const shellRef = useRef<HTMLDivElement>(null);
+  const compactRef = useRef<HTMLDivElement>(null);
+  const expandedRef = useRef<HTMLDivElement>(null);
+  const collapseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [expanded, setExpanded] = useState(false);
+  const [isTouchDevice, setIsTouchDevice] = useState(false);
+  const [widths, setWidths] = useState<IslandWidths | null>(null);
   const initials = initialsFrom(userName, userEmail);
-  const displayName = userName?.trim() || userEmail || "Seeker";
 
   function isActive(href: string) {
     if (href === "/jobs") return pathname === "/jobs" || pathname.startsWith("/jobs/");
@@ -57,150 +79,235 @@ export default function SeekerPillNav({ userName, userEmail }: Props) {
     return pathname === href || pathname.startsWith(`${href}/`);
   }
 
-  useEffect(() => {
-    const ctx = gsap.context(() => {
-      const tl = gsap.timeline({
-        scrollTrigger: {
-          trigger: document.body,
-          start: "top top",
-          end: "160 top",
-          scrub: 0.4,
-        },
+  const collapse = useCallback(() => setExpanded(false), []);
+
+  useLayoutEffect(() => {
+    const compactEl = compactRef.current;
+    const expandedEl = expandedRef.current;
+    if (!compactEl || !expandedEl) return;
+
+    const update = () => {
+      setWidths({
+        compact: compactEl.scrollWidth,
+        expanded: expandedEl.scrollWidth,
       });
-
-      tl.to(headerRef.current, { paddingTop: 10, ease: "power2.out" }, 0);
-      tl.to(fullNavRef.current, { opacity: 0, y: -10, scale: 0.97, ease: "power2.out" }, 0);
-      tl.to(compactNavRef.current, { opacity: 1, y: 0, scale: 1, ease: "power2.out" }, 0);
-    });
-
-    const st = ScrollTrigger.create({
-      trigger: document.body,
-      start: "top top",
-      end: "160 top",
-      onUpdate: (self) => {
-        const compact = self.progress > 0.5;
-        if (fullNavRef.current) {
-          fullNavRef.current.style.pointerEvents = compact ? "none" : "auto";
-        }
-        if (compactNavRef.current) {
-          compactNavRef.current.style.pointerEvents = compact ? "auto" : "none";
-        }
-      },
-    });
-
-    return () => {
-      ctx.revert();
-      st.kill();
     };
-  }, [pathname]);
+
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(compactEl);
+    ro.observe(expandedEl);
+    return () => ro.disconnect();
+  }, [isTouchDevice]);
+
+  useEffect(() => {
+    setIsTouchDevice(!window.matchMedia("(hover: hover)").matches);
+  }, []);
+
+  useEffect(() => {
+    if (!expanded) return;
+    function handleClickOutside(e: MouseEvent) {
+      if (shellRef.current && !shellRef.current.contains(e.target as Node)) {
+        collapse();
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [expanded, collapse]);
+
+  useEffect(() => {
+    collapse();
+  }, [pathname, collapse]);
+
+  useEffect(() => {
+    return () => {
+      if (collapseTimer.current) clearTimeout(collapseTimer.current);
+    };
+  }, []);
+
+  function handleMouseEnter() {
+    if (!canHover()) return;
+    if (collapseTimer.current) {
+      clearTimeout(collapseTimer.current);
+      collapseTimer.current = null;
+    }
+    setExpanded(true);
+  }
+
+  function handleMouseLeave() {
+    if (!canHover()) return;
+    collapseTimer.current = setTimeout(() => setExpanded(false), 120);
+  }
+
+  function handleFocusIn() {
+    if (collapseTimer.current) {
+      clearTimeout(collapseTimer.current);
+      collapseTimer.current = null;
+    }
+    setExpanded(true);
+  }
+
+  function handleFocusOut(e: React.FocusEvent<HTMLDivElement>) {
+    if (!shellRef.current?.contains(e.relatedTarget as Node)) {
+      collapseTimer.current = setTimeout(() => setExpanded(false), 120);
+    }
+  }
+
+  const shellWidth = widths ? (expanded ? widths.expanded : widths.compact) : undefined;
+
+  const linkTone = (href: string) => {
+    const active = isActive(href);
+    return active
+      ? "bg-marigold/25 text-marigold"
+      : "text-mist/75 hover:bg-white/10 hover:text-white";
+  };
 
   return (
-    <>
-      <NavBackdropShield />
-      <header ref={headerRef} className="fixed inset-x-0 top-0 z-50" style={{ paddingTop: 20 }}>
-      <div className="relative mx-auto flex h-14 max-w-7xl items-center justify-center px-4 md:px-16 lg:px-24">
-        {/* Full pill */}
+    <header className="pointer-events-none fixed inset-x-0 top-0 z-50 flex justify-center pt-3">
+      <div
+        ref={shellRef}
+        role="navigation"
+        aria-label="Seeker navigation"
+        aria-expanded={expanded}
+        data-state={expanded ? "expanded" : "compact"}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+        onFocusCapture={handleFocusIn}
+        onBlurCapture={handleFocusOut}
+        style={{ width: shellWidth, visibility: widths ? "visible" : "hidden" }}
+        className={[
+          "seeker-island-outer pointer-events-auto relative min-h-[44px] max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-full border border-white/20 bg-ink/90 py-1.5 shadow-[0_8px_32px_rgba(0,0,0,0.28)] backdrop-blur-xl",
+          expanded ? "shadow-[0_14px_44px_rgba(0,0,0,0.34)]" : "",
+        ].join(" ")}
+      >
+        {/* Compact layer — icons only, fixed layout */}
         <div
-          ref={fullNavRef}
-          className="absolute inset-x-4 flex items-center justify-between rounded-full border border-white/30 bg-ink/70 px-3 py-2 shadow-2xl backdrop-blur-xl sm:px-4 md:inset-x-16 lg:inset-x-24"
-        >
-          <Link href="/seeker/dashboard" className="flex shrink-0 cursor-pointer items-center gap-2.5 transition-opacity hover:opacity-90">
-            <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-full">
-              <div className="absolute inset-0 bg-marigold" style={{ clipPath: "polygon(0 0,100% 0,0 100%)" }} />
-              <div className="absolute inset-0 bg-teal" style={{ clipPath: "polygon(100% 0,100% 100%,0 100%)" }} />
-            </div>
-            <span className="hidden whitespace-nowrap font-display text-lg font-bold text-mist sm:inline">
-              EasyHire
-            </span>
-          </Link>
-
-          <nav className="hidden items-center gap-1 md:flex">
-            {navItems.map((item) => {
-              const active = isActive(item.href);
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`cursor-pointer whitespace-nowrap rounded-full px-4 py-2 text-[14px] font-medium transition-all duration-300 ${
-                    active
-                      ? "bg-marigold/25 text-marigold"
-                      : "text-mist/75 hover:bg-white/10 hover:text-white"
-                  }`}
-                >
-                  {item.label}
-                </Link>
-              );
-            })}
-          </nav>
-
-          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
-            <div className="hidden items-center gap-2 sm:flex">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-marigold/30 font-display text-xs font-bold text-mist">
-                {initials}
-              </div>
-              <span className="max-w-[120px] truncate text-[13px] font-medium text-mist/80 lg:max-w-[160px]">
-                {displayName}
-              </span>
-            </div>
-            <button
-              type="button"
-              onClick={() => signOut({ callbackUrl: "/" })}
-              className="cursor-pointer rounded-full px-3 py-1.5 text-[13px] font-medium text-mist/70 transition hover:bg-white/10 hover:text-white"
-            >
-              Sign out
-            </button>
-          </div>
-        </div>
-
-        {/* Compact pill */}
-        <div
-          ref={compactNavRef}
-          className="absolute inline-flex items-center gap-1 rounded-full border border-white/30 bg-ink/85 px-2 py-2 opacity-0 shadow-2xl backdrop-blur-xl"
-          style={{ pointerEvents: "none" }}
+          ref={compactRef}
+          aria-hidden={expanded}
+          className={[
+            "seeker-island-layer absolute inset-y-0 left-0 flex items-center gap-0.5 px-2 py-1.5",
+            expanded ? "pointer-events-none opacity-0" : "opacity-100",
+          ].join(" ")}
         >
           <Link
             href="/seeker/dashboard"
-            className="relative h-8 w-8 shrink-0 cursor-pointer overflow-hidden rounded-full transition-opacity hover:opacity-90"
-            title="Dashboard"
+            className="flex h-8 w-8 shrink-0 items-center justify-center hover:opacity-90"
+            aria-label="EasyHire dashboard"
+            tabIndex={expanded ? -1 : 0}
           >
-            <div className="absolute inset-0 bg-marigold" style={{ clipPath: "polygon(0 0,100% 0,0 100%)" }} />
-            <div className="absolute inset-0 bg-teal" style={{ clipPath: "polygon(100% 0,100% 100%,0 100%)" }} />
+            <LogoMark />
           </Link>
 
-          <div className="mx-1 h-5 w-px bg-white/15" />
+          <div className="mx-0.5 h-4 w-px shrink-0 bg-white/15" aria-hidden="true" />
 
-          <div className="flex items-center gap-0.5">
+          <nav className="flex items-center gap-0.5">
             {navItems.map((item) => {
               const Icon = item.icon;
-              const active = isActive(item.href);
               return (
                 <Link
                   key={item.href}
                   href={item.href}
                   title={item.label}
-                  className={`flex h-9 w-9 cursor-pointer items-center justify-center rounded-full transition-colors duration-300 ${
-                    active
-                      ? "bg-marigold/25 text-marigold"
-                      : "text-mist/75 hover:bg-white/10 hover:text-white"
-                  }`}
+                  aria-label={item.label}
+                  tabIndex={expanded ? -1 : 0}
+                  className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors duration-150 ${linkTone(item.href)}`}
                 >
-                  <Icon className="h-4 w-4" />
+                  <Icon className="h-3.5 w-3.5" aria-hidden="true" />
                 </Link>
               );
             })}
-          </div>
+          </nav>
 
           <button
             type="button"
             title="Sign out"
+            aria-label="Sign out"
+            tabIndex={expanded ? -1 : 0}
             onClick={() => signOut({ callbackUrl: "/" })}
-            className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full text-mist/75 transition-colors hover:bg-white/10 hover:text-white"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-mist/75 hover:bg-white/10 hover:text-white"
           >
-            <LogOut className="h-4 w-4" />
+            <LogOut className="h-3.5 w-3.5" aria-hidden="true" />
+          </button>
+
+          {isTouchDevice && (
+            <button
+              type="button"
+              aria-expanded={expanded}
+              aria-label="Expand navigation menu"
+              tabIndex={expanded ? -1 : 0}
+              onClick={() => setExpanded(true)}
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-mist/60 hover:bg-white/10 hover:text-white"
+            >
+              <svg viewBox="0 0 16 16" fill="none" className="h-3 w-3" aria-hidden="true">
+                <path
+                  d="M4 6l4 4 4-4"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </button>
+          )}
+        </div>
+
+        {/* Expanded layer — full labels in normal document flow */}
+        <div
+          ref={expandedRef}
+          aria-hidden={!expanded}
+          className={[
+            "seeker-island-layer absolute inset-y-0 left-0 flex items-center gap-1 px-3 py-1.5",
+            expanded ? "opacity-100" : "pointer-events-none opacity-0",
+          ].join(" ")}
+        >
+          <Link
+            href="/seeker/dashboard"
+            className="flex shrink-0 items-center gap-2 hover:opacity-90"
+            aria-label="EasyHire dashboard"
+            tabIndex={expanded ? 0 : -1}
+          >
+            <LogoMark />
+            <span className="whitespace-nowrap font-display text-sm font-bold text-mist">EasyHire</span>
+          </Link>
+
+          <nav className="flex items-center gap-0.5">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  title={item.label}
+                  aria-label={item.label}
+                  tabIndex={expanded ? 0 : -1}
+                  className={`flex h-8 shrink-0 items-center rounded-full px-2.5 transition-colors duration-150 ${linkTone(item.href)}`}
+                >
+                  <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                  <span className="ml-1.5 whitespace-nowrap text-[13px] font-medium">{item.label}</span>
+                </Link>
+              );
+            })}
+          </nav>
+
+          <div className="mx-0.5 h-4 w-px shrink-0 bg-white/15" aria-hidden="true" />
+
+          <div
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-marigold/30 font-display text-[10px] font-bold text-mist"
+            title={userName?.trim() || userEmail || "Seeker"}
+          >
+            {initials}
+          </div>
+
+          <button
+            type="button"
+            tabIndex={expanded ? 0 : -1}
+            onClick={() => signOut({ callbackUrl: "/" })}
+            className="shrink-0 cursor-pointer whitespace-nowrap rounded-full px-2.5 py-1 text-[12px] font-medium text-mist/70 transition-colors hover:bg-white/10 hover:text-white"
+          >
+            Sign out
           </button>
         </div>
       </div>
     </header>
-    </>
   );
 }
