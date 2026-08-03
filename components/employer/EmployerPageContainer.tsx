@@ -25,7 +25,9 @@ export default function EmployerPageContainer({ children }: { children: React.Re
 
   return (
     <div
-      className={`${isMessages ? "px-4 py-4 pb-6" : "px-8 py-8 pb-28"} ${widthClasses[width]}`}
+      className={`${
+        isMessages ? "flex h-full min-h-0 flex-col px-0 py-0 pb-0" : "px-8 py-8 pb-28"
+      } ${widthClasses[width]}`}
     >
       {children}
     </div>

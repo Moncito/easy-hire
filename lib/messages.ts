@@ -17,6 +17,7 @@ type ConversationListItem = {
   seeker: { id: string; fullName: string; headline: string | null };
   lastMessage: { body: string; createdAt: string; senderUserId: string } | null;
   unreadCount: number;
+  applicationStatus: string | null;
 };
 
 async function requireConversationAccess(userId: string, role: string, conversationId: string) {
@@ -59,7 +60,7 @@ function mapConversationListItem(conv: {
   job: { id: string; title: string } | null;
   messages: { body: string; createdAt: Date; senderUserId: string }[];
   _count: { messages: number };
-}): ConversationListItem {
+}, applicationStatus: string | null = null): ConversationListItem {
   const last = conv.messages[0] ?? null;
 
   return {
@@ -72,6 +73,7 @@ function mapConversationListItem(conv: {
       ? { body: last.body, createdAt: last.createdAt.toISOString(), senderUserId: last.senderUserId }
       : null,
     unreadCount: conv._count.messages,
+    applicationStatus,
   };
 }
 
@@ -114,7 +116,41 @@ export async function listConversationsForUser(userId: string, role: string) {
     },
   });
 
-  return conversations.map((c) => mapConversationListItem(c));
+  const jobIds = conversations.map((c) => c.job?.id).filter((id): id is string => !!id);
+  let statusByJob: Record<string, string> = {};
+
+  if (jobIds.length > 0) {
+    if (role === "SEEKER") {
+      const seeker = await prisma.seekerProfile.findUnique({ where: { userId } });
+      if (seeker) {
+        const apps = await prisma.application.findMany({
+          where: { seekerId: seeker.id, jobId: { in: jobIds } },
+          select: { jobId: true, status: true },
+        });
+        statusByJob = Object.fromEntries(apps.map((a) => [a.jobId, a.status]));
+      }
+    } else if (role === "EMPLOYER") {
+      const company = await requireEmployerCompany(userId);
+      const apps = await prisma.application.findMany({
+        where: { jobId: { in: jobIds }, job: { companyId: company.id } },
+        select: { jobId: true, seekerId: true, status: true },
+      });
+      for (const conv of conversations) {
+        if (!conv.job) continue;
+        const app = apps.find((a) => a.jobId === conv.job!.id && a.seekerId === conv.seekerId);
+        if (app) statusByJob[`${conv.job.id}:${conv.seekerId}`] = app.status;
+      }
+    }
+  }
+
+  return conversations.map((c) => {
+    const applicationStatus = c.job
+      ? role === "EMPLOYER"
+        ? statusByJob[`${c.job.id}:${c.seekerId}`] ?? null
+        : statusByJob[c.job.id] ?? null
+      : null;
+    return mapConversationListItem(c, applicationStatus);
+  });
 }
 
 export async function getConversationThread(userId: string, role: string, conversationId: string) {

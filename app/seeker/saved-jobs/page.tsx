@@ -1,41 +1,53 @@
-import Link from "next/link";
 import { auth } from "@/Auth";
-import { Bookmark } from "lucide-react";
+import { prisma } from "@/lib/prisma";
 import { listSavedJobs } from "@/lib/saved-jobs";
-import JobListingCard from "@/components/jobs/JobListingCard";
+import { SeekerNavBandBleed } from "@/components/seeker/SeekerNavBand";
+import SavedJobsPanel from "@/components/seeker/SavedJobsPanel";
+import { Bookmark } from "lucide-react";
 
 export default async function SavedJobsPage() {
   const session = await auth();
   const saved = session?.user ? await listSavedJobs(session.user.id) : [];
 
-  return (
-    <div className="space-y-6 animate-fade-in">
-      <div>
-        <h1 className="font-display text-3xl font-bold text-ink sm:text-4xl">Saved jobs</h1>
-        <p className="mt-2 text-sm text-ink/55">Your shortlist — come back anytime to apply.</p>
-      </div>
+  let appliedJobIds: string[] = [];
+  if (session?.user && saved.length > 0) {
+    const profile = await prisma.seekerProfile.findUnique({
+      where: { userId: session.user.id },
+      select: { id: true },
+    });
+    if (profile) {
+      const apps = await prisma.application.findMany({
+        where: {
+          seekerId: profile.id,
+          jobId: { in: saved.map((s) => s.job.id) },
+        },
+        select: { jobId: true },
+      });
+      appliedJobIds = apps.map((a) => a.jobId);
+    }
+  }
 
-      {saved.length === 0 ? (
-        <div className="rounded-2xl border border-navy/8 bg-white p-14 text-center">
-          <Bookmark className="mx-auto h-8 w-8 text-ink/25" aria-hidden="true" />
-          <h2 className="mt-4 font-display text-lg font-bold text-ink">No saved jobs yet</h2>
-          <p className="mt-2 text-sm text-ink/50">
-            Tap the bookmark icon on any listing to save it here for later.
-          </p>
-          <Link
-            href="/jobs"
-            className="mt-5 inline-flex cursor-pointer rounded-xl bg-marigold px-5 py-2.5 text-sm font-semibold text-ink hover:bg-marigold/90"
-          >
-            Browse jobs
-          </Link>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 gap-5">
-          {saved.map((s) => (
-            <JobListingCard key={s.job.id} job={s.job} saved />
-          ))}
-        </div>
-      )}
+  const countLabel =
+    saved.length === 1 ? "1 saved role" : `${saved.length} saved roles`;
+
+  return (
+    <div className="animate-fade-in pb-16">
+      <SeekerNavBandBleed
+        section="Saved jobs"
+        icon={Bookmark}
+        badge={
+          saved.length > 0 ? (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-marigold/15 px-2.5 py-1 font-data text-[10px] font-bold uppercase tracking-wide text-[#8a5a10]">
+              {countLabel}
+            </span>
+          ) : undefined
+        }
+        hint="Your shortlist"
+      />
+
+      <div className="pt-6 sm:pt-8">
+        <SavedJobsPanel initialSaved={saved} appliedJobIds={appliedJobIds} />
+      </div>
     </div>
   );
 }

@@ -315,10 +315,84 @@ backdrop-filter:blur(6px);
    the gap below the pill is consistent across pages. */
 :root {
   --header-clearance: 6rem;
+  --header-clearance-compact: 0px;
 }
 
 .header-offset {
   padding-top: var(--header-clearance);
+}
+
+.header-offset-compact {
+  padding-top: var(--header-clearance-compact);
+}
+
+/* Jobs page — full viewport workspace; nav band sits under floating pill like seeker pages. */
+.jobs-workspace-shell {
+  position: relative;
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  background: transparent;
+}
+
+@media (min-width: 1024px) {
+  .jobs-workspace-shell {
+    overflow: hidden;
+  }
+}
+
+.jobs-workspace-shell::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(to bottom, rgba(245, 246, 244, 0.45) 0, transparent 4rem);
+  z-index: 0;
+}
+
+.jobs-workspace-shell > * {
+  position: relative;
+  z-index: 1;
+}
+
+.jobs-list-viewport {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.jobs-detail-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (min-width: 1024px) {
+  .jobs-list-viewport {
+    overflow: hidden;
+  }
+}
+
+/* Seeker Dynamic Island — shell width morph + crossfade between two fixed layouts. */
+.seeker-island-outer {
+  transition: width 0.48s cubic-bezier(0.32, 1.05, 0.48, 1),
+    box-shadow 0.48s cubic-bezier(0.32, 1.05, 0.48, 1);
+}
+
+.seeker-island-layer {
+  transition: opacity 0.24s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .seeker-island-outer,
+  .seeker-island-layer {
+    transition: none;
+  }
 }
 
 /* Deprecated alias, kept so any remaining references don't break. Use
@@ -395,4 +469,60 @@ backdrop-filter:blur(6px);
   pointer-events: none;
   color: rgba(32, 36, 43, 0.35);
   content: attr(data-placeholder);
+}
+
+/* Seeker nav band — branding row under floating pill; transparent so page bg shows through */
+.seeker-nav-band,
+.messages-nav-band {
+  background: transparent;
+  border-bottom: none;
+}
+
+.jobs-nav-band {
+  background: transparent;
+  border-bottom: 1px solid rgba(32, 36, 43, 0.06);
+}
+
+.companies-nav-band {
+  background: transparent;
+  border-bottom: 1px solid rgba(32, 36, 43, 0.06);
+}
+
+.seekers-nav-band {
+  background: transparent;
+  border-bottom: 1px solid rgba(32, 36, 43, 0.06);
+}
+
+.seeker-nav-band::before,
+.messages-nav-band::before,
+.jobs-nav-band::before,
+.companies-nav-band::before,
+.seekers-nav-band::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 2px;
+  background: linear-gradient(
+    to right,
+    rgba(242, 169, 59, 0.4) 0%,
+    rgba(31, 128, 115, 0.28) 50%,
+    rgba(30, 58, 95, 0.32) 100%
+  );
+  opacity: 0.85;
+}
+
+/* Seeker shell — subtle dot grid + brand gradient wash */
+.seeker-area-dots {
+  background-image: radial-gradient(circle, rgba(32, 36, 43, 0.055) 1px, transparent 1px);
+  background-size: 24px 24px;
+  mask-image: linear-gradient(to bottom, black 0%, black 85%, transparent 100%);
+}
+
+.seeker-area-glow {
+  background:
+    radial-gradient(ellipse 70% 55% at 8% -5%, rgba(242, 169, 59, 0.11), transparent 58%),
+    radial-gradient(ellipse 50% 45% at 96% 18%, rgba(30, 58, 95, 0.07), transparent 52%),
+    radial-gradient(ellipse 40% 35% at 50% 100%, rgba(31, 128, 115, 0.04), transparent 55%);
 }

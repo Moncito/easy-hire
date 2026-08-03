@@ -35,7 +35,7 @@ function Chip({
       className={`cursor-pointer rounded-full border px-3 py-1 text-xs font-semibold transition-colors ${
         active
           ? "border-marigold/40 bg-marigold/15 text-[#8a5a10]"
-          : "border-navy/10 bg-white text-ink/60 hover:border-navy/25 hover:text-ink"
+          : "border-ink/10 bg-mist/40 text-ink/60 hover:border-ink/20 hover:text-ink"
       }`}
     >
       {children}
@@ -67,6 +67,7 @@ export type JobFiltersPanelProps = {
   onSubmit: (e: React.FormEvent) => void;
   loading: boolean;
   activeFilterCount: number;
+  hasPendingChanges?: boolean;
   employmentOptions: { value: string; label: string }[];
   remoteOptions: { value: string; label: string }[];
   salaryPeriodOptions: { value: SalaryPeriod; label: string }[];
@@ -100,6 +101,7 @@ export default function JobFiltersPanel({
   onSubmit,
   loading,
   activeFilterCount,
+  hasPendingChanges = false,
   employmentOptions,
   remoteOptions,
   salaryPeriodOptions,
@@ -112,15 +114,18 @@ export default function JobFiltersPanel({
   return (
     <form onSubmit={onSubmit} className="space-y-1">
       <div className="mb-4 flex items-center gap-2.5">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-marigold/15 text-marigold">
+        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-marigold/15 text-marigold">
           <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
         </div>
         <div>
           <h2 className="font-display text-sm font-bold text-ink">Filters</h2>
           {activeFilterCount > 0 && (
             <p className="text-[11px] text-ink/45">
-              {activeFilterCount} active filter{activeFilterCount === 1 ? "" : "s"}
+              {activeFilterCount} applied · {hasPendingChanges ? "unsaved changes" : "up to date"}
             </p>
+          )}
+          {activeFilterCount === 0 && hasPendingChanges && (
+            <p className="text-[11px] text-marigold/80">Unsaved filter changes</p>
           )}
         </div>
       </div>
@@ -133,7 +138,7 @@ export default function JobFiltersPanel({
               value={query}
               onChange={(e) => onQueryChange(e.target.value)}
               placeholder="Role, skill, company..."
-              className="w-full rounded-lg border border-navy/10 bg-white py-2.5 pl-9 pr-3 text-sm outline-none focus:border-marigold focus:ring-2 focus:ring-marigold/20"
+              className="w-full rounded-xl border border-ink/10 bg-mist/50 py-2.5 pl-9 pr-3 text-sm outline-none focus:border-marigold focus:ring-2 focus:ring-marigold/20"
             />
           </div>
         </JobFilterAccordion>
@@ -146,7 +151,7 @@ export default function JobFiltersPanel({
             value={location}
             onChange={(e) => onLocationChange(e.target.value)}
             placeholder="Philippines, Cebu..."
-            className="w-full rounded-lg border border-navy/10 bg-white py-2.5 pl-9 pr-3 text-sm outline-none focus:border-marigold focus:ring-2 focus:ring-marigold/20"
+            className="w-full rounded-xl border border-ink/10 bg-mist/50 py-2.5 pl-9 pr-3 text-sm outline-none focus:border-marigold focus:ring-2 focus:ring-marigold/20"
           />
         </div>
       </JobFilterAccordion>
@@ -157,6 +162,7 @@ export default function JobFiltersPanel({
           value={category}
           onChange={onCategoryChange}
           ariaLabel="Role type"
+          searchable
           options={[{ value: "", label: "All role types" }, ...ROLE_TYPES.map((rt) => ({ value: rt.label, label: rt.label }))]}
         />
         <FilterIconSelect
@@ -164,6 +170,7 @@ export default function JobFiltersPanel({
           value={industry}
           onChange={onIndustryChange}
           ariaLabel="Industry"
+          searchable
           options={[{ value: "", label: "All industries" }, ...INDUSTRIES.map((ind) => ({ value: ind.label, label: ind.label }))]}
         />
       </JobFilterAccordion>
@@ -221,14 +228,14 @@ export default function JobFiltersPanel({
             value={salaryMin}
             onChange={(e) => onSalaryMinChange(e.target.value)}
             placeholder={`Min${periodSuffix(salaryPeriod)}`}
-            className="w-full rounded-lg border border-navy/10 px-3 py-2 font-data text-sm outline-none focus:border-marigold"
+            className="w-full rounded-xl border border-ink/10 bg-mist/50 px-3 py-2 font-data text-sm outline-none focus:border-marigold"
           />
           <input
             type="number"
             value={salaryMax}
             onChange={(e) => onSalaryMaxChange(e.target.value)}
             placeholder={`Max${periodSuffix(salaryPeriod)}`}
-            className="w-full rounded-lg border border-navy/10 px-3 py-2 font-data text-sm outline-none focus:border-marigold"
+            className="w-full rounded-xl border border-ink/10 bg-mist/50 px-3 py-2 font-data text-sm outline-none focus:border-marigold"
           />
         </div>
       </JobFilterAccordion>
@@ -245,10 +252,14 @@ export default function JobFiltersPanel({
 
       <button
         type="submit"
-        disabled={loading}
-        className="mt-4 w-full cursor-pointer rounded-lg bg-marigold py-2.5 text-sm font-semibold text-ink shadow-sm transition hover:bg-marigold/90 disabled:opacity-60"
+        disabled={loading || !hasPendingChanges}
+        className={`mt-4 w-full cursor-pointer rounded-xl py-2.5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${
+          hasPendingChanges
+            ? "bg-marigold text-ink shadow-sm hover:bg-marigold/90"
+            : "border border-ink/10 bg-ink/[0.03] text-ink/40"
+        }`}
       >
-        {loading ? "Searching..." : "Apply filters"}
+        {loading ? "Searching..." : hasPendingChanges ? "Apply filters" : "Filters applied"}
       </button>
     </form>
   );

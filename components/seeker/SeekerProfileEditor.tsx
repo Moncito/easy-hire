@@ -119,7 +119,11 @@ const inputClassName =
 const selectClassName =
   "w-full cursor-pointer appearance-none rounded-xl border border-ink/10 bg-white px-4 py-3 text-sm text-ink outline-none transition-colors focus-visible:border-marigold focus-visible:ring-2 focus-visible:ring-marigold/20";
 
-const bucketPanelClassName = "rounded-2xl border border-navy/8 bg-white p-6 lg:p-8 xl:p-10";
+const summaryHeadlineClassName =
+  "w-full border-b-2 border-ink/12 bg-transparent py-3 text-xl font-semibold text-ink placeholder:text-ink/25 outline-none transition-colors focus:border-marigold";
+
+const summaryBioClassName =
+  "w-full resize-y border-b border-ink/10 bg-transparent py-3 text-sm leading-relaxed text-ink placeholder:text-ink/30 outline-none transition-colors focus:border-marigold/70";
 
 async function parseJsonResponse(res: Response) {
   try {
@@ -411,9 +415,9 @@ export default function SeekerProfileEditor({
     switch (activeBucket) {
       case "summary":
         return (
-          <div className="grid gap-5">
+          <div className="grid gap-6">
             <div>
-              <label htmlFor="headline" className="mb-2 block text-xs font-semibold uppercase tracking-wider text-ink/45">
+              <label htmlFor="headline" className="mb-3 block text-xs font-semibold uppercase tracking-wider text-ink/45">
                 Headline
               </label>
               <input
@@ -421,20 +425,20 @@ export default function SeekerProfileEditor({
                 value={form.headline}
                 onChange={(e) => updateField("headline", e.target.value)}
                 placeholder="e.g. Executive VA · 5 yrs experience"
-                className={inputClassName}
+                className={summaryHeadlineClassName}
               />
             </div>
             <div>
-              <label htmlFor="bio" className="mb-2 block text-xs font-semibold uppercase tracking-wider text-ink/45">
+              <label htmlFor="bio" className="mb-3 block text-xs font-semibold uppercase tracking-wider text-ink/45">
                 About you
               </label>
               <textarea
                 id="bio"
-                rows={6}
+                rows={7}
                 value={form.bio}
                 onChange={(e) => updateField("bio", e.target.value)}
                 placeholder="Brief summary of your experience and what you're looking for..."
-                className={`${inputClassName} resize-y`}
+                className={summaryBioClassName}
               />
             </div>
           </div>
@@ -1274,32 +1278,32 @@ export default function SeekerProfileEditor({
 
   return (
     <div className="space-y-5">
-      <div className="rounded-2xl border border-navy/8 bg-white p-5 shadow-[0_8px_30px_rgba(30,58,95,0.04)] sm:p-6">
-        <div className="flex flex-wrap items-start gap-4">
-          <div className="min-w-0 flex-1">
-            <h2 className="font-display text-xl font-bold text-ink">Profile hub</h2>
-            <p className="mt-1 text-sm text-ink/55">
-              <span className="font-data font-semibold text-ink">{completed}/{total}</span> sections complete
-              {profileUpdatedAt && (
-                <span className="text-ink/45"> · Profile saved {formatRelativeUpdated(profileUpdatedAt)}</span>
-              )}
-            </p>
-            <div className="mt-2 h-1.5 max-w-md overflow-hidden rounded-full bg-ink/8">
-              <div
-                className="h-full rounded-full bg-marigold transition-all duration-500"
-                style={{ width: `${(completed / total) * 100}%` }}
-              />
-            </div>
+      {/* ── Progress toolbar (replaces old "Profile hub" card) ── */}
+      <div className="animate-fade-in flex flex-wrap items-center justify-between gap-4 pb-2">
+        <div>
+          <p className="font-data text-xs font-bold uppercase tracking-widest text-marigold">
+            {completed}/{total} sections complete
+          </p>
+          <div className="mt-2 h-[2px] w-48 overflow-hidden rounded-full bg-ink/8 sm:w-64">
+            <div
+              className="h-full rounded-full bg-marigold transition-all duration-500"
+              style={{ width: `${(completed / total) * 100}%` }}
+            />
           </div>
-          <button
-            type="submit"
-            form="seeker-profile-form"
-            disabled={loading}
-            className="cursor-pointer rounded-xl bg-marigold px-5 py-2.5 text-sm font-semibold text-ink shadow-sm hover:bg-marigold/90 disabled:opacity-60"
-          >
-            {loading ? "Saving..." : "Save profile"}
-          </button>
+          {profileUpdatedAt && (
+            <p className="mt-1.5 text-[11px] text-ink/40">
+              Saved {formatRelativeUpdated(profileUpdatedAt)}
+            </p>
+          )}
         </div>
+        <button
+          type="submit"
+          form="seeker-profile-form"
+          disabled={loading}
+          className="cursor-pointer rounded-xl bg-marigold px-5 py-2.5 text-sm font-semibold text-ink shadow-sm hover:bg-marigold/90 disabled:opacity-60"
+        >
+          {loading ? "Saving..." : "Save profile"}
+        </button>
       </div>
 
       <div className="lg:hidden">
@@ -1312,8 +1316,8 @@ export default function SeekerProfileEditor({
       </div>
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,200px)_minmax(0,1fr)] xl:grid-cols-[minmax(0,200px)_minmax(0,1fr)_minmax(280px,340px)] xl:gap-6">
-        <aside className="hidden lg:block">
-          <div className="sticky top-28 rounded-2xl border border-navy/8 bg-white p-3 shadow-[0_8px_30px_rgba(30,58,95,0.04)]">
+        <aside className="hidden animate-slide-in-left lg:block">
+          <div className="sticky top-28 py-1">
             <ProfileBucketNav
               variant="sidebar"
               activeId={activeBucket}
@@ -1330,8 +1334,9 @@ export default function SeekerProfileEditor({
             </div>
           )}
 
-          <section className={bucketPanelClassName}>
-            <div className="mb-8 border-b border-ink/5 pb-5">
+          <section key={activeBucket} className="animate-slide-up min-w-0">
+            <div className="mb-1 h-0.5 w-10 rounded-full bg-marigold" />
+            <div className="mb-6 mt-3">
               <h3 className="font-display text-xl font-bold text-ink">{activeMeta.label}</h3>
               <p className="mt-1.5 text-sm text-ink/55">{activeMeta.description}</p>
             </div>
@@ -1382,14 +1387,14 @@ export default function SeekerProfileEditor({
             </button>
             {previewOpen && (
               <div className="mt-3">
-                <SeekerEmployerPreview data={previewData} />
+                <SeekerEmployerPreview data={previewData} profileId={profileId} />
               </div>
             )}
           </div>
         </form>
 
-        <aside className="hidden xl:block">
-          <SeekerEmployerPreview data={previewData} />
+        <aside className="hidden animate-slide-in-right xl:block">
+          <SeekerEmployerPreview data={previewData} profileId={profileId} />
         </aside>
       </div>
     </div>

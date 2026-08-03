@@ -1,21 +1,34 @@
 import { auth } from "@/Auth";
 import { listJobAlerts } from "@/lib/job-alerts";
 import JobAlertsList from "@/components/seeker/JobAlertsList";
+import { SeekerNavBandBleed } from "@/components/seeker/SeekerNavBand";
+import { Bell } from "lucide-react";
 
 export default async function JobAlertsPage() {
   const session = await auth();
   const alerts = session?.user ? await listJobAlerts(session.user.id) : [];
 
-  return (
-    <div className="space-y-6 animate-fade-in">
-      <div>
-        <h1 className="font-display text-3xl font-bold text-ink sm:text-4xl">Job alerts</h1>
-        <p className="mt-2 text-sm text-ink/55">
-          Saved searches that notify you when a matching VA role goes live.
-        </p>
-      </div>
+  const countLabel =
+    alerts.length === 1 ? "1 active alert" : `${alerts.length} active alerts`;
 
-      <JobAlertsList initialAlerts={alerts} />
+  return (
+    <div className="animate-fade-in pb-16">
+      <SeekerNavBandBleed
+        section="Job alerts"
+        icon={Bell}
+        badge={
+          alerts.length > 0 ? (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-marigold/15 px-2.5 py-1 font-data text-[10px] font-bold uppercase tracking-wide text-[#8a5a10]">
+              {countLabel}
+            </span>
+          ) : undefined
+        }
+        hint="Saved searches"
+      />
+
+      <div className="pt-6 sm:pt-8">
+        <JobAlertsList initialAlerts={alerts} />
+      </div>
     </div>
   );
 }

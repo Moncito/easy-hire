@@ -51,8 +51,8 @@ export default function ProfileBucketNav({
   }
 
   return (
-    <nav aria-label="Profile sections" className="space-y-1">
-      <p className="mb-3 px-2 text-[10px] font-bold uppercase tracking-wider text-navy/50">
+    <nav aria-label="Profile sections" className="space-y-0.5">
+      <p className="mb-3 px-2 text-[10px] font-bold uppercase tracking-wider text-ink/35">
         Profile sections
       </p>
       {PROFILE_BUCKETS.map((bucket) => {
@@ -65,18 +65,20 @@ export default function ProfileBucketNav({
             onClick={() => onSelect(bucket.id)}
             className={`flex w-full cursor-pointer items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm transition-colors ${
               active
-                ? "bg-marigold/12 font-semibold text-ink"
-                : "font-medium text-ink/60 hover:bg-ink/4 hover:text-ink"
+                ? "bg-marigold/10 font-semibold text-ink"
+                : "font-medium text-ink/55 hover:bg-ink/[0.04] hover:text-ink"
             }`}
           >
             <span
-              className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[10px] ${
+              className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[10px] transition-colors ${
                 complete
                   ? "border-teal/30 bg-teal/10 text-teal"
-                  : "border-ink/15 bg-white text-ink/30"
+                  : active
+                    ? "border-marigold/40 bg-marigold/12 text-marigold"
+                    : "border-ink/15 bg-white text-ink/30"
               }`}
             >
-              {complete ? <Check className="h-3 w-3" /> : "·"}
+              {complete ? <Check className="h-3 w-3" /> : <span className="h-1.5 w-1.5 rounded-full bg-current" />}
             </span>
             <span className="min-w-0 truncate">{bucket.label}</span>
           </button>
