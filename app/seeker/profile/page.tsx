@@ -27,6 +27,7 @@ export default async function SeekerProfilePage({
   const { completed, total } = profileBucketCompletion({
     fullName: profile.fullName ?? "",
     headline: profile.headline ?? "",
+    location: profile.location ?? "",
     bio: profile.bio ?? "",
     skills: profile.skills ?? [],
     availability: profile.availability,
