@@ -526,3 +526,48 @@ backdrop-filter:blur(6px);
     radial-gradient(ellipse 50% 45% at 96% 18%, rgba(30, 58, 95, 0.07), transparent 52%),
     radial-gradient(ellipse 40% 35% at 50% 100%, rgba(31, 128, 115, 0.04), transparent 55%);
 }
+
+/* =======================================================
+   LANDING — shared primitives for the premium redesign
+   Marquees run on the compositor via CSS keyframes; GSAP
+   is reserved for scroll/entrance/pointer effects.
+======================================================= */
+
+@keyframes marquee-x {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+/* Put on the inner track that holds two copies of the list.
+   --marquee-duration is set inline per section. */
+.landing-marquee {
+  animation: marquee-x var(--marquee-duration, 40s) linear infinite;
+  will-change: transform;
+}
+
+.landing-marquee-reverse {
+  animation-direction: reverse;
+}
+
+/* Put on the outer wrapper to pause the track on hover. */
+.landing-marquee-hover:hover .landing-marquee {
+  animation-play-state: paused;
+}
+
+/* Soft fade on the left/right edges of a marquee viewport. */
+.landing-marquee-mask {
+  mask-image: linear-gradient(to right, transparent, black 8%, black 92%, transparent);
+  -webkit-mask-image: linear-gradient(to right, transparent, black 8%, black 92%, transparent);
+}
+
+/* Film-grain overlay — inline SVG turbulence, no asset request. */
+.landing-grain {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 160px 160px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-marquee {
+    animation: none;
+  }
+}
