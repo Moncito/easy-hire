@@ -39,6 +39,15 @@ const POSTED_WITHIN_MS: Record<string, number> = {
   "30d": 30 * 24 * 60 * 60 * 1000,
 };
 
+function baseActiveJobWhere(): Prisma.JobWhereInput[] {
+  const now = new Date();
+  return [
+    { status: "ACTIVE" },
+    { OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] },
+    { company: { verifiedStatus: "APPROVED" } },
+  ];
+}
+
 /**
  * Salary filters are entered by the seeker in a single period (via the
  * pay-period toggle) but jobs are posted in whatever period the employer
@@ -47,12 +56,7 @@ const POSTED_WITHIN_MS: Record<string, number> = {
  * converting/displaying a job's own stated numbers.
  */
 function activeJobWhere(input: JobSearchInput): Prisma.JobWhereInput {
-  const now = new Date();
-  const andClauses: Prisma.JobWhereInput[] = [
-    { status: "ACTIVE" },
-    { OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] },
-    { company: { verifiedStatus: "APPROVED" } },
-  ];
+  const andClauses: Prisma.JobWhereInput[] = baseActiveJobWhere();
 
   if (input.category) andClauses.push({ category: input.category });
   if (input.industry) andClauses.push({ industry: input.industry });
@@ -356,6 +360,34 @@ export async function getPublicJob(jobId: string) {
   }
 
   return job;
+}
+
+export async function listLandingJobs(limit = 12): Promise<PublicJobListItem[]> {
+  try {
+    const jobs = await prisma.job.findMany({
+      where: { AND: baseActiveJobWhere() },
+      orderBy: [
+        { publishedAt: { sort: "desc", nulls: "last" } },
+        { createdAt: "desc" },
+        { id: "desc" },
+      ],
+      take: limit,
+      include: {
+        company: {
+          select: {
+            id: true,
+            companyName: true,
+            logoUrl: true,
+            verifiedStatus: true,
+            industry: true,
+          },
+        },
+      },
+    });
+    return jobs.map(mapJob);
+  } catch {
+    return [];
+  }
 }
 
 export async function listJobCategories() {
