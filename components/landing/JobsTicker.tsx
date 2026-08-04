@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import type { CSSProperties } from "react";
 import Link from "next/link";
 import { ArrowRight, BadgeCheck, Sparkles } from "lucide-react";
 import type { PublicJobListItem } from "@/lib/public-jobs";
@@ -9,6 +9,16 @@ import type { SalaryPeriod } from "@/lib/format";
 
 interface JobsTickerProps {
   jobs: PublicJobListItem[];
+}
+
+/** Repeat items until the track is wide enough to feel like a continuous ribbon. */
+function padForMarquee<T>(items: T[], minCount = 6): T[] {
+  if (items.length === 0) return items;
+  const out: T[] = [];
+  while (out.length < minCount) {
+    out.push(...items);
+  }
+  return out;
 }
 
 export default function JobsTicker({ jobs }: JobsTickerProps) {
@@ -21,7 +31,6 @@ export default function JobsTicker({ jobs }: JobsTickerProps) {
   return (
     <section className="w-full bg-mist py-20 overflow-hidden">
       <div className="mx-auto max-w-6xl px-6 mb-12 text-center">
-        {/* Pill badge */}
         <div className="mx-auto mb-6 inline-flex items-center gap-2 rounded-full border border-marigold/30 bg-marigold/10 px-4 py-2">
           <Sparkles className="h-3.5 w-3.5 fill-marigold/40 text-marigold" />
           <span className="text-xs font-semibold tracking-wide text-marigold">
@@ -44,10 +53,8 @@ export default function JobsTicker({ jobs }: JobsTickerProps) {
         </Link>
       </div>
 
-      {/* Row A */}
       <MarqueeRow jobs={rowA} duration="40s" reverse={false} />
 
-      {/* Row B (if enough jobs) */}
       {rowB && rowB.length > 0 && (
         <div className="mt-4">
           <MarqueeRow jobs={rowB} duration="48s" reverse={true} />
@@ -66,20 +73,22 @@ function MarqueeRow({
   duration: string;
   reverse: boolean;
 }) {
+  const loop = padForMarquee(jobs, 6);
+
   return (
-    <div className={`landing-marquee-hover landing-marquee-mask overflow-hidden`}>
+    <div className="landing-marquee-hover landing-marquee-mask overflow-hidden">
       <div
-        className={`landing-marquee ${reverse ? "landing-marquee-reverse" : ""} flex items-stretch gap-4`}
-        style={{ "--marquee-duration": duration } as React.CSSProperties}
+        className={`landing-marquee gap-4 ${reverse ? "landing-marquee-reverse" : ""}`}
+        style={{ "--marquee-duration": duration } as CSSProperties}
       >
-        {/* First copy */}
-        {jobs.map((job) => (
-          <JobCard key={job.id} job={job} />
-        ))}
-        {/* Second copy — seamless loop */}
-        <div aria-hidden="true" className="flex items-stretch gap-4">
-          {jobs.map((job) => (
-            <JobCard key={`dup-${job.id}`} job={job} />
+        <div className="flex shrink-0 items-stretch gap-4 pr-4">
+          {loop.map((job, i) => (
+            <JobCard key={`a-${job.id}-${i}`} job={job} />
+          ))}
+        </div>
+        <div className="flex shrink-0 items-stretch gap-4 pr-4" aria-hidden="true">
+          {loop.map((job, i) => (
+            <JobCard key={`b-${job.id}-${i}`} job={job} inert />
           ))}
         </div>
       </div>
@@ -87,7 +96,7 @@ function MarqueeRow({
   );
 }
 
-function JobCard({ job }: { job: PublicJobListItem }) {
+function JobCard({ job, inert = false }: { job: PublicJobListItem; inert?: boolean }) {
   const salary =
     job.salaryMin != null || job.salaryMax != null
       ? formatPesoRange(job.salaryMin, job.salaryMax, job.salaryPeriod as SalaryPeriod)
@@ -96,6 +105,7 @@ function JobCard({ job }: { job: PublicJobListItem }) {
   return (
     <Link
       href={`/jobs/${job.id}`}
+      tabIndex={inert ? -1 : undefined}
       className="group flex w-[320px] shrink-0 flex-col gap-2 rounded-2xl border border-ink/10 bg-white/70 p-4 backdrop-blur-sm transition-all duration-200 hover:-translate-y-1 hover:border-marigold/40 hover:shadow-md"
     >
       <p className="font-display font-bold text-sm text-ink truncate">{job.title}</p>

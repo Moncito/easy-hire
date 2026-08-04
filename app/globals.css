@@ -538,9 +538,12 @@ backdrop-filter:blur(6px);
   to { transform: translateX(-50%); }
 }
 
-/* Put on the inner track that holds two copies of the list.
-   --marquee-duration is set inline per section. */
+/* Inner track must size to its content (not the viewport), otherwise
+   translateX(-50%) only shifts by half the screen and the loop looks static.
+   Structure: exactly two equal children (copy A + copy A), each shrink-0. */
 .landing-marquee {
+  display: flex;
+  width: max-content;
   animation: marquee-x var(--marquee-duration, 40s) linear infinite;
   will-change: transform;
 }
