@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useCallback } from "react";
 import { ArrowRight, BadgeCheck, Star, TrendingUp, Clock } from "lucide-react";
-import { gsap, ScrollTrigger } from "@/lib/gsap";
+import { gsap } from "@/lib/gsap";
 import Link from "next/link";
 import { useLoginModalOptional } from "@/components/auth/LoginModalProvider";
 
@@ -213,78 +213,70 @@ export default function Hero() {
 
   useEffect(() => {
     const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-    // Make sure everything is visible for reduced-motion users immediately
-    if (prefersReduced) {
-      if (headlineRef.current) {
-        gsap.set(headlineRef.current.querySelectorAll(".word-wrap"), { opacity: 1, y: 0, clipPath: "inset(0 0 0% 0)" });
-      }
-      gsap.set([subtextRef.current, ctaGroupRef.current, trustRef.current], { opacity: 1, y: 0 });
-      cardRefs.current.forEach((el) => el && gsap.set(el, { opacity: 1, scale: 1 }));
-      // Still set up the word-flip interval for non-animation visual
-      return;
-    }
+    if (prefersReduced) return;
 
     const ctx = gsap.context(() => {
-      // ── 1. Entrance: word-by-word headline reveal ──────────────────────────
+      // Content is VISIBLE by default in the DOM. Entrance only enhances —
+      // never gsap.set(opacity:0), so a failed/interrupted tween cannot blank the hero.
       const wordWraps = headlineRef.current?.querySelectorAll(".word-wrap") ?? [];
-
-      gsap.set(wordWraps, { clipPath: "inset(0 0 100% 0)", y: 18 });
-      gsap.set([subtextRef.current, ctaGroupRef.current, trustRef.current], { opacity: 0, y: 22 });
-      cardRefs.current.forEach((el) => el && gsap.set(el, { opacity: 0, scale: 0.88 }));
+      const cards = cardRefs.current.filter(Boolean);
 
       const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
 
-      tl.to(wordWraps, {
-        clipPath: "inset(0 0 0% 0)",
-        y: 0,
-        duration: 0.65,
-        stagger: 0.06,
-        delay: 0.25,
-      })
-        .to(subtextRef.current, { opacity: 1, y: 0, duration: 0.55 }, "-=0.25")
-        .to(ctaGroupRef.current, { opacity: 1, y: 0, duration: 0.5 }, "-=0.35")
-        .to(trustRef.current, { opacity: 1, y: 0, duration: 0.45 }, "-=0.3")
-        .to(
-          cardRefs.current.filter(Boolean),
-          { opacity: 1, scale: 1, duration: 0.6, stagger: 0.07, ease: "back.out(1.4)" },
-          "-=0.5"
+      if (wordWraps.length) {
+        tl.from(
+          wordWraps,
+          { y: 18, opacity: 0, duration: 0.65, stagger: 0.06, immediateRender: false },
+          0.1
         );
+      }
+      tl.from(
+        [subtextRef.current, ctaGroupRef.current, trustRef.current].filter(Boolean),
+        { y: 18, opacity: 0, duration: 0.55, stagger: 0.08, immediateRender: false },
+        0.35
+      );
+      if (cards.length) {
+        tl.from(
+          cards,
+          { opacity: 0, scale: 0.92, duration: 0.55, stagger: 0.06, ease: "back.out(1.3)", immediateRender: false },
+          0.45
+        );
+      }
 
-      // ── 2. Rotating accent word (y-slide) ─────────────────────────────────
-      // wordA starts visible (y 0), wordB starts below (y 100%)
+      // Rotating accent word (y-slide)
       gsap.set(wordBRef.current, { yPercent: 105 });
 
       let showingA = true;
-      const flipInterval = setInterval(() => {
+      const flipInterval = window.setInterval(() => {
         if (showingA) {
           gsap.to(wordARef.current, { yPercent: -105, duration: 0.42, ease: "power2.in" });
-          gsap.to(wordBRef.current, { yPercent: 0, duration: 0.42, ease: "power2.out", delay: 0.38 });
+          gsap.to(wordBRef.current, { yPercent: 0, duration: 0.42, ease: "power2.out", delay: 0.08 });
         } else {
           gsap.to(wordBRef.current, { yPercent: -105, duration: 0.42, ease: "power2.in" });
-          gsap.to(wordARef.current, { yPercent: 0, duration: 0.42, ease: "power2.out", delay: 0.38 });
+          gsap.to(wordARef.current, { yPercent: 0, duration: 0.42, ease: "power2.out", delay: 0.08 });
         }
         showingA = !showingA;
       }, 2500);
 
-      // ── 3. Pointer parallax — quickTo per card ─────────────────────────────
+      // Pointer parallax — quickTo on the INNER card
       cardRefs.current.forEach((el, i) => {
         if (!el) return;
         qxRefs.current[i] = gsap.quickTo(el, "x", { duration: 0.55, ease: "power2.out" });
         qyRefs.current[i] = gsap.quickTo(el, "y", { duration: 0.55, ease: "power2.out" });
       });
 
-      // ── 4. Scroll parallax (scrubbed yPercent per card) ───────────────────
-      cardRefs.current.forEach((el, i) => {
-        if (!el) return;
-        ScrollTrigger.create({
-          trigger: containerRef.current,
-          start: "top top",
-          end: "bottom top",
-          scrub: true,
-          onUpdate: (self) => {
-            const speed = CARDS[i]?.scrollSpeed ?? 0.04;
-            gsap.set(el, { y: `+=${self.getVelocity() * speed * 0.001}` });
+      // Scroll parallax — OUTER wrapper so it never fights pointer y
+      const scrollCards = containerRef.current?.querySelectorAll<HTMLElement>("[data-scroll-card]") ?? [];
+      scrollCards.forEach((el, i) => {
+        const distance = (CARDS[i]?.scrollSpeed ?? 0.04) * 400;
+        gsap.to(el, {
+          y: distance,
+          ease: "none",
+          scrollTrigger: {
+            trigger: containerRef.current,
+            start: "top top",
+            end: "bottom top",
+            scrub: true,
           },
         });
       });
@@ -330,14 +322,19 @@ export default function Hero() {
           className="landing-grain pointer-events-none absolute inset-0 opacity-[0.04] mix-blend-multiply"
         />
 
-        {/* Floating cards (desktop) */}
+        {/* Floating cards (desktop) — outer = scroll parallax, inner = pointer parallax */}
         {CARDS.map((card, i) => (
           <div
             key={card.id}
-            ref={(el) => { cardRefs.current[i] = el; }}
-            className={`absolute z-10 hidden md:block rounded-2xl border border-white/60 bg-white/80 p-3.5 shadow-[0_8px_30px_rgba(0,0,0,0.06)] backdrop-blur-md will-change-transform ${card.className}`}
+            className={`absolute z-10 hidden md:block will-change-transform ${card.className}`}
+            data-scroll-card={i}
           >
-            {card.content}
+            <div
+              ref={(el) => { cardRefs.current[i] = el; }}
+              className="rounded-2xl border border-white/60 bg-white/80 p-3.5 shadow-[0_8px_30px_rgba(0,0,0,0.06)] backdrop-blur-md will-change-transform"
+            >
+              {card.content}
+            </div>
           </div>
         ))}
 

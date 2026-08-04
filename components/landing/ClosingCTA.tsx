@@ -7,63 +7,33 @@ import { gsap } from "@/lib/gsap";
 
 export default function ClosingCTA() {
   const sectionRef = useRef<HTMLDivElement>(null);
-  const headingRef = useRef<HTMLHeadingElement>(null);
-  const subRef = useRef<HTMLParagraphElement>(null);
-  const btnsRef = useRef<HTMLDivElement>(null);
   const ring1Ref = useRef<HTMLDivElement>(null);
   const ring2Ref = useRef<HTMLDivElement>(null);
   const ring3Ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (prefersReducedMotion) {
-      [headingRef, subRef, btnsRef].forEach(({ current: el }) => {
-        if (el) (el as HTMLElement).style.opacity = "1";
-      });
-      return;
-    }
+    if (prefersReducedMotion) return;
 
     const ctx = gsap.context(() => {
-      // Heading reveal on scroll
-      const tl = gsap.timeline({
-        scrollTrigger: {
-          trigger: sectionRef.current,
-          start: "top 70%",
-          toggleActions: "play none none none",
-        },
-      });
-
-      tl.from(headingRef.current, {
-        y: 40,
-        opacity: 0,
-        duration: 0.8,
-        ease: "power3.out",
-      })
-        .from(
-          subRef.current,
-          { y: 24, opacity: 0, duration: 0.6, ease: "power2.out" },
-          "-=0.5"
-        )
-        .from(
-          btnsRef.current,
-          { y: 20, opacity: 0, duration: 0.6, ease: "power2.out" },
-          "-=0.45"
-        );
-
-      // Concentric rings: scale scrub on scroll
+      // Decorative ring scrub only — content is static and always visible.
       const rings = [ring1Ref.current, ring2Ref.current, ring3Ref.current];
       rings.forEach((ring, i) => {
         if (!ring) return;
-        gsap.to(ring, {
-          scale: 1 + i * 0.06,
-          ease: "none",
-          scrollTrigger: {
-            trigger: sectionRef.current,
-            start: "top bottom",
-            end: "bottom top",
-            scrub: true,
-          },
-        });
+        gsap.fromTo(
+          ring,
+          { scale: 1 },
+          {
+            scale: 1 + i * 0.06,
+            ease: "none",
+            scrollTrigger: {
+              trigger: sectionRef.current,
+              start: "top bottom",
+              end: "bottom top",
+              scrub: true,
+            },
+          }
+        );
       });
     }, sectionRef);
 
@@ -75,7 +45,6 @@ export default function ClosingCTA() {
       ref={sectionRef}
       className="relative w-full overflow-hidden bg-mist px-6 py-28 md:py-36"
     >
-      {/* Floating blob backgrounds */}
       <div
         className="pointer-events-none absolute -left-40 top-0 h-[500px] w-[500px] rounded-full bg-marigold/20 blur-3xl animate-float-slow"
         aria-hidden="true"
@@ -85,13 +54,11 @@ export default function ClosingCTA() {
         aria-hidden="true"
       />
 
-      {/* Grain overlay */}
       <div
         className="landing-grain pointer-events-none absolute inset-0 opacity-[0.04]"
         aria-hidden="true"
       />
 
-      {/* Concentric rings */}
       <div
         ref={ring1Ref}
         className="pointer-events-none absolute left-1/2 top-1/2 h-[340px] w-[340px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-ink/5"
@@ -108,30 +75,17 @@ export default function ClosingCTA() {
         aria-hidden="true"
       />
 
-      {/* Content */}
       <div className="relative z-10 mx-auto max-w-4xl text-center">
-        <h2
-          ref={headingRef}
-          className="font-display text-5xl md:text-7xl font-extrabold tracking-tight text-ink mb-6 leading-none"
-          style={{ opacity: 0 }}
-        >
+        <h2 className="font-display text-5xl md:text-7xl font-extrabold tracking-tight text-ink mb-6 leading-none">
           Ready when you are.
         </h2>
 
-        <p
-          ref={subRef}
-          className="mx-auto max-w-xl text-base md:text-lg text-ink/60 mb-10"
-          style={{ opacity: 0 }}
-        >
+        <p className="mx-auto max-w-xl text-base md:text-lg text-ink/60 mb-10">
           Join thousands of Virtual Assistants and verified employers already building
           better careers together.
         </p>
 
-        <div
-          ref={btnsRef}
-          className="flex flex-col sm:flex-row items-center justify-center gap-4"
-          style={{ opacity: 0 }}
-        >
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
           <Link
             href="/signup?role=SEEKER"
             className="inline-flex items-center gap-2 rounded-full bg-marigold px-8 py-4 text-base font-bold text-ink shadow-md transition-all hover:bg-marigold/90 hover:-translate-y-0.5 active:scale-95"

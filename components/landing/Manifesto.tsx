@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { Sparkles } from "lucide-react";
-import { gsap, ScrollTrigger } from "@/lib/gsap";
+import { gsap } from "@/lib/gsap";
 
 const RULES = [
   {
@@ -39,17 +39,18 @@ export default function Manifesto() {
     const ctx = gsap.context(() => {
       lineRefs.current.forEach((el) => {
         if (!el) return;
-        ScrollTrigger.create({
-          trigger: el,
-          start: "top 85%",
-          once: true,
-          onEnter: () => {
-            gsap.fromTo(
-              el,
-              { opacity: 0, y: 40 },
-              { opacity: 1, y: 0, duration: 0.75, ease: "power3.out" }
-            );
+        // Soft y-settle only — never opacity:0. Content is always readable.
+        gsap.from(el, {
+          y: 36,
+          duration: 0.75,
+          ease: "power3.out",
+          scrollTrigger: {
+            trigger: el,
+            start: "top 85%",
+            toggleActions: "play none none none",
+            once: true,
           },
+          immediateRender: false,
         });
       });
     }, sectionRef);
@@ -58,12 +59,8 @@ export default function Manifesto() {
   }, []);
 
   return (
-    <section
-      ref={sectionRef}
-      className="w-full bg-mist px-6 py-28"
-    >
+    <section ref={sectionRef} className="w-full bg-mist px-6 py-28">
       <div className="mx-auto max-w-5xl">
-        {/* Eyebrow badge */}
         <div className="mb-16 flex justify-center">
           <div className="inline-flex items-center gap-2 rounded-full border border-navy/20 bg-navy/8 px-4 py-2">
             <Sparkles className="h-3.5 w-3.5 fill-navy/40 text-navy" />
@@ -73,7 +70,6 @@ export default function Manifesto() {
           </div>
         </div>
 
-        {/* Lines */}
         <div className="flex flex-col gap-20 md:gap-24">
           {RULES.map((rule, i) => (
             <div
@@ -84,7 +80,6 @@ export default function Manifesto() {
               className={`flex flex-col gap-3 ${
                 rule.align === "right" ? "items-end text-right" : "items-start text-left"
               }`}
-              style={{ opacity: 0 }}
             >
               <h2 className="font-display text-4xl md:text-6xl font-extrabold tracking-tight text-ink leading-none">
                 {rule.headline.map((segment, si) => (
@@ -96,9 +91,7 @@ export default function Manifesto() {
                   </span>
                 ))}
               </h2>
-              <p
-                className={`max-w-md text-base text-ink/60 leading-relaxed`}
-              >
+              <p className="max-w-md text-base text-ink/60 leading-relaxed">
                 {rule.support}
               </p>
             </div>
