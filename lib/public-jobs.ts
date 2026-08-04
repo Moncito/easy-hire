@@ -56,6 +56,7 @@ function baseActiveJobWhere(): Prisma.JobWhereInput[] {
  * converting/displaying a job's own stated numbers.
  */
 function activeJobWhere(input: JobSearchInput): Prisma.JobWhereInput {
+  const now = new Date();
   const andClauses: Prisma.JobWhereInput[] = baseActiveJobWhere();
 
   if (input.category) andClauses.push({ category: input.category });
