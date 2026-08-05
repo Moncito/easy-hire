@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { Plus } from "lucide-react";
 import JobList from "@/components/employer/JobList";
+import { EmployerPrimaryButton } from "@/components/employer/ui/EmployerPageHeader";
 
 export default async function EmployerJobsPage() {
   const session = await auth();
@@ -20,37 +21,33 @@ export default async function EmployerJobsPage() {
     redirect("/employer/company-profile");
   }
 
-  // Fetch all jobs with applicant count
   const jobs = await prisma.job.findMany({
     where: { companyId: company.id },
-    orderBy: { createdAt: "desc" },
+    orderBy: { updatedAt: "desc" },
     include: {
-      _count: {
-        select: { applications: true },
+      _count: { select: { applications: true } },
+      screeningQuestions: {
+        orderBy: { sortOrder: "asc" },
+        select: { prompt: true, required: true },
       },
     },
   });
 
+  const companyVerified = company.verifiedStatus === "APPROVED";
+
   return (
     <>
-      <div className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-        <div>
-          <h1 className="font-display text-2xl font-bold text-ink tracking-tight">Job Postings</h1>
-          <p className="mt-1.5 text-sm text-ink/50">
-            Manage your job listings, track applicant counts, and hire the right virtual assistants.
-          </p>
-        </div>
-        
-        <Link
-          href="/employer/jobs/new"
-          className="flex items-center gap-2 rounded-xl bg-teal px-5 py-2.5 text-sm font-semibold text-white shadow-xs hover:bg-teal/95 hover:scale-[1.01] active:scale-[0.99] transition-all cursor-pointer"
-        >
+      <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+        <p className="max-w-xl text-sm text-ink/50">
+          Manage listings, filter by status, and open the applicant pipeline for any job.
+        </p>
+        <EmployerPrimaryButton href="/employer/jobs/new">
           <Plus className="h-4 w-4" strokeWidth={2.5} />
           Post a new job
-        </Link>
+        </EmployerPrimaryButton>
       </div>
 
-      <JobList jobs={JSON.parse(JSON.stringify(jobs))} />
+      <JobList jobs={JSON.parse(JSON.stringify(jobs))} companyVerified={companyVerified} />
     </>
   );
 }

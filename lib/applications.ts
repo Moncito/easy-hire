@@ -31,6 +31,7 @@ export async function createApplication(seekerUserId: string, raw: unknown) {
       company: {
         include: { user: { select: { id: true, email: true } } },
       },
+      screeningQuestions: true,
     },
   });
 
@@ -42,17 +43,46 @@ export async function createApplication(seekerUserId: string, raw: unknown) {
     throw new ApiError("This employer is not yet verified", 400);
   }
 
+  // Screening answers are collected for the employer's context only —
+  // required questions must be answered, but content never triggers auto-rejection.
+  const answerByQuestionId = new Map(input.answers.map((a) => [a.questionId, a.answerText]));
+  const missingRequired = job.screeningQuestions.some(
+    (q) => q.required && !answerByQuestionId.get(q.id)?.trim()
+  );
+  if (missingRequired) {
+    throw new ApiError("Please answer all required screening questions", 400);
+  }
+
+  const validQuestionIds = new Set(job.screeningQuestions.map((q) => q.id));
+  const answersToCreate = input.answers.filter(
+    (a) => validQuestionIds.has(a.questionId) && a.answerText.trim().length > 0
+  );
+
   try {
-    const application = await prisma.application.create({
-      data: {
-        jobId: job.id,
-        seekerId: seeker.id,
-        coverNote: input.coverNote?.trim() || null,
-      },
-      include: {
-        job: { select: { title: true } },
-        seeker: { select: { fullName: true } },
-      },
+    const application = await prisma.$transaction(async (tx) => {
+      const created = await tx.application.create({
+        data: {
+          jobId: job.id,
+          seekerId: seeker.id,
+          coverNote: input.coverNote?.trim() || null,
+        },
+        include: {
+          job: { select: { title: true } },
+          seeker: { select: { fullName: true } },
+        },
+      });
+
+      if (answersToCreate.length > 0) {
+        await tx.applicationAnswer.createMany({
+          data: answersToCreate.map((a) => ({
+            applicationId: created.id,
+            questionId: a.questionId,
+            answerText: a.answerText.trim(),
+          })),
+        });
+      }
+
+      return created;
     });
 
     await notifyApplicationSubmitted({
@@ -161,6 +191,12 @@ export async function listJobApplications(jobId: string) {
           certifications: true,
           photoUrl: true,
         },
+      },
+      answers: {
+        include: {
+          question: { select: { id: true, prompt: true, required: true, sortOrder: true } },
+        },
+        orderBy: { question: { sortOrder: "asc" } },
       },
     },
   });

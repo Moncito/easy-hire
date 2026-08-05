@@ -14,7 +14,7 @@ export default function Footer() {
     {
       heading: "For employers",
       links: [
-        { label: "Post a job", href: "/signup" },
+        { label: "Post a job", href: "/employers" },
         { label: "Employer login", href: "/login", isLogin: true },
       ],
     },

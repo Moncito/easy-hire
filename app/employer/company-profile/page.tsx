@@ -12,6 +12,9 @@ export default async function CompanyProfilePage() {
 
   const company = await prisma.company.findUnique({
     where: { userId: session.user.id },
+    include: {
+      verificationDocuments: { orderBy: { uploadedAt: "desc" } },
+    },
   });
 
   if (!company) {
@@ -54,11 +57,19 @@ export default async function CompanyProfilePage() {
           logoUrl: company.logoUrl,
           bannerUrl: company.bannerUrl,
           verificationStatus: verificationStatusMap[company.verifiedStatus] || "pending",
+          verificationRejectionReason: company.verificationRejectionReason,
         }}
         stats={{
           activeJobsCount,
           totalApplicantsCount,
         }}
+        verificationDocuments={company.verificationDocuments.map((doc) => ({
+          id: doc.id,
+          fileUrl: doc.fileUrl,
+          fileName: doc.fileName,
+          docType: doc.docType,
+          uploadedAt: doc.uploadedAt.toISOString(),
+        }))}
       />
     </>
   );

@@ -47,41 +47,41 @@ enum ProfileVisibility {
 // ============================================================================
 
 model SeekerProfile {
-  id                String             @id @default(cuid())
-  userId            String             @unique @map("user_id")
-  fullName          String             @map("full_name")
-  phone             String?
-  location          String?
-  headline          String?
-  bio               String?
-  resumeUrl         String?            @map("resume_url")
-  skills            String[]
-  desiredSalaryMin  Int?               @map("desired_salary_min")
-  desiredSalaryMax  Int?               @map("desired_salary_max")
-  visibility        ProfileVisibility  @default(STANDARD)
-  createdAt         DateTime           @default(now()) @map("created_at")
-  updatedAt         DateTime           @updatedAt @map("updated_at")
-  availability      String?            @map("availability")
-  yearsExperience   String?            @map("years_experience")
-  linkedinUrl       String?            @map("linkedin_url")
-  portfolioUrl      String?            @map("portfolio_url")
-  certifications    String[]           @default([])
-  photoUrl          String?            @map("photo_url")
-  languages         String[]           @default([])
-  timezone          String?            @default("Asia/Manila")
-  workExperience    String[]           @default([]) @map("work_experience")
-  education         String[]           @default([])
-  resumeLabel       String?            @map("resume_label")
-  resumeUpdatedAt   DateTime?          @map("resume_updated_at")
-  resumes           String[]           @default([])
+  id               String            @id @default(cuid())
+  userId           String            @unique @map("user_id")
+  fullName         String            @map("full_name")
+  phone            String?
+  location         String?
+  headline         String?
+  bio              String?
+  resumeUrl        String?           @map("resume_url")
+  skills           String[]
+  desiredSalaryMin Int?              @map("desired_salary_min")
+  desiredSalaryMax Int?              @map("desired_salary_max")
+  visibility       ProfileVisibility @default(STANDARD)
+  createdAt        DateTime          @default(now()) @map("created_at")
+  updatedAt        DateTime          @updatedAt @map("updated_at")
+  availability     String?           @map("availability")
+  yearsExperience  String?           @map("years_experience")
+  linkedinUrl      String?           @map("linkedin_url")
+  portfolioUrl     String?           @map("portfolio_url")
+  certifications   String[]          @default([])
+  photoUrl         String?           @map("photo_url")
+  languages        String[]          @default([])
+  timezone         String?           @default("Asia/Manila")
+  workExperience   String[]          @default([]) @map("work_experience")
+  education        String[]          @default([])
+  resumeLabel      String?           @map("resume_label")
+  resumeUpdatedAt  DateTime?         @map("resume_updated_at")
+  resumes          String[]          @default([])
 
   // Relations
-  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  applications Application[]
-  savedJobs    SavedJob[]
-  jobAlerts    JobAlert[]
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  applications  Application[]
+  savedJobs     SavedJob[]
+  jobAlerts     JobAlert[]
   conversations Conversation[]
-  savedBy      SavedSeeker[]
+  savedBy       SavedSeeker[]
 
   @@map("seeker_profiles")
 }
@@ -91,34 +91,55 @@ model SeekerProfile {
 // ============================================================================
 
 model Company {
-  id             String              @id @default(cuid())
-  userId         String              @unique @map("user_id")
-  companyName    String              @map("company_name")
-  logoUrl        String?             @map("logo_url")
-  bannerUrl      String?             @map("banner_url")
-  description    String?
-  website        String?
-  industry       String?
-  verifiedStatus VerificationStatus  @default(PENDING) @map("verified_status")
-  createdAt      DateTime            @default(now()) @map("created_at")
-  updatedAt      DateTime            @updatedAt @map("updated_at")
-  teamSize       String?             @map("team_size")
-  foundedYear    Int?                @map("founded_year")
-  headquarters   String?
-  highlights     String[]            @default([])
-  linkedinUrl    String?             @map("linkedin_url")
-  facebookUrl    String?             @map("facebook_url")
-  instagramUrl   String?             @map("instagram_url")
-  xUrl           String?             @map("x_url")
+  id                          String             @id @default(cuid())
+  userId                      String             @unique @map("user_id")
+  companyName                 String             @map("company_name")
+  logoUrl                     String?            @map("logo_url")
+  bannerUrl                   String?            @map("banner_url")
+  description                 String?
+  website                     String?
+  industry                    String?
+  verifiedStatus              VerificationStatus @default(PENDING) @map("verified_status")
+  createdAt                   DateTime           @default(now()) @map("created_at")
+  updatedAt                   DateTime           @updatedAt @map("updated_at")
+  teamSize                    String?            @map("team_size")
+  foundedYear                 Int?               @map("founded_year")
+  headquarters                String?
+  highlights                  String[]           @default([])
+  linkedinUrl                 String?            @map("linkedin_url")
+  facebookUrl                 String?            @map("facebook_url")
+  instagramUrl                String?            @map("instagram_url")
+  xUrl                        String?            @map("x_url")
+  verificationRejectionReason String?            @map("verification_rejection_reason")
 
   // Relations
-  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  jobs          Job[]
-  subscriptions Subscription[]
-  conversations Conversation[]
-  savedSeekers  SavedSeeker[]
+  user                  User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobs                  Job[]
+  subscriptions         Subscription[]
+  conversations         Conversation[]
+  savedSeekers          SavedSeeker[]
+  verificationDocuments VerificationDocument[]
 
   @@map("companies")
+}
+
+// ============================================================================
+// EMPLOYER VERIFICATION (Sprint 7-8)
+// ============================================================================
+
+model VerificationDocument {
+  id         String   @id @default(cuid())
+  companyId  String   @map("company_id")
+  fileUrl    String   @map("file_url")
+  fileName   String   @map("file_name")
+  docType    String   @map("doc_type") // BUSINESS_REGISTRATION | BUSINESS_PERMIT | OTHER
+  uploadedAt DateTime @default(now()) @map("uploaded_at")
+
+  // Relations
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@map("verification_documents")
 }
 
 enum VerificationStatus {
@@ -153,10 +174,11 @@ model Job {
   expiresAt      DateTime?      @map("expires_at")
 
   // Relations
-  company      Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  applications Application[]
-  savedJobs    SavedJob[]
-  conversations Conversation[]
+  company            Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  applications       Application[]
+  savedJobs          SavedJob[]
+  conversations      Conversation[]
+  screeningQuestions ScreeningQuestion[]
 
   @@index([companyId])
   @@index([industry])
@@ -205,8 +227,9 @@ model Application {
   updatedAt       DateTime          @updatedAt @map("updated_at")
 
   // Relations
-  job    Job           @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  seeker SeekerProfile @relation(fields: [seekerId], references: [id], onDelete: Cascade)
+  job     Job                 @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  seeker  SeekerProfile       @relation(fields: [seekerId], references: [id], onDelete: Cascade)
+  answers ApplicationAnswer[]
 
   @@unique([jobId, seekerId])
   @@index([jobId])
@@ -220,6 +243,40 @@ enum ApplicationStatus {
   INTERVIEW
   REJECTED
   HIRED
+}
+
+// ============================================================================
+// SCREENING QUESTIONS (Sprint 7-8) — answers are collected only, no knockout
+// ============================================================================
+
+model ScreeningQuestion {
+  id        String  @id @default(cuid())
+  jobId     String  @map("job_id")
+  prompt    String
+  required  Boolean @default(true)
+  sortOrder Int     @default(0) @map("sort_order")
+
+  // Relations
+  job     Job                 @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  answers ApplicationAnswer[]
+
+  @@index([jobId])
+  @@map("screening_questions")
+}
+
+model ApplicationAnswer {
+  id            String @id @default(cuid())
+  applicationId String @map("application_id")
+  questionId    String @map("question_id")
+  answerText    String @map("answer_text")
+
+  // Relations
+  application Application       @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  question    ScreeningQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@unique([applicationId, questionId])
+  @@index([applicationId])
+  @@map("application_answers")
 }
 
 // ============================================================================

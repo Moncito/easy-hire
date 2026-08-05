@@ -5,6 +5,14 @@ export const remoteTypeSchema = z.enum(["REMOTE", "ONSITE", "HYBRID"]);
 export const jobStatusSchema = z.enum(["DRAFT", "PENDING_REVIEW", "ACTIVE", "CLOSED"]);
 export const salaryPeriodSchema = z.enum(["HOURLY", "MONTHLY", "ANNUAL"]);
 
+export const screeningQuestionInputSchema = z.object({
+  prompt: z
+    .string()
+    .min(1, "Question is required")
+    .max(300, "Keep questions under 300 characters"),
+  required: z.boolean().optional().default(true),
+});
+
 export const jobInputSchema = z.object({
   title: z.string().min(1, "Title is required"),
   description: z.string().min(1, "Description is required"),
@@ -18,6 +26,11 @@ export const jobInputSchema = z.object({
   salaryPeriod: salaryPeriodSchema.default("MONTHLY"),
   location: z.string().min(1, "Location is required"),
   remoteType: remoteTypeSchema.default("REMOTE"),
+  screeningQuestions: z
+    .array(screeningQuestionInputSchema)
+    .max(5, "Up to 5 screening questions are allowed")
+    .optional()
+    .default([]),
 });
 
 export const jobStatusUpdateSchema = z.object({

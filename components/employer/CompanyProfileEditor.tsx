@@ -3,17 +3,17 @@
 import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  AlertCircle,
-  Building2,
   Camera,
-  Check,
-  Clock,
   Globe,
   Share2,
 } from "lucide-react";
 import ProfileStrengthCard from "@/components/employer/ProfileStrengthCard";
 import PublicCompanyPreview from "@/components/employer/PublicCompanyPreview";
 import StickySaveBar from "@/components/employer/StickySaveBar";
+import EmployerFormSection from "@/components/employer/ui/EmployerFormSection";
+import VerificationDocumentsPanel, {
+  type VerificationDoc,
+} from "@/components/employer/VerificationDocumentsPanel";
 
 const industryOptions = [
   "E-commerce",
@@ -76,11 +76,13 @@ type Props = {
     logoUrl: string | null;
     bannerUrl: string | null;
     verificationStatus: "pending" | "verified" | "rejected" | null;
+    verificationRejectionReason?: string | null;
   };
   stats: {
     activeJobsCount: number;
     totalApplicantsCount: number;
   };
+  verificationDocuments?: VerificationDoc[];
 };
 
 function getProfileStrengthLabel(percentage: number) {
@@ -180,7 +182,11 @@ const chipClassName = (selected: boolean) =>
       : "border-ink/10 text-ink/75 hover:border-teal/30 hover:bg-teal/5 hover:scale-[1.01]"
   }`;
 
-export default function CompanyProfileEditor({ initialData, stats }: Props) {
+export default function CompanyProfileEditor({
+  initialData,
+  stats,
+  verificationDocuments = [],
+}: Props) {
   const router = useRouter();
   const logoInputRef = useRef<HTMLInputElement>(null);
   const bannerInputRef = useRef<HTMLInputElement>(null);
@@ -445,17 +451,16 @@ export default function CompanyProfileEditor({ initialData, stats }: Props) {
   ];
 
   return (
-    <form onSubmit={handleSubmit}>
-      {/* Hero identity card */}
-      <section className="mb-8 overflow-hidden rounded-3xl border border-ink/5 bg-white shadow-xs transition-shadow duration-300 hover:shadow-sm">
-        <div className="group relative h-40 w-full overflow-hidden sm:h-44">
+    <form onSubmit={handleSubmit} className="pb-24">
+      <section className="mb-8 overflow-hidden rounded-2xl bg-ink/[0.02]">
+        <div className="group relative h-28 w-full overflow-hidden sm:h-32">
           {bannerUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={bannerUrl} alt="" className="h-full w-full object-cover" />
           ) : (
-            <div className="h-full w-full bg-gradient-to-r from-teal/60 via-navy/50 to-teal/40" />
+            <div className="h-full w-full bg-gradient-to-r from-teal/40 via-navy/35 to-teal/30" />
           )}
-          <div className="absolute inset-0 bg-black/10 transition-opacity duration-300 group-hover:opacity-60" />
+          <div className="absolute inset-0 bg-ink/10 transition-opacity duration-300 group-hover:bg-ink/20" />
           <input
             ref={bannerInputRef}
             type="file"
@@ -470,25 +475,25 @@ export default function CompanyProfileEditor({ initialData, stats }: Props) {
             type="button"
             disabled={bannerUploading}
             onClick={() => bannerInputRef.current?.click()}
-            className="absolute bottom-3 right-3 flex cursor-pointer items-center gap-1.5 rounded-xl border border-white/30 bg-white/15 px-3 py-1.5 text-xs font-semibold text-white opacity-0 backdrop-blur-sm transition-all duration-300 hover:bg-white/25 group-hover:opacity-100 disabled:opacity-50"
+            className="absolute bottom-2 right-3 flex cursor-pointer items-center gap-1.5 rounded-lg border border-white/25 bg-white/15 px-2.5 py-1 text-[11px] font-semibold text-white opacity-0 backdrop-blur-sm transition-all duration-300 hover:bg-white/25 group-hover:opacity-100 disabled:opacity-50"
           >
             <Camera className="h-3.5 w-3.5" aria-hidden="true" />
             {bannerUploading ? "Uploading..." : bannerUrl ? "Change banner" : "Upload banner"}
           </button>
         </div>
 
-        <div className="relative flex flex-col gap-5 px-6 pb-6 sm:flex-row sm:items-end sm:justify-between">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
-            <div className="group/logo relative z-10 -mt-10">
+        <div className="flex flex-col gap-5 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-4">
+            <div className="group/logo relative shrink-0">
               {logoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={logoUrl}
                   alt=""
-                  className="h-24 w-24 rounded-2xl border-4 border-white bg-teal object-cover shadow-md transition-transform duration-300 group-hover/logo:scale-[1.03]"
+                  className="h-16 w-16 rounded-xl border-2 border-white bg-teal object-cover shadow-sm transition-transform duration-300 group-hover/logo:scale-[1.02]"
                 />
               ) : (
-                <div className="flex h-24 w-24 items-center justify-center rounded-2xl border-4 border-white bg-teal font-display text-3xl font-bold text-white shadow-md transition-transform duration-300 group-hover/logo:scale-[1.03]">
+                <div className="flex h-16 w-16 items-center justify-center rounded-xl border-2 border-white bg-teal font-display text-xl font-bold text-white shadow-sm transition-transform duration-300 group-hover/logo:scale-[1.02]">
                   {logoInitials}
                 </div>
               )}
@@ -506,30 +511,35 @@ export default function CompanyProfileEditor({ initialData, stats }: Props) {
                 type="button"
                 disabled={logoUploading}
                 onClick={() => logoInputRef.current?.click()}
-                className="absolute -bottom-1 -right-1 flex h-8 w-8 items-center justify-center rounded-full border-2 border-white bg-teal text-white shadow-sm hover:bg-teal/90 disabled:opacity-60"
+                className="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-teal text-white shadow-sm hover:bg-teal/90 disabled:opacity-60"
                 aria-label={logoUploading ? "Uploading logo" : "Upload company logo"}
               >
-                <Camera className="h-4 w-4" aria-hidden="true" />
+                <Camera className="h-3.5 w-3.5" aria-hidden="true" />
               </button>
             </div>
 
-            <div className="min-w-0 sm:mb-1">
+            <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                <h2 className="font-display text-2xl font-bold leading-tight text-ink">
+                <h2 className="font-display text-xl font-bold leading-tight text-ink sm:text-2xl">
                   {form.companyName || "Your Company"}
                 </h2>
                 {verificationStatus === "verified" && (
-                  <span className="rounded-full bg-teal/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-teal">
+                  <span className="rounded-full bg-teal/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-teal">
                     Verified
                   </span>
                 )}
                 {verificationStatus === "pending" && (
-                  <span className="rounded-full bg-marigold/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-marigold">
-                    Pending
+                  <span className="rounded-full bg-navy/8 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-navy">
+                    Pending review
+                  </span>
+                )}
+                {verificationStatus === "rejected" && (
+                  <span className="rounded-full bg-ember/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-ember">
+                    Needs update
                   </span>
                 )}
               </div>
-              <p className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-ink/55">
+              <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-ink/55">
                 <span>{form.industry || "Industry not set"}</span>
                 {form.website && (
                   <>
@@ -551,34 +561,39 @@ export default function CompanyProfileEditor({ initialData, stats }: Props) {
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3 sm:mb-1">
-            <div className="rounded-xl border border-ink/8 bg-mist px-4 py-2 text-center">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-ink/40">
-                Profile Strength
-              </p>
-              <p className="font-display text-xl font-bold text-teal">{profileStrength}%</p>
+          <div className="w-full min-w-[200px] sm:max-w-xs">
+            <div className="mb-1.5 flex items-center justify-between text-xs">
+              <span className="font-semibold text-ink/50">Profile strength</span>
+              <span className="font-data font-bold text-teal">{profileStrength}%</span>
             </div>
-            <button
-              type="submit"
-              disabled={loading}
-              className="rounded-xl bg-teal px-5 py-2.5 text-sm font-semibold text-white shadow-sm shadow-teal/15 transition-all hover:bg-teal/95 hover:scale-[1.01] active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal/40 disabled:opacity-60"
+            <div
+              className="h-1.5 overflow-hidden rounded-full bg-ink/10"
+              role="progressbar"
+              aria-valuenow={profileStrength}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-label="Profile completion"
             >
-              {loading ? "Saving..." : "Save Changes"}
-            </button>
+              <div
+                className="h-full rounded-full bg-teal transition-all duration-500 ease-out"
+                style={{ width: `${profileStrength}%` }}
+              />
+            </div>
+            <p className="mt-1 text-[11px] text-ink/40">{strengthLabel}</p>
           </div>
         </div>
       </section>
 
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
-        <div className="space-y-8 lg:col-span-2">
-          {/* Company Information */}
-          <section className="rounded-3xl border border-ink/5 bg-white p-7 shadow-xs">
-            <div className="mb-6 flex items-center gap-2.5 border-b border-ink/5 pb-4">
-              <Building2 className="h-5 w-5 text-ink/40" aria-hidden="true" />
-              <h3 className="text-base font-bold tracking-tight text-ink">Company Information</h3>
-            </div>
+      {error && !isDirty && (
+        <div className="mb-6 rounded-xl border border-ember/20 bg-ember/5 px-4 py-3 text-sm text-ember">
+          {error}
+        </div>
+      )}
 
-            <div className="space-y-8">
+      <div className="grid grid-cols-1 gap-10 lg:grid-cols-3">
+        <div className="space-y-8 lg:col-span-2">
+          <EmployerFormSection title="Company information">
+            <div className="space-y-6">
               <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
                 <div>
                   <label htmlFor="companyName" className="mb-2 block text-xs font-semibold uppercase tracking-wider text-ink/45">
@@ -625,11 +640,7 @@ export default function CompanyProfileEditor({ initialData, stats }: Props) {
                 </div>
               </div>
 
-              <div className="rounded-2xl bg-mist/70 p-5">
-                <p className="mb-4 text-xs font-semibold uppercase tracking-wider text-ink/45">
-                  Additional Details
-                </p>
-                <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
                   <div>
                     <label htmlFor="teamSize" className="mb-2 block text-xs font-medium text-ink/55">
                       Company Size
@@ -675,18 +686,13 @@ export default function CompanyProfileEditor({ initialData, stats }: Props) {
                     />
                   </div>
                 </div>
-              </div>
             </div>
-          </section>
+          </EmployerFormSection>
 
-          {/* About Company */}
-          <section className="rounded-3xl border border-ink/5 bg-mist/40 p-7 shadow-xs">
-            <div className="mb-5">
-              <h3 className="text-base font-bold tracking-tight text-ink">About Company</h3>
-              <p className="mt-2 text-sm leading-relaxed text-ink/50">
-                Tell candidates about your culture, mission, values, and what makes your company unique.
-              </p>
-            </div>
+          <EmployerFormSection
+            title="About company"
+            description="Tell candidates about your culture, mission, values, and what makes your company unique."
+          >
             <textarea
               id="description"
               value={form.description}
@@ -703,16 +709,12 @@ export default function CompanyProfileEditor({ initialData, stats }: Props) {
                 {form.description.length} / {MAX_DESCRIPTION_LENGTH}
               </span>
             </div>
-          </section>
+          </EmployerFormSection>
 
-          {/* Company Highlights */}
-          <section className="rounded-3xl border border-ink/5 bg-white p-7 shadow-xs">
-            <div className="mb-5">
-              <h3 className="text-base font-bold tracking-tight text-ink">Company Highlights</h3>
-              <p className="mt-2 text-sm text-ink/50">
-                Select benefits and perks that will appear on your public job postings.
-              </p>
-            </div>
+          <EmployerFormSection
+            title="Company highlights"
+            description="Select benefits and perks that will appear on your public job postings."
+          >
             <div className="flex flex-wrap gap-2">
               {highlightOptions.map((highlight) => {
                 const selected = form.highlights.includes(highlight);
@@ -742,13 +744,12 @@ export default function CompanyProfileEditor({ initialData, stats }: Props) {
                   </button>
                 ))}
             </div>
-          </section>
+          </EmployerFormSection>
 
-          {/* Social Presence */}
-          <section className="rounded-3xl border border-ink/5 bg-mist/40 p-7 shadow-xs">
-            <div className="mb-6 flex items-center gap-2.5 border-b border-ink/5 pb-4">
-              <Share2 className="h-5 w-5 text-ink/40" aria-hidden="true" />
-              <h3 className="text-base font-bold tracking-tight text-ink">Social Presence</h3>
+          <EmployerFormSection title="Social presence" last>
+            <div className="mb-2 flex items-center gap-2 text-ink/40">
+              <Share2 className="h-4 w-4" aria-hidden="true" />
+              <span className="text-xs">Links shown on your public company page.</span>
             </div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               {socialFields.map((field) => {
@@ -782,7 +783,7 @@ export default function CompanyProfileEditor({ initialData, stats }: Props) {
                 );
               })}
             </div>
-          </section>
+          </EmployerFormSection>
         </div>
 
         {/* Sidebar */}
@@ -809,8 +810,8 @@ export default function CompanyProfileEditor({ initialData, stats }: Props) {
           />
 
           {/* Company Statistics */}
-          <section className="rounded-3xl border border-ink/5 bg-white p-6 shadow-xs">
-            <h3 className="mb-5 text-sm font-bold tracking-tight text-ink">Company Statistics</h3>
+          <section className="border-t border-ink/5 pt-6">
+            <h3 className="mb-4 text-sm font-bold tracking-tight text-ink">Company statistics</h3>
             <dl className="space-y-4">
               {[
                 { label: "Employees", value: form.teamSize || "—" },
@@ -828,43 +829,11 @@ export default function CompanyProfileEditor({ initialData, stats }: Props) {
             </dl>
           </section>
 
-          {/* Verification */}
-          <section className="rounded-3xl border border-ink/5 bg-mist/50 p-6 shadow-xs">
-            <h3 className="mb-4 text-sm font-bold tracking-tight text-ink">Verification</h3>
-            {verificationStatus === "verified" && (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 rounded-xl border border-teal/15 bg-teal/5 p-3 text-teal">
-                  <Check className="h-4 w-4" strokeWidth={2.5} aria-hidden="true" />
-                  <span className="text-xs font-semibold">Verified Company</span>
-                </div>
-                <p className="text-[11px] leading-relaxed text-ink/50">
-                  Your profile has been validated. You receive top placement in seeker searches.
-                </p>
-              </div>
-            )}
-            {verificationStatus === "pending" && (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 rounded-xl border border-marigold/15 bg-marigold/5 p-3 text-marigold">
-                  <Clock className="h-4 w-4" aria-hidden="true" />
-                  <span className="text-xs font-semibold">Review Pending</span>
-                </div>
-                <p className="text-[11px] leading-relaxed text-ink/50">
-                  Verification usually takes 24 hours. We will email you once complete.
-                </p>
-              </div>
-            )}
-            {verificationStatus === "rejected" && (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 rounded-xl border border-ember/15 bg-ember/5 p-3 text-ember">
-                  <AlertCircle className="h-4 w-4" aria-hidden="true" />
-                  <span className="text-xs font-semibold">Verification Failed</span>
-                </div>
-                <p className="text-[11px] leading-relaxed text-ink/50">
-                  Please review your company information or contact support to request a review.
-                </p>
-              </div>
-            )}
-          </section>
+          <VerificationDocumentsPanel
+            status={verificationStatus}
+            rejectionReason={initialData.verificationRejectionReason ?? null}
+            initialDocuments={verificationDocuments}
+          />
         </aside>
       </div>
 

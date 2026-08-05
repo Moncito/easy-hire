@@ -13,6 +13,7 @@ import {
   Briefcase,
   Clock,
   ExternalLink,
+  FileText,
 } from "lucide-react";
 
 type PendingCompany = {
@@ -29,6 +30,13 @@ type PendingCompany = {
   updatedAt: string;
   user: { email: string };
   jobs: { id: string; title: string; status: string }[];
+  verificationDocuments: {
+    id: string;
+    fileUrl: string;
+    fileName: string;
+    docType: string;
+    uploadedAt: string;
+  }[];
   _count: { jobs: number };
 };
 
@@ -149,6 +157,35 @@ export default function CompanyReviewQueue({ initialCompanies }: Props) {
 
                 {company.description && (
                   <p className="mt-4 line-clamp-4 text-sm leading-relaxed text-ink/70">{company.description}</p>
+                )}
+
+                {company.verificationDocuments.length > 0 ? (
+                  <div className="mt-4 rounded-xl bg-mist/80 p-3">
+                    <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-ink/45">
+                      <FileText className="h-3.5 w-3.5" aria-hidden="true" />
+                      Verification documents ({company.verificationDocuments.length})
+                    </p>
+                    <ul className="space-y-1.5">
+                      {company.verificationDocuments.map((doc) => (
+                        <li key={doc.id}>
+                          <a
+                            href={doc.fileUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 text-sm font-medium text-teal hover:underline"
+                          >
+                            {doc.fileName}
+                            <ExternalLink className="h-3 w-3" aria-hidden="true" />
+                          </a>
+                          <span className="ml-2 text-[10px] uppercase tracking-wider text-ink/40">
+                            {doc.docType.replace(/_/g, " ")}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : (
+                  <p className="mt-4 text-xs text-ink/40">No verification documents uploaded.</p>
                 )}
 
                 {company.highlights.length > 0 && (

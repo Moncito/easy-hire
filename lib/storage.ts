@@ -5,6 +5,7 @@ const RESUME_BUCKET = "resumes";
 const LOGO_BUCKET = "logos";
 const BANNER_BUCKET = "banners";
 const PHOTO_BUCKET = "photos";
+const VERIFICATION_DOC_BUCKET = "verification-docs";
 
 const RESUME_MIME_TYPES = new Set([
   "application/pdf",
@@ -15,11 +16,13 @@ const RESUME_MIME_TYPES = new Set([
 const LOGO_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 const BANNER_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 const PHOTO_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+const VERIFICATION_DOC_MIME_TYPES = new Set(["application/pdf", "image/jpeg", "image/png"]);
 
 const MAX_RESUME_BYTES = 5 * 1024 * 1024;
 const MAX_LOGO_BYTES = 2 * 1024 * 1024;
 const MAX_BANNER_BYTES = 3 * 1024 * 1024;
 const MAX_PHOTO_BYTES = 2 * 1024 * 1024;
+const MAX_VERIFICATION_DOC_BYTES = 5 * 1024 * 1024;
 
 function sanitizeFilename(name: string) {
   return name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 120);
@@ -113,4 +116,12 @@ export async function uploadSeekerPhoto(userId: string, file: File) {
   const path = `${userId}/photo.${ext}`;
   const url = await uploadObject(PHOTO_BUCKET, path, file);
   return `${url}?v=${Date.now()}`;
+}
+
+export async function uploadVerificationDocument(userId: string, file: File) {
+  assertFile(file, VERIFICATION_DOC_MIME_TYPES, MAX_VERIFICATION_DOC_BYTES, "Verification document");
+
+  const path = `${userId}/${Date.now()}-${sanitizeFilename(file.name)}`;
+  const url = await uploadObject(VERIFICATION_DOC_BUCKET, path, file);
+  return { url, fileName: sanitizeFilename(file.name) };
 }

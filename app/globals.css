@@ -574,3 +574,115 @@ backdrop-filter:blur(6px);
     animation: none;
   }
 }
+
+/* =======================================================
+   EMPLOYER APP — page enter, shimmer, pipeline
+======================================================= */
+
+@keyframes employer-page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes employer-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.employer-page-enter {
+  animation: employer-page-enter 0.28s ease-out forwards;
+}
+
+.employer-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(32, 36, 43, 0.06) 0%,
+    rgba(32, 36, 43, 0.1) 50%,
+    rgba(32, 36, 43, 0.06) 100%
+  );
+  background-size: 200% 100%;
+  animation: employer-shimmer 1.4s ease-in-out infinite;
+}
+
+.employer-pipeline-segment {
+  transition: width 0.5s ease-out;
+}
+
+@keyframes employer-drawer-backdrop {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes employer-drawer-panel {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+.employer-drawer-backdrop {
+  animation: employer-drawer-backdrop 0.25s ease-out forwards;
+}
+
+.employer-drawer-panel {
+  animation: employer-drawer-panel 0.3s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes employer-sheet-enter {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.employer-sheet-enter {
+  animation: employer-sheet-enter 0.22s ease-out forwards;
+}
+
+.employer-route-progress-bar {
+  transition: width 0.28s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .employer-page-enter {
+    animation: none;
+  }
+
+  .employer-shimmer {
+    animation: none;
+  }
+
+  .employer-pipeline-segment {
+    transition: none;
+  }
+
+  .employer-drawer-backdrop,
+  .employer-drawer-panel,
+  .employer-sheet-enter {
+    animation: none;
+  }
+
+  .employer-route-progress-bar {
+    transition: none;
+  }
+
+  .employer-sidebar {
+    transition: none;
+  }
+
+  .animate-fade-in,
+  .animate-slide-up,
+  .animate-slide-in-left,
+  .animate-slide-in-right,
+  .animate-scale-in {
+    animation: none !important;
+  }
+}

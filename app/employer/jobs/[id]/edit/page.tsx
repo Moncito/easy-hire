@@ -20,6 +20,9 @@ export default async function EditJobPage({ params }: { params: Promise<{ id: st
   const job = company
     ? await prisma.job.findFirst({
         where: { id, companyId: company.id },
+        include: {
+          screeningQuestions: { orderBy: { sortOrder: "asc" } },
+        },
       })
     : null;
 
@@ -51,6 +54,10 @@ export default async function EditJobPage({ params }: { params: Promise<{ id: st
           salaryPeriod: job.salaryPeriod,
           location: job.location,
           remoteType: job.remoteType,
+          screeningQuestions: job.screeningQuestions.map((q) => ({
+            prompt: q.prompt,
+            required: q.required,
+          })),
         }}
       />
     </JobFormPageShell>

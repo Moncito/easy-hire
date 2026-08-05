@@ -34,36 +34,15 @@ type Props = {
 };
 
 const primaryColumns = [
-  {
-    status: "APPLIED",
-    title: "Applied",
-    headerClass: "bg-marigold/10 border-marigold/20 text-[#8a5a10]",
-    emptyHint: "New applications land here first.",
-  },
-  {
-    status: "SHORTLISTED",
-    title: "Shortlisted",
-    headerClass: "bg-navy/8 border-navy/15 text-navy",
-    emptyHint: "Promising candidates you want to review further.",
-  },
-  {
-    status: "INTERVIEW",
-    title: "Interview",
-    headerClass: "bg-teal/10 border-teal/20 text-teal",
-    emptyHint: "Candidates you're actively evaluating.",
-  },
-  {
-    status: "HIRED",
-    title: "Hired",
-    headerClass: "bg-teal/15 border-teal/25 text-teal",
-    emptyHint: "Successful hires for this role.",
-  },
+  { status: "APPLIED", title: "Applied", emptyHint: "New applications land here first." },
+  { status: "SHORTLISTED", title: "Shortlisted", emptyHint: "Promising candidates you want to review further." },
+  { status: "INTERVIEW", title: "Interview", emptyHint: "Candidates you're actively evaluating." },
+  { status: "HIRED", title: "Hired", emptyHint: "Successful hires for this role." },
 ];
 
 const rejectedColumn = {
   status: "REJECTED",
   title: "Rejected",
-  headerClass: "bg-ember/8 border-ember/15 text-ember",
   emptyHint: "Candidates you passed on.",
 };
 
@@ -91,7 +70,6 @@ export default function KanbanBoard({
             <KanbanColumn
               key={col.status}
               title={col.title}
-              headerClass={col.headerClass}
               emptyHint={col.emptyHint}
               applications={applications.filter((app) => app.status === col.status)}
               onCardClick={onCardClick}
@@ -105,15 +83,13 @@ export default function KanbanBoard({
             <button
               type="button"
               onClick={() => setShowRejected((v) => !v)}
-              className={`mb-3 flex items-center justify-between rounded-xl border px-3 py-2.5 text-left transition-colors ${rejectedColumn.headerClass} hover:opacity-90`}
+              className="mb-3 flex w-full items-center justify-between rounded-lg px-1 py-1.5 text-left transition-colors hover:bg-ink/[0.03]"
             >
-              <span className="text-xs font-semibold uppercase tracking-wide">
+              <span className="text-xs font-semibold uppercase tracking-wide text-ink/55">
                 {rejectedColumn.title}
               </span>
               <span className="flex items-center gap-1.5">
-                <span className="rounded-full bg-white/60 px-2 py-0.5 font-data text-xs font-bold">
-                  {rejectedCount}
-                </span>
+                <span className="font-data text-xs font-bold text-ink/45">{rejectedCount}</span>
                 {showRejected ? (
                   <ChevronUp className="h-4 w-4 opacity-70" aria-hidden="true" />
                 ) : (
@@ -124,7 +100,6 @@ export default function KanbanBoard({
             {showRejected && (
               <KanbanColumn
                 title={rejectedColumn.title}
-                headerClass={rejectedColumn.headerClass}
                 emptyHint={rejectedColumn.emptyHint}
                 applications={rejectedApps}
                 onCardClick={onCardClick}

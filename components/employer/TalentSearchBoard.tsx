@@ -6,6 +6,8 @@ import { Search, SlidersHorizontal, Download } from "lucide-react";
 import { formatPesoRange } from "@/lib/format";
 import SaveSeekerButton from "@/components/employer/SaveSeekerButton";
 import MessageSeekerButton from "@/components/employer/MessageSeekerButton";
+import EmployerEmptyState from "@/components/employer/ui/EmployerEmptyState";
+import Bone from "@/components/employer/skeletons/Bone";
 
 type TalentItem = {
   id: string;
@@ -27,6 +29,23 @@ const availabilityOptions = [
   { value: "Part-time", label: "Part-time" },
   { value: "Project-based", label: "Project-based" },
 ];
+
+function TalentListSkeleton() {
+  return (
+    <div className="divide-y divide-ink/5 overflow-hidden rounded-2xl border border-ink/5 bg-white/60">
+      {Array.from({ length: 5 }).map((_, i) => (
+        <div key={i} className="flex items-center gap-4 px-5 py-4">
+          <Bone className="h-11 w-11 shrink-0 rounded-full" />
+          <div className="min-w-0 flex-1 space-y-2">
+            <Bone className="h-4 w-40" />
+            <Bone className="h-3 w-56" />
+          </div>
+          <Bone className="hidden h-4 w-20 sm:block" />
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export default function TalentSearchBoard() {
   const [query, setQuery] = useState("");
@@ -101,12 +120,9 @@ export default function TalentSearchBoard() {
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="font-display text-2xl font-bold tracking-tight text-ink">Talent Search</h1>
-        <p className="mt-1.5 text-sm text-ink/50">
-          Browse verified virtual assistant profiles and save candidates for later.
-        </p>
-      </div>
+      <p className="mb-6 max-w-xl text-sm text-ink/50">
+        Search verified VA profiles. Save candidates or message them directly from the platform.
+      </p>
 
       <div className="mb-4 flex flex-col gap-3 sm:flex-row">
         <div className="relative flex-1">
@@ -117,14 +133,14 @@ export default function TalentSearchBoard() {
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && search()}
             placeholder="Search by name, skills, headline..."
-            className="w-full rounded-xl border border-ink/10 py-2.5 pl-10 pr-4 text-sm text-ink outline-none focus:border-teal"
+            className="w-full rounded-full border border-ink/10 bg-white py-2.5 pl-10 pr-4 text-sm text-ink outline-none focus:border-teal focus:ring-2 focus:ring-teal/15"
           />
         </div>
         <button
           type="button"
           onClick={search}
           disabled={loading}
-          className="rounded-xl bg-teal px-5 py-2.5 text-sm font-semibold text-white hover:bg-teal/95 disabled:opacity-60"
+          className="rounded-xl bg-teal px-5 py-2.5 text-sm font-semibold text-white shadow-sm shadow-teal/20 hover:bg-teal/95 disabled:opacity-60"
         >
           Search
         </button>
@@ -134,7 +150,7 @@ export default function TalentSearchBoard() {
           className={`inline-flex items-center gap-1.5 rounded-xl border px-4 py-2.5 text-sm font-semibold transition-colors ${
             filtersOpen || activeFilterCount > 0
               ? "border-teal/30 bg-teal/8 text-teal"
-              : "border-ink/10 text-ink/70 hover:bg-ink/3"
+              : "border-ink/10 bg-white text-ink/70 hover:bg-ink/3"
           }`}
         >
           <SlidersHorizontal className="h-4 w-4" />
@@ -150,7 +166,7 @@ export default function TalentSearchBoard() {
           className={`rounded-xl border px-5 py-2.5 text-sm font-semibold transition-colors ${
             showSaved
               ? "border-teal/30 bg-teal/8 text-teal"
-              : "border-ink/10 text-ink/70 hover:bg-ink/3"
+              : "border-ink/10 bg-white text-ink/70 hover:bg-ink/3"
           }`}
         >
           Saved
@@ -158,7 +174,7 @@ export default function TalentSearchBoard() {
       </div>
 
       {filtersOpen && (
-        <div className="mb-6 grid grid-cols-1 gap-3 rounded-2xl border border-ink/8 bg-white p-4 sm:grid-cols-3">
+        <div className="mb-6 grid grid-cols-1 gap-3 rounded-2xl border border-ink/8 bg-white/80 p-4 sm:grid-cols-3">
           <input
             value={skill}
             onChange={(e) => setSkill(e.target.value)}
@@ -197,83 +213,72 @@ export default function TalentSearchBoard() {
       {error && <p className="mb-4 text-sm text-ember">{error}</p>}
 
       {loading ? (
-        <p className="text-sm text-ink/45">Searching...</p>
+        <TalentListSkeleton />
       ) : searched && seekers.length === 0 ? (
-        <div className="rounded-2xl border border-ink/8 bg-white p-12 text-center shadow-xs">
-          <p className="text-sm font-medium text-ink/60">No candidates found</p>
-          <p className="mt-1 text-xs text-ink/40">Try different keywords or check back as more VAs join.</p>
-        </div>
+        <EmployerEmptyState
+          title="No candidates found"
+          description="Try different keywords or check back as more VAs join the platform."
+        />
       ) : (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          {seekers.map((seeker) => (
-            <div
-              key={seeker.id}
-              className="rounded-2xl border border-ink/8 bg-white p-5 shadow-xs transition-shadow hover:shadow-sm"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex gap-3">
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-teal/10 font-display text-sm font-bold text-teal">
-                    {seeker.fullName
-                      .split(" ")
-                      .map((n) => n[0])
-                      .join("")
-                      .slice(0, 2)
-                      .toUpperCase()}
-                  </div>
-                  <div>
-                    <Link
-                      href={`/employer/talent/${seeker.id}`}
-                      className="font-display text-base font-bold text-ink hover:text-teal"
-                    >
-                      {seeker.fullName}
-                    </Link>
-                    <p className="text-xs text-ink/50">{seeker.headline || "Virtual Assistant"}</p>
-                  </div>
-                </div>
-                <SaveSeekerButton seekerId={seeker.id} saved={seeker.saved} onToggle={handleToggleSaved} />
-              </div>
+        <div className="divide-y divide-ink/5 overflow-hidden rounded-2xl border border-ink/5 bg-white/60 shadow-sm">
+          {seekers.map((seeker) => {
+            const initials = seeker.fullName
+              .split(" ")
+              .map((n) => n[0])
+              .join("")
+              .slice(0, 2)
+              .toUpperCase();
 
-              {seeker.skills.length > 0 && (
-                <div className="mt-3 flex flex-wrap gap-1">
-                  {seeker.skills.slice(0, 5).map((s) => (
-                    <span
-                      key={s}
-                      className="rounded-md bg-ink/5 px-2 py-0.5 text-[10px] font-semibold text-ink/65"
-                    >
-                      {s}
-                    </span>
-                  ))}
-                </div>
-              )}
-
-              <div className="mt-3 space-y-1 text-xs text-ink/55">
-                {seeker.location && <p>{seeker.location}</p>}
-                {seeker.availability && <p>{seeker.availability}</p>}
-                <p>
-                  Expected: {formatPesoRange(seeker.desiredSalaryMin, seeker.desiredSalaryMax)}
-                </p>
-              </div>
-
-              <div className="mt-4 flex gap-2">
+            return (
+              <div
+                key={seeker.id}
+                className="flex flex-col gap-3 px-5 py-4 transition-colors hover:bg-ink/[0.02] sm:flex-row sm:items-center"
+              >
                 <Link
                   href={`/employer/talent/${seeker.id}`}
-                  className="inline-flex flex-1 items-center justify-center rounded-xl border border-ink/10 px-3 py-2 text-xs font-semibold text-ink/70 hover:bg-ink/3"
+                  className="flex min-w-0 flex-1 items-center gap-3"
                 >
-                  View profile
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-teal/10 font-display text-sm font-bold text-teal">
+                    {initials}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-display font-bold text-ink hover:text-teal">{seeker.fullName}</p>
+                    <p className="truncate text-xs text-ink/45">
+                      {seeker.headline || "Virtual Assistant"}
+                      {seeker.location ? ` · ${seeker.location}` : ""}
+                    </p>
+                    {seeker.skills.length > 0 && (
+                      <p className="mt-1 truncate text-[11px] text-ink/40">
+                        {seeker.skills.slice(0, 4).join(" · ")}
+                      </p>
+                    )}
+                  </div>
                 </Link>
-                <MessageSeekerButton seekerId={seeker.id} />
-                {seeker.resumeUrl && (
-                  <a
-                    href={`/api/employer/talent/${seeker.id}/resume`}
-                    className="inline-flex items-center gap-1 rounded-xl border border-ink/10 px-3 py-2 text-xs font-semibold text-ink/70 hover:bg-ink/3"
-                  >
-                    <Download className="h-3.5 w-3.5" />
-                    Resume
-                  </a>
-                )}
+
+                <p className="hidden shrink-0 font-data text-xs tabular-nums text-ink/55 sm:block">
+                  {formatPesoRange(seeker.desiredSalaryMin, seeker.desiredSalaryMax)}
+                </p>
+
+                <div className="flex shrink-0 items-center gap-2">
+                  <SaveSeekerButton
+                    seekerId={seeker.id}
+                    saved={seeker.saved}
+                    onToggle={handleToggleSaved}
+                  />
+                  <MessageSeekerButton seekerId={seeker.id} />
+                  {seeker.resumeUrl && (
+                    <a
+                      href={`/api/employer/talent/${seeker.id}/resume`}
+                      className="inline-flex items-center gap-1 rounded-lg border border-ink/10 px-2.5 py-1.5 text-xs font-semibold text-ink/70 hover:bg-ink/3"
+                    >
+                      <Download className="h-3.5 w-3.5" />
+                      <span className="hidden sm:inline">Resume</span>
+                    </a>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

@@ -13,6 +13,9 @@ export async function listPendingCompanies() {
         select: { id: true, title: true, status: true },
         orderBy: { updatedAt: "desc" },
       },
+      verificationDocuments: {
+        orderBy: { uploadedAt: "desc" },
+      },
       _count: { select: { jobs: true } },
     },
   });
@@ -41,7 +44,7 @@ export async function reviewCompany(companyId: string, raw: unknown) {
     const [updated] = await prisma.$transaction([
       prisma.company.update({
         where: { id: companyId },
-        data: { verifiedStatus: "APPROVED" },
+        data: { verifiedStatus: "APPROVED", verificationRejectionReason: null },
       }),
       prisma.notification.create({
         data: {
@@ -62,7 +65,7 @@ export async function reviewCompany(companyId: string, raw: unknown) {
   const [updated] = await prisma.$transaction([
     prisma.company.update({
       where: { id: companyId },
-      data: { verifiedStatus: "REJECTED" },
+      data: { verifiedStatus: "REJECTED", verificationRejectionReason: reason },
     }),
     ...(activeJobIds.length
       ? [

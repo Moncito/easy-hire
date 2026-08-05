@@ -43,6 +43,12 @@ export default async function ApplicantsPage({ params }: { params: Promise<{ id:
           desiredSalaryMax: true,
         },
       },
+      answers: {
+        include: {
+          question: { select: { id: true, prompt: true, required: true, sortOrder: true } },
+        },
+        orderBy: { question: { sortOrder: "asc" } },
+      },
     },
   });
 

@@ -310,7 +310,8 @@ export default function MessagesInbox({ role, fillNavClearance = false }: Props)
   }, [activeId, loadConversations, pollNewMessages]);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    bottomRef.current?.scrollIntoView({ behavior: reduced ? "auto" : "smooth" });
   }, [thread?.messages]);
 
   async function handleSend(e: React.FormEvent) {
@@ -383,7 +384,7 @@ export default function MessagesInbox({ role, fillNavClearance = false }: Props)
   const isSeeker = role === "SEEKER";
   const basePath = isSeeker ? "/seeker" : "/employer";
   const accentDot = isSeeker ? "bg-marigold" : "bg-teal";
-  const activeRow = isSeeker ? "bg-navy/[0.06]" : "bg-teal/5";
+  const activeRow = isSeeker ? "bg-navy/[0.06]" : "";
   const filterActive = isSeeker
     ? "bg-marigold/20 text-[#8a5a10]"
     : "bg-teal/15 text-teal";
@@ -394,10 +395,25 @@ export default function MessagesInbox({ role, fillNavClearance = false }: Props)
   const minePending = isSeeker ? "bg-navy/75 text-mist" : "bg-teal/75 text-white";
   const theirsBubble = isSeeker
     ? "border border-navy/10 bg-navy/[0.05] text-ink"
-    : "border border-teal/15 bg-teal/[0.06] text-ink";
+    : "border border-ink/8 bg-white text-ink";
   const sendBtn = isSeeker
     ? "bg-navy text-mist hover:bg-navy/90"
     : "bg-teal text-white hover:bg-teal/95";
+  const composerWrap = isSeeker
+    ? "flex items-center gap-2 rounded-full border border-navy/10 bg-navy/[0.04] py-1.5 pl-2 pr-1.5 transition focus-within:border-navy/25 focus-within:bg-white focus-within:ring-2 focus-within:ring-navy/10"
+    : "flex items-center gap-2 rounded-xl border border-ink/8 bg-ink/[0.02] px-2 py-1.5 transition focus-within:border-teal/30 focus-within:bg-white focus-within:ring-2 focus-within:ring-teal/10";
+
+  function conversationRowClass(convId: string) {
+    const active = activeId === convId;
+    if (isSeeker) {
+      return `flex w-full cursor-pointer gap-3 rounded-xl px-3 py-3 text-left transition-all duration-200 hover:bg-ink/[0.03] animate-slide-up sm:px-4 ${
+        active ? activeRow : ""
+      }`;
+    }
+    return `flex w-full cursor-pointer gap-3 border-l-2 px-3 py-3 text-left transition-colors duration-200 sm:px-4 ${
+      active ? "border-teal bg-teal/[0.04]" : "border-transparent hover:bg-ink/[0.03]"
+    }`;
+  }
 
   const filteredConversations = useMemo(() => {
     let list = conversations;
@@ -473,12 +489,17 @@ export default function MessagesInbox({ role, fillNavClearance = false }: Props)
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden lg:flex-row">
       {/* ── Sidebar ── */}
       <aside
-        className={`flex w-full flex-col border-ink/8 bg-mist/40 lg:w-[min(360px,38%)] lg:max-w-[420px] lg:shrink-0 lg:border-r ${
-          activeId ? "hidden lg:flex" : "flex"
-        }`}
+        className={`flex w-full flex-col border-ink/8 lg:w-[min(340px,36%)] lg:max-w-[400px] lg:shrink-0 lg:border-r ${
+          isSeeker ? "bg-mist/40" : "bg-mist/25"
+        } ${activeId ? "hidden lg:flex" : "flex"}`}
       >
-        <div className="border-b border-ink/8 px-6 py-5 sm:px-8">
-          <h1 className="font-display text-2xl font-bold text-ink">Messages</h1>
+        <div className={`border-b border-ink/8 ${isSeeker ? "px-6 py-5 sm:px-8" : "px-5 py-4 sm:px-6"}`}>
+          {!isSeeker && (
+            <p className="text-[10px] font-bold uppercase tracking-wider text-ink/40">Inbox</p>
+          )}
+          <h1 className={`font-display font-bold text-ink ${isSeeker ? "text-2xl" : "mt-0.5 text-xl"}`}>
+            Messages
+          </h1>
           <p className="mt-0.5 text-sm text-ink/45">In-platform conversations</p>
 
           <div className="mt-4 flex flex-wrap gap-1.5">
@@ -511,7 +532,7 @@ export default function MessagesInbox({ role, fillNavClearance = false }: Props)
           </label>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-4 py-2 sm:px-5">
+        <div className={`flex-1 overflow-y-auto ${isSeeker ? "px-4 py-2 sm:px-5" : "divide-y divide-ink/5 px-0 py-0"}`}>
           {listError && <p className="p-4 text-sm text-ember">{listError}</p>}
 
           {!loadingList && filteredConversations.length === 0 && (
@@ -543,10 +564,8 @@ export default function MessagesInbox({ role, fillNavClearance = false }: Props)
               key={conv.id}
               type="button"
               onClick={() => selectConversation(conv.id)}
-              style={{ animationDelay: `${idx * 40}ms` }}
-              className={`flex w-full cursor-pointer gap-3 rounded-xl px-3 py-3 text-left transition-all duration-200 hover:bg-ink/[0.03] animate-slide-up sm:px-4 ${
-                activeId === conv.id ? activeRow : ""
-              }`}
+              style={isSeeker ? { animationDelay: `${idx * 40}ms` } : undefined}
+              className={conversationRowClass(conv.id)}
             >
               <div className="relative shrink-0">
                 <PeerAvatar
@@ -771,10 +790,10 @@ export default function MessagesInbox({ role, fillNavClearance = false }: Props)
             {/* Composer — extra right padding keeps clear of any fixed UI; search pill hidden on this route */}
             <form
               onSubmit={handleSend}
-              className="shrink-0 border-t border-ink/8 px-4 py-4 sm:px-6"
+              className={`shrink-0 border-t border-ink/8 py-4 ${isSeeker ? "px-4 sm:px-6" : "bg-mist/20 px-4 sm:px-5"}`}
             >
               {sendError && <p className="mb-2 text-xs text-ember">{sendError}</p>}
-              <div className="flex items-center gap-2 rounded-full border border-navy/10 bg-navy/[0.04] py-1.5 pl-2 pr-1.5 transition focus-within:border-navy/25 focus-within:bg-white focus-within:ring-2 focus-within:ring-navy/10">
+              <div className={composerWrap}>
                 <button
                   type="button"
                   className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full text-ink/35 transition hover:bg-ink/5 hover:text-ink/55"
@@ -800,7 +819,9 @@ export default function MessagesInbox({ role, fillNavClearance = false }: Props)
                   type="submit"
                   disabled={!draft.trim()}
                   aria-label="Send message"
-                  className={`flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-40 ${sendBtn}`}
+                  className={`flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-40 ${sendBtn} ${
+                    !isSeeker ? "rounded-lg" : ""
+                  }`}
                 >
                   <Send className="h-4 w-4" />
                 </button>
