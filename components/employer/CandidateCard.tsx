@@ -64,8 +64,10 @@ export default function CandidateCard({
 
   return (
     <div
-      className={`group w-full rounded-xl border bg-white p-3.5 text-left shadow-xs transition-all duration-200 hover:shadow-md focus-within:ring-2 focus-within:ring-teal/30 ${
-        selected ? "border-teal/40 bg-teal/3 ring-2 ring-teal/20" : "border-ink/8 hover:border-teal/25"
+      className={`group w-full rounded-lg border bg-white p-3.5 text-left transition-all duration-200 focus-within:ring-2 focus-within:ring-teal/30 ${
+        selected
+          ? "border-teal/40 bg-teal/3 ring-2 ring-teal/20 shadow-md"
+          : "border-ink/6 hover:border-teal/20 hover:shadow-md"
       }`}
     >
       <div className="flex items-start gap-2">

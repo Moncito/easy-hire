@@ -21,9 +21,15 @@ export const applicationUpdateSchema = z
 
 export type ApplicationUpdate = z.infer<typeof applicationUpdateSchema>;
 
+export const applicationAnswerInputSchema = z.object({
+  questionId: z.string().min(1),
+  answerText: z.string().max(2000),
+});
+
 export const applicationCreateSchema = z.object({
   jobId: z.string().min(1),
   coverNote: z.string().max(2000).optional().nullable(),
+  answers: z.array(applicationAnswerInputSchema).optional().default([]),
 });
 
 export type ApplicationCreate = z.infer<typeof applicationCreateSchema>;

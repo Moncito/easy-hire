@@ -10,9 +10,15 @@ type Props = {
   jobId: string;
   jobTitle: string;
   companyName: string;
+  screeningQuestions?: {
+    id: string;
+    prompt: string;
+    required: boolean;
+  }[];
 };
 
 const COVER_NOTE_MAX = 2000;
+const ANSWER_MAX = 1000;
 
 async function parseJsonResponse(res: Response) {
   try {
@@ -22,10 +28,16 @@ async function parseJsonResponse(res: Response) {
   }
 }
 
-export default function ApplyButton({ jobId, jobTitle, companyName }: Props) {
+export default function ApplyButton({
+  jobId,
+  jobTitle,
+  companyName,
+  screeningQuestions = [],
+}: Props) {
   const { data: session, status } = useSession();
   const [open, setOpen] = useState(false);
   const [coverNote, setCoverNote] = useState("");
+  const [answers, setAnswers] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [checking, setChecking] = useState(false);
   const [error, setError] = useState("");
@@ -126,13 +138,32 @@ export default function ApplyButton({ jobId, jobTitle, companyName }: Props) {
 
   async function submitApplication() {
     setError("");
+
+    const missingRequired = screeningQuestions.filter(
+      (q) => q.required && !(answers[q.id]?.trim())
+    );
+    if (missingRequired.length > 0) {
+      setError("Please answer all required screening questions.");
+      toast.error("Please answer all required screening questions.");
+      return;
+    }
+
     setLoading(true);
 
     try {
       const res = await fetch("/api/applications", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ jobId, coverNote: coverNote.trim() || null }),
+        body: JSON.stringify({
+          jobId,
+          coverNote: coverNote.trim() || null,
+          answers: screeningQuestions
+            .map((q) => ({
+              questionId: q.id,
+              answerText: (answers[q.id] || "").trim(),
+            }))
+            .filter((a) => a.answerText.length > 0),
+        }),
       });
 
       const result = await parseJsonResponse(res);
@@ -305,7 +336,7 @@ export default function ApplyButton({ jobId, jobTitle, companyName }: Props) {
                   </p>
                   <textarea
                     id="coverNote"
-                    rows={12}
+                    rows={8}
                     maxLength={COVER_NOTE_MAX}
                     value={coverNote}
                     onChange={(e) => setCoverNote(e.target.value)}
@@ -321,6 +352,47 @@ I'm excited to apply because...
                   <p className="mt-2 text-right font-data text-xs text-ink/40">
                     {coverNote.length}/{COVER_NOTE_MAX}
                   </p>
+
+                  {screeningQuestions.length > 0 && (
+                    <div className="mt-6 space-y-4">
+                      <div>
+                        <p className="text-sm font-semibold text-ink">Employer questions</p>
+                        <p className="mt-1 text-xs text-ink/50">
+                          Short answers only — nothing here auto-rejects your application.
+                        </p>
+                      </div>
+                      {screeningQuestions.map((question) => (
+                        <div key={question.id}>
+                          <label
+                            htmlFor={`screening-${question.id}`}
+                            className="mb-2 block text-sm font-medium text-ink"
+                          >
+                            {question.prompt}
+                            {question.required && (
+                              <span className="ml-1 text-ember" aria-hidden="true">
+                                *
+                              </span>
+                            )}
+                          </label>
+                          <textarea
+                            id={`screening-${question.id}`}
+                            rows={3}
+                            maxLength={ANSWER_MAX}
+                            required={question.required}
+                            value={answers[question.id] || ""}
+                            onChange={(e) =>
+                              setAnswers((prev) => ({
+                                ...prev,
+                                [question.id]: e.target.value,
+                              }))
+                            }
+                            className="w-full resize-y rounded-xl border border-ink/10 px-4 py-3 text-sm leading-relaxed text-ink outline-none focus:border-marigold focus:ring-2 focus:ring-marigold/20"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
                   {error && <p className="mt-3 text-sm text-ember">{error}</p>}
                   <div className="mt-6 flex flex-col gap-3 sm:flex-row">
                     <button

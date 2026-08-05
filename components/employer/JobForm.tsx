@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { HelpCircle, MapPin } from "lucide-react";
+import { HelpCircle, MapPin, Plus, Trash2 } from "lucide-react";
 import RichTextEditor from "@/components/ui/RichTextEditor";
 import EmployerActionBar from "@/components/employer/EmployerActionBar";
+import EmployerFormSection from "@/components/employer/ui/EmployerFormSection";
 import { INDUSTRIES, ROLE_TYPES } from "@/lib/constants/job-categories";
 import { periodSuffix, type SalaryPeriod } from "@/lib/format";
 
@@ -23,6 +24,13 @@ const salaryPeriods: { value: SalaryPeriod; label: string }[] = [
   { value: "ANNUAL", label: "Annual" },
 ];
 
+const MAX_SCREENING_QUESTIONS = 5;
+
+export type ScreeningQuestionFormItem = {
+  prompt: string;
+  required: boolean;
+};
+
 export type JobFormData = {
   title: string;
   description: string;
@@ -36,6 +44,7 @@ export type JobFormData = {
   salaryPeriod: string;
   location: string;
   remoteType: string;
+  screeningQuestions: ScreeningQuestionFormItem[];
 };
 
 export type JobSubmitIntent = "draft" | "submit";
@@ -45,26 +54,6 @@ type Props = {
   loading: boolean;
   onSubmit: (data: JobFormData, intent: JobSubmitIntent) => void;
 };
-
-function SectionCard({
-  title,
-  description,
-  children,
-}: {
-  title: string;
-  description?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className="rounded-2xl border border-ink/5 bg-white p-6 shadow-xs">
-      <div className="mb-4">
-        <h2 className="text-sm font-bold tracking-tight text-ink">{title}</h2>
-        {description && <p className="mt-1 text-xs leading-relaxed text-ink/45">{description}</p>}
-      </div>
-      {children}
-    </section>
-  );
-}
 
 export default function JobForm({ initialData, loading, onSubmit }: Props) {
   const [title, setTitle] = useState(initialData?.title || "");
@@ -81,6 +70,9 @@ export default function JobForm({ initialData, loading, onSubmit }: Props) {
   );
   const [location, setLocation] = useState(initialData?.location || "");
   const [remoteType, setRemoteType] = useState(initialData?.remoteType || "REMOTE");
+  const [screeningQuestions, setScreeningQuestions] = useState<ScreeningQuestionFormItem[]>(
+    initialData?.screeningQuestions ?? []
+  );
   const [error, setError] = useState("");
 
   function buildPayload(): JobFormData {
@@ -97,6 +89,9 @@ export default function JobForm({ initialData, loading, onSubmit }: Props) {
       salaryPeriod,
       location,
       remoteType,
+      screeningQuestions: screeningQuestions
+        .map((q) => ({ prompt: q.prompt.trim(), required: q.required }))
+        .filter((q) => q.prompt.length > 0),
     };
   }
 
@@ -106,7 +101,26 @@ export default function JobForm({ initialData, loading, onSubmit }: Props) {
       setError("Job title, description, category, and location are required.");
       return false;
     }
+    if (screeningQuestions.some((q) => q.prompt.trim().length > 300)) {
+      setError("Each screening question must be under 300 characters.");
+      return false;
+    }
     return true;
+  }
+
+  function addScreeningQuestion() {
+    if (screeningQuestions.length >= MAX_SCREENING_QUESTIONS) return;
+    setScreeningQuestions((prev) => [...prev, { prompt: "", required: true }]);
+  }
+
+  function updateScreeningQuestion(index: number, patch: Partial<ScreeningQuestionFormItem>) {
+    setScreeningQuestions((prev) =>
+      prev.map((q, i) => (i === index ? { ...q, ...patch } : q))
+    );
+  }
+
+  function removeScreeningQuestion(index: number) {
+    setScreeningQuestions((prev) => prev.filter((_, i) => i !== index));
   }
 
   function handleAction(intent: JobSubmitIntent) {
@@ -121,17 +135,25 @@ export default function JobForm({ initialData, loading, onSubmit }: Props) {
         : "border-ink/10 text-ink/75 hover:border-teal/30 hover:bg-teal/5"
     }`;
 
+  const checklist = [
+    { label: "Job title", done: !!title.trim() },
+    { label: "Description", done: !!description.trim() },
+    { label: "Role type", done: !!category },
+    { label: "Location", done: !!location.trim() },
+  ];
+  const checklistDone = checklist.filter((item) => item.done).length;
+
   return (
-    <div>
+    <div className="pb-24">
       {error && (
         <div className="mb-5 rounded-xl border border-ember/20 bg-ember/5 px-4 py-3 text-sm text-ember">
           {error}
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
-        <div className="space-y-5 lg:col-span-2">
-          <SectionCard
+      <div className="grid grid-cols-1 gap-10 lg:grid-cols-3">
+        <div className="space-y-8 lg:col-span-2">
+          <EmployerFormSection
             title="Job Information"
             description="Start with the role title and how you categorize this position."
           >
@@ -181,9 +203,9 @@ export default function JobForm({ initialData, loading, onSubmit }: Props) {
                 <p className="mt-1.5 text-[11px] text-ink/40">The business domain this role supports.</p>
               </div>
             </div>
-          </SectionCard>
+          </EmployerFormSection>
 
-          <SectionCard
+          <EmployerFormSection
             title="Description"
             description="Describe responsibilities, day-to-day work, and what success looks like in this role."
           >
@@ -193,9 +215,9 @@ export default function JobForm({ initialData, loading, onSubmit }: Props) {
               minHeight="280px"
               placeholder="Describe the role responsibilities, team context, and day-to-day work..."
             />
-          </SectionCard>
+          </EmployerFormSection>
 
-          <SectionCard
+          <EmployerFormSection
             title="Requirements"
             description="List required skills, tools, experience level, and language expectations."
           >
@@ -205,9 +227,9 @@ export default function JobForm({ initialData, loading, onSubmit }: Props) {
               minHeight="200px"
               placeholder="e.g. 2+ years VA experience, fluent English, HubSpot..."
             />
-          </SectionCard>
+          </EmployerFormSection>
 
-          <SectionCard
+          <EmployerFormSection
             title="Benefits"
             description="Highlight perks candidates care about — training, equipment, flexible hours, or growth opportunities."
           >
@@ -217,9 +239,12 @@ export default function JobForm({ initialData, loading, onSubmit }: Props) {
               minHeight="200px"
               placeholder="e.g. Paid training, equipment provided, flexible schedule..."
             />
-          </SectionCard>
+          </EmployerFormSection>
 
-          <SectionCard title="Compensation" description="Set an expected salary range in Philippine Peso (PHP) and how it's paid out.">
+          <EmployerFormSection
+            title="Compensation"
+            description="Set an expected salary range in Philippine Peso (PHP) and how it's paid out."
+          >
             <div className="mb-4">
               <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-ink/40">Pay period</p>
               <div className="flex flex-wrap gap-1.5">
@@ -261,9 +286,12 @@ export default function JobForm({ initialData, loading, onSubmit }: Props) {
                 />
               </div>
             </div>
-          </SectionCard>
+          </EmployerFormSection>
 
-          <SectionCard title="Location" description="Where will this virtual assistant be working from?">
+          <EmployerFormSection
+            title="Location"
+            description="Where will this virtual assistant be working from?"
+          >
             <div className="space-y-4">
               <div className="relative">
                 <MapPin className="absolute left-3 top-3 h-4 w-4 text-ink/35" aria-hidden="true" />
@@ -291,39 +319,146 @@ export default function JobForm({ initialData, loading, onSubmit }: Props) {
                 </div>
               </div>
             </div>
-          </SectionCard>
+          </EmployerFormSection>
+
+          <EmployerFormSection
+            title="Screening questions"
+            description="Optional short-text questions applicants answer when they apply. Answers are for your review only — nothing auto-rejects."
+            last
+          >
+            <div className="space-y-3">
+              {screeningQuestions.map((question, index) => (
+                <div
+                  key={index}
+                  className="rounded-xl bg-ink/[0.02] p-3"
+                >
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-ink/45">
+                      Question {index + 1}
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => removeScreeningQuestion(index)}
+                      className="rounded-lg p-1.5 text-ink/35 transition hover:bg-ember/5 hover:text-ember"
+                      aria-label={`Remove question ${index + 1}`}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                  <textarea
+                    value={question.prompt}
+                    onChange={(e) => updateScreeningQuestion(index, { prompt: e.target.value })}
+                    rows={2}
+                    maxLength={300}
+                    placeholder="e.g. What timezone do you work in?"
+                    className="w-full rounded-xl border border-ink/10 bg-white px-3 py-2 text-sm text-ink outline-none focus:border-teal"
+                  />
+                  <div className="mt-2 flex items-center justify-between">
+                    <label className="flex cursor-pointer items-center gap-2 text-xs text-ink/60">
+                      <input
+                        type="checkbox"
+                        checked={question.required}
+                        onChange={(e) =>
+                          updateScreeningQuestion(index, { required: e.target.checked })
+                        }
+                        className="rounded border-ink/20 text-teal focus:ring-teal"
+                      />
+                      Required
+                    </label>
+                    <span className="font-data text-[10px] text-ink/35">
+                      {question.prompt.length}/300
+                    </span>
+                  </div>
+                </div>
+              ))}
+
+              {screeningQuestions.length < MAX_SCREENING_QUESTIONS ? (
+                <button
+                  type="button"
+                  onClick={addScreeningQuestion}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-ink/15 px-3 py-2.5 text-xs font-semibold text-ink/60 transition hover:border-teal/40 hover:bg-teal/5 hover:text-teal"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  Add question ({screeningQuestions.length}/{MAX_SCREENING_QUESTIONS})
+                </button>
+              ) : (
+                <p className="text-center text-[11px] text-ink/40">
+                  Maximum of {MAX_SCREENING_QUESTIONS} questions reached.
+                </p>
+              )}
+            </div>
+          </EmployerFormSection>
         </div>
 
         <div className="lg:sticky lg:top-24 lg:self-start">
-          <div className="rounded-2xl border border-ink/5 bg-white p-5 shadow-xs">
-            <h3 className="text-sm font-bold text-ink">Job Settings</h3>
-            <p className="mt-1 text-xs text-ink/45">Configure employment type before submitting.</p>
+          <div className="space-y-5 rounded-2xl bg-white/80 p-5 backdrop-blur-sm">
+            <div>
+              <h3 className="text-sm font-bold text-ink">Job settings</h3>
+              <p className="mt-1 text-xs text-ink/45">Employment type and submission checklist.</p>
+            </div>
 
-            <div className="mt-5 space-y-5">
-              <div>
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-ink/40">Employment Type</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {employmentTypes.map((type) => (
-                    <button
-                      key={type.value}
-                      type="button"
-                      onClick={() => setEmploymentType(type.value)}
-                      className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-all ${
-                        employmentType === type.value
-                          ? "border-ink bg-ink text-white"
-                          : "border-ink/10 text-ink/75 hover:border-ink/30 hover:bg-ink/5"
-                      }`}
-                    >
-                      {type.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="rounded-xl bg-mist/70 p-3 text-xs leading-relaxed text-ink/55">
-                Submit for review when ready. Our team approves jobs before they appear to seekers.
+            <div>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-ink/40">Employment type</p>
+              <div className="flex flex-wrap gap-1.5">
+                {employmentTypes.map((type) => (
+                  <button
+                    key={type.value}
+                    type="button"
+                    onClick={() => setEmploymentType(type.value)}
+                    className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-all ${
+                      employmentType === type.value
+                        ? "border-ink bg-ink text-white"
+                        : "border-ink/10 text-ink/75 hover:border-ink/30 hover:bg-ink/5"
+                    }`}
+                  >
+                    {type.label}
+                  </button>
+                ))}
               </div>
             </div>
+
+            <div>
+              <div className="mb-2 flex items-center justify-between">
+                <p className="text-xs font-semibold uppercase tracking-wider text-ink/40">Checklist</p>
+                <span className="font-data text-[10px] font-bold text-teal">
+                  {checklistDone}/{checklist.length}
+                </span>
+              </div>
+              <ul className="space-y-1.5">
+                {checklist.map((item) => (
+                  <li key={item.label} className="flex items-center gap-2 text-xs text-ink/60">
+                    <span
+                      className={`h-1.5 w-1.5 shrink-0 rounded-full ${
+                        item.done ? "bg-teal" : "bg-ink/15"
+                      }`}
+                      aria-hidden="true"
+                    />
+                    {item.label}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="border-t border-ink/5 pt-4">
+              <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-ink/40">Preview</p>
+              <div className="space-y-1">
+                <p className="font-display text-sm font-bold text-ink">
+                  {title.trim() || "Untitled role"}
+                </p>
+                <p className="text-xs text-ink/50">
+                  {[category, remoteTypes.find((t) => t.value === remoteType)?.label, location]
+                    .filter(Boolean)
+                    .join(" · ") || "Add role type and location"}
+                </p>
+                <p className="font-data text-[10px] text-ink/40">
+                  {employmentTypes.find((t) => t.value === employmentType)?.label}
+                </p>
+              </div>
+            </div>
+
+            <p className="text-[11px] leading-relaxed text-ink/45">
+              Submit for review when ready. Our team approves jobs before they appear to seekers.
+            </p>
           </div>
         </div>
       </div>

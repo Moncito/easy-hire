@@ -16,9 +16,20 @@ type Props = {
   jobTitle: string;
   company: Company;
   isSaved: boolean;
+  screeningQuestions?: {
+    id: string;
+    prompt: string;
+    required: boolean;
+  }[];
 };
 
-export default function JobDetailSidebar({ jobId, jobTitle, company, isSaved }: Props) {
+export default function JobDetailSidebar({
+  jobId,
+  jobTitle,
+  company,
+  isSaved,
+  screeningQuestions = [],
+}: Props) {
   const initials = company.companyName
     .split(" ")
     .map((w) => w[0])
@@ -66,7 +77,12 @@ export default function JobDetailSidebar({ jobId, jobTitle, company, isSaved }: 
           Your profile and resume go straight to the employer&apos;s board — no agency middlemen.
         </p>
         <div className="mt-4">
-          <ApplyButton jobId={jobId} jobTitle={jobTitle} companyName={company.companyName} />
+          <ApplyButton
+            jobId={jobId}
+            jobTitle={jobTitle}
+            companyName={company.companyName}
+            screeningQuestions={screeningQuestions}
+          />
         </div>
       </div>
     </aside>

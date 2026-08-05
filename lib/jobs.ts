@@ -1,10 +1,18 @@
 import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/lib/api-error";
-import { jobInputSchema, jobInputToData } from "@/lib/validations/job";
+import { jobInputSchema, jobInputToData, type JobInput } from "@/lib/validations/job";
 
 type JobStatus = "DRAFT" | "PENDING_REVIEW" | "ACTIVE" | "CLOSED";
 
 const SUBMITTABLE_STATUSES: JobStatus[] = ["DRAFT", "PENDING_REVIEW"];
+
+function screeningQuestionsCreateData(questions: JobInput["screeningQuestions"]) {
+  return (questions ?? []).map((q, index) => ({
+    prompt: q.prompt.trim(),
+    required: q.required ?? true,
+    sortOrder: index,
+  }));
+}
 
 export async function listEmployerJobs(companyId: string) {
   return prisma.job.findMany({
@@ -23,6 +31,12 @@ export async function createJob(companyId: string, raw: unknown) {
       companyId,
       ...jobInputToData(input),
       status: "DRAFT",
+      screeningQuestions: {
+        create: screeningQuestionsCreateData(input.screeningQuestions),
+      },
+    },
+    include: {
+      screeningQuestions: { orderBy: { sortOrder: "asc" } },
     },
   });
 }
@@ -31,12 +45,22 @@ export async function updateJob(jobId: string, existingStatus: JobStatus, raw: u
   const input = jobInputSchema.parse(raw);
   const newStatus = existingStatus === "ACTIVE" ? "PENDING_REVIEW" : existingStatus;
 
-  return prisma.job.update({
-    where: { id: jobId },
-    data: {
-      ...jobInputToData(input),
-      status: newStatus,
-    },
+  return prisma.$transaction(async (tx) => {
+    await tx.screeningQuestion.deleteMany({ where: { jobId } });
+
+    return tx.job.update({
+      where: { id: jobId },
+      data: {
+        ...jobInputToData(input),
+        status: newStatus,
+        screeningQuestions: {
+          create: screeningQuestionsCreateData(input.screeningQuestions),
+        },
+      },
+      include: {
+        screeningQuestions: { orderBy: { sortOrder: "asc" } },
+      },
+    });
   });
 }
 

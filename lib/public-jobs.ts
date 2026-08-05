@@ -353,6 +353,10 @@ export async function getPublicJob(jobId: string) {
           highlights: true,
         },
       },
+      screeningQuestions: {
+        select: { id: true, prompt: true, required: true, sortOrder: true },
+        orderBy: { sortOrder: "asc" },
+      },
     },
   });
 

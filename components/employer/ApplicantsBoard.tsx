@@ -26,6 +26,11 @@ type Application = {
   rating: number | null;
   appliedAt: string;
   seeker: SeekerSummary;
+  answers?: {
+    id: string;
+    answerText: string;
+    question: { id: string; prompt: string; required: boolean; sortOrder: number };
+  }[];
 };
 
 type JobContext = {
@@ -311,19 +316,14 @@ export default function ApplicantsBoard({ job, initialApplications }: Props) {
       />
 
       {selectedApp && (
-        <div
-          className="fixed inset-0 z-40 bg-ink/30 backdrop-blur-xs transition-opacity"
-          onClick={() => setSelectedApp(null)}
-        />
-      )}
+        <>
+          <div
+            className="employer-drawer-backdrop fixed inset-0 z-40 bg-ink/30 backdrop-blur-xs"
+            onClick={() => setSelectedApp(null)}
+            aria-hidden="true"
+          />
 
-      <div
-        className={`fixed top-0 right-0 z-50 flex h-full w-full max-w-lg transform flex-col border-l border-ink/5 bg-white shadow-2xl transition-transform duration-300 ease-out ${
-          selectedApp ? "translate-x-0" : "translate-x-full"
-        }`}
-      >
-        {selectedApp && (
-          <>
+          <div className="employer-drawer-panel fixed top-0 right-0 z-50 flex h-full w-full max-w-lg flex-col border-l border-ink/5 bg-white shadow-2xl">
             <div className="flex shrink-0 items-start justify-between border-b border-ink/5 p-6">
               <div className="flex items-center gap-3">
                 <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-teal/10 font-display text-lg font-bold text-teal">
@@ -358,7 +358,7 @@ export default function ApplicantsBoard({ job, initialApplications }: Props) {
             </div>
 
             <div className="flex-1 space-y-6 overflow-y-auto p-6">
-              <div className="flex items-center justify-between rounded-2xl border border-ink/5 bg-mist p-4">
+              <div className="rounded-xl bg-ink/[0.02] p-4">
                 <div>
                   <span className="block text-[10px] font-bold uppercase tracking-wider text-ink/40">
                     Current Stage
@@ -474,11 +474,28 @@ export default function ApplicantsBoard({ job, initialApplications }: Props) {
               <div className="h-px bg-ink/5" />
 
               <div className="space-y-2">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-ink/45">Cover Letter / Note</h4>
-                <div className="rounded-xl border border-ink/5 bg-ink/2 p-4 text-xs italic leading-relaxed text-ink/80">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-ink/45">Cover letter / note</h4>
+                <div className="rounded-xl bg-ink/[0.02] p-4 text-xs italic leading-relaxed text-ink/80">
                   {selectedApp.coverNote || "No cover note provided by candidate."}
                 </div>
               </div>
+
+              {selectedApp.answers && selectedApp.answers.length > 0 && (
+                <>
+                  <div className="h-px bg-ink/5" />
+                  <div className="space-y-3">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-ink/45">
+                      Screening answers
+                    </h4>
+                    {selectedApp.answers.map((answer) => (
+                      <div key={answer.id} className="rounded-xl bg-ink/[0.02] p-3">
+                        <p className="text-[11px] font-semibold text-ink/70">{answer.question.prompt}</p>
+                        <p className="mt-1.5 text-xs leading-relaxed text-ink/80">{answer.answerText}</p>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
 
               <div className="h-px bg-ink/5" />
 
@@ -521,9 +538,9 @@ export default function ApplicantsBoard({ job, initialApplications }: Props) {
                 </button>
               </div>
             </div>
-          </>
-        )}
-      </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

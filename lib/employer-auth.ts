@@ -17,6 +17,9 @@ export async function requireEmployerJob(userId: string, jobId: string) {
   const company = await requireEmployerCompany(userId);
   const job = await prisma.job.findFirst({
     where: { id: jobId, companyId: company.id },
+    include: {
+      screeningQuestions: { orderBy: { sortOrder: "asc" } },
+    },
   });
 
   if (!job) {
@@ -46,6 +49,12 @@ export async function requireEmployerApplication(userId: string, applicationId: 
           certifications: true,
           photoUrl: true,
         },
+      },
+      answers: {
+        include: {
+          question: { select: { id: true, prompt: true, required: true, sortOrder: true } },
+        },
+        orderBy: { question: { sortOrder: "asc" } },
       },
     },
   });

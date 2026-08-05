@@ -44,6 +44,12 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
           photoUrl: true,
         },
       },
+      answers: {
+        include: {
+          question: { select: { id: true, prompt: true, required: true, sortOrder: true } },
+        },
+        orderBy: { question: { sortOrder: "asc" } },
+      },
     },
   });
 
