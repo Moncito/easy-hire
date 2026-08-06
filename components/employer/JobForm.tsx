@@ -44,6 +44,7 @@ export type JobFormData = {
   salaryPeriod: string;
   location: string;
   remoteType: string;
+  targetHireCount: string;
   screeningQuestions: ScreeningQuestionFormItem[];
 };
 
@@ -70,6 +71,7 @@ export default function JobForm({ initialData, loading, onSubmit }: Props) {
   );
   const [location, setLocation] = useState(initialData?.location || "");
   const [remoteType, setRemoteType] = useState(initialData?.remoteType || "REMOTE");
+  const [targetHireCount, setTargetHireCount] = useState(initialData?.targetHireCount || "1");
   const [screeningQuestions, setScreeningQuestions] = useState<ScreeningQuestionFormItem[]>(
     initialData?.screeningQuestions ?? []
   );
@@ -89,6 +91,7 @@ export default function JobForm({ initialData, loading, onSubmit }: Props) {
       salaryPeriod,
       location,
       remoteType,
+      targetHireCount,
       screeningQuestions: screeningQuestions
         .map((q) => ({ prompt: q.prompt.trim(), required: q.required }))
         .filter((q) => q.prompt.length > 0),
@@ -103,6 +106,11 @@ export default function JobForm({ initialData, loading, onSubmit }: Props) {
     }
     if (screeningQuestions.some((q) => q.prompt.trim().length > 300)) {
       setError("Each screening question must be under 300 characters.");
+      return false;
+    }
+    const hires = Number(targetHireCount);
+    if (!Number.isFinite(hires) || hires < 1 || hires > 99) {
+      setError("Target hires must be between 1 and 99.");
       return false;
     }
     return true;
@@ -415,6 +423,27 @@ export default function JobForm({ initialData, loading, onSubmit }: Props) {
                   </button>
                 ))}
               </div>
+            </div>
+
+            <div>
+              <label
+                htmlFor="target-hire-count"
+                className="mb-2 block text-xs font-semibold uppercase tracking-wider text-ink/40"
+              >
+                Target hires
+              </label>
+              <input
+                id="target-hire-count"
+                type="number"
+                min={1}
+                max={99}
+                value={targetHireCount}
+                onChange={(e) => setTargetHireCount(e.target.value)}
+                className="w-full rounded-xl border border-ink/10 px-3 py-2.5 font-data text-sm text-ink outline-none focus:border-teal"
+              />
+              <p className="mt-1.5 text-[11px] leading-relaxed text-ink/45">
+                How many people you&apos;re hiring for this role. Used for progress tracking on your dashboard.
+              </p>
             </div>
 
             <div>

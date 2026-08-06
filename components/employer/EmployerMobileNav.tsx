@@ -12,6 +12,7 @@ import {
   Menu,
   Search,
   Building2,
+  BarChart3,
   LogOut,
   X,
 } from "lucide-react";
@@ -25,6 +26,7 @@ const primaryTabs = [
 
 const overflowLinks = [
   { label: "Talent search", href: "/employer/talent", icon: Search },
+  { label: "Reports", href: "/employer/reports", icon: BarChart3 },
   { label: "Company profile", href: "/employer/company-profile", icon: Building2 },
 ] as const;
 

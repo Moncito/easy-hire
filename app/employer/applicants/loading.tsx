@@ -1,5 +1,5 @@
-import { ListPageSkeleton } from "@/components/employer/skeletons/ProfileSkeleton";
+import ApplicantsHubSkeleton from "@/components/employer/skeletons/ApplicantsHubSkeleton";
 
 export default function Loading() {
-  return <ListPageSkeleton rows={8} />;
+  return <ApplicantsHubSkeleton />;
 }

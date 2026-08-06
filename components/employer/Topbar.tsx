@@ -3,6 +3,9 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { getEmployerPageTitle } from "@/lib/employer-nav";
+import { Search } from "lucide-react";
+import EmployerSearchTrigger from "@/components/employer/EmployerSearchTrigger";
+import EmployerNotificationBell from "@/components/employer/EmployerNotificationBell";
 
 type Props = {
   companyName: string;
@@ -24,6 +27,7 @@ const statusLabel: Record<string, string> = {
 export default function Topbar({ companyName, verifiedStatus }: Props) {
   const pathname = usePathname();
   const title = getEmployerPageTitle(pathname);
+  const isMessages = pathname.startsWith("/employer/messages");
 
   const initials = companyName
     ? companyName
@@ -35,10 +39,33 @@ export default function Topbar({ companyName, verifiedStatus }: Props) {
     : "CO";
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center justify-between border-b border-ink/5 bg-mist/80 px-6 backdrop-blur-md">
-      <h1 className="font-display text-lg font-bold tracking-tight text-ink">{title}</h1>
+    <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-4 border-b border-ink/5 bg-mist/80 px-4 backdrop-blur-md sm:px-6">
+      <h1
+        className={`shrink-0 font-display text-lg font-bold tracking-tight text-ink ${
+          isMessages ? "" : "lg:hidden"
+        }`}
+      >
+        {title}
+      </h1>
 
-      <div className="flex items-center gap-3">
+      <div className={`hidden flex-1 justify-center lg:flex ${isMessages ? "lg:hidden" : ""}`}>
+        <EmployerSearchTrigger />
+      </div>
+
+      <div className="ml-auto flex items-center gap-2 sm:gap-3">
+        <button
+          type="button"
+          onClick={() =>
+            window.dispatchEvent(new KeyboardEvent("keydown", { key: "k", ctrlKey: true, bubbles: true }))
+          }
+          className="rounded-lg p-2 text-ink/55 transition hover:bg-ink/[0.04] hover:text-ink lg:hidden"
+          aria-label="Search"
+        >
+          <Search className="h-5 w-5" strokeWidth={2} />
+        </button>
+
+        <EmployerNotificationBell />
+
         <div
           className="hidden items-center gap-2 rounded-full bg-white/60 px-2.5 py-1 ring-1 ring-ink/5 sm:flex"
           title={statusLabel[verifiedStatus] ?? verifiedStatus}
@@ -59,9 +86,10 @@ export default function Topbar({ companyName, verifiedStatus }: Props) {
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal text-xs font-bold text-white shadow-sm shadow-teal/25">
             {initials}
           </div>
-          <span className="hidden max-w-[140px] truncate text-sm font-medium text-ink md:inline">
-            {companyName}
-          </span>
+          <div className="hidden max-w-[140px] md:block">
+            <span className="block truncate text-sm font-medium text-ink">{companyName}</span>
+            <span className="block truncate text-[10px] text-ink/45">Employer</span>
+          </div>
         </Link>
       </div>
     </header>

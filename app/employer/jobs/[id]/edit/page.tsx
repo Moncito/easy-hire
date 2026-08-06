@@ -54,6 +54,7 @@ export default async function EditJobPage({ params }: { params: Promise<{ id: st
           salaryPeriod: job.salaryPeriod,
           location: job.location,
           remoteType: job.remoteType,
+          targetHireCount: job.targetHireCount.toString(),
           screeningQuestions: job.screeningQuestions.map((q) => ({
             prompt: q.prompt,
             required: q.required,

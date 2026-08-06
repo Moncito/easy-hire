@@ -167,11 +167,12 @@ model Job {
   salaryPeriod   SalaryPeriod   @default(MONTHLY) @map("salary_period")
   location       String
   remoteType     RemoteType     @default(REMOTE) @map("remote_type")
-  status         JobStatus      @default(DRAFT)
-  publishedAt    DateTime?      @map("published_at")
-  createdAt      DateTime       @default(now()) @map("created_at")
-  updatedAt      DateTime       @updatedAt @map("updated_at")
-  expiresAt      DateTime?      @map("expires_at")
+  status          JobStatus      @default(DRAFT)
+  targetHireCount Int            @default(1) @map("target_hire_count")
+  publishedAt     DateTime?      @map("published_at")
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
+  expiresAt       DateTime?      @map("expires_at")
 
   // Relations
   company            Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
@@ -179,6 +180,7 @@ model Job {
   savedJobs          SavedJob[]
   conversations      Conversation[]
   screeningQuestions ScreeningQuestion[]
+  views              JobView[]
 
   @@index([companyId])
   @@index([industry])
@@ -208,6 +210,18 @@ enum JobStatus {
   PENDING_REVIEW
   ACTIVE
   CLOSED
+}
+
+model JobView {
+  id          String   @id @default(cuid())
+  jobId       String   @map("job_id")
+  viewedAt    DateTime @default(now()) @map("viewed_at")
+  sessionHash String?  @map("session_hash")
+
+  job Job @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([jobId, viewedAt])
+  @@map("job_views")
 }
 
 // ============================================================================

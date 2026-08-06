@@ -4,6 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { getPublicJob } from "@/lib/public-jobs";
 import JobDetailTabs from "@/components/jobs/JobDetailTabs";
 import JobDetailSidebar from "@/components/jobs/JobDetailSidebar";
+import JobViewTracker from "@/components/jobs/JobViewTracker";
 import JobsNavBand from "@/components/jobs/JobsNavBand";
 import { listSavedJobIds } from "@/lib/saved-jobs";
 import { auth } from "@/Auth";
@@ -61,6 +62,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
 
   return (
     <div className="jobs-detail-scroll flex min-h-0 flex-1 flex-col">
+      <JobViewTracker jobId={job.id} />
       <JobsNavBand
         isSeeker={isSeeker}
         metaLabel={metaLabel}
