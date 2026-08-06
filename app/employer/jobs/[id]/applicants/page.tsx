@@ -2,7 +2,6 @@ import { auth } from "@/Auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import ApplicantsBoard from "@/components/employer/ApplicantsBoard";
-import ApplicantsJobHeader from "@/components/employer/ApplicantsJobHeader";
 
 export default async function ApplicantsPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
@@ -15,6 +14,7 @@ export default async function ApplicantsPage({ params }: { params: Promise<{ id:
 
   const company = await prisma.company.findUnique({
     where: { userId: session.user.id },
+    select: { id: true, verifiedStatus: true, companyName: true },
   });
 
   const job = company
@@ -38,9 +38,16 @@ export default async function ApplicantsPage({ params }: { params: Promise<{ id:
           headline: true,
           skills: true,
           resumeUrl: true,
+          resumeLabel: true,
+          resumeUpdatedAt: true,
+          resumes: true,
           location: true,
           desiredSalaryMin: true,
           desiredSalaryMax: true,
+          availability: true,
+          yearsExperience: true,
+          languages: true,
+          education: true,
         },
       },
       answers: {
@@ -52,33 +59,32 @@ export default async function ApplicantsPage({ params }: { params: Promise<{ id:
     },
   });
 
-  const pipeline = {
-    applied: applications.filter((a) => a.status === "APPLIED").length,
-    shortlisted: applications.filter((a) => a.status === "SHORTLISTED").length,
-    interview: applications.filter((a) => a.status === "INTERVIEW").length,
-    hired: applications.filter((a) => a.status === "HIRED").length,
-    rejected: applications.filter((a) => a.status === "REJECTED").length,
-  };
+  const staleThreshold = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
+  const unreviewedStale = applications.filter(
+    (a) => a.status === "APPLIED" && a.appliedAt < staleThreshold
+  ).length;
+  const needsAttention = unreviewedStale > 0;
+  const companyVerified = company?.verifiedStatus === "APPROVED";
 
   return (
-    <>
-      <ApplicantsJobHeader
-        job={{
-          id: job.id,
-          title: job.title,
-          status: job.status,
-          employmentType: job.employmentType,
-          remoteType: job.remoteType,
-          location: job.location,
-          createdAt: job.createdAt.toISOString(),
-        }}
-        totalApplicants={applications.length}
-        pipeline={pipeline}
-      />
-      <ApplicantsBoard
-        job={{ id: job.id, status: job.status }}
-        initialApplications={JSON.parse(JSON.stringify(applications))}
-      />
-    </>
+    <ApplicantsBoard
+      job={{
+        id: job.id,
+        title: job.title,
+        status: job.status,
+        employmentType: job.employmentType,
+        remoteType: job.remoteType,
+        location: job.location,
+        salaryMin: job.salaryMin,
+        salaryMax: job.salaryMax,
+        salaryPeriod: job.salaryPeriod,
+        createdAt: job.createdAt.toISOString(),
+        targetHireCount: job.targetHireCount,
+      }}
+      companyVerified={companyVerified}
+      needsAttention={needsAttention}
+      employerName={company?.companyName ?? "Team"}
+      initialApplications={JSON.parse(JSON.stringify(applications))}
+    />
   );
 }

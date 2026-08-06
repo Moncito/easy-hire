@@ -632,6 +632,30 @@ backdrop-filter:blur(6px);
   animation: employer-drawer-panel 0.3s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
+@keyframes employer-detail-panel-enter {
+  from {
+    opacity: 0;
+    transform: translateX(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.employer-detail-panel-enter {
+  animation: employer-detail-panel-enter 0.2s ease-out forwards;
+}
+
+.employer-tab-fade {
+  animation: employer-tab-fade 0.15s ease-out;
+}
+
+@keyframes employer-tab-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
 @keyframes employer-sheet-enter {
   from {
     opacity: 0;
@@ -666,6 +690,8 @@ backdrop-filter:blur(6px);
 
   .employer-drawer-backdrop,
   .employer-drawer-panel,
+  .employer-detail-panel-enter,
+  .employer-tab-fade,
   .employer-sheet-enter {
     animation: none;
   }

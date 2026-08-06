@@ -1,45 +1,27 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import KanbanBoard from "./KanbanBoard";
 import RejectCandidateModal from "./RejectCandidateModal";
 import BulkApplicantActionsBar from "./BulkApplicantActionsBar";
-import { X, Paperclip, MapPin, DollarSign, CheckCircle, XCircle, Star, CheckSquare, MessageSquare } from "lucide-react";
-import { formatPesoRange } from "@/lib/format";
+import ApplicantsJobHeader, { type PipelineCounts } from "./ApplicantsJobHeader";
+import type { ApplicantsJobSummary } from "./ApplicantsJobHeader";
+import ApplicantsWorkspace from "./ApplicantsWorkspace";
+import CandidateDetailPanel from "./candidate-detail/CandidateDetailPanel";
+import type { CandidateApplication } from "./candidate-detail/types";
+import { mergeApplicationUpdate } from "./candidate-detail/utils";
+import { CheckSquare } from "lucide-react";
+import { appendInternalNote } from "@/lib/candidate-notes";
 
-type SeekerSummary = {
-  id: string;
-  fullName: string;
-  headline: string | null;
-  skills: string[];
-  resumeUrl: string | null;
-  location: string | null;
-  desiredSalaryMin: number | null;
-  desiredSalaryMax: number | null;
-};
+type Application = CandidateApplication;
 
-type Application = {
-  id: string;
-  status: string;
-  coverNote: string | null;
-  internalNotes: string | null;
-  rating: number | null;
-  appliedAt: string;
-  seeker: SeekerSummary;
-  answers?: {
-    id: string;
-    answerText: string;
-    question: { id: string; prompt: string; required: boolean; sortOrder: number };
-  }[];
-};
-
-type JobContext = {
-  id: string;
-  status: string;
-};
+type JobContext = ApplicantsJobSummary;
 
 type Props = {
   job: JobContext;
+  companyVerified: boolean;
+  needsAttention?: boolean;
+  employerName: string;
   initialApplications: Application[];
 };
 
@@ -48,8 +30,23 @@ type PendingReject = {
   candidateName: string;
 };
 
-export default function ApplicantsBoard({ job, initialApplications }: Props) {
+function applyUpdate(
+  apps: Application[],
+  id: string,
+  updated: Partial<Application>
+): Application[] {
+  return apps.map((app) => (app.id === id ? mergeApplicationUpdate(app, updated) : app));
+}
+
+export default function ApplicantsBoard({
+  job,
+  companyVerified,
+  needsAttention = false,
+  employerName,
+  initialApplications,
+}: Props) {
   const [applications, setApplications] = useState<Application[]>(initialApplications);
+  const [activeStage, setActiveStage] = useState<string | null>(null);
   const [selectedApp, setSelectedApp] = useState<Application | null>(null);
   const [noteInput, setNoteInput] = useState("");
   const [savingNotes, setSavingNotes] = useState(false);
@@ -63,10 +60,20 @@ export default function ApplicantsBoard({ job, initialApplications }: Props) {
   const [rejectError, setRejectError] = useState("");
 
   useEffect(() => {
-    if (selectedApp) {
-      setNoteInput(selectedApp.internalNotes || "");
-    }
-  }, [selectedApp]);
+    if (selectedApp) setNoteInput("");
+  }, [selectedApp?.id]);
+
+  const navIndex = selectedApp ? applications.findIndex((a) => a.id === selectedApp.id) : -1;
+
+  const navigateCandidate = useCallback(
+    (direction: "prev" | "next") => {
+      if (navIndex < 0) return;
+      const nextIndex = direction === "prev" ? navIndex - 1 : navIndex + 1;
+      const next = applications[nextIndex];
+      if (next) setSelectedApp(next);
+    },
+    [applications, navIndex]
+  );
 
   async function patchApplication(id: string, body: Record<string, unknown>) {
     const res = await fetch(`/api/applications/${id}`, {
@@ -80,7 +87,12 @@ export default function ApplicantsBoard({ job, initialApplications }: Props) {
       throw new Error(result.error || "Update failed");
     }
 
-    return res.json() as Promise<Application>;
+    return res.json() as Promise<Partial<Application>>;
+  }
+
+  function syncUpdated(id: string, updated: Partial<Application>) {
+    setApplications((prev) => applyUpdate(prev, id, updated));
+    setSelectedApp((prev) => (prev?.id === id ? mergeApplicationUpdate(prev, updated) : prev));
   }
 
   function toggleSelect(id: string) {
@@ -97,7 +109,7 @@ export default function ApplicantsBoard({ job, initialApplications }: Props) {
     setSelectionMode(false);
   }
 
-  async function handleStatusChange(id: string, newStatus: string, rejectionReason?: string | null) {
+  async function handleStatusChange(id: string, newStatus: string) {
     if (newStatus === "REJECTED") {
       const app = applications.find((a) => a.id === id);
       setPendingReject({
@@ -108,6 +120,7 @@ export default function ApplicantsBoard({ job, initialApplications }: Props) {
     }
 
     const previous = applications;
+    const previousSelected = selectedApp;
     setApplications((prev) => prev.map((app) => (app.id === id ? { ...app, status: newStatus } : app)));
     if (selectedApp?.id === id) {
       setSelectedApp((prev) => (prev ? { ...prev, status: newStatus } : null));
@@ -115,15 +128,10 @@ export default function ApplicantsBoard({ job, initialApplications }: Props) {
 
     try {
       const updated = await patchApplication(id, { status: newStatus });
-      setApplications((prev) => prev.map((app) => (app.id === id ? { ...app, ...updated } : app)));
-      if (selectedApp?.id === id) {
-        setSelectedApp((prev) => (prev ? { ...prev, ...updated } : null));
-      }
+      syncUpdated(id, updated);
     } catch {
       setApplications(previous);
-      if (selectedApp?.id === id) {
-        setSelectedApp(previous.find((a) => a.id === id) || null);
-      }
+      setSelectedApp(previousSelected);
     }
   }
 
@@ -133,6 +141,7 @@ export default function ApplicantsBoard({ job, initialApplications }: Props) {
     setRejectError("");
 
     const previous = applications;
+    const previousSelected = selectedApp;
     const ids = pendingReject.ids;
 
     setApplications((prev) =>
@@ -152,13 +161,13 @@ export default function ApplicantsBoard({ job, initialApplications }: Props) {
       setApplications((prev) =>
         prev.map((app) => {
           const updated = results.find((r) => r.id === app.id);
-          return updated ? { ...app, ...updated } : app;
+          return updated ? mergeApplicationUpdate(app, updated) : app;
         })
       );
 
       if (selectedApp && ids.includes(selectedApp.id)) {
         const updated = results.find((r) => r.id === selectedApp.id);
-        if (updated) setSelectedApp((prev) => (prev ? { ...prev, ...updated } : null));
+        if (updated) setSelectedApp((prev) => (prev ? mergeApplicationUpdate(prev, updated) : null));
       }
 
       setSelectedIds((prev) => {
@@ -169,6 +178,7 @@ export default function ApplicantsBoard({ job, initialApplications }: Props) {
       setPendingReject(null);
     } catch (err) {
       setApplications(previous);
+      setSelectedApp(previousSelected);
       setRejectError(err instanceof Error ? err.message : "Rejection failed");
     } finally {
       setRejectLoading(false);
@@ -199,7 +209,7 @@ export default function ApplicantsBoard({ job, initialApplications }: Props) {
       setApplications((prev) =>
         prev.map((app) => {
           const updated = results.find((r) => r.id === app.id);
-          return updated ? { ...app, ...updated } : app;
+          return updated ? mergeApplicationUpdate(app, updated) : app;
         })
       );
       clearSelection();
@@ -211,12 +221,20 @@ export default function ApplicantsBoard({ job, initialApplications }: Props) {
   }
 
   async function handleSaveNotes() {
-    if (!selectedApp) return;
+    if (!selectedApp || !noteInput.trim()) return;
     setSavingNotes(true);
     try {
-      const updated = await patchApplication(selectedApp.id, { internalNotes: noteInput.trim() || null });
-      setApplications((prev) => prev.map((app) => (app.id === selectedApp.id ? { ...app, ...updated } : app)));
-      setSelectedApp((prev) => (prev ? { ...prev, ...updated } : null));
+      const merged = appendInternalNote(
+        selectedApp.internalNotes,
+        employerName,
+        noteInput.trim()
+      );
+      const updated = await patchApplication(selectedApp.id, { internalNotes: merged });
+      syncUpdated(selectedApp.id, {
+        internalNotes: updated.internalNotes,
+        updatedAt: updated.updatedAt,
+      });
+      setNoteInput("");
     } finally {
       setSavingNotes(false);
     }
@@ -226,8 +244,7 @@ export default function ApplicantsBoard({ job, initialApplications }: Props) {
     if (!selectedApp) return;
     const nextRating = selectedApp.rating === rating ? null : rating;
     const updated = await patchApplication(selectedApp.id, { rating: nextRating });
-    setApplications((prev) => prev.map((app) => (app.id === selectedApp.id ? { ...app, ...updated } : app)));
-    setSelectedApp((prev) => (prev ? { ...prev, ...updated } : null));
+    syncUpdated(selectedApp.id, updated);
   }
 
   async function handleMessageCandidate() {
@@ -257,50 +274,115 @@ export default function ApplicantsBoard({ job, initialApplications }: Props) {
     }
   }
 
-  return (
-    <div className="relative">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <button
-          type="button"
-          onClick={() => {
-            setSelectionMode((v) => !v);
-            if (selectionMode) clearSelection();
-          }}
-          className={`inline-flex items-center gap-2 rounded-xl border px-3.5 py-2 text-xs font-semibold transition-colors ${
-            selectionMode
-              ? "border-teal/30 bg-teal/8 text-teal"
-              : "border-ink/10 bg-white text-ink/70 hover:border-ink/20"
-          }`}
-        >
-          <CheckSquare className="h-3.5 w-3.5" aria-hidden="true" />
-          {selectionMode ? "Exit selection" : "Select candidates"}
-        </button>
-      </div>
+  function handleStageSelect(stage: string) {
+    setActiveStage(stage);
+    const el = document.getElementById(`kanban-col-${stage}`);
+    el?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+  }
 
-      <BulkApplicantActionsBar
-        selectedCount={selectedIds.size}
-        loading={bulkLoading || rejectLoading}
-        onClear={clearSelection}
-        onMove={handleBulkMove}
-        onReject={() => {
-          if (selectedIds.size > 0) {
-            setPendingReject({
-              ids: Array.from(selectedIds),
-              candidateName: `${selectedIds.size} candidates`,
-            });
-          }
-        }}
+  const hasApplicants = applications.length > 0;
+
+  const livePipeline: PipelineCounts = {
+    applied: applications.filter((a) => a.status === "APPLIED").length,
+    shortlisted: applications.filter((a) => a.status === "SHORTLISTED").length,
+    interview: applications.filter((a) => a.status === "INTERVIEW").length,
+    hired: applications.filter((a) => a.status === "HIRED").length,
+    rejected: applications.filter((a) => a.status === "REJECTED").length,
+  };
+
+  const toolbar = hasApplicants ? (
+    <button
+      type="button"
+      onClick={() => {
+        setSelectionMode((v) => !v);
+        if (selectionMode) clearSelection();
+      }}
+      className={`inline-flex items-center gap-2 rounded-xl border px-3.5 py-2 text-xs font-semibold transition-colors ${
+        selectionMode
+          ? "border-teal/30 bg-teal/8 text-teal"
+          : "border-ink/10 bg-white text-ink/70 hover:border-ink/20"
+      }`}
+    >
+      <CheckSquare className="h-3.5 w-3.5" aria-hidden="true" />
+      {selectionMode ? "Exit selection" : "Select candidates"}
+    </button>
+  ) : null;
+
+  const panel =
+    selectedApp && navIndex >= 0 ? (
+      <CandidateDetailPanel
+        application={selectedApp}
+        navIndex={navIndex}
+        navTotal={applications.length}
+        noteInput={noteInput}
+        savingNotes={savingNotes}
+        messageLoading={messageLoading}
+        messageError={messageError}
+        onClose={() => setSelectedApp(null)}
+        onNoteChange={setNoteInput}
+        onSaveNotes={handleSaveNotes}
+        onStatusChange={(status) => handleStatusChange(selectedApp.id, status)}
+        onRating={handleRating}
+        onMessage={handleMessageCandidate}
+        onNavigate={navigateCandidate}
       />
+    ) : null;
 
-      <KanbanBoard
-        applications={applications}
-        job={job}
-        onCardClick={(app) => {
-          if (!selectionMode) setSelectedApp(app as Application);
-        }}
-        selectionMode={selectionMode}
-        selectedIds={selectedIds}
-        onToggleSelect={toggleSelect}
+  return (
+    <div className="flex h-full min-h-0 flex-1 flex-col">
+      <ApplicantsWorkspace
+        panelOpen={!!selectedApp}
+        onClosePanel={() => setSelectedApp(null)}
+        board={
+          <div className="flex h-full min-h-0 flex-col overflow-hidden">
+            <div className="shrink-0">
+              <ApplicantsJobHeader
+                job={job}
+                totalApplicants={applications.length}
+                pipeline={livePipeline}
+                companyVerified={companyVerified}
+                needsAttention={needsAttention}
+                activeStage={activeStage}
+                onStageSelect={handleStageSelect}
+                toolbar={toolbar}
+              />
+
+              <BulkApplicantActionsBar
+                selectedCount={selectedIds.size}
+                loading={bulkLoading || rejectLoading}
+                onClear={clearSelection}
+                onMove={handleBulkMove}
+                onReject={() => {
+                  if (selectedIds.size > 0) {
+                    setPendingReject({
+                      ids: Array.from(selectedIds),
+                      candidateName: `${selectedIds.size} candidates`,
+                    });
+                  }
+                }}
+              />
+            </div>
+
+            <div className="min-h-0 flex-1 overflow-hidden">
+              <KanbanBoard
+                applications={applications}
+                job={job}
+                companyVerified={companyVerified}
+                activeStage={activeStage}
+                focusedApplicationId={selectedApp?.id ?? null}
+                onCardClick={(app) => {
+                  if (selectionMode) return;
+                  if (selectedApp?.id === app.id) setSelectedApp(null);
+                  else setSelectedApp(app as Application);
+                }}
+                selectionMode={selectionMode}
+                selectedIds={selectedIds}
+                onToggleSelect={toggleSelect}
+              />
+            </div>
+          </div>
+        }
+        panel={panel}
       />
 
       <RejectCandidateModal
@@ -314,233 +396,6 @@ export default function ApplicantsBoard({ job, initialApplications }: Props) {
         }}
         onConfirm={confirmReject}
       />
-
-      {selectedApp && (
-        <>
-          <div
-            className="employer-drawer-backdrop fixed inset-0 z-40 bg-ink/30 backdrop-blur-xs"
-            onClick={() => setSelectedApp(null)}
-            aria-hidden="true"
-          />
-
-          <div className="employer-drawer-panel fixed top-0 right-0 z-50 flex h-full w-full max-w-lg flex-col border-l border-ink/5 bg-white shadow-2xl">
-            <div className="flex shrink-0 items-start justify-between border-b border-ink/5 p-6">
-              <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-teal/10 font-display text-lg font-bold text-teal">
-                  {selectedApp.seeker.fullName
-                    .split(" ")
-                    .map((n) => n[0])
-                    .join("")
-                    .slice(0, 2)
-                    .toUpperCase()}
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold tracking-tight text-ink">{selectedApp.seeker.fullName}</h3>
-                  <p className="mt-0.5 text-xs text-ink/50">
-                    {selectedApp.seeker.headline || "Virtual Assistant"}
-                  </p>
-                  <a
-                    href={`/employer/talent/${selectedApp.seeker.id}`}
-                    className="mt-1 inline-block cursor-pointer text-[11px] font-semibold text-teal hover:underline"
-                  >
-                    View full profile
-                  </a>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setSelectedApp(null)}
-                className="cursor-pointer rounded-xl p-2 text-ink/40 hover:bg-ink/5 hover:text-ink"
-                aria-label="Close candidate details"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <div className="flex-1 space-y-6 overflow-y-auto p-6">
-              <div className="rounded-xl bg-ink/[0.02] p-4">
-                <div>
-                  <span className="block text-[10px] font-bold uppercase tracking-wider text-ink/40">
-                    Current Stage
-                  </span>
-                  <select
-                    value={selectedApp.status}
-                    onChange={(e) => handleStatusChange(selectedApp.id, e.target.value)}
-                    className="mt-1 block w-full rounded-lg border border-ink/10 bg-white px-2.5 py-1.5 text-xs font-semibold text-ink outline-none"
-                  >
-                    <option value="APPLIED">Applied</option>
-                    <option value="SHORTLISTED">Shortlisted</option>
-                    <option value="INTERVIEW">Interview</option>
-                    <option value="HIRED">Hired</option>
-                    <option value="REJECTED">Rejected</option>
-                  </select>
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={handleMessageCandidate}
-                    disabled={messageLoading}
-                    className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-teal/20 px-3 py-1.5 text-xs font-bold text-teal transition-colors hover:bg-teal/5 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    <MessageSquare className="h-4 w-4" />
-                    {messageLoading ? "Opening..." : "Message"}
-                  </button>
-                  {selectedApp.status !== "REJECTED" && (
-                    <button
-                      type="button"
-                      onClick={() => handleStatusChange(selectedApp.id, "REJECTED")}
-                      className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-ember/20 px-3 py-1.5 text-xs font-bold text-ember transition-colors hover:bg-ember/5"
-                    >
-                      <XCircle className="h-4 w-4" />
-                      Reject
-                    </button>
-                  )}
-                  {selectedApp.status !== "HIRED" && (
-                    <button
-                      type="button"
-                      onClick={() => handleStatusChange(selectedApp.id, "HIRED")}
-                      className="flex cursor-pointer items-center gap-1.5 rounded-lg bg-teal px-3.5 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-teal/95"
-                    >
-                      <CheckCircle className="h-4 w-4" />
-                      Hire VA
-                    </button>
-                  )}
-                </div>
-              </div>
-              {messageError && (
-                <p className="mt-2 text-xs text-ember">{messageError}</p>
-              )}
-
-              <div className="space-y-4">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-ink/45">Candidate Profile</h4>
-
-                {selectedApp.seeker.skills.length > 0 && (
-                  <div>
-                    <span className="mb-1.5 block text-xs text-ink/40">Core Skills</span>
-                    <div className="flex flex-wrap gap-1">
-                      {selectedApp.seeker.skills.map((skill) => (
-                        <span
-                          key={skill}
-                          className="rounded bg-ink/5 px-2 py-0.5 text-[10px] font-semibold text-ink/70"
-                        >
-                          {skill}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <div className="flex items-center gap-2 text-xs text-ink/65">
-                    <MapPin className="h-4 w-4 shrink-0 text-ink/30" aria-hidden="true" />
-                    <span>{selectedApp.seeker.location || "Location not set"}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-xs text-ink/65">
-                    <DollarSign className="h-4 w-4 shrink-0 text-teal" aria-hidden="true" />
-                    <span>
-                      Expected:{" "}
-                      {formatPesoRange(
-                        selectedApp.seeker.desiredSalaryMin,
-                        selectedApp.seeker.desiredSalaryMax
-                      )}
-                    </span>
-                  </div>
-                </div>
-
-                <div>
-                  <span className="mb-1.5 block text-xs text-ink/40">Your rating</span>
-                  <div className="flex gap-1">
-                    {[1, 2, 3, 4, 5].map((value) => (
-                      <button
-                        key={value}
-                        type="button"
-                        onClick={() => handleRating(value)}
-                        className="rounded p-1 transition-colors hover:bg-ink/5"
-                        aria-label={`Rate ${value} stars`}
-                      >
-                        <Star
-                          className={`h-4 w-4 ${
-                            (selectedApp.rating ?? 0) >= value
-                              ? "fill-marigold text-marigold"
-                              : "text-ink/25"
-                          }`}
-                        />
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              <div className="h-px bg-ink/5" />
-
-              <div className="space-y-2">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-ink/45">Cover letter / note</h4>
-                <div className="rounded-xl bg-ink/[0.02] p-4 text-xs italic leading-relaxed text-ink/80">
-                  {selectedApp.coverNote || "No cover note provided by candidate."}
-                </div>
-              </div>
-
-              {selectedApp.answers && selectedApp.answers.length > 0 && (
-                <>
-                  <div className="h-px bg-ink/5" />
-                  <div className="space-y-3">
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-ink/45">
-                      Screening answers
-                    </h4>
-                    {selectedApp.answers.map((answer) => (
-                      <div key={answer.id} className="rounded-xl bg-ink/[0.02] p-3">
-                        <p className="text-[11px] font-semibold text-ink/70">{answer.question.prompt}</p>
-                        <p className="mt-1.5 text-xs leading-relaxed text-ink/80">{answer.answerText}</p>
-                      </div>
-                    ))}
-                  </div>
-                </>
-              )}
-
-              <div className="h-px bg-ink/5" />
-
-              <div className="space-y-2">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-ink/45">Resume</h4>
-                {selectedApp.seeker.resumeUrl ? (
-                  <a
-                    href={`/api/employer/talent/${selectedApp.seeker.id}/resume`}
-                    className="flex cursor-pointer items-center gap-2 rounded-xl border border-ink/10 p-3 transition-all hover:border-teal/30 hover:bg-teal/5"
-                  >
-                    <Paperclip className="h-4 w-4 text-teal" aria-hidden="true" />
-                    <div className="min-w-0">
-                      <p className="truncate text-xs font-semibold text-ink">Download resume</p>
-                      <p className="mt-0.5 text-[9px] text-ink/40">PDF/DOCX file</p>
-                    </div>
-                  </a>
-                ) : (
-                  <p className="text-xs text-ink/45">No resume uploaded yet.</p>
-                )}
-              </div>
-
-              <div className="h-px bg-ink/5" />
-
-              <div className="space-y-3">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-ink/45">Internal Notes</h4>
-                <textarea
-                  value={noteInput}
-                  onChange={(e) => setNoteInput(e.target.value)}
-                  placeholder="Add an internal evaluation note for this candidate..."
-                  rows={4}
-                  className="w-full rounded-xl border border-ink/10 bg-white p-3 text-xs text-ink outline-none focus:border-teal"
-                />
-                <button
-                  type="button"
-                  onClick={handleSaveNotes}
-                  disabled={savingNotes}
-                  className="cursor-pointer rounded-lg bg-ink px-3 py-1.5 text-xs font-semibold text-white hover:bg-ink/90 disabled:opacity-60"
-                >
-                  {savingNotes ? "Saving..." : "Save note"}
-                </button>
-              </div>
-            </div>
-          </div>
-        </>
-      )}
     </div>
   );
 }

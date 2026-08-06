@@ -20,6 +20,8 @@ type Application = {
 type Props = {
   application: Application;
   selected?: boolean;
+  focused?: boolean;
+  dimmed?: boolean;
   selectionMode?: boolean;
   onToggleSelect?: (id: string) => void;
   onClick: () => void;
@@ -41,6 +43,8 @@ function formatAppliedAt(iso: string) {
 export default function CandidateCard({
   application,
   selected = false,
+  focused = false,
+  dimmed = false,
   selectionMode = false,
   onToggleSelect,
   onClick,
@@ -67,7 +71,11 @@ export default function CandidateCard({
       className={`group w-full rounded-lg border bg-white p-3.5 text-left transition-all duration-200 focus-within:ring-2 focus-within:ring-teal/30 ${
         selected
           ? "border-teal/40 bg-teal/3 ring-2 ring-teal/20 shadow-md"
-          : "border-ink/6 hover:border-teal/20 hover:shadow-md"
+          : focused
+            ? "border-teal/50 ring-2 ring-teal/30 shadow-md"
+            : dimmed
+              ? "border-ink/5 opacity-55 hover:opacity-80"
+              : "border-ink/6 hover:border-teal/20 hover:shadow-md"
       }`}
     >
       <div className="flex items-start gap-2">

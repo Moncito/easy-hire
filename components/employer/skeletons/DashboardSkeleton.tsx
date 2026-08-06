@@ -3,57 +3,64 @@ import Bone from "@/components/employer/skeletons/Bone";
 export default function DashboardSkeleton() {
   return (
     <>
-      <div className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-        <div className="space-y-2">
-          <Bone className="h-8 w-64" />
-          <Bone className="h-4 w-80 max-w-full" />
-        </div>
-        <Bone className="h-11 w-40 rounded-xl" />
-      </div>
-
-      <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-        {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className="rounded-2xl border border-ink/5 bg-white p-5 shadow-sm">
-            <div className="flex items-center justify-between">
-              <Bone className="h-3 w-16" />
-              <Bone className="h-8 w-8 rounded-lg" />
-            </div>
-            <Bone className="mt-4 h-8 w-12" />
-            <Bone className="mt-2 h-3 w-24" />
+      <div className="mb-6 grid grid-cols-1 items-start gap-6 xl:grid-cols-3">
+        <div className="space-y-4 xl:col-span-2">
+          <div className="rounded-2xl bg-navy/20 p-8">
+            <Bone className="h-4 w-24 bg-white/20" />
+            <Bone className="mt-3 h-8 w-64 bg-white/20" />
+            <Bone className="mt-4 h-10 w-full max-w-md rounded-xl bg-white/15" />
           </div>
-        ))}
-      </div>
-
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div className="space-y-4 lg:col-span-2">
-          <Bone className="h-6 w-40" />
-          {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="rounded-2xl border border-ink/5 bg-white p-5 shadow-sm">
-              <Bone className="h-5 w-3/4" />
-              <Bone className="mt-2 h-3 w-1/2" />
-              <div className="mt-4 flex justify-between border-t border-ink/5 pt-4">
-                <Bone className="h-3 w-32" />
-                <Bone className="h-8 w-28 rounded-lg" />
-              </div>
+          <div className="flex gap-3">
+            <Bone className="h-10 w-48 shrink-0 rounded-xl" />
+            <Bone className="h-10 w-40 shrink-0 rounded-xl" />
+          </div>
+        </div>
+        <div className="grid w-full grid-cols-1 gap-4 sm:grid-cols-3 xl:grid-cols-1">
+          <div className="rounded-2xl border border-ink/5 bg-white p-5 shadow-sm">
+            <Bone className="mx-auto h-28 w-28 rounded-full" />
+          </div>
+          {Array.from({ length: 2 }).map((_, i) => (
+            <div key={i} className="rounded-2xl border border-ink/5 bg-white p-4 shadow-sm">
+              <Bone className="h-3 w-16" />
+              <Bone className="mt-3 h-7 w-12" />
             </div>
           ))}
         </div>
-        <div className="space-y-6">
-          <div className="rounded-2xl border border-ink/5 bg-white p-6 shadow-sm">
-            <Bone className="h-5 w-32" />
-            <Bone className="mt-3 h-2 w-full rounded-full" />
-            <div className="mt-4 space-y-2">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <Bone key={i} className="h-3 w-full" />
-              ))}
-            </div>
-          </div>
+      </div>
+
+      <div className="mb-6 grid grid-cols-1 items-start gap-6 lg:grid-cols-3">
+        <div className="rounded-2xl border border-ink/5 bg-white p-6 shadow-sm lg:col-span-2">
+          <Bone className="mb-4 h-5 w-40" />
+          <Bone className="h-36 w-full rounded-xl" />
+        </div>
+        <div className="space-y-4">
           <div className="rounded-2xl border border-ink/5 bg-white p-6 shadow-sm">
             <Bone className="mb-4 h-5 w-28" />
-            {Array.from({ length: 3 }).map((_, i) => (
-              <Bone key={i} className="mb-3 h-10 w-full" />
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Bone key={i} className="mb-3 h-6 w-full" />
             ))}
           </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <Bone className="mb-4 h-6 w-32" />
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="rounded-2xl border border-ink/5 bg-white p-5 shadow-sm">
+                <Bone className="h-5 w-3/4" />
+                <Bone className="mt-2 h-3 w-1/2" />
+                <Bone className="mt-4 h-1.5 w-full rounded-full" />
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="rounded-2xl border border-ink/5 bg-white p-6 shadow-sm">
+          <Bone className="mb-4 h-5 w-28" />
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Bone key={i} className="mb-3 h-10 w-full" />
+          ))}
         </div>
       </div>
     </>

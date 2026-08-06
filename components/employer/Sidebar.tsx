@@ -16,47 +16,34 @@ import {
 } from "lucide-react";
 import { useEmployerShell } from "@/components/employer/EmployerShellContext";
 
+type NavCounts = {
+  activeJobs: number;
+  needsReview: number;
+  unreadMessages: number;
+};
+
 const navItems = [
-  { label: "Dashboard", href: "/employer/dashboard", icon: LayoutDashboard },
-  { label: "Jobs", href: "/employer/jobs", icon: Briefcase },
-  { label: "Applicants", href: "/employer/applicants", icon: Users },
-  { label: "Messages", href: "/employer/messages", icon: MessageSquare },
-  { label: "Talent", href: "/employer/talent", icon: Search },
-  { label: "Company", href: "/employer/company-profile", icon: Building2 },
-  { label: "Reports", href: "/employer/reports", icon: BarChart3, disabled: true },
+  { label: "Dashboard", href: "/employer/dashboard", icon: LayoutDashboard, badgeKey: null as keyof NavCounts | null },
+  { label: "Jobs", href: "/employer/jobs", icon: Briefcase, badgeKey: "activeJobs" as const },
+  { label: "Applicants", href: "/employer/applicants", icon: Users, badgeKey: "needsReview" as const },
+  { label: "Messages", href: "/employer/messages", icon: MessageSquare, badgeKey: "unreadMessages" as const },
+  { label: "Talent", href: "/employer/talent", icon: Search, badgeKey: null },
+  { label: "Company", href: "/employer/company-profile", icon: Building2, badgeKey: null },
+  { label: "Reports", href: "/employer/reports", icon: BarChart3, badgeKey: null },
 ];
 
 function NavLink({
   item,
   isActive,
   expanded,
+  badge,
 }: {
   item: (typeof navItems)[number];
   isActive: boolean;
   expanded: boolean;
+  badge?: number;
 }) {
   const Icon = item.icon;
-
-  if (item.disabled) {
-    return (
-      <div
-        title={item.label}
-        className={`flex items-center rounded-xl text-mist/25 ${
-          expanded ? "justify-between px-3 py-2.5" : "h-10 w-10 justify-center"
-        }`}
-      >
-        <div className="flex items-center gap-3">
-          <Icon className="h-[18px] w-[18px] shrink-0" strokeWidth={2} />
-          {expanded && <span className="text-sm font-medium">{item.label}</span>}
-        </div>
-        {expanded && (
-          <span className="rounded bg-white/5 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide">
-            Soon
-          </span>
-        )}
-      </div>
-    );
-  }
 
   return (
     <Link
@@ -76,17 +63,27 @@ function NavLink({
         }`}
         strokeWidth={2}
       />
-      {expanded && <span className="text-sm font-medium">{item.label}</span>}
+      {expanded && <span className="flex-1 text-sm font-medium">{item.label}</span>}
+      {badge !== undefined && badge > 0 && (
+        <span
+          className={`flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[10px] font-bold ${
+            isActive ? "bg-white/20 text-white" : "bg-teal/20 text-teal"
+          } ${expanded ? "" : "absolute -right-0.5 -top-0.5 h-4 min-w-4 text-[9px]"}`}
+        >
+          {badge > 99 ? "99+" : badge}
+        </span>
+      )}
       {!expanded && (
         <span className="pointer-events-none absolute left-full z-50 ml-3 whitespace-nowrap rounded-lg bg-ink px-2.5 py-1.5 text-xs font-medium text-mist opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100">
           {item.label}
+          {badge ? ` (${badge})` : ""}
         </span>
       )}
     </Link>
   );
 }
 
-export default function Sidebar() {
+export default function Sidebar({ navCounts }: { navCounts: NavCounts }) {
   const pathname = usePathname();
   const { expanded, toggleExpanded } = useEmployerShell();
 
@@ -152,7 +149,15 @@ export default function Sidebar() {
             pathname === item.href ||
             (item.href !== "/employer/dashboard" && pathname.startsWith(item.href));
 
-          return <NavLink key={item.href} item={item} isActive={isActive} expanded={expanded} />;
+          return (
+            <NavLink
+              key={item.href}
+              item={item}
+              isActive={isActive}
+              expanded={expanded}
+              badge={item.badgeKey ? navCounts[item.badgeKey] : undefined}
+            />
+          );
         })}
       </nav>
 

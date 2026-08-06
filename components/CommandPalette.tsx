@@ -8,6 +8,8 @@ import { Search, Briefcase, Building2, User, LayoutDashboard, Bookmark, Loader2 
 type QuickJob = { id: string; title: string; company: string; location: string | null };
 type QuickCompany = { id: string; name: string; logoUrl: string | null };
 
+type WorkspaceResult = { type: string; id: string; label: string; sub?: string; href: string };
+
 type NavShortcut = {
   key: string;
   label: string;
@@ -20,6 +22,8 @@ function shortcutsForRole(role: string | undefined): NavShortcut[] {
     return [
       { key: "employer-dashboard", label: "Employer dashboard", href: "/employer/dashboard", icon: LayoutDashboard },
       { key: "employer-jobs", label: "Manage job posts", href: "/employer/jobs", icon: Briefcase },
+      { key: "employer-applicants", label: "Applicants", href: "/employer/applicants", icon: User },
+      { key: "employer-reports", label: "Hiring reports", href: "/employer/reports", icon: LayoutDashboard },
       { key: "employer-talent", label: "Talent search", href: "/employer/talent", icon: User },
     ];
   }
@@ -41,6 +45,7 @@ export default function CommandPalette() {
   const [query, setQuery] = useState("");
   const [jobs, setJobs] = useState<QuickJob[]>([]);
   const [companies, setCompanies] = useState<QuickCompany[]>([]);
+  const [workspaceResults, setWorkspaceResults] = useState<WorkspaceResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -48,15 +53,19 @@ export default function CommandPalette() {
   const pathname = usePathname();
   const { data: session } = useSession();
 
-  const hideFloatingTrigger = pathname.includes("/messages");
+  const role = session?.user?.role as string | undefined;
+  const isEmployer = role === "EMPLOYER";
 
-  const shortcuts = shortcutsForRole(session?.user?.role as string | undefined);
+  const hideFloatingTrigger = pathname.includes("/messages") || pathname.startsWith("/employer");
+
+  const shortcuts = shortcutsForRole(role);
 
   const close = useCallback(() => {
     setOpen(false);
     setQuery("");
     setJobs([]);
     setCompanies([]);
+    setWorkspaceResults([]);
     setActiveIndex(0);
   }, []);
 
@@ -85,12 +94,23 @@ export default function CommandPalette() {
     setLoading(true);
     const timer = setTimeout(async () => {
       try {
-        const res = await fetch(`/api/search/quick?q=${encodeURIComponent(query.trim())}`);
-        if (!res.ok || cancelled) return;
-        const data = await res.json();
-        if (cancelled) return;
-        setJobs(data.jobs ?? []);
-        setCompanies(data.companies ?? []);
+        if (isEmployer) {
+          const res = await fetch(`/api/employer/search?q=${encodeURIComponent(query.trim())}`);
+          if (!res.ok || cancelled) return;
+          const data = await res.json();
+          if (cancelled) return;
+          setWorkspaceResults(data.results ?? []);
+          setJobs([]);
+          setCompanies([]);
+        } else {
+          const res = await fetch(`/api/search/quick?q=${encodeURIComponent(query.trim())}`);
+          if (!res.ok || cancelled) return;
+          const data = await res.json();
+          if (cancelled) return;
+          setJobs(data.jobs ?? []);
+          setCompanies(data.companies ?? []);
+          setWorkspaceResults([]);
+        }
         setActiveIndex(0);
       } finally {
         if (!cancelled) setLoading(false);
@@ -100,26 +120,34 @@ export default function CommandPalette() {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [query, open]);
+  }, [query, open, isEmployer]);
 
   const showingResults = query.trim().length >= 2;
-  const results: { type: "job" | "company" | "shortcut"; id: string; href: string; label: string; sub?: string }[] =
+  const results: { type: string; id: string; href: string; label: string; sub?: string }[] =
     showingResults
-      ? [
-          ...jobs.map((j) => ({
-            type: "job" as const,
-            id: j.id,
-            href: `/jobs/${j.id}`,
-            label: j.title,
-            sub: [j.company, j.location].filter(Boolean).join(" · "),
-          })),
-          ...companies.map((c) => ({
-            type: "company" as const,
-            id: c.id,
-            href: `/companies/${c.id}`,
-            label: c.name,
-          })),
-        ]
+      ? isEmployer
+        ? workspaceResults.map((r) => ({
+            type: r.type,
+            id: r.id,
+            href: r.href,
+            label: r.label,
+            sub: r.sub,
+          }))
+        : [
+            ...jobs.map((j) => ({
+              type: "job" as const,
+              id: j.id,
+              href: `/jobs/${j.id}`,
+              label: j.title,
+              sub: [j.company, j.location].filter(Boolean).join(" · "),
+            })),
+            ...companies.map((c) => ({
+              type: "company" as const,
+              id: c.id,
+              href: `/companies/${c.id}`,
+              label: c.name,
+            })),
+          ]
       : shortcuts.map((s) => ({ type: "shortcut" as const, id: s.key, href: s.href, label: s.label }));
 
   function go(href: string) {
@@ -174,7 +202,11 @@ export default function CommandPalette() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={onKeyDownInput}
-            placeholder="Search jobs, companies, or jump to a page..."
+            placeholder={
+              isEmployer
+                ? "Search jobs, applicants, or jump to a page…"
+                : "Search jobs, companies, or jump to a page..."
+            }
             className="w-full bg-transparent text-sm text-ink outline-none placeholder:text-ink/35"
           />
           {loading && <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-ink/35" />}
@@ -194,14 +226,22 @@ export default function CommandPalette() {
             </p>
           )}
 
-          {showingResults && jobs.length > 0 && (
+          {showingResults && isEmployer && workspaceResults.length > 0 && (
+            <p className="px-4 pb-1.5 pt-2 text-[10px] font-bold uppercase tracking-wider text-ink/35">
+              Your workspace
+            </p>
+          )}
+
+          {showingResults && !isEmployer && jobs.length > 0 && (
             <p className="px-4 pb-1.5 pt-2 text-[10px] font-bold uppercase tracking-wider text-ink/35">Jobs</p>
           )}
 
           {results.map((r, idx) => {
             const shortcut = r.type === "shortcut" ? shortcuts.find((s) => s.key === r.id) : null;
-            const Icon = shortcut?.icon ?? (r.type === "company" ? Building2 : Briefcase);
-            const isCompanyStart = r.type === "company" && results[idx - 1]?.type !== "company";
+            const Icon =
+              shortcut?.icon ??
+              (r.type === "company" ? Building2 : r.type === "applicant" ? User : Briefcase);
+            const isCompanyStart = !isEmployer && r.type === "company" && results[idx - 1]?.type !== "company";
             return (
               <div key={`${r.type}-${r.id}`}>
                 {isCompanyStart && (

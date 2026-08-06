@@ -22,14 +22,16 @@ export default function EmployerPageContainer({ children }: { children: React.Re
   const pathname = usePathname();
   const width = getContentWidth(pathname);
   const isMessages = pathname.startsWith("/employer/messages");
+  const isApplicants = !!pathname.match(/\/employer\/jobs\/[^/]+\/applicants$/);
+  const isFixedWorkspace = isMessages || isApplicants;
+
+  const workspaceClasses = isMessages
+    ? "flex h-full min-h-0 flex-1 flex-col overflow-hidden"
+    : "flex h-full min-h-0 flex-1 flex-col overflow-hidden px-4 py-3 sm:px-5 lg:px-5 lg:py-3";
 
   return (
     <div
-      className={`${
-        isMessages
-          ? "flex h-[calc(100dvh-3.5rem-4rem)] min-h-0 flex-col overflow-hidden px-0 py-0 lg:h-[calc(100dvh-3.5rem)]"
-          : "px-6 py-6 pb-28 sm:px-8 lg:pb-24"
-      } ${widthClasses[width]}`}
+      className={`${isFixedWorkspace ? workspaceClasses : "px-6 py-6 pb-28 sm:px-8 lg:pb-24"} ${widthClasses[width]}`}
     >
       {children}
     </div>

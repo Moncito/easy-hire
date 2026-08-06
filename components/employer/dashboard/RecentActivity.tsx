@@ -1,0 +1,72 @@
+import Link from "next/link";
+import type { RecentActivityItem } from "@/lib/employer-analytics";
+
+function formatRelativeTime(iso: string) {
+  const date = new Date(iso);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60_000);
+  const diffHours = Math.floor(diffMs / 3_600_000);
+  const diffDays = Math.floor(diffMs / 86_400_000);
+
+  if (diffMins < 1) return "Just now";
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+  return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
+type Props = {
+  items: RecentActivityItem[];
+};
+
+export default function RecentActivity({ items }: Props) {
+  return (
+    <div className="rounded-2xl border border-ink/5 bg-white p-6 shadow-sm">
+      <h2 className="mb-4 text-sm font-bold text-ink">Recent activity</h2>
+      {items.length === 0 ? (
+        <div className="py-6 text-center">
+          <p className="text-sm font-medium text-ink/50">No applications yet</p>
+          <p className="mt-1 text-xs text-ink/35">
+            New applicants will show up here as they apply to your jobs.
+          </p>
+          <Link
+            href="/employer/jobs/new"
+            className="mt-3 inline-block text-xs font-semibold text-teal hover:underline"
+          >
+            Post a job to get started →
+          </Link>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {items.map((item, i) => (
+            <Link
+              key={item.id}
+              href={`/employer/jobs/${item.jobId}/applicants`}
+              className="group relative flex gap-3 rounded-lg p-1 transition hover:bg-ink/[0.02]"
+            >
+              {i < items.length - 1 && (
+                <div className="absolute bottom-[-12px] left-[13px] top-7 w-px bg-ink/8" />
+              )}
+              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-teal/12 text-[11px] font-bold text-teal">
+                {item.seekerName[0]?.toUpperCase()}
+              </div>
+              <div className="min-w-0 flex-1 text-xs">
+                <p className="leading-snug text-ink/75">
+                  <span className="font-semibold text-ink group-hover:text-teal">
+                    {item.seekerName}
+                  </span>{" "}
+                  applied for{" "}
+                  <span className="font-medium text-ink/80">{item.jobTitle}</span>
+                </p>
+                <span className="mt-0.5 block text-[10px] text-ink/35">
+                  {formatRelativeTime(item.appliedAt)}
+                </span>
+              </div>
+            </Link>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}

@@ -26,6 +26,7 @@ export const jobInputSchema = z.object({
   salaryPeriod: salaryPeriodSchema.default("MONTHLY"),
   location: z.string().min(1, "Location is required"),
   remoteType: remoteTypeSchema.default("REMOTE"),
+  targetHireCount: z.coerce.number().int().min(1, "At least 1 hire").max(99).default(1),
   screeningQuestions: z
     .array(screeningQuestionInputSchema)
     .max(5, "Up to 5 screening questions are allowed")
@@ -59,5 +60,6 @@ export function jobInputToData(input: JobInput) {
     salaryPeriod: input.salaryPeriod,
     location: input.location,
     remoteType: input.remoteType,
+    targetHireCount: input.targetHireCount,
   };
 }

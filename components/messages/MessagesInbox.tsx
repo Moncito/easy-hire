@@ -480,8 +480,17 @@ export default function MessagesInbox({ role, fillNavClearance = false }: Props)
     return role === "EMPLOYER" ? conv.seeker.fullName : conv.company.companyName;
   }, [activeId, thread, conversations, role]);
 
+  const activeConversation = useMemo(
+    () => conversations.find((c) => c.id === activeId),
+    [conversations, activeId]
+  );
+
   return (
-    <div className="animate-fade-in flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-white">
+    <div
+      className={`animate-fade-in flex h-full min-h-0 flex-1 flex-col overflow-hidden ${
+        isSeeker ? "bg-white" : "bg-mist/30"
+      }`}
+    >
       {fillNavClearance && (
         <MessagesNavBand unreadCount={unreadTotal} activeLabel={activeBandLabel} />
       )}
@@ -489,47 +498,73 @@ export default function MessagesInbox({ role, fillNavClearance = false }: Props)
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden lg:flex-row">
       {/* ── Sidebar ── */}
       <aside
-        className={`flex w-full flex-col border-ink/8 lg:w-[min(340px,36%)] lg:max-w-[400px] lg:shrink-0 lg:border-r ${
-          isSeeker ? "bg-mist/40" : "bg-mist/25"
+        className={`flex w-full flex-col border-ink/8 lg:w-[min(320px,34%)] lg:max-w-[380px] lg:shrink-0 lg:border-r ${
+          isSeeker ? "bg-mist/40" : "bg-mist/50"
         } ${activeId ? "hidden lg:flex" : "flex"}`}
       >
-        <div className={`border-b border-ink/8 ${isSeeker ? "px-6 py-5 sm:px-8" : "px-5 py-4 sm:px-6"}`}>
-          {!isSeeker && (
-            <p className="text-[10px] font-bold uppercase tracking-wider text-ink/40">Inbox</p>
+        <div
+          className={`shrink-0 border-b border-ink/8 ${isSeeker ? "px-6 py-5 sm:px-8" : "px-4 py-3 sm:px-5"}`}
+        >
+          {isSeeker ? (
+            <>
+              <h1 className="font-display text-2xl font-bold text-ink">Messages</h1>
+              <p className="mt-0.5 text-sm text-ink/45">In-platform conversations</p>
+            </>
+          ) : (
+            <div className="flex items-center gap-2 lg:hidden">
+              <h2 className="font-display text-base font-bold text-ink">Inbox</h2>
+              {unreadTotal > 0 && (
+                <span className="rounded-full bg-teal/15 px-2 py-0.5 font-data text-[10px] font-bold tabular-nums text-teal">
+                  {unreadTotal} unread
+                </span>
+              )}
+            </div>
           )}
-          <h1 className={`font-display font-bold text-ink ${isSeeker ? "text-2xl" : "mt-0.5 text-xl"}`}>
-            Messages
-          </h1>
-          <p className="mt-0.5 text-sm text-ink/45">In-platform conversations</p>
 
-          <div className="mt-4 flex flex-wrap gap-1.5">
-            {filters.map((f) => (
-              <button
-                key={f.id}
-                type="button"
-                onClick={() => setListFilter(f.id)}
-                className={`cursor-pointer rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors duration-200 ${
-                  listFilter === f.id ? filterActive : filterIdle
+          <div
+            className={`flex flex-col gap-2.5 sm:flex-row sm:items-center ${
+              isSeeker ? "mt-4" : "mt-2 lg:mt-0"
+            }`}
+          >
+            <div className="flex flex-wrap gap-1.5 sm:shrink-0">
+              {filters.map((f) => (
+                <button
+                  key={f.id}
+                  type="button"
+                  onClick={() => setListFilter(f.id)}
+                  className={`cursor-pointer rounded-full px-3 py-1.5 text-xs font-semibold transition-colors duration-200 ${
+                    listFilter === f.id ? filterActive : filterIdle
+                  }`}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+
+            <label className="relative block min-w-0 flex-1">
+              <Search
+                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/30"
+                aria-hidden="true"
+              />
+              <input
+                type="search"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search conversations..."
+                className={`w-full rounded-xl border border-ink/8 py-2 pl-9 pr-3 text-sm text-ink outline-none transition-colors placeholder:text-ink/35 focus:bg-white ${
+                  isSeeker
+                    ? "bg-ink/[0.03] focus:border-navy/25"
+                    : "bg-white/80 focus:border-teal/30 focus:ring-2 focus:ring-teal/10"
                 }`}
-              >
-                {f.label}
-              </button>
-            ))}
+              />
+            </label>
           </div>
 
-          <label className="relative mt-3 block">
-            <Search
-              className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/30"
-              aria-hidden="true"
-            />
-            <input
-              type="search"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search conversations..."
-              className="w-full rounded-xl border border-ink/8 bg-ink/[0.03] py-2.5 pl-9 pr-3 text-sm text-ink outline-none transition-colors placeholder:text-ink/35 focus:border-navy/25 focus:bg-white"
-            />
-          </label>
+          {!isSeeker && unreadTotal > 0 && (
+            <p className="mt-2 hidden text-xs text-ink/45 lg:block">
+              <span className="font-data font-semibold text-teal">{unreadTotal}</span> unread
+            </p>
+          )}
         </div>
 
         <div className={`flex-1 overflow-y-auto ${isSeeker ? "px-4 py-2 sm:px-5" : "divide-y divide-ink/5 px-0 py-0"}`}>
@@ -626,15 +661,25 @@ export default function MessagesInbox({ role, fillNavClearance = false }: Props)
       </aside>
 
       {/* ── Thread panel ── */}
-      <section className={`flex min-h-0 flex-1 flex-col bg-white ${!activeId ? "hidden lg:flex" : "flex"}`}>
+      <section
+        className={`flex min-h-0 flex-1 flex-col ${
+          !activeId ? (isSeeker ? "bg-white" : "bg-mist/20") : "bg-white"
+        } ${!activeId ? "hidden lg:flex" : "flex"}`}
+      >
         {!activeId ? (
-          <div className="flex flex-1 flex-col items-center justify-center text-center animate-fade-in">
-            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-ink/[0.04]">
+          <div className="flex flex-1 flex-col items-center justify-center px-6 text-center animate-fade-in">
+            <div
+              className={`mb-4 flex h-16 w-16 items-center justify-center rounded-2xl ${
+                isSeeker ? "bg-ink/[0.04]" : "bg-white shadow-sm ring-1 ring-ink/5"
+              }`}
+            >
               <MessageSquare className="h-8 w-8 text-ink/20" />
             </div>
             <p className="font-display text-base font-semibold text-ink/55">Select a conversation</p>
             <p className="mt-1 max-w-xs text-sm text-ink/35">
-              Pick a thread from the list to read and reply.
+              {isSeeker
+                ? "Pick a thread from the list to read and reply."
+                : "Choose a candidate from your inbox to continue the conversation."}
             </p>
           </div>
         ) : loadingThread || !thread ? (
@@ -702,6 +747,22 @@ export default function MessagesInbox({ role, fillNavClearance = false }: Props)
               </div>
 
               <div className="flex shrink-0 items-center gap-2">
+                {!isSeeker && thread.job && (
+                  <Link
+                    href={`/employer/jobs/${thread.job.id}/applicants`}
+                    className="hidden cursor-pointer rounded-lg border border-ink/10 bg-white px-3 py-1.5 text-xs font-semibold text-ink/65 transition hover:border-teal/25 hover:text-teal sm:inline-flex"
+                  >
+                    View pipeline
+                  </Link>
+                )}
+                {!isSeeker && (
+                  <Link
+                    href={`/employer/talent/${thread.seeker.id}`}
+                    className="hidden cursor-pointer rounded-lg border border-ink/10 bg-white px-3 py-1.5 text-xs font-semibold text-ink/65 transition hover:border-teal/25 hover:text-teal sm:inline-flex"
+                  >
+                    View profile
+                  </Link>
+                )}
                 {thread.job && isSeeker && (
                   <Link
                     href={`/jobs/${thread.job.id}`}
@@ -719,6 +780,29 @@ export default function MessagesInbox({ role, fillNavClearance = false }: Props)
                 </button>
               </div>
             </div>
+
+            {!isSeeker && (activeConversation?.applicationStatus || thread.job) && (
+              <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-ink/5 bg-mist/30 px-4 py-2 sm:px-6">
+                {activeConversation?.applicationStatus && (
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide ${statusBadgeClass(activeConversation.applicationStatus, false)}`}
+                  >
+                    {activeConversation.applicationStatus.replace(/_/g, " ")}
+                  </span>
+                )}
+                {thread.job && (
+                  <span className="truncate text-xs text-ink/45">
+                    Re:{" "}
+                    <Link
+                      href={`/employer/jobs/${thread.job.id}/applicants`}
+                      className="font-medium text-ink/60 transition hover:text-teal"
+                    >
+                      {thread.job.title}
+                    </Link>
+                  </span>
+                )}
+              </div>
+            )}
 
             {/* Messages */}
             <div
@@ -790,7 +874,11 @@ export default function MessagesInbox({ role, fillNavClearance = false }: Props)
             {/* Composer — extra right padding keeps clear of any fixed UI; search pill hidden on this route */}
             <form
               onSubmit={handleSend}
-              className={`shrink-0 border-t border-ink/8 py-4 ${isSeeker ? "px-4 sm:px-6" : "bg-mist/20 px-4 sm:px-5"}`}
+              className={`shrink-0 border-t border-ink/8 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] ${
+                isSeeker
+                  ? "px-4 sm:px-6"
+                  : "bg-white px-4 shadow-[0_-4px_12px_rgba(32,36,43,0.04)] sm:px-5"
+              }`}
             >
               {sendError && <p className="mb-2 text-xs text-ember">{sendError}</p>}
               <div className={composerWrap}>
