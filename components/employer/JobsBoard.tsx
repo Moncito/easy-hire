@@ -2,6 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import EmployerFilterChips from "@/components/employer/ui/EmployerFilterChips";
 import EmployerEmptyState from "@/components/employer/ui/EmployerEmptyState";
 import { EmployerPrimaryButton } from "@/components/employer/ui/EmployerPageHeader";
@@ -119,6 +120,10 @@ export default function JobsBoard({ jobs: initialJobs, companyVerified }: Props)
       setJobs((prev) =>
         prev.map((j) => (j.id === id ? { ...j, status: "CLOSED", needsAttention: false } : j))
       );
+      toast.success("Job closed");
+    } else {
+      const data = (await res.json().catch(() => null)) as { error?: string } | null;
+      toast.error(data?.error ?? "Could not close job");
     }
     setLoadingId(null);
   }
@@ -153,7 +158,11 @@ export default function JobsBoard({ jobs: initialJobs, companyVerified }: Props)
     });
 
     if (res.ok) {
+      toast.success("Job duplicated");
       router.refresh();
+    } else {
+      const data = (await res.json().catch(() => null)) as { error?: string } | null;
+      toast.error(data?.error ?? "Could not duplicate job");
     }
     setLoadingId(null);
   }

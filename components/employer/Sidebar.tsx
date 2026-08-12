@@ -13,6 +13,7 @@ import {
   MessageSquare,
   Search,
   PanelLeft,
+  CreditCard,
 } from "lucide-react";
 import { useEmployerShell } from "@/components/employer/EmployerShellContext";
 
@@ -30,6 +31,7 @@ const navItems = [
   { label: "Talent", href: "/employer/talent", icon: Search, badgeKey: null },
   { label: "Company", href: "/employer/company-profile", icon: Building2, badgeKey: null },
   { label: "Reports", href: "/employer/reports", icon: BarChart3, badgeKey: null },
+  { label: "Billing", href: "/employer/billing", icon: CreditCard, badgeKey: null },
 ];
 
 function NavLink({
@@ -37,11 +39,13 @@ function NavLink({
   isActive,
   expanded,
   badge,
+  isPro,
 }: {
   item: (typeof navItems)[number];
   isActive: boolean;
   expanded: boolean;
   badge?: number;
+  isPro?: boolean;
 }) {
   const Icon = item.icon;
 
@@ -53,8 +57,12 @@ function NavLink({
         expanded ? "gap-3 px-3 py-2.5" : "h-10 w-10 justify-center"
       } ${
         isActive
-          ? "bg-teal text-white shadow-lg shadow-teal/30"
-          : "text-mist/55 hover:bg-white/8 hover:text-mist"
+          ? isPro
+            ? "bg-ink/90 text-white shadow-md shadow-ink/15"
+            : "bg-teal text-white shadow-lg shadow-teal/30"
+          : isPro
+            ? "text-ink/55 hover:bg-ink/5 hover:text-ink"
+            : "text-mist/55 hover:bg-white/8 hover:text-mist"
       }`}
     >
       <Icon
@@ -83,20 +91,38 @@ function NavLink({
   );
 }
 
-export default function Sidebar({ navCounts }: { navCounts: NavCounts }) {
+export default function Sidebar({
+  navCounts,
+  plan = "FREE",
+}: {
+  navCounts: NavCounts;
+  plan?: "FREE" | "PRO";
+}) {
   const pathname = usePathname();
   const { expanded, toggleExpanded } = useEmployerShell();
+  const isPro = plan === "PRO";
 
   return (
     <aside
-      className={`employer-sidebar fixed left-0 top-0 z-40 hidden h-screen flex-col bg-navy transition-[width] duration-200 ease-out lg:flex ${
+      className={`employer-sidebar fixed left-0 top-0 z-40 hidden h-screen flex-col transition-[width] duration-200 ease-out lg:flex ${
         expanded ? "w-52" : "w-[60px]"
+      } ${
+        isPro
+          ? "border-r border-white/40 bg-white/55 shadow-[inset_-1px_0_0_rgba(255,255,255,0.6)] backdrop-blur-2xl backdrop-saturate-150"
+          : "bg-navy"
       }`}
     >
+      {isPro && expanded && (
+        <div className="flex shrink-0 items-center gap-1.5 px-4 pt-3">
+          <span className="h-2.5 w-2.5 rounded-full bg-[#ff5f57]" aria-hidden />
+          <span className="h-2.5 w-2.5 rounded-full bg-[#febc2e]" aria-hidden />
+          <span className="h-2.5 w-2.5 rounded-full bg-[#28c840]" aria-hidden />
+        </div>
+      )}
       <div
-        className={`flex h-14 shrink-0 items-center border-b border-white/5 ${
-          expanded ? "justify-between px-3" : "justify-center"
-        }`}
+        className={`flex h-14 shrink-0 items-center ${
+          isPro ? "border-b border-ink/5" : "border-b border-white/5"
+        } ${expanded ? "justify-between px-3" : "justify-center"}`}
       >
         <Link
           href="/"
@@ -111,7 +137,13 @@ export default function Sidebar({ navCounts }: { navCounts: NavCounts }) {
             />
           </div>
           {expanded && (
-            <span className="font-display text-base font-bold tracking-tight text-mist">EasyHire</span>
+            <span
+              className={`font-display text-base font-bold tracking-tight ${
+                isPro ? "text-ink" : "text-mist"
+              }`}
+            >
+              EasyHire{isPro ? " Pro" : ""}
+            </span>
           )}
         </Link>
         {expanded && (
@@ -156,6 +188,7 @@ export default function Sidebar({ navCounts }: { navCounts: NavCounts }) {
               isActive={isActive}
               expanded={expanded}
               badge={item.badgeKey ? navCounts[item.badgeKey] : undefined}
+              isPro={isPro}
             />
           );
         })}

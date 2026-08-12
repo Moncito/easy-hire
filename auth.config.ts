@@ -1,10 +1,12 @@
 import type { NextAuthConfig } from "next-auth";
+import { getAuthSecret } from "@/lib/auth-secret";
 
 // This file must stay Edge Runtime-safe: no Prisma, no bcrypt, no Node-only
 // imports. It's used by middleware.ts. The full config with providers lives
 // in auth.ts and is only used in Node.js runtime contexts (API routes,
 // Server Components, Server Actions).
 export const authConfig = {
+  secret: getAuthSecret(),
   pages: {
     signIn: "/login",
   },

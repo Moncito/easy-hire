@@ -3,6 +3,7 @@ import { Space_Grotesk, Inter, IBM_Plex_Mono } from "next/font/google";
 import { Toaster } from "sonner";
 import AuthProvider from "@/components/providers/AuthProvider";
 import CommandPalette from "@/components/CommandPalette";
+import { getSession } from "@/lib/employer-session";
 import "./globals.css";
 
 const spaceGrotesk = Space_Grotesk({
@@ -28,13 +29,15 @@ export const metadata: Metadata = {
   description: "Find verified VA jobs, or hire your next virtual assistant.",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  const session = await getSession();
+
   return (
     <html lang="en" className={`scroll-smooth ${spaceGrotesk.variable} ${inter.variable} ${ibmPlexMono.variable}`}>
       <body className="font-body antialiased">
-        <AuthProvider>
+        <AuthProvider session={session}>
           {children}
           <CommandPalette />
           <Toaster

@@ -1,3 +1,4 @@
+import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { headers } from "next/headers";
 import { createHash } from "crypto";
@@ -138,7 +139,7 @@ function computeHiringScore(input: {
   return Math.min(100, profilePoints + reviewPoints + pipelinePoints + activityPoints);
 }
 
-async function computeScorePercentile(score: number) {
+async function computeScorePercentileUncached(score: number) {
   const companies = await prisma.company.findMany({
     select: {
       id: true,
@@ -151,42 +152,61 @@ async function computeScorePercentile(score: number) {
       instagramUrl: true,
       xUrl: true,
       highlights: true,
-      jobs: {
-        where: { status: "ACTIVE" },
-        select: {
-          id: true,
-          _count: { select: { applications: true } },
-          applications: { select: { status: true } },
-        },
-      },
     },
   });
 
   if (companies.length < 5) return null;
 
-  const scores = companies.map((c) => {
-    const profileCompletion = computeProfileCompletion(c);
-    const allApps = c.jobs.flatMap((j) => j.applications);
-    const totalApplicants = allApps.length;
-    const reviewedCount = allApps.filter((a) => a.status !== "APPLIED").length;
-    const interviewCount = allApps.filter((a) => a.status === "INTERVIEW").length;
-    const hiredCount = allApps.filter((a) => a.status === "HIRED").length;
-    const activeJobs = c.jobs.length;
-    const activeJobsWithApplicants = c.jobs.filter((j) => j._count.applications > 0).length;
-    return computeHiringScore({
-      profileCompletion,
-      totalApplicants,
-      reviewedCount,
-      interviewCount,
-      hiredCount,
-      activeJobsWithApplicants,
-      activeJobs,
-    });
-  });
+  const scores = await Promise.all(
+    companies.map(async (c) => {
+      const [statusGroups, activeJobs, activeJobsWithApplicants] = await Promise.all([
+        prisma.application.groupBy({
+          by: ["status"],
+          where: { job: { companyId: c.id } },
+          _count: { _all: true },
+        }),
+        prisma.job.count({ where: { companyId: c.id, status: "ACTIVE" } }),
+        prisma.job.count({
+          where: {
+            companyId: c.id,
+            status: "ACTIVE",
+            applications: { some: {} },
+          },
+        }),
+      ]);
+
+      const statusMap = Object.fromEntries(
+        statusGroups.map((g) => [g.status, g._count._all])
+      ) as Record<string, number>;
+
+      const applied = statusMap.APPLIED ?? 0;
+      const reviewedCount =
+        (statusMap.SHORTLISTED ?? 0) +
+        (statusMap.INTERVIEW ?? 0) +
+        (statusMap.HIRED ?? 0) +
+        (statusMap.REJECTED ?? 0);
+
+      return computeHiringScore({
+        profileCompletion: computeProfileCompletion(c),
+        totalApplicants: applied + reviewedCount,
+        reviewedCount,
+        interviewCount: statusMap.INTERVIEW ?? 0,
+        hiredCount: statusMap.HIRED ?? 0,
+        activeJobsWithApplicants,
+        activeJobs,
+      });
+    })
+  );
 
   const below = scores.filter((s) => s < score).length;
   return Math.round((below / scores.length) * 100);
 }
+
+const computeScorePercentile = unstable_cache(
+  async (score: number) => computeScorePercentileUncached(score),
+  ["employer-score-percentile"],
+  { revalidate: 300 }
+);
 
 export async function getEmployerAnalytics(companyId: string): Promise<EmployerAnalytics> {
   const now = new Date();
@@ -196,6 +216,7 @@ export async function getEmployerAnalytics(companyId: string): Promise<EmployerA
   const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
   const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
   const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  const staleThreshold = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
 
   const company = await prisma.company.findUniqueOrThrow({
     where: { id: companyId },
@@ -211,10 +232,11 @@ export async function getEmployerAnalytics(companyId: string): Promise<EmployerA
     appsYesterday,
     activeJobs,
     jobViewCounts,
-    appsLast14Days,
-    interviewsLast14Days,
+    appsLastWeek,
+    interviewsLastWeek,
     recentApplications,
     unreadMessages,
+    interviewsPrevWeek,
   ] = await Promise.all([
     prisma.application.groupBy({
       by: ["status"],
@@ -240,9 +262,6 @@ export async function getEmployerAnalytics(companyId: string): Promise<EmployerA
       take: 6,
       include: {
         _count: { select: { applications: true } },
-        applications: {
-          select: { id: true, status: true, appliedAt: true },
-        },
       },
     }),
     prisma.jobView.groupBy({
@@ -251,14 +270,14 @@ export async function getEmployerAnalytics(companyId: string): Promise<EmployerA
       _count: { _all: true },
     }),
     prisma.application.findMany({
-      where: { job: { companyId }, appliedAt: { gte: twoWeeksAgo } },
+      where: { job: { companyId }, appliedAt: { gte: weekAgo } },
       select: { appliedAt: true },
     }),
     prisma.application.findMany({
       where: {
         job: { companyId },
         status: { in: ["INTERVIEW", "HIRED"] },
-        updatedAt: { gte: twoWeeksAgo },
+        updatedAt: { gte: weekAgo },
       },
       select: { updatedAt: true },
     }),
@@ -278,7 +297,42 @@ export async function getEmployerAnalytics(companyId: string): Promise<EmployerA
         sender: { role: "SEEKER" },
       },
     }),
+    prisma.application.count({
+      where: {
+        job: { companyId },
+        status: { in: ["INTERVIEW", "HIRED"] },
+        updatedAt: { gte: twoWeeksAgo, lt: weekAgo },
+      },
+    }),
   ]);
+
+  const activeJobIds = activeJobs.map((j) => j.id);
+  const [pipelineByJob, staleAppliedByJob] =
+    activeJobIds.length > 0
+      ? await Promise.all([
+          prisma.application.groupBy({
+            by: ["jobId", "status"],
+            where: { jobId: { in: activeJobIds } },
+            _count: { _all: true },
+          }),
+          prisma.application.groupBy({
+            by: ["jobId"],
+            where: {
+              jobId: { in: activeJobIds },
+              status: "APPLIED",
+              appliedAt: { lt: staleThreshold },
+            },
+            _count: { _all: true },
+          }),
+        ])
+      : [[], []];
+
+  const pipelineMap: Record<string, Record<string, number>> = {};
+  for (const row of pipelineByJob) {
+    if (!pipelineMap[row.jobId]) pipelineMap[row.jobId] = {};
+    pipelineMap[row.jobId][row.status] = row._count._all;
+  }
+  const staleJobIds = new Set(staleAppliedByJob.map((r) => r.jobId));
 
   const statusMap = Object.fromEntries(
     statusGroups.map((g) => [g.status, g._count._all])
@@ -308,18 +362,11 @@ export async function getEmployerAnalytics(companyId: string): Promise<EmployerA
     activeJobs: activeJobsCount,
   });
 
-  const scorePercentile = await computeScorePercentile(hiringScore);
+  const scorePercentile = null;
 
   const appsTodayChange = percentChange(appsToday, appsYesterday, 2);
 
   const interviewsThisWeek = interview;
-  const interviewsPrevWeek = await prisma.application.count({
-    where: {
-      job: { companyId },
-      status: { in: ["INTERVIEW", "HIRED"] },
-      updatedAt: { gte: twoWeeksAgo, lt: weekAgo },
-    },
-  });
   const interviewsChange = percentChange(interviewsThisWeek, interviewsPrevWeek, 3);
 
   function countByDay(items: { appliedAt?: Date; updatedAt?: Date }[], field: "appliedAt" | "updatedAt", dayList: Date[]) {
@@ -335,12 +382,12 @@ export async function getEmployerAnalytics(companyId: string): Promise<EmployerA
   }
 
   const weeklyTrend = {
-    applications: countByDay(appsLast14Days, "appliedAt", days),
-    interviews: countByDay(interviewsLast14Days, "updatedAt", days),
+    applications: countByDay(appsLastWeek, "appliedAt", days),
+    interviews: countByDay(interviewsLastWeek, "updatedAt", days),
   };
 
-  const appsTodaySparkline = countByDay(appsLast14Days, "appliedAt", days).map((d) => d.count);
-  const interviewsSparkline = countByDay(interviewsLast14Days, "updatedAt", days).map(
+  const appsTodaySparkline = countByDay(appsLastWeek, "appliedAt", days).map((d) => d.count);
+  const interviewsSparkline = countByDay(interviewsLastWeek, "updatedAt", days).map(
     (d) => d.count
   );
 
@@ -360,8 +407,6 @@ export async function getEmployerAnalytics(companyId: string): Promise<EmployerA
   } else if (activeJobsCount > 0) {
     marketInsight = "No new applications this week — consider refreshing job descriptions or expanding reach";
   }
-
-  const staleThreshold = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
 
   const attentionItems: AttentionItem[] = [];
   if (needsReview > 0) {
@@ -423,11 +468,10 @@ export async function getEmployerAnalytics(companyId: string): Promise<EmployerA
     weeklyTrend,
     insights: { actionRequired, marketInsight },
     activeJobs: activeJobs.map((job) => {
-      const unreviewedCount = job.applications.filter((a) => a.status === "APPLIED").length;
-      const hiredCount = job.applications.filter((a) => a.status === "HIRED").length;
-      const hasStale = job.applications.some(
-        (a) => a.status === "APPLIED" && a.appliedAt < staleThreshold
-      );
+      const pipeline = pipelineMap[job.id] ?? {};
+      const unreviewedCount = pipeline.APPLIED ?? 0;
+      const hiredCount = pipeline.HIRED ?? 0;
+      const hasStale = staleJobIds.has(job.id);
       return {
         id: job.id,
         title: job.title,

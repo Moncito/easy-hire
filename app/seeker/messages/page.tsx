@@ -1,11 +1,15 @@
-import { Suspense } from "react";
+import { redirect } from "next/navigation";
+import { auth } from "@/Auth";
 import MessagesInbox from "@/components/messages/MessagesInbox";
-import MessagesSkeleton from "@/components/messages/MessagesSkeleton";
+import { listConversationsForUserCached } from "@/lib/conversations-cache";
 
-export default function SeekerMessagesPage() {
-  return (
-    <Suspense fallback={<MessagesSkeleton showNavBand />}>
-      <MessagesInbox role="SEEKER" fillNavClearance />
-    </Suspense>
-  );
+export default async function SeekerMessagesPage() {
+  const session = await auth();
+  if (!session?.user || session.user.role !== "SEEKER") {
+    redirect("/login");
+  }
+
+  const conversations = await listConversationsForUserCached(session.user.id, "SEEKER");
+
+  return <MessagesInbox role="SEEKER" fillNavClearance initialConversations={conversations} />;
 }

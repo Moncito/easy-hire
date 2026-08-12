@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { ApiError } from "@/lib/api-error";
 import { adminJobReviewSchema } from "@/lib/validations/admin";
+import { invalidateEmployerWorkspace } from "@/lib/employer-cache";
 
 const JOB_LISTING_DAYS = 90;
 
@@ -71,6 +72,7 @@ export async function reviewJob(jobId: string, raw: unknown) {
       }),
     ]);
 
+    invalidateEmployerWorkspace(job.companyId);
     return updated;
   }
 
@@ -79,7 +81,10 @@ export async function reviewJob(jobId: string, raw: unknown) {
   const [updated] = await prisma.$transaction([
     prisma.job.update({
       where: { id: jobId },
-      data: { status: "DRAFT" },
+      data: {
+        status: "DRAFT",
+        reviewRejectionReason: reason,
+      },
     }),
     prisma.notification.create({
       data: {
@@ -90,5 +95,6 @@ export async function reviewJob(jobId: string, raw: unknown) {
     }),
   ]);
 
+  invalidateEmployerWorkspace(job.companyId);
   return updated;
 }

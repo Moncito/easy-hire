@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { auth } from "@/Auth";
 import { ArrowLeft, Download } from "lucide-react";
 import { getSeekerProfileForEmployer } from "@/lib/talent";
 import { ApiError } from "@/lib/api-error";
 import SeekerEmployerPreview from "@/components/seeker/SeekerEmployerPreview";
 import SaveSeekerButton from "@/components/employer/SaveSeekerButton";
 import MessageSeekerButton from "@/components/employer/MessageSeekerButton";
+import { requireEmployerPageContext } from "@/lib/employer-session";
 
 const STATUS_LABEL: Record<string, string> = {
   APPLIED: "Applied",
@@ -21,11 +21,7 @@ export default async function EmployerSeekerProfilePage({
 }: {
   params: Promise<{ seekerId: string }>;
 }) {
-  const session = await auth();
-  if (!session?.user || session.user.role !== "EMPLOYER") {
-    redirect("/login");
-  }
-
+  const { session } = await requireEmployerPageContext();
   const { seekerId } = await params;
 
   let data;

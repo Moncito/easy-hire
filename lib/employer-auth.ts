@@ -1,10 +1,15 @@
+import { cache } from "react";
 import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/lib/api-error";
 
-export async function requireEmployerCompany(userId: string) {
-  const company = await prisma.company.findUnique({
+export const getEmployerCompanyCached = cache(async (userId: string) => {
+  return prisma.company.findUnique({
     where: { userId },
   });
+});
+
+export async function requireEmployerCompany(userId: string) {
+  const company = await getEmployerCompanyCached(userId);
 
   if (!company) {
     throw new ApiError("Company not found", 404);

@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import { ApiError } from "@/lib/api-error";
 import { notifyApplicationSubmitted, notifyApplicationRejected } from "@/lib/email";
 import { applicationCreateSchema, applicationUpdateSchema } from "@/lib/validations/application";
+import { invalidateEmployerWorkspace } from "@/lib/employer-cache";
 
 export async function createApplication(seekerUserId: string, raw: unknown) {
   const input = applicationCreateSchema.parse(raw);
@@ -95,6 +96,7 @@ export async function createApplication(seekerUserId: string, raw: unknown) {
       jobId: job.id,
     });
 
+    invalidateEmployerWorkspace(job.companyId);
     return application;
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
@@ -117,7 +119,7 @@ export async function updateApplication(applicationId: string, raw: unknown) {
       },
       job: {
         include: {
-          company: { select: { companyName: true } },
+          company: { select: { companyName: true, id: true } },
         },
       },
     },
@@ -168,36 +170,46 @@ export async function updateApplication(applicationId: string, raw: unknown) {
     }).catch((err) => console.error("[applications] rejection notify failed:", err));
   }
 
+  invalidateEmployerWorkspace(existing.job.company.id);
   return updated;
 }
 
-export async function listJobApplications(jobId: string) {
-  return prisma.application.findMany({
-    where: { jobId },
-    orderBy: { appliedAt: "desc" },
-    include: {
-      seeker: {
-        select: {
-          id: true,
-          fullName: true,
-          headline: true,
-          skills: true,
-          resumeUrl: true,
-          location: true,
-          desiredSalaryMin: true,
-          desiredSalaryMax: true,
-          linkedinUrl: true,
-          portfolioUrl: true,
-          certifications: true,
-          photoUrl: true,
+export async function listJobApplications(jobId: string, page = 1, pageSize = 50) {
+  const skip = (page - 1) * pageSize;
+
+  const [applications, total] = await Promise.all([
+    prisma.application.findMany({
+      where: { jobId },
+      orderBy: { appliedAt: "desc" },
+      skip,
+      take: pageSize,
+      include: {
+        seeker: {
+          select: {
+            id: true,
+            fullName: true,
+            headline: true,
+            skills: true,
+            resumeUrl: true,
+            location: true,
+            desiredSalaryMin: true,
+            desiredSalaryMax: true,
+            linkedinUrl: true,
+            portfolioUrl: true,
+            certifications: true,
+            photoUrl: true,
+          },
+        },
+        answers: {
+          include: {
+            question: { select: { id: true, prompt: true, required: true, sortOrder: true } },
+          },
+          orderBy: { question: { sortOrder: "asc" } },
         },
       },
-      answers: {
-        include: {
-          question: { select: { id: true, prompt: true, required: true, sortOrder: true } },
-        },
-        orderBy: { question: { sortOrder: "asc" } },
-      },
-    },
-  });
+    }),
+    prisma.application.count({ where: { jobId } }),
+  ]);
+
+  return { applications, total, page, pageSize, totalPages: Math.ceil(total / pageSize) };
 }

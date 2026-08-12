@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { auth } from "@/Auth";
 import { errorResponse } from "@/lib/api-error";
 import { parseJsonBody } from "@/lib/parse-json-body";
-import { listConversationsForUser, createOrGetConversation } from "@/lib/messages";
+import { listConversationsForUserCached } from "@/lib/conversations-cache";
+import { createOrGetConversation } from "@/lib/messages";
 import { ZodError } from "zod";
 
 export const dynamic = "force-dynamic";
@@ -14,7 +15,7 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const conversations = await listConversationsForUser(session.user.id, session.user.role);
+    const conversations = await listConversationsForUserCached(session.user.id, session.user.role);
     return NextResponse.json(
       { conversations },
       { headers: { "Cache-Control": "no-store" } }

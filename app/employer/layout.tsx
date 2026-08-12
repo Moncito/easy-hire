@@ -1,28 +1,21 @@
-import { auth } from "@/Auth";
-import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import EmployerShell from "@/components/employer/EmployerShell";
-import { getEmployerNavCounts } from "@/lib/employer-analytics";
+import { requireEmployerLayoutContext } from "@/lib/employer-session";
 
 export default async function EmployerLayout({ children }: { children: React.ReactNode }) {
-  const session = await auth();
+  const ctx = await requireEmployerLayoutContext();
 
-  if (!session?.user || session.user.role !== "EMPLOYER") {
+  if (!ctx) {
     redirect("/login");
   }
 
-  const company = await prisma.company.findUnique({
-    where: { userId: session.user.id },
-  });
-
-  const navCounts = company
-    ? await getEmployerNavCounts(company.id)
-    : { activeJobs: 0, needsReview: 0, unreadMessages: 0 };
+  const { company, navCounts, plan } = ctx;
 
   return (
     <EmployerShell
       companyName={company?.companyName || "Your company"}
       verifiedStatus={company?.verifiedStatus || "PENDING"}
+      plan={plan}
       navCounts={{
         activeJobs: navCounts.activeJobs,
         needsReview: navCounts.needsReview,

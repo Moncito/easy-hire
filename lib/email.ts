@@ -1,6 +1,7 @@
 import { Resend } from "resend";
 import { prisma } from "@/lib/prisma";
 import { escapeHtml } from "@/lib/escape-html";
+import { invalidateEmployerNotifications } from "@/lib/employer-cache";
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 const fromAddress = process.env.EMAIL_FROM ?? "EasyHire <onboarding@resend.dev>";
@@ -25,9 +26,11 @@ export async function sendEmail(to: string, subject: string, html: string) {
 }
 
 export async function createNotification(userId: string, type: string, message: string) {
-  return prisma.notification.create({
+  const notification = await prisma.notification.create({
     data: { userId, type, message },
   });
+  invalidateEmployerNotifications(userId);
+  return notification;
 }
 
 type ApplicationEmailContext = {
@@ -90,4 +93,34 @@ export async function notifyApplicationRejected(ctx: {
        <p>You can continue browsing other opportunities on <a href="${appUrl}/jobs">EasyHire</a>.</p>`
     ),
   ]);
+}
+
+export async function sendJobAlertEmail(ctx: {
+  to: string;
+  seekerName: string;
+  frequency: "DAILY" | "WEEKLY";
+  jobs: Array<{ id: string; title: string; companyName: string; location: string }>;
+}): Promise<boolean> {
+  if (!resend) {
+    console.warn("[email] RESEND_API_KEY not set — skipped job alert digest");
+    return false;
+  }
+
+  const list = ctx.jobs
+    .slice(0, 10)
+    .map(
+      (j) =>
+        `<li><a href="${appUrl}/jobs/${j.id}"><strong>${escapeHtml(j.title)}</strong></a> — ${escapeHtml(j.companyName)} · ${escapeHtml(j.location)}</li>`
+    )
+    .join("");
+
+  await sendEmail(
+    ctx.to,
+    `Your ${ctx.frequency.toLowerCase()} job alert — ${ctx.jobs.length} new match${ctx.jobs.length === 1 ? "" : "es"}`,
+    `<p>Hi ${escapeHtml(ctx.seekerName)},</p>
+     <p>We found ${ctx.jobs.length} new job${ctx.jobs.length === 1 ? "" : "s"} matching your alert:</p>
+     <ul>${list}</ul>
+     <p><a href="${appUrl}/jobs">Browse all jobs</a></p>`
+  );
+  return true;
 }

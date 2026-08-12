@@ -2,10 +2,10 @@ import { NextResponse } from "next/server";
 import { auth } from "@/Auth";
 import { errorResponse } from "@/lib/api-error";
 import {
-  getEmployerNotifications,
-  getUnreadNotificationCount,
-  markNotificationsRead,
-} from "@/lib/notifications";
+  getEmployerNotificationsCached,
+  invalidateEmployerNotifications,
+} from "@/lib/employer-cache";
+import { markNotificationsRead } from "@/lib/notifications";
 
 export async function GET() {
   try {
@@ -14,12 +14,9 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const [notifications, unreadCount] = await Promise.all([
-      getEmployerNotifications(session.user.id),
-      getUnreadNotificationCount(session.user.id),
-    ]);
+    const { notifications, unreadCount } = await getEmployerNotificationsCached(session.user.id);
 
-    return NextResponse.json({ notifications, unreadCount }, { headers: { "Cache-Control": "no-store" } });
+    return NextResponse.json({ notifications, unreadCount });
   } catch (error) {
     return errorResponse(error);
   }
@@ -34,6 +31,7 @@ export async function PATCH(req: Request) {
 
     const body = (await req.json()) as { ids?: string[] };
     await markNotificationsRead(session.user.id, body.ids);
+    invalidateEmployerNotifications(session.user.id);
 
     return NextResponse.json({ ok: true });
   } catch (error) {

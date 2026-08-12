@@ -1,8 +1,12 @@
 import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/lib/api-error";
 import { jobInputSchema, jobInputToData, type JobInput } from "@/lib/validations/job";
-
-type JobStatus = "DRAFT" | "PENDING_REVIEW" | "ACTIVE" | "CLOSED";
+import {
+  assertEmployerStatusTransition,
+  type JobStatus,
+} from "@/lib/job-status";
+import { canAutoPublishJob, publishJobLive } from "@/lib/subscriptions";
+import { invalidateEmployerWorkspace } from "@/lib/employer-cache";
 
 const SUBMITTABLE_STATUSES: JobStatus[] = ["DRAFT", "PENDING_REVIEW"];
 
@@ -26,7 +30,7 @@ export async function listEmployerJobs(companyId: string) {
 
 export async function createJob(companyId: string, raw: unknown) {
   const input = jobInputSchema.parse(raw);
-  return prisma.job.create({
+  const job = await prisma.job.create({
     data: {
       companyId,
       ...jobInputToData(input),
@@ -39,13 +43,25 @@ export async function createJob(companyId: string, raw: unknown) {
       screeningQuestions: { orderBy: { sortOrder: "asc" } },
     },
   });
+  invalidateEmployerWorkspace(companyId);
+  return job;
 }
 
-export async function updateJob(jobId: string, existingStatus: JobStatus, raw: unknown) {
+export async function updateJob(
+  jobId: string,
+  existingStatus: JobStatus,
+  raw: unknown,
+  companyId?: string
+) {
   const input = jobInputSchema.parse(raw);
-  const newStatus = existingStatus === "ACTIVE" ? "PENDING_REVIEW" : existingStatus;
+  let newStatus = existingStatus;
 
-  return prisma.$transaction(async (tx) => {
+  if (existingStatus === "ACTIVE") {
+    const autoPublish = companyId ? await canAutoPublishJob(companyId) : false;
+    newStatus = autoPublish ? "ACTIVE" : "PENDING_REVIEW";
+  }
+
+  const updated = await prisma.$transaction(async (tx) => {
     await tx.screeningQuestion.deleteMany({ where: { jobId } });
 
     return tx.job.update({
@@ -62,23 +78,43 @@ export async function updateJob(jobId: string, existingStatus: JobStatus, raw: u
       },
     });
   });
+
+  if (companyId) invalidateEmployerWorkspace(companyId);
+  return updated;
 }
 
-export async function updateJobStatus(jobId: string, status: JobStatus) {
-  return prisma.job.update({
+export async function updateJobStatus(
+  jobId: string,
+  status: JobStatus,
+  currentStatus: JobStatus,
+  companyId?: string
+) {
+  assertEmployerStatusTransition(currentStatus, status);
+
+  const updated = await prisma.job.update({
     where: { id: jobId },
     data: { status },
   });
+
+  const resolvedCompanyId =
+    companyId ??
+    (await prisma.job.findUnique({ where: { id: jobId }, select: { companyId: true } }))?.companyId;
+
+  if (resolvedCompanyId) invalidateEmployerWorkspace(resolvedCompanyId);
+  return updated;
 }
 
-export async function submitJobForReview(job: {
-  id: string;
-  status: JobStatus;
-  title: string;
-  description: string;
-  category: string;
-  location: string;
-}) {
+export async function submitJobForReview(
+  job: {
+    id: string;
+    status: JobStatus;
+    title: string;
+    description: string;
+    category: string;
+    location: string;
+  },
+  companyId: string
+) {
   if (!SUBMITTABLE_STATUSES.includes(job.status)) {
     throw new ApiError("Only draft or pending jobs can be submitted for review", 400);
   }
@@ -87,10 +123,19 @@ export async function submitJobForReview(job: {
     throw new ApiError("Complete all required fields before submitting for review", 400);
   }
 
-  return prisma.job.update({
-    where: { id: job.id },
-    data: { status: "PENDING_REVIEW" },
-  });
+  const autoPublish = await canAutoPublishJob(companyId);
+  const updated = autoPublish
+    ? await publishJobLive(job.id)
+    : await prisma.job.update({
+        where: { id: job.id },
+        data: {
+          status: "PENDING_REVIEW",
+          reviewRejectionReason: null,
+        },
+      });
+
+  invalidateEmployerWorkspace(companyId);
+  return updated;
 }
 
 export function parseJobInput(raw: unknown) {

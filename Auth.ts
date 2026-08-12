@@ -14,29 +14,44 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   session: { strategy: "jwt" },
   callbacks: {
     async jwt({ token, user }) {
+      const ROLE_REFRESH_MS = 15 * 60 * 1000;
+
       if (user) {
         token.id = user.id;
         token.role = (user as { role?: string }).role;
+        token.roleRefreshedAt = Date.now();
+        return token;
+      }
+
+      const lastRefresh = (token.roleRefreshedAt as number | undefined) ?? 0;
+      const needsRefresh = Date.now() - lastRefresh > ROLE_REFRESH_MS;
+
+      if (!needsRefresh && token.id && token.role) {
+        return token;
       }
 
       // Auth.js replaces OAuth user.id with a random UUID (see getUserAndAccount
-      // in @auth/core). Always resolve to the real DB user — email is reliable
-      // for Google sign-in; id lookup covers credentials sign-in.
-      const email = token.email as string | undefined;
-      const dbUser = email
-        ? await prisma.user.findUnique({ where: { email }, select: { id: true, role: true } })
-        : token.id
-          ? await prisma.user.findUnique({
-              where: { id: token.id as string },
-              select: { id: true, role: true },
-            })
-          : null;
+      // in @auth/core). Refresh from DB periodically or when id/role is missing.
+      try {
+        const email = token.email as string | undefined;
+        const dbUser = email
+          ? await prisma.user.findUnique({ where: { email }, select: { id: true, role: true } })
+          : token.id
+            ? await prisma.user.findUnique({
+                where: { id: token.id as string },
+                select: { id: true, role: true },
+              })
+            : null;
 
-      if (dbUser) {
-        token.id = dbUser.id;
-        token.role = dbUser.role;
+        if (dbUser) {
+          token.id = dbUser.id;
+          token.role = dbUser.role;
+        }
+      } catch (err) {
+        console.error("[auth] jwt role refresh failed:", err);
       }
 
+      token.roleRefreshedAt = Date.now();
       return token;
     },
     async session({ session, token }) {
