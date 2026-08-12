@@ -32,19 +32,23 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
       // Auth.js replaces OAuth user.id with a random UUID (see getUserAndAccount
       // in @auth/core). Refresh from DB periodically or when id/role is missing.
-      const email = token.email as string | undefined;
-      const dbUser = email
-        ? await prisma.user.findUnique({ where: { email }, select: { id: true, role: true } })
-        : token.id
-          ? await prisma.user.findUnique({
-              where: { id: token.id as string },
-              select: { id: true, role: true },
-            })
-          : null;
+      try {
+        const email = token.email as string | undefined;
+        const dbUser = email
+          ? await prisma.user.findUnique({ where: { email }, select: { id: true, role: true } })
+          : token.id
+            ? await prisma.user.findUnique({
+                where: { id: token.id as string },
+                select: { id: true, role: true },
+              })
+            : null;
 
-      if (dbUser) {
-        token.id = dbUser.id;
-        token.role = dbUser.role;
+        if (dbUser) {
+          token.id = dbUser.id;
+          token.role = dbUser.role;
+        }
+      } catch (err) {
+        console.error("[auth] jwt role refresh failed:", err);
       }
 
       token.roleRefreshedAt = Date.now();
