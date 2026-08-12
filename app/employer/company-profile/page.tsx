@@ -1,17 +1,13 @@
-import { auth } from "@/Auth";
-import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
+import { prisma } from "@/lib/prisma";
 import CompanyProfileEditor from "@/components/employer/CompanyProfileEditor";
+import { requireEmployerPageContext } from "@/lib/employer-session";
 
 export default async function CompanyProfilePage() {
-  const session = await auth();
-
-  if (!session?.user || session.user.role !== "EMPLOYER") {
-    redirect("/login");
-  }
+  const { company: baseCompany } = await requireEmployerPageContext();
 
   const company = await prisma.company.findUnique({
-    where: { userId: session.user.id },
+    where: { id: baseCompany.id },
     include: {
       verificationDocuments: { orderBy: { uploadedAt: "desc" } },
     },

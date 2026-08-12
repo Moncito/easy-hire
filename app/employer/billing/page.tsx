@@ -1,15 +1,12 @@
 import Link from "next/link";
-import { requireEmployerLayoutContext } from "@/lib/employer-session";
+import { requireEmployerPageContext } from "@/lib/employer-session";
 import { getCompanySubscription } from "@/lib/subscriptions";
-import { redirect } from "next/navigation";
 import EmployerPageHeader from "@/components/employer/ui/EmployerPageHeader";
 
 export default async function EmployerBillingPage() {
-  const ctx = await requireEmployerLayoutContext();
-  if (!ctx?.company) redirect("/employer/company-profile");
-
-  const subscription = await getCompanySubscription(ctx.company.id);
-  const isPro = ctx.plan === "PRO";
+  const { company, plan } = await requireEmployerPageContext();
+  const subscription = await getCompanySubscription(company.id);
+  const isPro = plan === "PRO";
 
   return (
     <>

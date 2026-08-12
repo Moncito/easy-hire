@@ -1,30 +1,15 @@
-import { auth } from "@/Auth";
-import { prisma } from "@/lib/prisma";
-import { redirect } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { getEmployerAnalytics } from "@/lib/employer-analytics";
+import { getEmployerAnalyticsCached } from "@/lib/employer-cache";
+import { requireEmployerPageContext } from "@/lib/employer-session";
 import HiringScoreGauge from "@/components/employer/dashboard/HiringScoreGauge";
 import HiringFunnel from "@/components/employer/dashboard/HiringFunnel";
 import WeeklyTrendChart from "@/components/employer/charts/WeeklyTrendChart";
 import Sparkline from "@/components/employer/charts/Sparkline";
 
 export default async function EmployerReportsPage() {
-  const session = await auth();
-
-  if (!session?.user || session.user.role !== "EMPLOYER") {
-    redirect("/login");
-  }
-
-  const company = await prisma.company.findUnique({
-    where: { userId: session.user.id },
-  });
-
-  if (!company) {
-    redirect("/employer/company-profile");
-  }
-
-  const analytics = await getEmployerAnalytics(company.id);
+  const { company } = await requireEmployerPageContext();
+  const analytics = await getEmployerAnalyticsCached(company.id);
   const { metrics, weeklyTrend, funnel } = analytics;
 
   const dayLabels = weeklyTrend.applications.map((d) => {

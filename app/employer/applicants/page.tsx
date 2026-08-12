@@ -1,29 +1,18 @@
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import ApplicantsPageHeader from "@/components/employer/ApplicantsPageHeader";
 import ApplicantsHubBoard from "@/components/employer/ApplicantsHubBoard";
 import AttentionStrip from "@/components/employer/dashboard/AttentionStrip";
 import {
-  getEmployerJobsWithMetrics,
   getApplicantsPageAttentionItems,
 } from "@/lib/employer-jobs";
+import { getEmployerJobsWithMetricsCached } from "@/lib/employer-cache";
+import { requireEmployerPageContext } from "@/lib/employer-session";
 import ApplicantsHubSkeleton from "@/components/employer/skeletons/ApplicantsHubSkeleton";
-import { requireEmployerLayoutContext } from "@/lib/employer-session";
-import { Suspense } from "react";
 
 export default async function EmployerApplicantsPage() {
-  const ctx = await requireEmployerLayoutContext();
-
-  if (!ctx) {
-    redirect("/login");
-  }
-
-  const { company } = ctx;
-
-  if (!company) {
-    redirect("/employer/company-profile");
-  }
-
-  const { jobs, summary } = await getEmployerJobsWithMetrics(company.id);
+  const { company } = await requireEmployerPageContext();
+  const { jobs, summary } = await getEmployerJobsWithMetricsCached(company.id);
   const companyVerified = company.verifiedStatus === "APPROVED";
   const jobsWithApplicants = jobs.filter((j) => j.applicantCount > 0).length;
   const attentionItems = getApplicantsPageAttentionItems(jobs);

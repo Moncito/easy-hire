@@ -14,7 +14,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   session: { strategy: "jwt" },
   callbacks: {
     async jwt({ token, user }) {
-      const ROLE_REFRESH_MS = 5 * 60 * 1000;
+      const ROLE_REFRESH_MS = 15 * 60 * 1000;
 
       if (user) {
         token.id = user.id;

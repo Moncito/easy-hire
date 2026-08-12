@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/Auth";
 import { errorResponse } from "@/lib/api-error";
-import { searchTalent } from "@/lib/talent";
+import { searchTalentCached } from "@/lib/employer-cache";
 import { ZodError } from "zod";
 
 export const dynamic = "force-dynamic";
@@ -14,7 +14,7 @@ export async function GET(req: Request) {
     }
 
     const params = Object.fromEntries(new URL(req.url).searchParams);
-    const result = await searchTalent(session.user.id, params);
+    const result = await searchTalentCached(session.user.id, params);
     return NextResponse.json(result, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     if (error instanceof ZodError) {

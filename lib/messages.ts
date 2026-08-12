@@ -3,6 +3,7 @@ import { isDiscoverableInTalentSearch } from "@/lib/seeker-profile-format";
 import { Prisma } from "@prisma/client";
 import { ApiError } from "@/lib/api-error";
 import { createNotification } from "@/lib/email";
+import { invalidateEmployerNav } from "@/lib/employer-cache";
 import { requireEmployerCompany } from "@/lib/employer-auth";
 import {
   conversationCreateSchema,
@@ -386,6 +387,10 @@ export async function sendMessage(
     ).catch((err) => console.error("[messages] notification failed:", err));
   }
 
+  if (role === "EMPLOYER") {
+    invalidateEmployerNav(conversation.company.id);
+  }
+
   return {
     id: message.id,
     body: message.body,
@@ -397,7 +402,7 @@ export async function sendMessage(
 }
 
 export async function markConversationRead(userId: string, role: string, conversationId: string) {
-  await requireConversationAccess(userId, role, conversationId);
+  const conversation = await requireConversationAccess(userId, role, conversationId);
 
   await prisma.message.updateMany({
     where: {
@@ -407,6 +412,10 @@ export async function markConversationRead(userId: string, role: string, convers
     },
     data: { readAt: new Date() },
   });
+
+  if (role === "EMPLOYER") {
+    invalidateEmployerNav(conversation.company.id);
+  }
 
   return { ok: true };
 }

@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import ApplicantsBoard from "@/components/employer/ApplicantsBoard";
-import { getEmployerCompanyByUserId, getSession } from "@/lib/employer-session";
+import { requireEmployerPageContext } from "@/lib/employer-session";
 import { listJobApplications } from "@/lib/applications";
 import { prisma } from "@/lib/prisma";
 
@@ -13,23 +13,14 @@ export default async function ApplicantsPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ page?: string }>;
 }) {
-  const session = await getSession();
-
-  if (!session?.user || session.user.role !== "EMPLOYER") {
-    redirect("/login");
-  }
-
+  const { company } = await requireEmployerPageContext();
   const { id } = await params;
   const { page: pageParam } = await searchParams;
   const page = Math.max(1, Number(pageParam) || 1);
 
-  const company = await getEmployerCompanyByUserId(session.user.id);
-
-  const job = company
-    ? await prisma.job.findFirst({
-        where: { id, companyId: company.id },
-      })
-    : null;
+  const job = await prisma.job.findFirst({
+    where: { id, companyId: company.id },
+  });
 
   if (!job) {
     redirect("/employer/jobs");

@@ -1,7 +1,8 @@
 import { cache } from "react";
+import { redirect } from "next/navigation";
 import { auth } from "@/Auth";
 import { prisma } from "@/lib/prisma";
-import { getEmployerNavCounts } from "@/lib/employer-analytics";
+import { getEmployerNavCountsCached } from "@/lib/employer-cache";
 import { getCompanyPlan, type SubscriptionPlan } from "@/lib/subscriptions";
 
 export const getSession = cache(async () => auth());
@@ -12,13 +13,16 @@ export const getEmployerCompanyByUserId = cache(async (userId: string) => {
   });
 });
 
-export const getEmployerNavCountsCached = cache(async (companyId: string) => {
-  return getEmployerNavCounts(companyId);
-});
-
 export const getEmployerPlanCached = cache(async (companyId: string): Promise<SubscriptionPlan> => {
   return getCompanyPlan(companyId);
 });
+
+export type EmployerLayoutContext = {
+  session: NonNullable<Awaited<ReturnType<typeof getSession>>>;
+  company: NonNullable<Awaited<ReturnType<typeof getEmployerCompanyByUserId>>>;
+  navCounts: Awaited<ReturnType<typeof getEmployerNavCountsCached>>;
+  plan: SubscriptionPlan;
+};
 
 export async function requireEmployerLayoutContext() {
   const session = await getSession();
@@ -33,4 +37,12 @@ export async function requireEmployerLayoutContext() {
   const plan = company ? await getEmployerPlanCached(company.id) : ("FREE" as SubscriptionPlan);
 
   return { session, company, navCounts, plan };
+}
+
+/** Layout + pages: ensures employer is signed in and has a company row. */
+export async function requireEmployerPageContext(): Promise<EmployerLayoutContext> {
+  const ctx = await requireEmployerLayoutContext();
+  if (!ctx) redirect("/login");
+  if (!ctx.company) redirect("/employer/company-profile");
+  return ctx as EmployerLayoutContext;
 }

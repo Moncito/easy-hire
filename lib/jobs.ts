@@ -6,6 +6,7 @@ import {
   type JobStatus,
 } from "@/lib/job-status";
 import { canAutoPublishJob, publishJobLive } from "@/lib/subscriptions";
+import { invalidateEmployerWorkspace } from "@/lib/employer-cache";
 
 const SUBMITTABLE_STATUSES: JobStatus[] = ["DRAFT", "PENDING_REVIEW"];
 
@@ -29,7 +30,7 @@ export async function listEmployerJobs(companyId: string) {
 
 export async function createJob(companyId: string, raw: unknown) {
   const input = jobInputSchema.parse(raw);
-  return prisma.job.create({
+  const job = await prisma.job.create({
     data: {
       companyId,
       ...jobInputToData(input),
@@ -42,6 +43,8 @@ export async function createJob(companyId: string, raw: unknown) {
       screeningQuestions: { orderBy: { sortOrder: "asc" } },
     },
   });
+  invalidateEmployerWorkspace(companyId);
+  return job;
 }
 
 export async function updateJob(
@@ -58,7 +61,7 @@ export async function updateJob(
     newStatus = autoPublish ? "ACTIVE" : "PENDING_REVIEW";
   }
 
-  return prisma.$transaction(async (tx) => {
+  const updated = await prisma.$transaction(async (tx) => {
     await tx.screeningQuestion.deleteMany({ where: { jobId } });
 
     return tx.job.update({
@@ -75,19 +78,30 @@ export async function updateJob(
       },
     });
   });
+
+  if (companyId) invalidateEmployerWorkspace(companyId);
+  return updated;
 }
 
 export async function updateJobStatus(
   jobId: string,
   status: JobStatus,
-  currentStatus: JobStatus
+  currentStatus: JobStatus,
+  companyId?: string
 ) {
   assertEmployerStatusTransition(currentStatus, status);
 
-  return prisma.job.update({
+  const updated = await prisma.job.update({
     where: { id: jobId },
     data: { status },
   });
+
+  const resolvedCompanyId =
+    companyId ??
+    (await prisma.job.findUnique({ where: { id: jobId }, select: { companyId: true } }))?.companyId;
+
+  if (resolvedCompanyId) invalidateEmployerWorkspace(resolvedCompanyId);
+  return updated;
 }
 
 export async function submitJobForReview(
@@ -110,17 +124,18 @@ export async function submitJobForReview(
   }
 
   const autoPublish = await canAutoPublishJob(companyId);
-  if (autoPublish) {
-    return publishJobLive(job.id);
-  }
+  const updated = autoPublish
+    ? await publishJobLive(job.id)
+    : await prisma.job.update({
+        where: { id: job.id },
+        data: {
+          status: "PENDING_REVIEW",
+          reviewRejectionReason: null,
+        },
+      });
 
-  return prisma.job.update({
-    where: { id: job.id },
-    data: {
-      status: "PENDING_REVIEW",
-      reviewRejectionReason: null,
-    },
-  });
+  invalidateEmployerWorkspace(companyId);
+  return updated;
 }
 
 export function parseJobInput(raw: unknown) {

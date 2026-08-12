@@ -34,7 +34,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
     if (body.status && Object.keys(body).length === 1) {
       const { status } = jobStatusUpdateSchema.parse(body);
-      const updatedJob = await updateJobStatus(id, status, existingJob.status);
+      const updatedJob = await updateJobStatus(id, status, existingJob.status, company.id);
       return NextResponse.json(updatedJob);
     }
 

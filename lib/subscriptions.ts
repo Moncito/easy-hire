@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { invalidateEmployerWorkspace } from "@/lib/employer-cache";
 
 export type SubscriptionPlan = "FREE" | "PRO";
 
@@ -34,7 +35,7 @@ export async function publishJobLive(jobId: string) {
   const expiresAt = new Date(now);
   expiresAt.setDate(expiresAt.getDate() + JOB_LISTING_DAYS);
 
-  return prisma.job.update({
+  const updated = await prisma.job.update({
     where: { id: jobId },
     data: {
       status: "ACTIVE",
@@ -42,7 +43,11 @@ export async function publishJobLive(jobId: string) {
       expiresAt,
       reviewRejectionReason: null,
     },
+    select: { companyId: true },
   });
+
+  invalidateEmployerWorkspace(updated.companyId);
+  return prisma.job.findUniqueOrThrow({ where: { id: jobId } });
 }
 
 export async function getCompanySubscription(companyId: string) {
