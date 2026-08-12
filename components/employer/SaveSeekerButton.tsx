@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Bookmark, BookmarkCheck } from "lucide-react";
 import { toast } from "sonner";
+import { saveSeeker, unsaveSeeker } from "@/lib/client/saved-seekers";
 
 type Props = {
   seekerId: string;
@@ -22,13 +23,7 @@ export default function SaveSeekerButton({ seekerId, saved, onToggle }: Props) {
     setPending(true);
 
     try {
-      const res = next
-        ? await fetch("/api/employer/saved-seekers", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ seekerId }),
-          })
-        : await fetch(`/api/employer/saved-seekers/${seekerId}`, { method: "DELETE" });
+      const res = next ? await saveSeeker(seekerId) : await unsaveSeeker(seekerId);
 
       if (!res.ok) throw new Error("Failed");
     } catch {

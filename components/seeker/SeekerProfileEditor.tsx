@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { ChevronDown, FileText, Plus, Upload, X } from "lucide-react";
 import { formatPesoRange } from "@/lib/format";
+import { updateSeekerProfile } from "@/lib/client/profile";
+import { uploadPhoto, uploadResume } from "@/lib/client/uploads";
 import SeekerEmployerPreview from "@/components/seeker/SeekerEmployerPreview";
 import ProfileBucketNav from "@/components/seeker/ProfileBucketNav";
 import {
@@ -310,21 +312,18 @@ export default function SeekerProfileEditor({
   async function handleResumeUpload(file: File) {
     setUploading(true);
     setError("");
-    const body = new FormData();
-    body.append("file", file);
     try {
-      const res = await fetch("/api/upload/resume", { method: "POST", body });
-      const result = await parseJsonResponse(res);
-      if (!res.ok) {
-        const msg = (result as { error?: string }).error || "Resume upload failed";
+      const result = await uploadResume(file);
+      if (!result.ok) {
+        const msg = result.data.error || "Resume upload failed";
         setError(msg);
         toast.error(msg);
         return;
       }
-      setResumeUrl((result as { resumeUrl?: string | null }).resumeUrl ?? resumeUrl);
-      const updatedAt = (result as { resumeUpdatedAt?: string | null }).resumeUpdatedAt;
+      setResumeUrl(result.data.resumeUrl ?? resumeUrl);
+      const updatedAt = (result.data as { resumeUpdatedAt?: string | null }).resumeUpdatedAt;
       if (updatedAt) setResumeUpdatedAt(updatedAt);
-      const newResumes = (result as { resumes?: string[] }).resumes;
+      const newResumes = (result.data as { resumes?: string[] }).resumes;
       if (newResumes) updateField("resumes", newResumes);
       toast.success("Resume uploaded");
     } finally {
@@ -335,18 +334,15 @@ export default function SeekerProfileEditor({
   async function handlePhotoUpload(file: File) {
     setPhotoUploading(true);
     setError("");
-    const body = new FormData();
-    body.append("file", file);
     try {
-      const res = await fetch("/api/upload/photo", { method: "POST", body });
-      const result = await parseJsonResponse(res);
-      if (!res.ok) {
-        const msg = (result as { error?: string }).error || "Photo upload failed";
+      const result = await uploadPhoto(file);
+      if (!result.ok) {
+        const msg = result.data.error || "Photo upload failed";
         setError(msg);
         toast.error(msg);
         return;
       }
-      setPhotoUrl((result as { photoUrl?: string }).photoUrl ?? null);
+      setPhotoUrl((result.data as { photoUrl?: string }).photoUrl ?? null);
       toast.success("Photo uploaded");
     } finally {
       setPhotoUploading(false);
@@ -366,39 +362,33 @@ export default function SeekerProfileEditor({
     setLoading(true);
 
     try {
-      const res = await fetch("/api/profile/seeker", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          fullName: form.fullName,
-          phone: form.phone || null,
-          location: form.location || null,
-          headline: form.headline || null,
-          bio: form.bio || null,
-          skills: form.skills,
-          availability: form.availability,
-          yearsExperience: form.yearsExperience,
-          desiredSalaryMin: form.desiredSalaryMin || null,
-          desiredSalaryMax: form.desiredSalaryMax || null,
-          resumeUrl,
-          resumeLabel: form.resumeLabel || null,
-          resumes: form.resumes,
-          photoUrl,
-          linkedinUrl: form.linkedinUrl || "",
-          portfolioUrl: form.portfolioUrl || "",
-          certifications: form.certifications,
-          languages: form.languages,
-          workExperience: form.workExperience,
-          education: form.education,
-          timezone: form.timezone,
-          visibility: form.visibility,
-        }),
+      const result = await updateSeekerProfile({
+        fullName: form.fullName,
+        phone: form.phone || null,
+        location: form.location || null,
+        headline: form.headline || null,
+        bio: form.bio || null,
+        skills: form.skills,
+        availability: form.availability,
+        yearsExperience: form.yearsExperience,
+        desiredSalaryMin: form.desiredSalaryMin || null,
+        desiredSalaryMax: form.desiredSalaryMax || null,
+        resumeUrl,
+        resumeLabel: form.resumeLabel || null,
+        resumes: form.resumes,
+        photoUrl,
+        linkedinUrl: form.linkedinUrl || "",
+        portfolioUrl: form.portfolioUrl || "",
+        certifications: form.certifications,
+        languages: form.languages,
+        workExperience: form.workExperience,
+        education: form.education,
+        timezone: form.timezone,
+        visibility: form.visibility,
       });
 
-      const result = await parseJsonResponse(res);
-
-      if (!res.ok) {
-        const msg = (result as { error?: string }).error || "Failed to save profile";
+      if (!result.ok) {
+        const msg = result.data.error || "Failed to save profile";
         setError(msg);
         toast.error(msg);
         return;

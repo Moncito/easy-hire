@@ -1,19 +1,14 @@
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/prisma";
 import EditJobForm from "@/components/employer/EditJobForm";
 import JobFormPageShell from "@/components/employer/JobFormPageShell";
 import { requireEmployerPageContext } from "@/lib/employer-session";
+import { getEmployerJobForEdit } from "@/lib/employer-jobs";
 
 export default async function EditJobPage({ params }: { params: Promise<{ id: string }> }) {
   const { company } = await requireEmployerPageContext();
   const { id } = await params;
 
-  const job = await prisma.job.findFirst({
-    where: { id, companyId: company.id },
-    include: {
-      screeningQuestions: { orderBy: { sortOrder: "asc" } },
-    },
-  });
+  const job = await getEmployerJobForEdit(company.id, id);
 
   if (!job) {
     redirect("/employer/jobs");

@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import ApplicantsBoard from "@/components/employer/ApplicantsBoard";
 import { requireEmployerPageContext } from "@/lib/employer-session";
 import { listJobApplications } from "@/lib/applications";
-import { prisma } from "@/lib/prisma";
+import { getEmployerJobForApplicants } from "@/lib/employer-jobs";
 
 const PAGE_SIZE = 50;
 
@@ -18,9 +18,7 @@ export default async function ApplicantsPage({
   const { page: pageParam } = await searchParams;
   const page = Math.max(1, Number(pageParam) || 1);
 
-  const job = await prisma.job.findFirst({
-    where: { id, companyId: company.id },
-  });
+  const job = await getEmployerJobForApplicants(company.id, id);
 
   if (!job) {
     redirect("/employer/jobs");

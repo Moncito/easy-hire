@@ -12,6 +12,8 @@ import type { CandidateApplication } from "./candidate-detail/types";
 import { mergeApplicationUpdate } from "./candidate-detail/utils";
 import { CheckSquare } from "lucide-react";
 import { appendInternalNote } from "@/lib/candidate-notes";
+import { patchApplication } from "@/lib/client/applications";
+import { startConversation } from "@/lib/client/conversations";
 
 type Application = CandidateApplication;
 
@@ -75,19 +77,12 @@ export default function ApplicantsBoard({
     [applications, navIndex]
   );
 
-  async function patchApplication(id: string, body: Record<string, unknown>) {
-    const res = await fetch(`/api/applications/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-
-    if (!res.ok) {
-      const result = await res.json();
-      throw new Error(result.error || "Update failed");
+  async function patchApplicationLocal(id: string, body: Record<string, unknown>) {
+    try {
+      return await patchApplication(id, body);
+    } catch (err) {
+      throw new Error(err instanceof Error ? err.message : "Update failed");
     }
-
-    return res.json() as Promise<Partial<Application>>;
   }
 
   function syncUpdated(id: string, updated: Partial<Application>) {
@@ -127,8 +122,8 @@ export default function ApplicantsBoard({
     }
 
     try {
-      const updated = await patchApplication(id, { status: newStatus });
-      syncUpdated(id, updated);
+      const updated = await patchApplicationLocal(id, { status: newStatus });
+      syncUpdated(id, updated as Partial<Application>);
     } catch {
       setApplications(previous);
       setSelectedApp(previousSelected);
@@ -151,7 +146,7 @@ export default function ApplicantsBoard({
     try {
       const results = await Promise.all(
         ids.map((id) =>
-          patchApplication(id, {
+          patchApplicationLocal(id, {
             status: "REJECTED",
             rejectionReason: reason || null,
           })
@@ -205,7 +200,7 @@ export default function ApplicantsBoard({
     );
 
     try {
-      const results = await Promise.all(ids.map((id) => patchApplication(id, { status })));
+      const results = await Promise.all(ids.map((id) => patchApplicationLocal(id, { status })));
       setApplications((prev) =>
         prev.map((app) => {
           const updated = results.find((r) => r.id === app.id);
@@ -229,10 +224,10 @@ export default function ApplicantsBoard({
         employerName,
         noteInput.trim()
       );
-      const updated = await patchApplication(selectedApp.id, { internalNotes: merged });
+      const updated = await patchApplicationLocal(selectedApp.id, { internalNotes: merged });
       syncUpdated(selectedApp.id, {
-        internalNotes: updated.internalNotes,
-        updatedAt: updated.updatedAt,
+        internalNotes: updated.internalNotes as string | null | undefined,
+        updatedAt: updated.updatedAt as string | undefined,
       });
       setNoteInput("");
     } finally {
@@ -243,8 +238,8 @@ export default function ApplicantsBoard({
   async function handleRating(rating: number) {
     if (!selectedApp) return;
     const nextRating = selectedApp.rating === rating ? null : rating;
-    const updated = await patchApplication(selectedApp.id, { rating: nextRating });
-    syncUpdated(selectedApp.id, updated);
+    const updated = await patchApplicationLocal(selectedApp.id, { rating: nextRating });
+      syncUpdated(selectedApp.id, updated as Partial<Application>);
   }
 
   async function handleMessageCandidate() {
@@ -253,20 +248,14 @@ export default function ApplicantsBoard({
     setMessageLoading(true);
 
     try {
-      const res = await fetch("/api/conversations", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ seekerId: selectedApp.seeker.id, jobId: job.id }),
-      });
+      const result = await startConversation(selectedApp.seeker.id, job.id);
 
-      const result = await res.json().catch(() => ({}));
-
-      if (!res.ok) {
-        setMessageError((result as { error?: string }).error || "Could not start conversation");
+      if (!result.ok) {
+        setMessageError(result.error || "Could not start conversation");
         return;
       }
 
-      window.location.href = `/employer/messages?c=${(result as { id: string }).id}`;
+      window.location.href = `/employer/messages?c=${(result.data as { id: string }).id}`;
     } catch {
       setMessageError("Could not start conversation");
     } finally {

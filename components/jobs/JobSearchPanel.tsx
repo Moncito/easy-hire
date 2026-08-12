@@ -10,6 +10,8 @@ import SaveSearchButton from "@/components/jobs/SaveSearchButton";
 import JobFiltersPanel from "@/components/jobs/JobFiltersPanel";
 import FilterIconSelect from "@/components/jobs/FilterIconSelect";
 import { JobSearchSplitSkeleton } from "@/components/jobs/JobPageSkeletons";
+import { searchJobs } from "@/lib/client/jobs";
+import { listSeekerApplications, listSavedJobIds } from "@/lib/client/applications";
 import {
   buildJobSearchParams,
   countActiveFilters,
@@ -58,10 +60,7 @@ async function requestJobs(
   opts: { q?: string; sort?: string; cursor?: string | null } = {}
 ) {
   const params = buildJobSearchParams(filters, opts);
-  const res = await fetch(`/api/jobs/search?${params.toString()}`);
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || "Failed to load jobs");
-  return data as { jobs: JobCardData[]; nextCursor: string | null };
+  return searchJobs(params) as Promise<{ jobs: JobCardData[]; nextCursor: string | null }>;
 }
 
 export default function JobSearchPanel() {
@@ -127,16 +126,18 @@ export default function JobSearchPanel() {
 
   useEffect(() => {
     if (session?.user?.role !== "SEEKER") return;
-    fetch("/api/applications/list")
-      .then((r) => (r.ok ? r.json() : null))
+    listSeekerApplications()
       .then((data) => {
-        if (data?.jobIds) setAppliedIds(new Set(data.jobIds as string[]));
+        if (data && typeof data === "object" && "jobIds" in data) {
+          setAppliedIds(new Set((data as { jobIds: string[] }).jobIds));
+        }
       })
       .catch(() => {});
-    fetch("/api/seeker/jobs/saved")
-      .then((r) => (r.ok ? r.json() : null))
+    listSavedJobIds()
       .then((data) => {
-        if (data?.jobIds) setSavedIds(new Set(data.jobIds as string[]));
+        if (data && typeof data === "object" && "jobIds" in data) {
+          setSavedIds(new Set((data as { jobIds: string[] }).jobIds));
+        }
       })
       .catch(() => {});
   }, [session?.user?.role]);

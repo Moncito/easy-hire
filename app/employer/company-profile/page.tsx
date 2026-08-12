@@ -1,26 +1,18 @@
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/prisma";
 import CompanyProfileEditor from "@/components/employer/CompanyProfileEditor";
 import { requireEmployerPageContext } from "@/lib/employer-session";
+import { getEmployerCompanyProfile } from "@/lib/companies";
 
 export default async function CompanyProfilePage() {
   const { company: baseCompany } = await requireEmployerPageContext();
 
-  const company = await prisma.company.findUnique({
-    where: { id: baseCompany.id },
-    include: {
-      verificationDocuments: { orderBy: { uploadedAt: "desc" } },
-    },
-  });
+  const result = await getEmployerCompanyProfile(baseCompany.id);
 
-  if (!company) {
+  if (!result) {
     redirect("/employer/dashboard");
   }
 
-  const [activeJobsCount, totalApplicantsCount] = await Promise.all([
-    prisma.job.count({ where: { companyId: company.id, status: "ACTIVE" } }),
-    prisma.application.count({ where: { job: { companyId: company.id } } }),
-  ]);
+  const { company, activeJobsCount, totalApplicantsCount } = result;
 
   const verificationStatusMap = {
     PENDING: "pending" as const,

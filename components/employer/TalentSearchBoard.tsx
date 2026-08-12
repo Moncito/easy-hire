@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Search, SlidersHorizontal, Download } from "lucide-react";
 import { formatPesoRange } from "@/lib/format";
+import { listSavedSeekers } from "@/lib/client/saved-seekers";
 import SaveSeekerButton from "@/components/employer/SaveSeekerButton";
 import MessageSeekerButton from "@/components/employer/MessageSeekerButton";
 import EmployerEmptyState from "@/components/employer/ui/EmployerEmptyState";
@@ -63,14 +64,13 @@ export default function TalentSearchBoard() {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch("/api/employer/saved-seekers");
-      if (!res.ok) {
+      const data = await listSavedSeekers();
+      if (!data) {
         setSeekers([]);
         setError("Could not load saved candidates");
         return;
       }
-      const data = await res.json();
-      setSeekers(data.seekers);
+      setSeekers(data.seekers as TalentItem[]);
     } catch {
       setSeekers([]);
       setError("Could not load saved candidates");

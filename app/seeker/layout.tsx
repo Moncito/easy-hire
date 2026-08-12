@@ -1,14 +1,12 @@
-import { auth } from "@/Auth";
-import { redirect } from "next/navigation";
 import SeekerPillNav from "@/components/seeker/SeekerPillNav";
 import SeekerAreaBackground from "@/components/seeker/SeekerAreaBackground";
+import { requireSeekerLayoutContext } from "@/lib/auth/seeker-session";
+import { redirect } from "next/navigation";
 
 export default async function SeekerLayout({ children }: { children: React.ReactNode }) {
-  const session = await auth();
-
-  if (!session?.user || session.user.role !== "SEEKER") {
-    redirect("/login");
-  }
+  const ctx = await requireSeekerLayoutContext();
+  if (!ctx) redirect("/login");
+  const { session } = ctx;
 
   return (
     <div className="relative min-h-screen overflow-x-hidden bg-mist">

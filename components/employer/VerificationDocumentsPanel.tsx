@@ -3,6 +3,12 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
+  createVerificationDocument,
+  deleteVerificationDocument,
+  requestVerificationReview,
+} from "@/lib/client/company";
+import { uploadVerificationDoc } from "@/lib/client/uploads";
+import {
   AlertCircle,
   Check,
   Clock,
@@ -63,33 +69,21 @@ export default function VerificationDocumentsPanel({
     setUploading(true);
 
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-
-      const uploadRes = await fetch("/api/upload/verification-doc", {
-        method: "POST",
-        body: formData,
-      });
-      const uploadResult = await uploadRes.json();
-      if (!uploadRes.ok) {
-        throw new Error(uploadResult.error || "Upload failed");
+      const upload = await uploadVerificationDoc(file);
+      if (!upload.ok) {
+        throw new Error(upload.data.error || "Upload failed");
       }
 
-      const createRes = await fetch("/api/company/verification-documents", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          fileUrl: uploadResult.url,
-          fileName: uploadResult.fileName || file.name,
-          docType,
-        }),
+      const create = await createVerificationDocument({
+        fileUrl: upload.data.url!,
+        fileName: upload.data.fileName || file.name,
+        docType,
       });
-      const created = await createRes.json();
-      if (!createRes.ok) {
-        throw new Error(created.error || "Could not save document");
+      if (!create.ok) {
+        throw new Error(create.error || "Could not save document");
       }
 
-      setDocuments((prev) => [created, ...prev]);
+      setDocuments((prev) => [create.data as VerificationDoc, ...prev]);
       if (localStatus === "rejected") {
         setLocalStatus("pending");
       }
@@ -106,11 +100,8 @@ export default function VerificationDocumentsPanel({
     setError("");
     setDeletingId(id);
     try {
-      const res = await fetch(`/api/company/verification-documents/${id}`, {
-        method: "DELETE",
-      });
-      const result = await res.json();
-      if (!res.ok) {
+      const result = await deleteVerificationDocument(id);
+      if (!result.ok) {
         throw new Error(result.error || "Could not delete document");
       }
       setDocuments((prev) => prev.filter((d) => d.id !== id));
@@ -126,11 +117,8 @@ export default function VerificationDocumentsPanel({
     setError("");
     setRequesting(true);
     try {
-      const res = await fetch("/api/company/verification/request-review", {
-        method: "POST",
-      });
-      const result = await res.json();
-      if (!res.ok) {
+      const result = await requestVerificationReview();
+      if (!result.ok) {
         throw new Error(result.error || "Could not request review");
       }
       setLocalStatus("pending");

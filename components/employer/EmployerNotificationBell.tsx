@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Bell } from "lucide-react";
 import { notificationHref } from "@/lib/notifications";
+import { listEmployerNotifications, markEmployerNotificationsRead } from "@/lib/client/notifications";
 
 type Notification = {
   id: string;
@@ -21,9 +22,8 @@ export default function EmployerNotificationBell() {
 
   const fetchNotifications = useCallback(async () => {
     try {
-      const res = await fetch("/api/employer/notifications");
-      if (!res.ok) return;
-      const data = await res.json();
+      const data = await listEmployerNotifications();
+      if (!data) return;
       setNotifications(data.notifications ?? []);
       setUnreadCount(data.unreadCount ?? 0);
     } catch {
@@ -48,11 +48,7 @@ export default function EmployerNotificationBell() {
   }, [open]);
 
   async function markAllRead() {
-    await fetch("/api/employer/notifications", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({}),
-    });
+    await markEmployerNotificationsRead();
     setUnreadCount(0);
     setNotifications((prev) => prev.map((n) => ({ ...n, readStatus: true })));
   }

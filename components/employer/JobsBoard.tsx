@@ -9,6 +9,7 @@ import { EmployerPrimaryButton } from "@/components/employer/ui/EmployerPageHead
 import EmployerJobCard from "@/components/employer/EmployerJobCard";
 import JobsBoardToolbar, { type SortOption } from "@/components/employer/JobsBoardToolbar";
 import type { EmployerJobCardData } from "@/lib/employer-jobs";
+import { createEmployerJob, patchJobStatus } from "@/lib/client/jobs";
 
 type Props = {
   jobs: EmployerJobCardData[];
@@ -110,20 +111,15 @@ export default function JobsBoard({ jobs: initialJobs, companyVerified }: Props)
     if (!confirm("Close this job listing? It will no longer accept applications.")) return;
 
     setLoadingId(id);
-    const res = await fetch(`/api/jobs/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: "CLOSED" }),
-    });
+    const result = await patchJobStatus(id, "CLOSED");
 
-    if (res.ok) {
+    if (result.ok) {
       setJobs((prev) =>
         prev.map((j) => (j.id === id ? { ...j, status: "CLOSED", needsAttention: false } : j))
       );
       toast.success("Job closed");
     } else {
-      const data = (await res.json().catch(() => null)) as { error?: string } | null;
-      toast.error(data?.error ?? "Could not close job");
+      toast.error(result.error ?? "Could not close job");
     }
     setLoadingId(null);
   }
@@ -132,37 +128,32 @@ export default function JobsBoard({ jobs: initialJobs, companyVerified }: Props)
     if (!confirm(`Duplicate "${job.title}"?`)) return;
 
     setLoadingId(job.id);
-    const res = await fetch("/api/jobs", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        title: `${job.title} (Copy)`,
-        description: job.description,
-        requirements: job.requirements,
-        benefits: job.benefits,
-        category: job.category,
-        industry: job.industry,
-        employmentType: job.employmentType,
-        salaryMin: job.salaryMin,
-        salaryMax: job.salaryMax,
-        salaryPeriod: job.salaryPeriod,
-        location: job.location,
-        remoteType: job.remoteType,
-        targetHireCount: job.targetHireCount,
-        screeningQuestions:
-          job.screeningQuestions?.map((q) => ({
-            prompt: q.prompt,
-            required: q.required,
-          })) ?? [],
-      }),
+    const result = await createEmployerJob({
+      title: `${job.title} (Copy)`,
+      description: job.description,
+      requirements: job.requirements,
+      benefits: job.benefits,
+      category: job.category,
+      industry: job.industry,
+      employmentType: job.employmentType,
+      salaryMin: job.salaryMin,
+      salaryMax: job.salaryMax,
+      salaryPeriod: job.salaryPeriod,
+      location: job.location,
+      remoteType: job.remoteType,
+      targetHireCount: job.targetHireCount,
+      screeningQuestions:
+        job.screeningQuestions?.map((q) => ({
+          prompt: q.prompt,
+          required: q.required,
+        })) ?? [],
     });
 
-    if (res.ok) {
+    if (result.ok) {
       toast.success("Job duplicated");
       router.refresh();
     } else {
-      const data = (await res.json().catch(() => null)) as { error?: string } | null;
-      toast.error(data?.error ?? "Could not duplicate job");
+      toast.error(result.error ?? "Could not duplicate job");
     }
     setLoadingId(null);
   }
