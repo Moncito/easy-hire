@@ -4,22 +4,21 @@ import { Prisma } from "@prisma/client";
 import { ApiError } from "@/lib/api-error";
 import { createNotification } from "@/lib/email";
 import { invalidateEmployerNav } from "@/lib/employer-cache";
+import { invalidateConversationsForParticipants } from "@/lib/conversations-cache";
 import { requireEmployerCompany } from "@/lib/employer-auth";
 import {
   conversationCreateSchema,
   messageCreateSchema,
 } from "@/lib/validations/message";
 
-type ConversationListItem = {
-  id: string;
-  lastMessageAt: string;
-  job: { id: string; title: string } | null;
-  company: { id: string; companyName: string; logoUrl: string | null };
-  seeker: { id: string; fullName: string; headline: string | null };
-  lastMessage: { body: string; createdAt: string; senderUserId: string } | null;
-  unreadCount: number;
-  applicationStatus: string | null;
-};
+export type { ConversationListItem } from "@/lib/conversation-inbox";
+
+function invalidateInboxForConversation(conversation: {
+  company: { userId: string };
+  seeker: { userId: string };
+}) {
+  invalidateConversationsForParticipants(conversation.company.userId, conversation.seeker.userId);
+}
 
 async function requireConversationAccess(userId: string, role: string, conversationId: string) {
   const conversation = await prisma.conversation.findUnique({
@@ -53,107 +52,6 @@ async function requireConversationAccess(userId: string, role: string, conversat
   return conversation;
 }
 
-function mapConversationListItem(conv: {
-  id: string;
-  lastMessageAt: Date;
-  company: { id: string; companyName: string; logoUrl: string | null };
-  seeker: { id: string; fullName: string; headline: string | null };
-  job: { id: string; title: string } | null;
-  messages: { body: string; createdAt: Date; senderUserId: string }[];
-  _count: { messages: number };
-}, applicationStatus: string | null = null): ConversationListItem {
-  const last = conv.messages[0] ?? null;
-
-  return {
-    id: conv.id,
-    lastMessageAt: conv.lastMessageAt.toISOString(),
-    job: conv.job,
-    company: conv.company,
-    seeker: conv.seeker,
-    lastMessage: last
-      ? { body: last.body, createdAt: last.createdAt.toISOString(), senderUserId: last.senderUserId }
-      : null,
-    unreadCount: conv._count.messages,
-    applicationStatus,
-  };
-}
-
-export async function listConversationsForUser(userId: string, role: string) {
-  let where: Prisma.ConversationWhereInput;
-
-  if (role === "EMPLOYER") {
-    const company = await requireEmployerCompany(userId);
-    where = { companyId: company.id };
-  } else if (role === "SEEKER") {
-    const seeker = await prisma.seekerProfile.findUnique({ where: { userId } });
-    if (!seeker) throw new ApiError("Seeker profile not found", 404);
-    where = { seekerId: seeker.id };
-  } else {
-    throw new ApiError("Forbidden", 403);
-  }
-
-  const conversations = await prisma.conversation.findMany({
-    where,
-    orderBy: { lastMessageAt: "desc" },
-    include: {
-      company: { select: { id: true, companyName: true, logoUrl: true } },
-      seeker: { select: { id: true, fullName: true, headline: true } },
-      job: { select: { id: true, title: true } },
-      messages: {
-        orderBy: { createdAt: "desc" },
-        take: 1,
-        select: { body: true, createdAt: true, senderUserId: true },
-      },
-      _count: {
-        select: {
-          messages: {
-            where: {
-              senderUserId: { not: userId },
-              readAt: null,
-            },
-          },
-        },
-      },
-    },
-  });
-
-  const jobIds = conversations.map((c) => c.job?.id).filter((id): id is string => !!id);
-  let statusByJob: Record<string, string> = {};
-
-  if (jobIds.length > 0) {
-    if (role === "SEEKER") {
-      const seeker = await prisma.seekerProfile.findUnique({ where: { userId } });
-      if (seeker) {
-        const apps = await prisma.application.findMany({
-          where: { seekerId: seeker.id, jobId: { in: jobIds } },
-          select: { jobId: true, status: true },
-        });
-        statusByJob = Object.fromEntries(apps.map((a) => [a.jobId, a.status]));
-      }
-    } else if (role === "EMPLOYER") {
-      const company = await requireEmployerCompany(userId);
-      const apps = await prisma.application.findMany({
-        where: { jobId: { in: jobIds }, job: { companyId: company.id } },
-        select: { jobId: true, seekerId: true, status: true },
-      });
-      for (const conv of conversations) {
-        if (!conv.job) continue;
-        const app = apps.find((a) => a.jobId === conv.job!.id && a.seekerId === conv.seekerId);
-        if (app) statusByJob[`${conv.job.id}:${conv.seekerId}`] = app.status;
-      }
-    }
-  }
-
-  return conversations.map((c) => {
-    const applicationStatus = c.job
-      ? role === "EMPLOYER"
-        ? statusByJob[`${c.job.id}:${c.seekerId}`] ?? null
-        : statusByJob[c.job.id] ?? null
-      : null;
-    return mapConversationListItem(c, applicationStatus);
-  });
-}
-
 export async function getConversationThread(userId: string, role: string, conversationId: string) {
   const conversation = await requireConversationAccess(userId, role, conversationId);
 
@@ -179,6 +77,8 @@ export async function getConversationThread(userId: string, role: string, conver
     data: { readAt: new Date() },
   });
 
+  invalidateInboxForConversation(conversation);
+
   return {
     id: conversation.id,
     job: conversation.job,
@@ -201,7 +101,7 @@ export async function getMessagesAfter(
   conversationId: string,
   afterMessageId?: string
 ) {
-  await requireConversationAccess(userId, role, conversationId);
+  const conversation = await requireConversationAccess(userId, role, conversationId);
 
   let messages;
   if (afterMessageId) {
@@ -250,6 +150,7 @@ export async function getMessagesAfter(
       },
       data: { readAt: new Date() },
     });
+    invalidateInboxForConversation(conversation);
   }
 
   return messages.map((m) => ({
@@ -345,6 +246,8 @@ export async function createOrGetConversation(employerUserId: string, raw: unkno
 
   if (input.initialMessage) {
     await sendMessage(employerUserId, "EMPLOYER", conversation.id, { body: input.initialMessage });
+  } else {
+    invalidateConversationsForParticipants(employerUserId, seeker.user.id);
   }
 
   return conversation;
@@ -391,6 +294,8 @@ export async function sendMessage(
     invalidateEmployerNav(conversation.company.id);
   }
 
+  invalidateInboxForConversation(conversation);
+
   return {
     id: message.id,
     body: message.body,
@@ -416,6 +321,8 @@ export async function markConversationRead(userId: string, role: string, convers
   if (role === "EMPLOYER") {
     invalidateEmployerNav(conversation.company.id);
   }
+
+  invalidateInboxForConversation(conversation);
 
   return { ok: true };
 }

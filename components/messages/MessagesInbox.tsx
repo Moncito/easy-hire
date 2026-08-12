@@ -14,17 +14,9 @@ import {
   Send,
 } from "lucide-react";
 import MessagesNavBand from "@/components/messages/MessagesNavBand";
+import type { ConversationListItem } from "@/lib/messages";
 
-type Conversation = {
-  id: string;
-  lastMessageAt: string;
-  job: { id: string; title: string } | null;
-  company: { id: string; companyName: string; logoUrl: string | null };
-  seeker: { id: string; fullName: string; headline: string | null };
-  lastMessage: { body: string; createdAt: string; senderUserId: string } | null;
-  unreadCount: number;
-  applicationStatus: string | null;
-};
+type Conversation = ConversationListItem;
 
 type ThreadMessage = {
   id: string;
@@ -47,6 +39,7 @@ type Thread = {
 type Props = {
   role: "EMPLOYER" | "SEEKER";
   fillNavClearance?: boolean;
+  initialConversations?: Conversation[];
 };
 
 type ListFilter = "ALL" | "UNREAD" | "INTERVIEWS";
@@ -154,14 +147,19 @@ function PeerAvatar({
   );
 }
 
-export default function MessagesInbox({ role, fillNavClearance = false }: Props) {
+export default function MessagesInbox({
+  role,
+  fillNavClearance = false,
+  initialConversations,
+}: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const activeId = searchParams.get("c");
+  const hasInitialData = initialConversations !== undefined;
 
-  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [conversations, setConversations] = useState<Conversation[]>(initialConversations ?? []);
   const [thread, setThread] = useState<Thread | null>(null);
-  const [loadingList, setLoadingList] = useState(true);
+  const [loadingList, setLoadingList] = useState(!hasInitialData);
   const [loadingThread, setLoadingThread] = useState(false);
   const [draft, setDraft] = useState("");
   const [sendError, setSendError] = useState("");
@@ -262,10 +260,10 @@ export default function MessagesInbox({ role, fillNavClearance = false }: Props)
 
   useEffect(() => {
     const id = window.setTimeout(() => {
-      void loadConversations();
+      void loadConversations(hasInitialData);
     }, 0);
     return () => window.clearTimeout(id);
-  }, [loadConversations]);
+  }, [loadConversations, hasInitialData]);
 
   useEffect(() => {
     const id = setInterval(() => loadConversations(true), LIST_POLL_MS);

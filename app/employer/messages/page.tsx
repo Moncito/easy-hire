@@ -1,11 +1,10 @@
-import { Suspense } from "react";
 import MessagesInbox from "@/components/messages/MessagesInbox";
-import MessagesSkeleton from "@/components/messages/MessagesSkeleton";
+import { listConversationsForUserCached } from "@/lib/conversations-cache";
+import { requireEmployerPageContext } from "@/lib/employer-session";
 
-export default function EmployerMessagesPage() {
-  return (
-    <Suspense fallback={<MessagesSkeleton />}>
-      <MessagesInbox role="EMPLOYER" />
-    </Suspense>
-  );
+export default async function EmployerMessagesPage() {
+  const { session } = await requireEmployerPageContext();
+  const conversations = await listConversationsForUserCached(session.user.id, "EMPLOYER");
+
+  return <MessagesInbox role="EMPLOYER" initialConversations={conversations} />;
 }

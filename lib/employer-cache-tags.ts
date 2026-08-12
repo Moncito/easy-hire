@@ -19,3 +19,7 @@ export function employerTalentSearchTag(queryKey: string) {
 export function employerNotificationsTag(userId: string) {
   return `employer-notifications-${userId}`;
 }
+
+export function conversationsListTag(userId: string) {
+  return `conversations-list-${userId}`;
+}
