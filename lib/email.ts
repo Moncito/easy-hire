@@ -1,6 +1,7 @@
 import { Resend } from "resend";
 import { prisma } from "@/lib/prisma";
 import { escapeHtml } from "@/lib/escape-html";
+import { invalidateEmployerNotifications } from "@/lib/employer-cache";
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 const fromAddress = process.env.EMAIL_FROM ?? "EasyHire <onboarding@resend.dev>";
@@ -25,9 +26,11 @@ export async function sendEmail(to: string, subject: string, html: string) {
 }
 
 export async function createNotification(userId: string, type: string, message: string) {
-  return prisma.notification.create({
+  const notification = await prisma.notification.create({
     data: { userId, type, message },
   });
+  invalidateEmployerNotifications(userId);
+  return notification;
 }
 
 type ApplicationEmailContext = {

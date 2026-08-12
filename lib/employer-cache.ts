@@ -6,8 +6,13 @@ import {
   employerAnalyticsTag,
   employerJobsTag,
   employerNavTag,
+  employerNotificationsTag,
   employerTalentSearchTag,
 } from "@/lib/employer-cache-tags";
+import {
+  getEmployerNotifications,
+  getUnreadNotificationCount,
+} from "@/lib/notifications";
 
 const NAV_REVALIDATE = 30;
 const JOBS_REVALIDATE = 60;
@@ -74,4 +79,22 @@ export function searchTalentCached(employerUserId: string, params: Record<string
     [`employer-talent-search`, employerUserId, queryKey],
     { revalidate: 30, tags: [employerTalentSearchTag(`${employerUserId}:${queryKey}`)] }
   )();
+}
+
+export function getEmployerNotificationsCached(userId: string) {
+  return unstable_cache(
+    async () => {
+      const [notifications, unreadCount] = await Promise.all([
+        getEmployerNotifications(userId),
+        getUnreadNotificationCount(userId),
+      ]);
+      return { notifications, unreadCount };
+    },
+    [`employer-notifications`, userId],
+    { revalidate: 15, tags: [employerNotificationsTag(userId)] }
+  )();
+}
+
+export function invalidateEmployerNotifications(userId: string) {
+  revalidateTag(employerNotificationsTag(userId), "max");
 }
