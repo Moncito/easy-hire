@@ -11,6 +11,11 @@ import EmployerProfileStep from "@/components/signup/EmployerProfileStep";
 import SuccessStep from "@/components/signup/SuccessStep";
 
 import {
+  registerAccount,
+  updateEmployerProfile,
+  updateSeekerProfile,
+} from "@/lib/client/profile";
+import {
   Role,
   CredentialsData,
   SeekerProfileData,
@@ -41,16 +46,10 @@ export default function SignupPageClient() {
     setError("");
     setLoading(true);
 
-    const res = await fetch("/api/register", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...data, role }),
-    });
+    const result = await registerAccount({ ...data, role });
 
-    const result = await res.json();
-
-    if (!res.ok) {
-      setError(result.error || "Something went wrong");
+    if (!result.ok) {
+      setError((result.data as { error?: string })?.error || result.error || "Something went wrong");
       setLoading(false);
       return;
     }
@@ -74,14 +73,9 @@ export default function SignupPageClient() {
   async function handleSeekerProfileComplete(data: SeekerProfileData) {
     setLoading(true);
     setError("");
-    const res = await fetch("/api/profile/seeker", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
-    if (!res.ok) {
-      const result = await res.json();
-      setError(result.error || "Failed to save profile. You can update it from your dashboard.");
+    const result = await updateSeekerProfile(data);
+    if (!result.ok) {
+      setError(result.data.error || "Failed to save profile. You can update it from your dashboard.");
       setLoading(false);
       return;
     }
@@ -91,14 +85,9 @@ export default function SignupPageClient() {
   async function handleEmployerProfileComplete(data: EmployerProfileData) {
     setLoading(true);
     setError("");
-    const res = await fetch("/api/profile/employer", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
-    if (!res.ok) {
-      const result = await res.json();
-      setError(result.error || "Failed to save company profile. You can update it from your dashboard.");
+    const result = await updateEmployerProfile(data);
+    if (!result.ok) {
+      setError(result.data.error || "Failed to save company profile. You can update it from your dashboard.");
       setLoading(false);
       return;
     }

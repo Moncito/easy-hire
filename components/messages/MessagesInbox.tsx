@@ -15,6 +15,13 @@ import {
 } from "lucide-react";
 import MessagesNavBand from "@/components/messages/MessagesNavBand";
 import type { ConversationListItem } from "@/lib/messages";
+import {
+  getConversation,
+  listConversations,
+  pollConversationMessages,
+  sendConversationMessage,
+} from "@/lib/client/conversations";
+import { noStore } from "@/lib/client/fetch-json";
 
 type Conversation = ConversationListItem;
 
@@ -47,7 +54,7 @@ type ListFilter = "ALL" | "UNREAD" | "INTERVIEWS";
 const THREAD_POLL_MS = 2000;
 const LIST_POLL_MS = 3000;
 
-const fetchOpts: RequestInit = { cache: "no-store" };
+const fetchOpts: RequestInit = noStore;
 
 function formatTime(iso: string) {
   const d = new Date(iso);
@@ -183,12 +190,11 @@ export default function MessagesInbox({
   const loadConversations = useCallback(async (silent = false) => {
     if (!silent) setLoadingList(true);
     try {
-      const res = await fetch("/api/conversations", fetchOpts);
-      if (!res.ok) {
+      const data = await listConversations(fetchOpts);
+      if (!data) {
         if (!silent) setListError("Could not load conversations");
         return;
       }
-      const data = await res.json();
       setConversations(data.conversations);
       setListError("");
     } catch {
@@ -202,15 +208,15 @@ export default function MessagesInbox({
     setLoadingThread(true);
     setThreadError("");
     try {
-      const res = await fetch(`/api/conversations/${id}`, fetchOpts);
-      if (!res.ok) {
+      const data = await getConversation(id, fetchOpts);
+      if (!data) {
         setThreadError("Could not load conversation");
         return;
       }
-      const data: Thread = await res.json();
+      const thread = data as Thread;
       if (activeIdRef.current !== id) return;
-      setThread(data);
-      syncCursor(data.messages);
+      setThread(thread);
+      syncCursor(thread.messages);
     } catch {
       if (activeIdRef.current === id) setThreadError("Could not load conversation");
     } finally {
@@ -225,15 +231,10 @@ export default function MessagesInbox({
     pollingRef.current = true;
     try {
       const after = lastMessageIdRef.current;
-      const url = after
-        ? `/api/conversations/${conversationId}/messages?after=${encodeURIComponent(after)}`
-        : `/api/conversations/${conversationId}/messages`;
+      const data = await pollConversationMessages(conversationId, after, { ...fetchOpts, signal });
+      if (!data || activeIdRef.current !== conversationId) return;
 
-      const res = await fetch(url, { ...fetchOpts, signal });
-      if (!res.ok || activeIdRef.current !== conversationId) return;
-
-      const data = await res.json();
-      const incoming = (data.messages ?? []) as ThreadMessage[];
+      const incoming = ((data as { messages?: ThreadMessage[] }).messages ?? []) as ThreadMessage[];
       if (incoming.length === 0 || activeIdRef.current !== conversationId) return;
 
       let mergedForCursor: ThreadMessage[] = [];
@@ -336,17 +337,10 @@ export default function MessagesInbox({
     setConversations((prev) => bumpConversationInList(prev, activeId, text, optimisticAt));
 
     try {
-      const res = await fetch(`/api/conversations/${activeId}/messages`, {
-        ...fetchOpts,
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ body: text }),
-      });
+      const result = await sendConversationMessage(activeId, text);
 
-      const result = await res.json().catch(() => ({}));
-
-      if (!res.ok) {
-        const msg = (result as { error?: string }).error || "Failed to send message";
+      if (!result.ok) {
+        const msg = result.error || "Failed to send message";
         setSendError(msg);
         toast.error(msg);
         setThread((prev) =>
@@ -356,7 +350,7 @@ export default function MessagesInbox({
         return;
       }
 
-      const message = result as ThreadMessage;
+      const message = (result.data.message ?? result.data) as ThreadMessage;
       lastMessageIdRef.current = message.id;
       setThread((prev) =>
         prev

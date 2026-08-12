@@ -4,6 +4,11 @@ import { useEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { toast } from "sonner";
+import {
+  getApplicationForJob,
+  getSeekerProfileForApply,
+  submitApplication as submitApplicationApi,
+} from "@/lib/client/applications";
 import { CheckCircle2, Loader2, X } from "lucide-react";
 
 type Props = {
@@ -19,14 +24,6 @@ type Props = {
 
 const COVER_NOTE_MAX = 2000;
 const ANSWER_MAX = 1000;
-
-async function parseJsonResponse(res: Response) {
-  try {
-    return await res.json();
-  } catch {
-    return {};
-  }
-}
 
 export default function ApplyButton({
   jobId,
@@ -49,8 +46,7 @@ export default function ApplyButton({
 
   useEffect(() => {
     if (session?.user?.role !== "SEEKER") return;
-    fetch(`/api/applications?jobId=${jobId}`)
-      .then((r) => r.json())
+    getApplicationForJob(jobId)
       .then((apps) => {
         if (apps.application) setApplied(true);
       })
@@ -104,19 +100,14 @@ export default function ApplyButton({
     setError("");
 
     try {
-      const [appsRes, profileRes] = await Promise.all([
-        fetch(`/api/applications?jobId=${jobId}`),
-        fetch("/api/profile/seeker"),
+      const [apps, profile] = await Promise.all([
+        getApplicationForJob(jobId),
+        getSeekerProfileForApply(),
       ]);
 
-      if (!appsRes.ok || !profileRes.ok) {
+      if (!profile) {
         throw new Error("Could not load your application details. Please try again.");
       }
-
-      const [apps, profile] = await Promise.all([
-        parseJsonResponse(appsRes),
-        parseJsonResponse(profileRes),
-      ]);
 
       if (apps.application) {
         setApplied(true);
@@ -136,7 +127,7 @@ export default function ApplyButton({
     }
   }
 
-  async function submitApplication() {
+  async function handleSubmitApplication() {
     setError("");
 
     const missingRequired = screeningQuestions.filter(
@@ -151,28 +142,22 @@ export default function ApplyButton({
     setLoading(true);
 
     try {
-      const res = await fetch("/api/applications", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          jobId,
-          coverNote: coverNote.trim() || null,
-          answers: screeningQuestions
-            .map((q) => ({
-              questionId: q.id,
-              answerText: (answers[q.id] || "").trim(),
-            }))
-            .filter((a) => a.answerText.length > 0),
-        }),
+      const result = await submitApplicationApi({
+        jobId,
+        coverNote: coverNote.trim() || null,
+        answers: screeningQuestions
+          .map((q) => ({
+            questionId: q.id,
+            answerText: (answers[q.id] || "").trim(),
+          }))
+          .filter((a) => a.answerText.length > 0),
       });
 
-      const result = await parseJsonResponse(res);
-
-      if (!res.ok) {
-        const msg = (result as { error?: string }).error || "Application failed";
+      if (!result.ok) {
+        const msg = result.data.error || "Application failed";
         setError(msg);
         toast.error(msg);
-        if (res.status === 409) setApplied(true);
+        if (result.status === 409) setApplied(true);
         return;
       }
 
@@ -405,7 +390,7 @@ I'm excited to apply because...
                     <button
                       type="button"
                       disabled={loading}
-                      onClick={() => void submitApplication()}
+                      onClick={() => void handleSubmitApplication()}
                       className="flex-1 cursor-pointer rounded-xl bg-marigold py-3 text-sm font-semibold text-ink shadow-sm hover:bg-marigold/90 disabled:opacity-60"
                     >
                       {loading ? "Submitting..." : "Submit application"}

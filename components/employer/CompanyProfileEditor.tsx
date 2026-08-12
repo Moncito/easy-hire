@@ -1,5 +1,8 @@
 "use client";
 
+import { updateCompany } from "@/lib/client/company";
+import { uploadBanner, uploadLogo } from "@/lib/client/uploads";
+
 import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -293,19 +296,15 @@ export default function CompanyProfileEditor({
     setBannerUploading(true);
     setError("");
 
-    const body = new FormData();
-    body.append("file", file);
-
-    const res = await fetch("/api/upload/banner", { method: "POST", body });
-    const result = await res.json();
+    const result = await uploadBanner(file);
     setBannerUploading(false);
 
-    if (!res.ok) {
-      setError(result.error || "Banner upload failed");
+    if (!result.ok) {
+      setError(result.data.error || "Banner upload failed");
       return;
     }
 
-    setBannerUrl(result.bannerUrl);
+    setBannerUrl(result.data.bannerUrl!);
     setSaved(false);
     router.refresh();
   }
@@ -314,19 +313,15 @@ export default function CompanyProfileEditor({
     setLogoUploading(true);
     setError("");
 
-    const body = new FormData();
-    body.append("file", file);
-
-    const res = await fetch("/api/upload/logo", { method: "POST", body });
-    const result = await res.json();
+    const result = await uploadLogo(file);
     setLogoUploading(false);
 
-    if (!res.ok) {
-      setError(result.error || "Logo upload failed");
+    if (!result.ok) {
+      setError(result.data.error || "Logo upload failed");
       return;
     }
 
-    setLogoUrl(result.logoUrl);
+    setLogoUrl(result.data.logoUrl!);
     setSaved(false);
     router.refresh();
   }
@@ -343,30 +338,25 @@ export default function CompanyProfileEditor({
 
     setLoading(true);
 
-    const res = await fetch("/api/company", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        companyName: form.companyName,
-        description: form.description,
-        website: form.website,
-        industry: form.industry,
-        teamSize: form.teamSize,
-        foundedYear: form.foundedYear ? parseInt(form.foundedYear, 10) : null,
-        headquarters: form.headquarters,
-        highlights: form.highlights,
-        linkedinUrl: form.linkedinUrl,
-        facebookUrl: form.facebookUrl,
-        instagramUrl: form.instagramUrl,
-        xUrl: form.xUrl,
-      }),
+    const result = await updateCompany({
+      companyName: form.companyName,
+      description: form.description,
+      website: form.website,
+      industry: form.industry,
+      teamSize: form.teamSize,
+      foundedYear: form.foundedYear ? parseInt(form.foundedYear, 10) : null,
+      headquarters: form.headquarters,
+      highlights: form.highlights,
+      linkedinUrl: form.linkedinUrl,
+      facebookUrl: form.facebookUrl,
+      instagramUrl: form.instagramUrl,
+      xUrl: form.xUrl,
     });
 
     setLoading(false);
 
-    if (!res.ok) {
-      const result = await res.json();
-      setError(result.error || "Something went wrong");
+    if (!result.ok) {
+      setError(result.data.error || "Something went wrong");
       return;
     }
 

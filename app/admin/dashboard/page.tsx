@@ -1,31 +1,18 @@
 import Link from "next/link";
-import { auth } from "@/Auth";
-import { prisma } from "@/lib/prisma";
 import { Briefcase, Building2, Clock, CheckCircle } from "lucide-react";
+import { requireAdminPageContext } from "@/lib/auth/admin-session";
+import { getAdminDashboardMetrics } from "@/lib/admin/dashboard";
 
 export default async function AdminDashboardPage() {
-  const session = await auth();
-
-  const [pendingJobs, pendingCompanies, publicLiveJobs, approvedToday] = await Promise.all([
-    prisma.job.count({ where: { status: "PENDING_REVIEW" } }),
-    prisma.company.count({ where: { verifiedStatus: "PENDING" } }),
-    prisma.job.count({
-      where: { status: "ACTIVE", company: { verifiedStatus: "APPROVED" } },
-    }),
-    prisma.job.count({
-      where: {
-        status: "ACTIVE",
-        publishedAt: { gte: new Date(new Date().setHours(0, 0, 0, 0)) },
-        company: { verifiedStatus: "APPROVED" },
-      },
-    }),
-  ]);
+  const { session } = await requireAdminPageContext();
+  const { pendingJobs, pendingCompanies, publicLiveJobs, approvedToday } =
+    await getAdminDashboardMetrics();
 
   return (
     <div className="mx-auto max-w-5xl">
       <div className="mb-8">
         <h1 className="font-display text-3xl font-bold tracking-tight text-ink">Admin dashboard</h1>
-        <p className="mt-2 text-sm text-ink/55">Signed in as {session?.user?.email}</p>
+        <p className="mt-2 text-sm text-ink/55">Signed in as {session.user.email}</p>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Bell, Check } from "lucide-react";
 import { toast } from "sonner";
+import { createJobAlert } from "@/lib/client/job-alerts";
 
 type Props = {
   keywords: string;
@@ -17,15 +18,10 @@ export default function SaveSearchButton({ keywords, category }: Props) {
     if (pending || saved) return;
     setPending(true);
     try {
-      const res = await fetch("/api/seeker/job-alerts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ keywords, category, frequency: "DAILY" }),
-      });
-      const data = await res.json().catch(() => ({}));
+      const result = await createJobAlert({ keywords, category, frequency: "DAILY" });
 
-      if (!res.ok) {
-        toast.error((data as { error?: string }).error || "Couldn't save this search");
+      if (!result.ok) {
+        toast.error(result.error || "Couldn't save this search");
         return;
       }
 

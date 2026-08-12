@@ -1,9 +1,7 @@
 import Link from "next/link";
-import { auth } from "@/Auth";
-import { prisma } from "@/lib/prisma";
-import { ensureSeekerProfile } from "@/lib/seekers";
-import { listJobAlerts } from "@/lib/job-alerts";
+import { getSeekerDashboardProfile } from "@/lib/seeker/dashboard";
 import { relativeTime } from "@/lib/time-ago";
+import { requireSeekerPageContext } from "@/lib/auth/seeker-session";
 import {
   Bookmark,
   Bell,
@@ -40,58 +38,16 @@ export default async function SeekerDashboardPage({
 }: {
   searchParams: Promise<{ status?: string }>;
 }) {
-  const session = await auth();
+  const { session } = await requireSeekerPageContext();
   const { status: statusParam } = await searchParams;
   const normalized = statusParam?.toUpperCase() as StatusFilter | undefined;
   const statusFilter: StatusFilter =
     normalized && STATUS_FILTERS.includes(normalized) ? normalized : "ALL";
 
-  await ensureSeekerProfile(session!.user!.id, {
-    fullName: session?.user?.name ?? "",
-  });
-
-  const profile = await prisma.seekerProfile.findUnique({
-    where: { userId: session!.user!.id },
-    include: {
-      applications: {
-        orderBy: { appliedAt: "desc" },
-        include: {
-          job: {
-            select: {
-              id: true,
-              title: true,
-              company: { select: { companyName: true } },
-            },
-          },
-        },
-      },
-      savedJobs: {
-        orderBy: { savedAt: "desc" },
-        take: 5,
-        include: {
-          job: {
-            select: {
-              id: true,
-              title: true,
-              company: { select: { companyName: true } },
-            },
-          },
-        },
-      },
-      conversations: {
-        orderBy: { lastMessageAt: "desc" },
-        take: 3,
-        include: {
-          company: { select: { companyName: true } },
-          messages: {
-            orderBy: { createdAt: "desc" },
-            take: 1,
-          },
-        },
-      },
-    },
-  });
-  const jobAlerts = await listJobAlerts(session!.user!.id);
+  const { profile, jobAlerts } = await getSeekerDashboardProfile(
+    session.user.id,
+    session.user.name ?? ""
+  );
 
   // Profile strength
   const strengthChecks = [
