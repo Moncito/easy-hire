@@ -20,6 +20,7 @@ export type EmployerJobCardData = {
   createdAt: string;
   updatedAt: string;
   publishedAt: string | null;
+  reviewRejectionReason: string | null;
   applicantCount: number;
   unreviewedCount: number;
   viewCount: number;
@@ -66,21 +67,20 @@ function enrichJob(
     createdAt: Date;
     updatedAt: Date;
     publishedAt: Date | null;
+    reviewRejectionReason: string | null;
     targetHireCount: number;
     _count: { applications: number };
-    applications: Array<{ status: string; appliedAt: Date }>;
     screeningQuestions: Array<{ prompt: string; required: boolean }>;
   },
   viewCount: number,
-  staleThreshold: Date
+  staleThreshold: Date,
+  pipelineByStatus: Record<string, number>,
+  hasStaleUnreviewed: boolean
 ): EmployerJobCardData {
-  const unreviewedCount = job.applications.filter((a) => a.status === "APPLIED").length;
-  const hiredCount = job.applications.filter((a) => a.status === "HIRED").length;
-  const shortlistedCount = job.applications.filter((a) => a.status === "SHORTLISTED").length;
-  const interviewCount = job.applications.filter((a) => a.status === "INTERVIEW").length;
-  const hasStale = job.applications.some(
-    (a) => a.status === "APPLIED" && a.appliedAt < staleThreshold
-  );
+  const unreviewedCount = pipelineByStatus.APPLIED ?? 0;
+  const hiredCount = pipelineByStatus.HIRED ?? 0;
+  const shortlistedCount = pipelineByStatus.SHORTLISTED ?? 0;
+  const interviewCount = pipelineByStatus.INTERVIEW ?? 0;
 
   return {
     id: job.id,
@@ -100,12 +100,13 @@ function enrichJob(
     createdAt: job.createdAt.toISOString(),
     updatedAt: job.updatedAt.toISOString(),
     publishedAt: job.publishedAt?.toISOString() ?? null,
+    reviewRejectionReason: job.reviewRejectionReason,
     applicantCount: job._count.applications,
     unreviewedCount,
     viewCount,
     hiredCount,
     targetHireCount: job.targetHireCount,
-    needsAttention: job.status === "ACTIVE" && unreviewedCount > 0 && hasStale,
+    needsAttention: job.status === "ACTIVE" && unreviewedCount > 0 && hasStaleUnreviewed,
     pipeline: {
       applied: unreviewedCount,
       shortlisted: shortlistedCount,
@@ -203,13 +204,13 @@ export async function getEmployerJobsWithMetrics(companyId: string) {
   const staleThreshold = new Date(now.getTime() - STALE_DAYS * 24 * 60 * 60 * 1000);
   const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-  const [jobs, jobViewCounts, needsReviewApplicants] = await Promise.all([
+  const [jobs, jobViewCounts, needsReviewApplicants, statusGroups, staleJobIds] =
+    await Promise.all([
     prisma.job.findMany({
       where: { companyId },
       orderBy: { updatedAt: "desc" },
       include: {
         _count: { select: { applications: true } },
-        applications: { select: { status: true, appliedAt: true } },
         screeningQuestions: {
           orderBy: { sortOrder: "asc" },
           select: { prompt: true, required: true },
@@ -224,14 +225,42 @@ export async function getEmployerJobsWithMetrics(companyId: string) {
     prisma.application.count({
       where: { job: { companyId }, status: "APPLIED" },
     }),
+    prisma.application.groupBy({
+      by: ["jobId", "status"],
+      where: { job: { companyId } },
+      _count: { _all: true },
+    }),
+    prisma.application.findMany({
+      where: {
+        job: { companyId },
+        status: "APPLIED",
+        appliedAt: { lt: staleThreshold },
+      },
+      select: { jobId: true },
+      distinct: ["jobId"],
+    }),
   ]);
+
+  const pipelineByJob: Record<string, Record<string, number>> = {};
+  for (const row of statusGroups) {
+    if (!pipelineByJob[row.jobId]) pipelineByJob[row.jobId] = {};
+    pipelineByJob[row.jobId][row.status] = row._count._all;
+  }
+
+  const staleJobIdSet = new Set(staleJobIds.map((r) => r.jobId));
 
   const viewCountByJob = Object.fromEntries(
     jobViewCounts.map((v) => [v.jobId, v._count._all])
   );
 
   const enriched = jobs.map((job) =>
-    enrichJob(job, viewCountByJob[job.id] ?? 0, staleThreshold)
+    enrichJob(
+      job,
+      viewCountByJob[job.id] ?? 0,
+      staleThreshold,
+      pipelineByJob[job.id] ?? {},
+      staleJobIdSet.has(job.id)
+    )
   );
 
   const summary: EmployerJobsSummary = {
@@ -299,7 +328,9 @@ export function getApplicantsPageAttentionItems(
 }
 
 export function jobStatusDisplay(
-  job: Pick<EmployerJobCardData, "status" | "needsAttention">,
+  job: Pick<EmployerJobCardData, "status" | "needsAttention"> & {
+    reviewRejectionReason?: string | null;
+  },
   companyVerified: boolean
 ) {
   if (job.needsAttention) {
@@ -313,6 +344,9 @@ export function jobStatusDisplay(
   }
   if (job.status === "PENDING_REVIEW") {
     return { label: "Pending review", className: "bg-navy/10 text-navy border-navy/15" };
+  }
+  if (job.status === "DRAFT" && job.reviewRejectionReason) {
+    return { label: "Needs revision", className: "bg-ember/10 text-ember border-ember/20" };
   }
   if (job.status === "DRAFT") {
     return { label: "Draft", className: "bg-ink/5 text-ink/55 border-ink/10" };

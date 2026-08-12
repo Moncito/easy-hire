@@ -1,21 +1,29 @@
-import { auth } from "@/Auth";
-import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import ApplicantsBoard from "@/components/employer/ApplicantsBoard";
+import { getEmployerCompanyByUserId, getSession } from "@/lib/employer-session";
+import { listJobApplications } from "@/lib/applications";
+import { prisma } from "@/lib/prisma";
 
-export default async function ApplicantsPage({ params }: { params: Promise<{ id: string }> }) {
-  const session = await auth();
+const PAGE_SIZE = 50;
+
+export default async function ApplicantsPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ page?: string }>;
+}) {
+  const session = await getSession();
 
   if (!session?.user || session.user.role !== "EMPLOYER") {
     redirect("/login");
   }
 
   const { id } = await params;
+  const { page: pageParam } = await searchParams;
+  const page = Math.max(1, Number(pageParam) || 1);
 
-  const company = await prisma.company.findUnique({
-    where: { userId: session.user.id },
-    select: { id: true, verifiedStatus: true, companyName: true },
-  });
+  const company = await getEmployerCompanyByUserId(session.user.id);
 
   const job = company
     ? await prisma.job.findFirst({
@@ -27,37 +35,7 @@ export default async function ApplicantsPage({ params }: { params: Promise<{ id:
     redirect("/employer/jobs");
   }
 
-  const applications = await prisma.application.findMany({
-    where: { jobId: job.id },
-    orderBy: { appliedAt: "desc" },
-    include: {
-      seeker: {
-        select: {
-          id: true,
-          fullName: true,
-          headline: true,
-          skills: true,
-          resumeUrl: true,
-          resumeLabel: true,
-          resumeUpdatedAt: true,
-          resumes: true,
-          location: true,
-          desiredSalaryMin: true,
-          desiredSalaryMax: true,
-          availability: true,
-          yearsExperience: true,
-          languages: true,
-          education: true,
-        },
-      },
-      answers: {
-        include: {
-          question: { select: { id: true, prompt: true, required: true, sortOrder: true } },
-        },
-        orderBy: { question: { sortOrder: "asc" } },
-      },
-    },
-  });
+  const { applications, total, totalPages } = await listJobApplications(job.id, page, PAGE_SIZE);
 
   const staleThreshold = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
   const unreviewedStale = applications.filter(
@@ -67,24 +45,52 @@ export default async function ApplicantsPage({ params }: { params: Promise<{ id:
   const companyVerified = company?.verifiedStatus === "APPROVED";
 
   return (
-    <ApplicantsBoard
-      job={{
-        id: job.id,
-        title: job.title,
-        status: job.status,
-        employmentType: job.employmentType,
-        remoteType: job.remoteType,
-        location: job.location,
-        salaryMin: job.salaryMin,
-        salaryMax: job.salaryMax,
-        salaryPeriod: job.salaryPeriod,
-        createdAt: job.createdAt.toISOString(),
-        targetHireCount: job.targetHireCount,
-      }}
-      companyVerified={companyVerified}
-      needsAttention={needsAttention}
-      employerName={company?.companyName ?? "Team"}
-      initialApplications={JSON.parse(JSON.stringify(applications))}
-    />
+    <>
+      {total > PAGE_SIZE && (
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-xs text-ink/45">
+          <p>
+            Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, total)} of {total}{" "}
+            applicants
+          </p>
+          <div className="flex gap-2">
+            {page > 1 && (
+              <a
+                href={`/employer/jobs/${job.id}/applicants?page=${page - 1}`}
+                className="font-medium text-teal hover:underline"
+              >
+                Previous
+              </a>
+            )}
+            {page < totalPages && (
+              <a
+                href={`/employer/jobs/${job.id}/applicants?page=${page + 1}`}
+                className="font-medium text-teal hover:underline"
+              >
+                Next
+              </a>
+            )}
+          </div>
+        </div>
+      )}
+      <ApplicantsBoard
+        job={{
+          id: job.id,
+          title: job.title,
+          status: job.status,
+          employmentType: job.employmentType,
+          remoteType: job.remoteType,
+          location: job.location,
+          salaryMin: job.salaryMin,
+          salaryMax: job.salaryMax,
+          salaryPeriod: job.salaryPeriod,
+          createdAt: job.createdAt.toISOString(),
+          targetHireCount: job.targetHireCount,
+        }}
+        companyVerified={companyVerified}
+        needsAttention={needsAttention}
+        employerName={company?.companyName ?? "Team"}
+        initialApplications={JSON.parse(JSON.stringify(applications))}
+      />
+    </>
   );
 }

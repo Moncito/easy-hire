@@ -1,3 +1,4 @@
+import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { headers } from "next/headers";
 import { createHash } from "crypto";
@@ -138,7 +139,7 @@ function computeHiringScore(input: {
   return Math.min(100, profilePoints + reviewPoints + pipelinePoints + activityPoints);
 }
 
-async function computeScorePercentile(score: number) {
+async function computeScorePercentileUncached(score: number) {
   const companies = await prisma.company.findMany({
     select: {
       id: true,
@@ -151,42 +152,61 @@ async function computeScorePercentile(score: number) {
       instagramUrl: true,
       xUrl: true,
       highlights: true,
-      jobs: {
-        where: { status: "ACTIVE" },
-        select: {
-          id: true,
-          _count: { select: { applications: true } },
-          applications: { select: { status: true } },
-        },
-      },
     },
   });
 
   if (companies.length < 5) return null;
 
-  const scores = companies.map((c) => {
-    const profileCompletion = computeProfileCompletion(c);
-    const allApps = c.jobs.flatMap((j) => j.applications);
-    const totalApplicants = allApps.length;
-    const reviewedCount = allApps.filter((a) => a.status !== "APPLIED").length;
-    const interviewCount = allApps.filter((a) => a.status === "INTERVIEW").length;
-    const hiredCount = allApps.filter((a) => a.status === "HIRED").length;
-    const activeJobs = c.jobs.length;
-    const activeJobsWithApplicants = c.jobs.filter((j) => j._count.applications > 0).length;
-    return computeHiringScore({
-      profileCompletion,
-      totalApplicants,
-      reviewedCount,
-      interviewCount,
-      hiredCount,
-      activeJobsWithApplicants,
-      activeJobs,
-    });
-  });
+  const scores = await Promise.all(
+    companies.map(async (c) => {
+      const [statusGroups, activeJobs, activeJobsWithApplicants] = await Promise.all([
+        prisma.application.groupBy({
+          by: ["status"],
+          where: { job: { companyId: c.id } },
+          _count: { _all: true },
+        }),
+        prisma.job.count({ where: { companyId: c.id, status: "ACTIVE" } }),
+        prisma.job.count({
+          where: {
+            companyId: c.id,
+            status: "ACTIVE",
+            applications: { some: {} },
+          },
+        }),
+      ]);
+
+      const statusMap = Object.fromEntries(
+        statusGroups.map((g) => [g.status, g._count._all])
+      ) as Record<string, number>;
+
+      const applied = statusMap.APPLIED ?? 0;
+      const reviewedCount =
+        (statusMap.SHORTLISTED ?? 0) +
+        (statusMap.INTERVIEW ?? 0) +
+        (statusMap.HIRED ?? 0) +
+        (statusMap.REJECTED ?? 0);
+
+      return computeHiringScore({
+        profileCompletion: computeProfileCompletion(c),
+        totalApplicants: applied + reviewedCount,
+        reviewedCount,
+        interviewCount: statusMap.INTERVIEW ?? 0,
+        hiredCount: statusMap.HIRED ?? 0,
+        activeJobsWithApplicants,
+        activeJobs,
+      });
+    })
+  );
 
   const below = scores.filter((s) => s < score).length;
   return Math.round((below / scores.length) * 100);
 }
+
+const computeScorePercentile = unstable_cache(
+  async (score: number) => computeScorePercentileUncached(score),
+  ["employer-score-percentile"],
+  { revalidate: 300 }
+);
 
 export async function getEmployerAnalytics(companyId: string): Promise<EmployerAnalytics> {
   const now = new Date();

@@ -10,6 +10,7 @@ import EmployerNotificationBell from "@/components/employer/EmployerNotification
 type Props = {
   companyName: string;
   verifiedStatus: string;
+  plan?: "FREE" | "PRO";
 };
 
 const statusDot: Record<string, string> = {
@@ -24,10 +25,11 @@ const statusLabel: Record<string, string> = {
   REJECTED: "Rejected",
 };
 
-export default function Topbar({ companyName, verifiedStatus }: Props) {
+export default function Topbar({ companyName, verifiedStatus, plan = "FREE" }: Props) {
   const pathname = usePathname();
   const title = getEmployerPageTitle(pathname);
   const isMessages = pathname.startsWith("/employer/messages");
+  const isPro = plan === "PRO";
 
   const initials = companyName
     ? companyName
@@ -39,7 +41,13 @@ export default function Topbar({ companyName, verifiedStatus }: Props) {
     : "CO";
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-4 border-b border-ink/5 bg-mist/80 px-4 backdrop-blur-md sm:px-6">
+    <header
+      className={`sticky top-0 z-30 flex h-14 shrink-0 items-center gap-4 border-b px-4 backdrop-blur-md sm:px-6 ${
+        isPro
+          ? "border-ink/5 bg-white/60 shadow-sm shadow-ink/5"
+          : "border-ink/5 bg-mist/80"
+      }`}
+    >
       <h1
         className={`shrink-0 font-display text-lg font-bold tracking-tight text-ink ${
           isMessages ? "" : "lg:hidden"

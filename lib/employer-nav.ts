@@ -21,5 +21,6 @@ export function getEmployerPageTitle(pathname: string): string {
   if (pathname === "/employer/talent") return "Talent search";
   if (pathname === "/employer/company-profile") return "Company profile";
   if (pathname === "/employer/reports") return "Reports";
+  if (pathname === "/employer/billing") return "Billing";
   return "Employer";
 }

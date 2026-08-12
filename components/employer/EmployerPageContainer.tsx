@@ -18,7 +18,13 @@ const widthClasses: Record<ContentWidth, string> = {
   "6xl": "mx-auto w-full max-w-6xl",
 };
 
-export default function EmployerPageContainer({ children }: { children: React.ReactNode }) {
+export default function EmployerPageContainer({
+  children,
+  pro = false,
+}: {
+  children: React.ReactNode;
+  pro?: boolean;
+}) {
   const pathname = usePathname();
   const width = getContentWidth(pathname);
   const isMessages = pathname.startsWith("/employer/messages");
@@ -31,7 +37,9 @@ export default function EmployerPageContainer({ children }: { children: React.Re
 
   return (
     <div
-      className={`${isFixedWorkspace ? workspaceClasses : "px-6 py-6 pb-28 sm:px-8 lg:pb-24"} ${widthClasses[width]}`}
+      className={`${isFixedWorkspace ? workspaceClasses : "px-6 py-6 pb-28 sm:px-8 lg:pb-24"} ${widthClasses[width]} ${
+        pro && !isFixedWorkspace ? "rounded-2xl bg-white/70 shadow-sm shadow-ink/5 ring-1 ring-ink/5 backdrop-blur-sm" : ""
+      }`}
     >
       {children}
     </div>

@@ -1,5 +1,6 @@
-import Link from "next/link";
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { getPublicJob } from "@/lib/public-jobs";
 import JobDetailTabs from "@/components/jobs/JobDetailTabs";
@@ -10,6 +11,28 @@ import { listSavedJobIds } from "@/lib/saved-jobs";
 import { auth } from "@/Auth";
 import { ensureSeekerProfile } from "@/lib/seekers";
 import { getSeekerProfileCompletion } from "@/lib/seeker-profile-completion";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  try {
+    const job = await getPublicJob(id);
+    return {
+      title: `${job.title} at ${job.company.companyName} — EasyHire`,
+      description: job.description.slice(0, 160),
+      openGraph: {
+        title: job.title,
+        description: job.description.slice(0, 160),
+        type: "website",
+      },
+    };
+  } catch {
+    return { title: "Job not found — EasyHire" };
+  }
+}
 
 export default async function JobDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

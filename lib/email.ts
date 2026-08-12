@@ -91,3 +91,33 @@ export async function notifyApplicationRejected(ctx: {
     ),
   ]);
 }
+
+export async function sendJobAlertEmail(ctx: {
+  to: string;
+  seekerName: string;
+  frequency: "DAILY" | "WEEKLY";
+  jobs: Array<{ id: string; title: string; companyName: string; location: string }>;
+}): Promise<boolean> {
+  if (!resend) {
+    console.warn("[email] RESEND_API_KEY not set — skipped job alert digest");
+    return false;
+  }
+
+  const list = ctx.jobs
+    .slice(0, 10)
+    .map(
+      (j) =>
+        `<li><a href="${appUrl}/jobs/${j.id}"><strong>${escapeHtml(j.title)}</strong></a> — ${escapeHtml(j.companyName)} · ${escapeHtml(j.location)}</li>`
+    )
+    .join("");
+
+  await sendEmail(
+    ctx.to,
+    `Your ${ctx.frequency.toLowerCase()} job alert — ${ctx.jobs.length} new match${ctx.jobs.length === 1 ? "" : "es"}`,
+    `<p>Hi ${escapeHtml(ctx.seekerName)},</p>
+     <p>We found ${ctx.jobs.length} new job${ctx.jobs.length === 1 ? "" : "s"} matching your alert:</p>
+     <ul>${list}</ul>
+     <p><a href="${appUrl}/jobs">Browse all jobs</a></p>`
+  );
+  return true;
+}

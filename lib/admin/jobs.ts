@@ -79,7 +79,10 @@ export async function reviewJob(jobId: string, raw: unknown) {
   const [updated] = await prisma.$transaction([
     prisma.job.update({
       where: { id: jobId },
-      data: { status: "DRAFT" },
+      data: {
+        status: "DRAFT",
+        reviewRejectionReason: reason,
+      },
     }),
     prisma.notification.create({
       data: {

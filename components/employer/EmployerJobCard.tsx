@@ -216,6 +216,13 @@ export default function EmployerJobCard({
         </div>
       )}
 
+      {job.reviewRejectionReason && job.status === "DRAFT" && (
+        <div className="mt-3 rounded-lg border border-ember/15 bg-ember/5 px-2.5 py-2 text-[10px] leading-relaxed text-ember">
+          <span className="font-semibold">Admin feedback: </span>
+          {job.reviewRejectionReason}
+        </div>
+      )}
+
       <div className="mt-auto pt-4">
         <Link
           href={primaryAction.href}

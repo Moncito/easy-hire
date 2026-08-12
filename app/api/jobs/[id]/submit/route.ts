@@ -12,8 +12,8 @@ export async function PATCH(_req: Request, { params }: { params: Promise<{ id: s
     }
 
     const { id } = await params;
-    const { job } = await requireEmployerJob(session.user.id, id);
-    const updated = await submitJobForReview(job);
+    const { job, company } = await requireEmployerJob(session.user.id, id);
+    const updated = await submitJobForReview(job, company.id);
     return NextResponse.json(updated);
   } catch (error) {
     return errorResponse(error);

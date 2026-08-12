@@ -171,33 +171,42 @@ export async function updateApplication(applicationId: string, raw: unknown) {
   return updated;
 }
 
-export async function listJobApplications(jobId: string) {
-  return prisma.application.findMany({
-    where: { jobId },
-    orderBy: { appliedAt: "desc" },
-    include: {
-      seeker: {
-        select: {
-          id: true,
-          fullName: true,
-          headline: true,
-          skills: true,
-          resumeUrl: true,
-          location: true,
-          desiredSalaryMin: true,
-          desiredSalaryMax: true,
-          linkedinUrl: true,
-          portfolioUrl: true,
-          certifications: true,
-          photoUrl: true,
+export async function listJobApplications(jobId: string, page = 1, pageSize = 50) {
+  const skip = (page - 1) * pageSize;
+
+  const [applications, total] = await Promise.all([
+    prisma.application.findMany({
+      where: { jobId },
+      orderBy: { appliedAt: "desc" },
+      skip,
+      take: pageSize,
+      include: {
+        seeker: {
+          select: {
+            id: true,
+            fullName: true,
+            headline: true,
+            skills: true,
+            resumeUrl: true,
+            location: true,
+            desiredSalaryMin: true,
+            desiredSalaryMax: true,
+            linkedinUrl: true,
+            portfolioUrl: true,
+            certifications: true,
+            photoUrl: true,
+          },
+        },
+        answers: {
+          include: {
+            question: { select: { id: true, prompt: true, required: true, sortOrder: true } },
+          },
+          orderBy: { question: { sortOrder: "asc" } },
         },
       },
-      answers: {
-        include: {
-          question: { select: { id: true, prompt: true, required: true, sortOrder: true } },
-        },
-        orderBy: { question: { sortOrder: "asc" } },
-      },
-    },
-  });
+    }),
+    prisma.application.count({ where: { jobId } }),
+  ]);
+
+  return { applications, total, page, pageSize, totalPages: Math.ceil(total / pageSize) };
 }

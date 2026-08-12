@@ -1,6 +1,3 @@
-import { Suspense } from "react";
-import { auth } from "@/Auth";
-import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import ApplicantsPageHeader from "@/components/employer/ApplicantsPageHeader";
 import ApplicantsHubBoard from "@/components/employer/ApplicantsHubBoard";
@@ -10,17 +7,17 @@ import {
   getApplicantsPageAttentionItems,
 } from "@/lib/employer-jobs";
 import ApplicantsHubSkeleton from "@/components/employer/skeletons/ApplicantsHubSkeleton";
+import { requireEmployerLayoutContext } from "@/lib/employer-session";
+import { Suspense } from "react";
 
 export default async function EmployerApplicantsPage() {
-  const session = await auth();
+  const ctx = await requireEmployerLayoutContext();
 
-  if (!session?.user || session.user.role !== "EMPLOYER") {
+  if (!ctx) {
     redirect("/login");
   }
 
-  const company = await prisma.company.findUnique({
-    where: { userId: session.user.id },
-  });
+  const { company } = ctx;
 
   if (!company) {
     redirect("/employer/company-profile");

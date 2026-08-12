@@ -29,16 +29,16 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     }
 
     const { id } = await params;
-    const { job: existingJob } = await requireEmployerJob(session.user.id, id);
+    const { job: existingJob, company } = await requireEmployerJob(session.user.id, id);
     const body = await req.json();
 
     if (body.status && Object.keys(body).length === 1) {
       const { status } = jobStatusUpdateSchema.parse(body);
-      const updatedJob = await updateJobStatus(id, status);
+      const updatedJob = await updateJobStatus(id, status, existingJob.status);
       return NextResponse.json(updatedJob);
     }
 
-    const updatedJob = await updateJob(id, existingJob.status, body);
+    const updatedJob = await updateJob(id, existingJob.status, body, company.id);
     return NextResponse.json(updatedJob);
   } catch (error) {
     if (error instanceof ZodError) {
