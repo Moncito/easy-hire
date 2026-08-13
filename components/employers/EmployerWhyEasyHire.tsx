@@ -26,17 +26,17 @@ const REASONS = [
 export default function EmployerWhyEasyHire() {
   return (
     <section
-      className="relative w-full overflow-hidden bg-mist px-6 py-20 md:py-24"
+      className="emp-bg-section relative w-full overflow-hidden px-6 py-20 md:py-24"
       aria-label="Why hire through EasyHire"
     >
       <div className="pointer-events-none absolute -right-40 top-10 h-[450px] w-[450px] rounded-full bg-teal/6 blur-3xl" />
 
       <div className="relative mx-auto max-w-6xl">
         <div className="mb-14 max-w-2xl">
-          <h2 className="font-display text-3xl font-extrabold tracking-tight text-ink md:text-5xl">
+          <h2 className="emp-text font-display text-3xl font-extrabold tracking-tight md:text-5xl">
             Why employers choose EasyHire
           </h2>
-          <p className="mt-4 text-sm font-medium leading-relaxed text-ink/60 md:text-base">
+          <p className="emp-text-secondary mt-4 text-sm font-medium leading-relaxed md:text-base">
             Built to remove the risk from offshore hiring — for founders who don&apos;t
             have time to vet agencies or chase down recruiters.
           </p>
@@ -48,16 +48,16 @@ export default function EmployerWhyEasyHire() {
             return (
               <div
                 key={reason.title}
-                className="flex gap-4 rounded-2xl border border-ink/8 bg-white/60 p-6 backdrop-blur-sm transition-colors duration-200 hover:border-teal/20 hover:bg-white/90"
+                className="emp-card flex gap-4 rounded-2xl border p-6 backdrop-blur-sm transition-colors duration-200 hover:border-teal/20"
               >
                 <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-teal/12">
                   <Icon className="h-5 w-5 text-teal" strokeWidth={1.8} />
                 </div>
                 <div>
-                  <p className="mb-1.5 font-display text-base font-bold tracking-tight text-ink">
+                  <p className="emp-text mb-1.5 font-display text-base font-bold tracking-tight">
                     {reason.title}
                   </p>
-                  <p className="text-sm leading-relaxed text-ink/65">{reason.detail}</p>
+                  <p className="emp-text-secondary text-sm leading-relaxed">{reason.detail}</p>
                 </div>
               </div>
             );

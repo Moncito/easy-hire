@@ -5,25 +5,37 @@ type Bar = { label: string; applications: number; interviews: number };
 
 type Props = {
   data: Bar[];
+  compact?: boolean;
 };
 
-export default function WeeklyTrendChart({ data }: Props) {
+export default function WeeklyTrendChart({ data, compact = false }: Props) {
   const totalApps = data.reduce((s, d) => s + d.applications, 0);
   const totalInterviews = data.reduce((s, d) => s + d.interviews, 0);
   const isEmpty = totalApps === 0 && totalInterviews === 0;
 
   if (isEmpty) {
     return (
-      <div className="flex min-h-[180px] flex-col items-center justify-center rounded-xl border border-dashed border-ink/10 bg-ink/[0.03] px-6 py-10 text-center">
-        <BarChart3 className="mb-3 h-9 w-9 text-ink/25" strokeWidth={1.5} />
-        <p className="text-sm font-semibold text-ink/60">No hiring activity this week</p>
-        <p className="mt-1.5 max-w-sm text-xs leading-relaxed text-ink/45">
-          Applications and interview moves will appear here once candidates start engaging with
-          your jobs.
+      <div
+        className={`flex flex-col items-center justify-center rounded-xl border border-dashed border-ink/10 bg-ink/[0.03] px-6 text-center ${
+          compact ? "min-h-[120px] py-6" : "min-h-[180px] py-10"
+        }`}
+      >
+        <BarChart3
+          className={`text-ink/25 ${compact ? "mb-2 h-7 w-7" : "mb-3 h-9 w-9"}`}
+          strokeWidth={1.5}
+        />
+        <p className={`font-semibold text-ink/60 ${compact ? "text-xs" : "text-sm"}`}>
+          No hiring activity this week
         </p>
+        {!compact && (
+          <p className="mt-1.5 max-w-sm text-xs leading-relaxed text-ink/45">
+            Applications and interview moves will appear here once candidates start engaging with
+            your jobs.
+          </p>
+        )}
         <Link
           href="/employer/jobs/new"
-          className="mt-4 inline-flex items-center rounded-lg bg-teal/10 px-3 py-1.5 text-xs font-semibold text-teal transition hover:bg-teal/15"
+          className="mt-3 inline-flex items-center rounded-lg bg-teal/10 px-3 py-1.5 text-xs font-semibold text-teal transition hover:bg-teal/15"
         >
           Post a job →
         </Link>

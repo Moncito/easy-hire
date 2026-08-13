@@ -14,6 +14,7 @@ export default async function EmployerLayout({ children }: { children: React.Rea
   return (
     <EmployerShell
       companyName={company?.companyName || "Your company"}
+      companyLogoUrl={company?.logoUrl ?? null}
       verifiedStatus={company?.verifiedStatus || "PENDING"}
       plan={plan}
       navCounts={{

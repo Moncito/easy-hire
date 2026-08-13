@@ -10,10 +10,11 @@ import {
   Globe,
   Share2,
 } from "lucide-react";
-import ProfileStrengthCard from "@/components/employer/ProfileStrengthCard";
-import PublicCompanyPreview from "@/components/employer/PublicCompanyPreview";
+import CompanyProfileTopBar from "@/components/employer/CompanyProfileTopBar";
+import CompanyVerificationBanner from "@/components/employer/CompanyVerificationBanner";
 import StickySaveBar from "@/components/employer/StickySaveBar";
 import EmployerFormSection from "@/components/employer/ui/EmployerFormSection";
+import EmployerFormSelect from "@/components/employer/ui/EmployerFormSelect";
 import VerificationDocumentsPanel, {
   type VerificationDoc,
 } from "@/components/employer/VerificationDocumentsPanel";
@@ -63,6 +64,7 @@ type FormState = {
 };
 
 type Props = {
+  companyId: string;
   initialData: {
     companyName: string;
     description: string | null;
@@ -119,22 +121,6 @@ function LinkedinIcon({ className }: { className?: string }) {
   );
 }
 
-function YoutubeIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-      <path d="M23.498 6.186a3.016 3.016 0 00-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 00.502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 002.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 002.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
-    </svg>
-  );
-}
-
-function GithubIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-      <path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12" />
-    </svg>
-  );
-}
-
 function FacebookIcon({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -159,22 +145,6 @@ function XIcon({ className }: { className?: string }) {
   );
 }
 
-function BehanceIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-      <path d="M22 7h-7V5h7v2zm1.726 10c-.442 2.333-2.23 3.995-4.726 3.995H0V4h15.104c2.482 0 4.302 1.435 4.726 3.995h-7.008c-.442 1.169-.988 2.005-1.638 2.508-.65.503-1.495.755-2.535.755-1.495 0-2.535-.503-3.12-1.51-.585-1.006-.878-2.412-.878-4.218 0-1.806.293-3.212.878-4.218.585-1.006 1.625-1.51 3.12-1.51 1.04 0 1.885.252 2.535.755.65.503 1.196 1.339 1.638 2.508H24c-.424-2.56-2.244-3.995-4.726-3.995H0v16h18c2.496 0 4.284-1.662 4.726-3.995h-7.008z" />
-    </svg>
-  );
-}
-
-function DribbbleIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-      <path d="M12 24C5.385 24 0 18.615 0 12S5.385 0 12 0s12 5.385 12 12-5.385 12-12 12zm10.12-10.358c-.35-.11-3.17-.953-6.384-.438 1.34 3.684 1.887 6.684 1.992 7.308 2.3-1.555 3.936-4.02 4.395-6.87zm-6.115-7.808c-.153-.032-3.755-.753-6.244 1.493 2.192 2.027 5.127 3.025 6.242 3.375 1.115-.35 4.05-1.348 6.242-3.375-2.489-2.246-6.091-1.525-6.24-1.493zM2.988 13.622c.057.322.75 4.018 3.014 6.548 2.264-2.53 2.957-6.226 3.014-6.548-1.878-.58-3.14-1.58-3.014-6.548zm3.015 8.775c.257.872.565 1.688.922 2.442 1.872-1.006 3.36-2.548 4.35-4.334-1.34-1.025-2.828-1.92-4.272-2.108zm8.025-14.122c-.922-.257-1.84-.438-2.742-.558-1.115 1.348-2.535 3.375-3.375 5.127 2.489.35 4.978.153 6.117-.153zm-8.025 2.108c-1.444.188-2.932 1.083-4.272 2.108.99 1.786 2.478 3.328 4.35 4.334.357-.754.665-1.57.922-2.442z" />
-    </svg>
-  );
-}
-
 const inputClassName =
   "w-full rounded-xl border border-ink/10 bg-white px-4 py-2.5 text-sm text-ink outline-none transition-colors focus-visible:border-teal focus-visible:ring-2 focus-visible:ring-teal/20";
 
@@ -186,6 +156,7 @@ const chipClassName = (selected: boolean) =>
   }`;
 
 export default function CompanyProfileEditor({
+  companyId,
   initialData,
   stats,
   verificationDocuments = [],
@@ -373,7 +344,6 @@ export default function CompanyProfileEditor({
       onChange: (value: string) => updateField("linkedinUrl", value),
       placeholder: "https://linkedin.com/company/...",
       icon: LinkedinIcon,
-      enabled: true,
     },
     {
       id: "facebook",
@@ -382,7 +352,6 @@ export default function CompanyProfileEditor({
       onChange: (value: string) => updateField("facebookUrl", value),
       placeholder: "https://facebook.com/...",
       icon: FacebookIcon,
-      enabled: true,
     },
     {
       id: "instagram",
@@ -391,7 +360,6 @@ export default function CompanyProfileEditor({
       onChange: (value: string) => updateField("instagramUrl", value),
       placeholder: "https://instagram.com/...",
       icon: InstagramIcon,
-      enabled: true,
     },
     {
       id: "x",
@@ -400,57 +368,20 @@ export default function CompanyProfileEditor({
       onChange: (value: string) => updateField("xUrl", value),
       placeholder: "https://x.com/...",
       icon: XIcon,
-      enabled: true,
-    },
-    {
-      id: "youtube",
-      label: "YouTube",
-      value: "",
-      onChange: () => undefined,
-      placeholder: "Coming soon",
-      icon: YoutubeIcon,
-      enabled: false,
-    },
-    {
-      id: "github",
-      label: "GitHub",
-      value: "",
-      onChange: () => undefined,
-      placeholder: "Coming soon",
-      icon: GithubIcon,
-      enabled: false,
-    },
-    {
-      id: "behance",
-      label: "Behance",
-      value: "",
-      onChange: () => undefined,
-      placeholder: "Coming soon",
-      icon: BehanceIcon,
-      enabled: false,
-    },
-    {
-      id: "dribbble",
-      label: "Dribbble",
-      value: "",
-      onChange: () => undefined,
-      placeholder: "Coming soon",
-      icon: DribbbleIcon,
-      enabled: false,
     },
   ];
 
   return (
-    <form onSubmit={handleSubmit} className="pb-24">
-      <section className="mb-8 overflow-hidden rounded-2xl bg-ink/[0.02]">
-        <div className="group relative h-28 w-full overflow-hidden sm:h-32">
+    <form onSubmit={handleSubmit}>
+      <section className="mb-5 overflow-hidden rounded-2xl border border-navy/[0.08] bg-white/90 shadow-[0_8px_24px_-6px_rgba(30,58,95,0.08)]">
+        <div className="group relative h-36 w-full overflow-hidden sm:h-44">
           {bannerUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={bannerUrl} alt="" className="h-full w-full object-cover" />
           ) : (
             <div className="h-full w-full bg-gradient-to-r from-teal/40 via-navy/35 to-teal/30" />
           )}
-          <div className="absolute inset-0 bg-ink/10 transition-opacity duration-300 group-hover:bg-ink/20" />
+          <div className="absolute inset-0 bg-gradient-to-t from-ink/30 via-ink/5 to-transparent" />
           <input
             ref={bannerInputRef}
             type="file"
@@ -465,15 +396,14 @@ export default function CompanyProfileEditor({
             type="button"
             disabled={bannerUploading}
             onClick={() => bannerInputRef.current?.click()}
-            className="absolute bottom-2 right-3 flex cursor-pointer items-center gap-1.5 rounded-lg border border-white/25 bg-white/15 px-2.5 py-1 text-[11px] font-semibold text-white opacity-0 backdrop-blur-sm transition-all duration-300 hover:bg-white/25 group-hover:opacity-100 disabled:opacity-50"
+            className="absolute bottom-3 right-3 flex cursor-pointer items-center gap-1.5 rounded-lg border border-white/30 bg-ink/40 px-3 py-1.5 text-[11px] font-semibold text-white backdrop-blur-sm transition hover:bg-ink/55 disabled:opacity-50"
           >
             <Camera className="h-3.5 w-3.5" aria-hidden="true" />
             {bannerUploading ? "Uploading..." : bannerUrl ? "Change banner" : "Upload banner"}
           </button>
         </div>
 
-        <div className="flex flex-col gap-5 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 px-5 py-4 sm:px-6">
             <div className="group/logo relative shrink-0">
               {logoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -549,42 +479,44 @@ export default function CompanyProfileEditor({
                 )}
               </p>
             </div>
-          </div>
-
-          <div className="w-full min-w-[200px] sm:max-w-xs">
-            <div className="mb-1.5 flex items-center justify-between text-xs">
-              <span className="font-semibold text-ink/50">Profile strength</span>
-              <span className="font-data font-bold text-teal">{profileStrength}%</span>
-            </div>
-            <div
-              className="h-1.5 overflow-hidden rounded-full bg-ink/10"
-              role="progressbar"
-              aria-valuenow={profileStrength}
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-label="Profile completion"
-            >
-              <div
-                className="h-full rounded-full bg-teal transition-all duration-500 ease-out"
-                style={{ width: `${profileStrength}%` }}
-              />
-            </div>
-            <p className="mt-1 text-[11px] text-ink/40">{strengthLabel}</p>
-          </div>
         </div>
       </section>
 
+      <CompanyVerificationBanner
+        status={verificationStatus}
+        rejectionReason={initialData.verificationRejectionReason}
+      />
+
+      <CompanyProfileTopBar
+        logoInitials={logoInitials}
+        logoUrl={logoUrl}
+        bannerUrl={bannerUrl}
+        companyName={form.companyName}
+        industry={form.industry}
+        description={form.description}
+        highlights={form.highlights}
+        headquarters={form.headquarters}
+        teamSize={form.teamSize}
+        website={form.website}
+        activeJobsCount={stats.activeJobsCount}
+        totalApplicantsCount={stats.totalApplicantsCount}
+        verified={verificationStatus === "verified"}
+        companyId={companyId}
+        profileStrength={profileStrength}
+        strengthLabel={strengthLabel}
+        checklist={checklist}
+      />
+
       {error && !isDirty && (
-        <div className="mb-6 rounded-xl border border-ember/20 bg-ember/5 px-4 py-3 text-sm text-ember">
+        <div className="mb-4 rounded-xl border border-ember/20 bg-ember/5 px-4 py-3 text-sm text-ember">
           {error}
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-10 lg:grid-cols-3">
-        <div className="space-y-8 lg:col-span-2">
+      <div className="space-y-5">
           <EmployerFormSection title="Company information">
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
                   <label htmlFor="companyName" className="mb-2 block text-xs font-semibold uppercase tracking-wider text-ink/45">
                     Company Name <span className="text-ember">*</span>
@@ -614,7 +546,7 @@ export default function CompanyProfileEditor({
               </div>
 
               <div>
-                <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-ink/45">Industry</p>
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-ink/45">Industry</p>
                 <div className="flex flex-wrap gap-2">
                   {industryOptions.map((opt) => (
                     <button
@@ -630,24 +562,18 @@ export default function CompanyProfileEditor({
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                   <div>
-                    <label htmlFor="teamSize" className="mb-2 block text-xs font-medium text-ink/55">
+                    <label htmlFor="teamSize" className="mb-1.5 block text-xs font-medium text-ink/55">
                       Company Size
                     </label>
-                    <select
-                      id="teamSize"
+                    <EmployerFormSelect
                       value={form.teamSize}
-                      onChange={(e) => updateField("teamSize", e.target.value)}
-                      className={inputClassName}
-                    >
-                      <option value="">Select size</option>
-                      {teamSizeOptions.map((opt) => (
-                        <option key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={(value) => updateField("teamSize", value)}
+                      options={teamSizeOptions}
+                      placeholder="Select size"
+                      ariaLabel="Company size"
+                    />
                   </div>
                   <div>
                     <label htmlFor="foundedYear" className="mb-2 block text-xs font-medium text-ink/55">
@@ -687,7 +613,7 @@ export default function CompanyProfileEditor({
               id="description"
               value={form.description}
               onChange={(e) => updateField("description", e.target.value.slice(0, MAX_DESCRIPTION_LENGTH))}
-              rows={7}
+              rows={6}
               maxLength={MAX_DESCRIPTION_LENGTH}
               placeholder="Share your story, team culture, and what makes working with you special..."
               aria-describedby="description-counter"
@@ -736,23 +662,18 @@ export default function CompanyProfileEditor({
             </div>
           </EmployerFormSection>
 
-          <EmployerFormSection title="Social presence" last>
-            <div className="mb-2 flex items-center gap-2 text-ink/40">
+          <EmployerFormSection title="Social presence">
+            <div className="mb-3 flex items-center gap-2 text-ink/40">
               <Share2 className="h-4 w-4" aria-hidden="true" />
               <span className="text-xs">Links shown on your public company page.</span>
             </div>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               {socialFields.map((field) => {
                 const Icon = field.icon;
                 return (
                   <div key={field.id}>
-                    <label htmlFor={field.id} className="mb-2 block text-xs font-semibold text-ink/55">
+                    <label htmlFor={field.id} className="mb-1.5 block text-xs font-semibold text-ink/55">
                       {field.label}
-                      {!field.enabled && (
-                        <span className="ml-2 rounded-md bg-ink/5 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-ink/40">
-                          Soon
-                        </span>
-                      )}
                     </label>
                     <div className="relative">
                       <Icon
@@ -765,66 +686,26 @@ export default function CompanyProfileEditor({
                         value={field.value}
                         onChange={(e) => field.onChange(e.target.value)}
                         placeholder={field.placeholder}
-                        disabled={!field.enabled}
-                        className={`${inputClassName} pl-10 disabled:cursor-not-allowed disabled:bg-ink/3 disabled:text-ink/35`}
+                        className={`${inputClassName} pl-10`}
                       />
                     </div>
                   </div>
                 );
               })}
             </div>
+            <p className="mt-3 text-[11px] text-ink/40">
+              YouTube, GitHub, Behance, and Dribbble — more platforms coming soon.
+            </p>
           </EmployerFormSection>
-        </div>
 
-        {/* Sidebar */}
-        <aside className="space-y-8">
-          <ProfileStrengthCard
-            percentage={profileStrength}
-            statusLabel={strengthLabel}
-            checklist={checklist}
-          />
-
-          <PublicCompanyPreview
-            logoInitials={logoInitials}
-            logoUrl={logoUrl}
-            bannerUrl={bannerUrl}
-            companyName={form.companyName}
-            industry={form.industry}
-            description={form.description}
-            highlights={form.highlights}
-            headquarters={form.headquarters}
-            teamSize={form.teamSize}
-            website={form.website}
-            activeJobsCount={stats.activeJobsCount}
-            verified={verificationStatus === "verified"}
-          />
-
-          {/* Company Statistics */}
-          <section className="border-t border-ink/5 pt-6">
-            <h3 className="mb-4 text-sm font-bold tracking-tight text-ink">Company statistics</h3>
-            <dl className="space-y-4">
-              {[
-                { label: "Employees", value: form.teamSize || "—" },
-                { label: "Active Jobs", value: stats.activeJobsCount.toString() },
-                { label: "Applicants Received", value: stats.totalApplicantsCount.toString() },
-                { label: "Average Response Time", value: "—" },
-                { label: "Response Rate", value: "—" },
-                { label: "Employer Rating", value: "Coming soon" },
-              ].map((stat) => (
-                <div key={stat.label} className="flex items-center justify-between border-b border-ink/5 pb-3 last:border-0 last:pb-0">
-                  <dt className="text-xs font-medium text-ink/50">{stat.label}</dt>
-                  <dd className="font-data text-sm font-semibold text-ink">{stat.value}</dd>
-                </div>
-              ))}
-            </dl>
-          </section>
-
-          <VerificationDocumentsPanel
-            status={verificationStatus}
-            rejectionReason={initialData.verificationRejectionReason ?? null}
-            initialDocuments={verificationDocuments}
-          />
-        </aside>
+          <EmployerFormSection title="Verification" last>
+            <VerificationDocumentsPanel
+              embedded
+              status={verificationStatus}
+              rejectionReason={initialData.verificationRejectionReason ?? null}
+              initialDocuments={verificationDocuments}
+            />
+          </EmployerFormSection>
       </div>
 
       <StickySaveBar

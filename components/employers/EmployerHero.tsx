@@ -18,8 +18,6 @@ export default function EmployerHero() {
     if (prefersReduced) return;
 
     const ctx = gsap.context(() => {
-      // Content is visible by default — entrance only enhances, never
-      // hides content behind a tween that could fail to fire.
       const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
 
       tl.from(
@@ -50,36 +48,28 @@ export default function EmployerHero() {
   return (
     <section
       ref={containerRef}
-      className="relative flex min-h-screen w-full flex-col items-center justify-center overflow-hidden bg-mist"
+      className="emp-bg relative flex min-h-screen w-full flex-col items-center justify-center overflow-hidden"
       aria-label="Hire a verified Filipino VA"
     >
-      {/* Atmosphere: teal-forward radial gradient washes — employer accent */}
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0"
-        style={{
-          background: [
-            "radial-gradient(ellipse 60% 55% at 92% 8%, rgba(31,128,115,0.16) 0%, transparent 58%)",
-            "radial-gradient(ellipse 55% 50% at 4% 18%, rgba(30,58,95,0.09) 0%, transparent 55%)",
-            "radial-gradient(ellipse 45% 40% at 50% 105%, rgba(242,169,59,0.06) 0%, transparent 60%)",
-          ].join(", "),
-        }}
+        style={{ background: "var(--emp-hero-glow)" }}
       />
 
-      {/* Faint dot grid, same texture language as landing */}
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-0 seeker-area-dots opacity-60"
+        className="seeker-area-dots pointer-events-none absolute inset-0"
+        style={{ opacity: "var(--emp-dot-opacity)" }}
       />
 
-      {/* Film grain overlay */}
       <div
         aria-hidden="true"
-        className="landing-grain pointer-events-none absolute inset-0 opacity-[0.04] mix-blend-multiply"
+        className="landing-grain pointer-events-none absolute inset-0 mix-blend-multiply"
+        style={{ opacity: "var(--emp-grain-opacity)" }}
       />
 
       <div className="relative z-10 mx-auto flex max-w-3xl flex-col items-center px-6 pt-28 pb-16 text-center">
-        {/* Eyebrow badge */}
         <div
           ref={badgeRef}
           className="mb-6 inline-flex items-center gap-1.5 rounded-full border border-teal/25 bg-teal/8 px-3.5 py-1.5 text-xs font-semibold text-teal"
@@ -88,10 +78,9 @@ export default function EmployerHero() {
           For US, AU &amp; UK founders hiring in the Philippines
         </div>
 
-        {/* Headline */}
         <h1
           ref={headlineRef}
-          className="mb-6 font-display text-[clamp(2.75rem,6.5vw,4.75rem)] font-extrabold leading-[1.08] tracking-tight text-ink"
+          className="emp-text mb-6 font-display text-[clamp(2.75rem,6.5vw,4.75rem)] font-extrabold leading-[1.08] tracking-tight"
         >
           {["Hire", "a", "verified"].map((word) => (
             <span key={word} className="word-wrap inline-block overflow-hidden align-bottom">
@@ -107,17 +96,15 @@ export default function EmployerHero() {
           </span>
         </h1>
 
-        {/* Subtext */}
         <p
           ref={subtextRef}
-          className="mb-10 max-w-xl font-body text-[1.05rem] leading-relaxed text-ink/65"
+          className="emp-text-secondary mb-10 max-w-xl font-body text-[1.05rem] leading-relaxed"
         >
           Post a role in minutes and meet skilled, English-fluent Virtual Assistants —
           every job we publish is admin-reviewed, and every applicant comes with a
           real, verifiable profile.
         </p>
 
-        {/* CTAs */}
         <div ref={ctaGroupRef} className="flex flex-col items-center gap-4 sm:flex-row sm:gap-3">
           <Link
             href="/signup?role=EMPLOYER"
@@ -129,24 +116,23 @@ export default function EmployerHero() {
 
           <Link
             href="/pricing"
-            className="group inline-flex items-center justify-center gap-2 rounded-2xl border border-ink/15 bg-white/60 px-7 py-3.5 font-display text-[0.9375rem] font-bold text-ink transition-colors duration-200 hover:bg-white active:scale-95"
+            className="emp-secondary-btn group inline-flex items-center justify-center gap-2 rounded-2xl border px-7 py-3.5 font-display text-[0.9375rem] font-bold backdrop-blur-sm active:scale-95"
           >
             See pricing
             <ArrowRight className="h-[18px] w-[18px] transition-transform duration-300 group-hover:translate-x-1" />
           </Link>
         </div>
 
-        {/* Trust strip */}
         <div
           ref={trustRef}
-          className="mt-12 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs font-medium text-ink/50"
+          className="emp-text-muted mt-12 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs font-medium"
         >
           {["Admin-reviewed job postings", "No salary markup or commission", "Free messaging at launch"].map(
             (item, i, arr) => (
               <span key={item} className="flex items-center gap-2">
                 {item}
                 {i < arr.length - 1 && (
-                  <span className="h-3.5 w-px bg-ink/15" aria-hidden="true" />
+                  <span className="emp-border h-3.5 w-px bg-current opacity-30" aria-hidden="true" />
                 )}
               </span>
             )
@@ -154,15 +140,14 @@ export default function EmployerHero() {
         </div>
       </div>
 
-      {/* Scroll cue */}
       <div
         aria-hidden="true"
-        className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1.5"
+        className="absolute bottom-8 left-1/2 flex -translate-x-1/2 flex-col items-center gap-1.5"
       >
-        <span className="text-[10px] font-medium uppercase tracking-widest text-ink/30">
+        <span className="emp-text-muted text-[10px] font-medium uppercase tracking-widest">
           Scroll
         </span>
-        <span className="block h-6 w-px animate-[grow-line_1.6s_ease-in-out_infinite] bg-ink/20 origin-top" />
+        <span className="emp-text-muted block h-6 w-px origin-top animate-[grow-line_1.6s_ease-in-out_infinite] bg-current opacity-30" />
       </div>
 
       <style>{`

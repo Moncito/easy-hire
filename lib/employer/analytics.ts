@@ -40,6 +40,7 @@ export type AttentionItem = {
 export type RecentActivityItem = {
   id: string;
   seekerName: string;
+  seekerPhotoUrl: string | null;
   jobTitle: string;
   jobId: string;
   appliedAt: string;
@@ -286,7 +287,7 @@ export async function getEmployerAnalytics(companyId: string): Promise<EmployerA
       orderBy: { appliedAt: "desc" },
       take: 6,
       include: {
-        seeker: { select: { fullName: true } },
+        seeker: { select: { fullName: true, photoUrl: true } },
         job: { select: { id: true, title: true } },
       },
     }),
@@ -445,6 +446,7 @@ export async function getEmployerAnalytics(companyId: string): Promise<EmployerA
   const recentActivity: RecentActivityItem[] = recentApplications.map((app) => ({
     id: app.id,
     seekerName: app.seeker.fullName,
+    seekerPhotoUrl: app.seeker.photoUrl,
     jobTitle: app.job.title,
     jobId: app.job.id,
     appliedAt: app.appliedAt.toISOString(),

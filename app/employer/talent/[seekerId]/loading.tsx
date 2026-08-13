@@ -1,5 +1,5 @@
-import TalentSkeleton from "@/components/employer/skeletons/TalentSkeleton";
+import TalentProfileSkeleton from "@/components/employer/skeletons/TalentProfileSkeleton";
 
 export default function Loading() {
-  return <TalentSkeleton />;
+  return <TalentProfileSkeleton />;
 }

@@ -2,6 +2,7 @@
 
 import { Paperclip } from "lucide-react";
 import { displaySkill } from "@/lib/seeker-profile-format";
+import EmployerAvatar from "@/components/employer/ui/EmployerAvatar";
 
 type Application = {
   id: string;
@@ -12,6 +13,7 @@ type Application = {
     id: string;
     fullName: string;
     headline: string | null;
+    photoUrl?: string | null;
     skills: string[];
     resumeUrl: string | null;
   };
@@ -49,14 +51,7 @@ export default function CandidateCard({
   onToggleSelect,
   onClick,
 }: Props) {
-  const initials = application.seeker.fullName
-    ? application.seeker.fullName
-        .split(" ")
-        .map((n) => n[0])
-        .join("")
-        .slice(0, 2)
-        .toUpperCase()
-    : "VA";
+  const skills = application.seeker.skills ?? [];
 
   function handleClick() {
     if (selectionMode && onToggleSelect) {
@@ -95,9 +90,14 @@ export default function CandidateCard({
           className="min-w-0 flex-1 text-left focus-visible:outline-none"
         >
           <div className="flex items-start gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-teal/10 font-display text-sm font-bold text-teal transition-transform group-hover:scale-105">
-              {initials}
-            </div>
+            <EmployerAvatar
+              name={application.seeker.fullName}
+              imageUrl={application.seeker.photoUrl}
+              size="md"
+              shape="rounded"
+              className="!rounded-xl transition-transform group-hover:scale-105"
+              fallbackClassName="bg-teal/10 text-teal ring-1 ring-teal/10"
+            />
             <div className="min-w-0 flex-1">
               <h4 className="truncate font-display text-sm font-bold text-ink group-hover:text-teal">
                 {application.seeker.fullName}
@@ -108,9 +108,9 @@ export default function CandidateCard({
             </div>
           </div>
 
-          {application.seeker.skills.length > 0 && (
+          {skills.length > 0 && (
             <div className="mt-2.5 flex flex-wrap gap-1">
-              {application.seeker.skills.slice(0, 3).map((skill) => (
+              {skills.slice(0, 3).map((skill) => (
                 <span
                   key={skill}
                   className="rounded-md bg-ink/4 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-ink/60"
@@ -118,9 +118,9 @@ export default function CandidateCard({
                   {displaySkill(skill)}
                 </span>
               ))}
-              {application.seeker.skills.length > 3 && (
+              {skills.length > 3 && (
                 <span className="rounded-md bg-ink/4 px-1.5 py-0.5 text-[9px] font-semibold text-ink/40">
-                  +{application.seeker.skills.length - 3}
+                  +{skills.length - 3}
                 </span>
               )}
             </div>

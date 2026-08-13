@@ -32,6 +32,7 @@ type Props = {
   status: VerificationStatus;
   rejectionReason: string | null;
   initialDocuments: VerificationDoc[];
+  embedded?: boolean;
 };
 
 const DOC_TYPE_OPTIONS = [
@@ -48,6 +49,7 @@ export default function VerificationDocumentsPanel({
   status,
   rejectionReason,
   initialDocuments,
+  embedded = false,
 }: Props) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -131,8 +133,8 @@ export default function VerificationDocumentsPanel({
   }
 
   return (
-    <section className="border-t border-ink/5 pt-6">
-      <h3 className="mb-4 text-sm font-bold tracking-tight text-ink">Verification</h3>
+    <section className={embedded ? "" : "border-t border-ink/5 pt-6"}>
+      {!embedded && <h3 className="mb-4 text-sm font-bold tracking-tight text-ink">Verification</h3>}
 
       {localStatus === "verified" && (
         <div className="mb-4 space-y-2">

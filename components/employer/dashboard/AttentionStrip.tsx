@@ -11,14 +11,16 @@ const iconMap: Record<string, typeof AlertCircle> = {
 
 type Props = {
   items: AttentionItem[];
+  fallbackItems?: AttentionItem[];
 };
 
-export default function AttentionStrip({ items }: Props) {
-  if (items.length === 0) return null;
+export default function AttentionStrip({ items, fallbackItems = [] }: Props) {
+  const visibleItems = items.length > 0 ? items : fallbackItems;
+  if (visibleItems.length === 0) return null;
 
   return (
-    <div className="mb-6 flex gap-3 overflow-x-auto pb-1">
-      {items.map((item) => {
+    <div className="flex gap-3 overflow-x-auto pb-1">
+      {visibleItems.map((item) => {
         const Icon = iconMap[item.id] ?? AlertCircle;
         return (
           <Link

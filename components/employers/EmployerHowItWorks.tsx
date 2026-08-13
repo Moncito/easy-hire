@@ -26,7 +26,7 @@ const STEPS = [
 export default function EmployerHowItWorks() {
   return (
     <section
-      className="relative overflow-hidden border-b border-ink/10 bg-gradient-to-b from-mist/50 to-mist px-6 py-24 md:px-8"
+      className="emp-bg-section relative overflow-hidden border-b px-6 py-24 md:px-8 emp-border"
       aria-label="How hiring on EasyHire works"
     >
       <div className="pointer-events-none absolute left-1/2 top-0 h-[500px] w-[500px] -translate-x-1/2 rounded-full bg-teal/5 blur-3xl" />
@@ -36,10 +36,10 @@ export default function EmployerHowItWorks() {
           <div className="mx-auto mb-4 inline-flex items-center gap-1.5 rounded-full border border-teal/20 bg-teal/8 px-3.5 py-1 text-xs font-semibold text-teal">
             For employers
           </div>
-          <h2 className="font-display text-4xl font-extrabold tracking-tight text-ink md:text-6xl">
+          <h2 className="emp-text font-display text-4xl font-extrabold tracking-tight md:text-6xl">
             From job post to hire
           </h2>
-          <p className="mx-auto mt-4 max-w-lg text-sm font-medium text-ink/60 md:text-base">
+          <p className="emp-text-secondary mx-auto mt-4 max-w-lg text-sm font-medium md:text-base">
             Four steps, one dashboard. No agencies, no recruiter fees.
           </p>
         </div>
@@ -50,7 +50,7 @@ export default function EmployerHowItWorks() {
             return (
               <div
                 key={step.title}
-                className="group relative rounded-2xl border border-teal/10 bg-white/50 p-6 backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 hover:border-teal/25 hover:bg-white/80 hover:shadow-md"
+                className="emp-card group relative rounded-2xl border p-6 backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 hover:border-teal/25 hover:shadow-md"
               >
                 <div className="mb-5 flex items-center justify-between">
                   <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-teal/12 transition-transform duration-300 group-hover:scale-110">
@@ -60,10 +60,10 @@ export default function EmployerHowItWorks() {
                     0{i + 1}
                   </span>
                 </div>
-                <p className="mb-2 font-display text-base font-bold tracking-tight text-ink md:text-lg">
+                <p className="emp-text mb-2 font-display text-base font-bold tracking-tight md:text-lg">
                   {step.title}
                 </p>
-                <p className="text-sm leading-relaxed text-ink/65">{step.detail}</p>
+                <p className="emp-text-secondary text-sm leading-relaxed">{step.detail}</p>
               </div>
             );
           })}

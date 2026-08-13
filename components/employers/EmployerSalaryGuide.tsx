@@ -25,23 +25,25 @@ function formatPhp(n: number) {
 export default function EmployerSalaryGuide() {
   return (
     <section
-      className="relative w-full overflow-hidden border-t border-ink/10 bg-white px-6 py-20 md:py-24"
+      className="emp-bg-elevated relative w-full overflow-hidden border-t px-6 py-20 md:py-24 emp-border"
       aria-label="Virtual assistant salary guide"
     >
       <div className="relative mx-auto max-w-5xl">
         <div className="mb-12 max-w-2xl">
-          <h2 className="font-display text-3xl font-extrabold tracking-tight text-ink md:text-5xl">
+          <h2 className="emp-text font-display text-3xl font-extrabold tracking-tight md:text-5xl">
             What VAs typically earn
           </h2>
-          <p className="mt-4 text-sm font-medium leading-relaxed text-ink/60 md:text-base">
+          <p className="emp-text-secondary mt-4 text-sm font-medium leading-relaxed md:text-base">
             A rough monthly guide in Philippine pesos for common roles, with a rough
             USD, AUD and GBP equivalent so you can budget in your own currency.
           </p>
         </div>
 
-        <div className="overflow-hidden rounded-2xl border border-ink/10">
-          {/* Header row — desktop only */}
-          <div className="hidden grid-cols-[2fr_1.2fr_1fr_1fr_1fr] gap-4 border-b border-ink/10 bg-mist px-6 py-3 text-[11px] font-semibold uppercase tracking-wider text-ink/45 md:grid">
+        <div className="overflow-hidden rounded-2xl border emp-border">
+          <div
+            className="hidden grid-cols-[2fr_1.2fr_1fr_1fr_1fr] gap-4 border-b px-6 py-3 text-[11px] font-semibold uppercase tracking-wider md:grid emp-border emp-text-muted"
+            style={{ backgroundColor: "var(--emp-table-header)" }}
+          >
             <span>Role</span>
             <span>PHP / month</span>
             <span>≈ USD</span>
@@ -49,27 +51,27 @@ export default function EmployerSalaryGuide() {
             <span>≈ GBP</span>
           </div>
 
-          <div className="divide-y divide-ink/8 bg-white">
+          <div className="emp-bg-elevated divide-y divide-[var(--emp-border-subtle)]">
             {SALARY_ROWS.map((row) => (
               <div
                 key={row.role}
-                className="grid grid-cols-1 gap-2 px-6 py-4 transition-colors duration-150 hover:bg-mist/60 md:grid-cols-[2fr_1.2fr_1fr_1fr_1fr] md:items-center md:gap-4"
+                className="grid grid-cols-1 gap-2 px-6 py-4 transition-colors duration-150 md:grid-cols-[2fr_1.2fr_1fr_1fr_1fr] md:items-center md:gap-4 hover:[background-color:var(--emp-table-row-hover)]"
               >
-                <span className="font-display text-sm font-bold text-ink md:text-[0.9rem]">
+                <span className="emp-text font-display text-sm font-bold md:text-[0.9rem]">
                   {row.role}
                 </span>
                 <span className="font-data text-sm font-semibold text-teal">
                   {formatPhp(row.phpLow)}–{formatPhp(row.phpHigh)}
                 </span>
-                <span className="font-data text-xs text-ink/55 md:text-[0.8rem]">{row.usd}</span>
-                <span className="font-data text-xs text-ink/55 md:text-[0.8rem]">{row.aud}</span>
-                <span className="font-data text-xs text-ink/55 md:text-[0.8rem]">{row.gbp}</span>
+                <span className="emp-text-secondary font-data text-xs md:text-[0.8rem]">{row.usd}</span>
+                <span className="emp-text-secondary font-data text-xs md:text-[0.8rem]">{row.aud}</span>
+                <span className="emp-text-secondary font-data text-xs md:text-[0.8rem]">{row.gbp}</span>
               </div>
             ))}
           </div>
         </div>
 
-        <p className="mt-5 max-w-2xl text-xs leading-relaxed text-ink/45">
+        <p className="emp-text-muted mt-5 max-w-2xl text-xs leading-relaxed">
           Estimates only, based on typical full-time monthly rates reported by employers on
           EasyHire. Actual pay depends on experience, scope, and hours — foreign currency
           figures use approximate exchange rates and will vary.
