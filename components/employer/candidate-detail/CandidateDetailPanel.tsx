@@ -16,9 +16,10 @@ import CandidateDetailTabs from "./CandidateDetailTabs";
 import CandidateOverviewTab from "./CandidateOverviewTab";
 import CandidateApplicationTab from "./CandidateApplicationTab";
 import CandidateNotesTab from "./CandidateNotesTab";
+import EmployerAvatar from "@/components/employer/ui/EmployerAvatar";
 import type { CandidateApplication, CandidateDetailTab } from "./types";
 import { PIPELINE } from "./types";
-import { formatAppliedAt, initials, stageIndex } from "./utils";
+import { formatAppliedAt, stageIndex } from "./utils";
 
 const STATUS_STYLES: Record<string, string> = {
   APPLIED: "bg-ink/8 text-ink/70",
@@ -108,9 +109,14 @@ export default function CandidateDetailPanel({
       {/* Header */}
       <div className="shrink-0 border-b border-ink/6 bg-white px-4 pb-3 pt-3">
         <div className="flex items-start gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-teal/10 font-display text-sm font-bold text-teal ring-1 ring-teal/10">
-            {initials(seeker.fullName)}
-          </div>
+          <EmployerAvatar
+            name={seeker.fullName}
+            imageUrl={seeker.photoUrl}
+            size="md"
+            shape="rounded"
+            className="!h-10 !w-10 !rounded-xl ring-1 ring-teal/10"
+            fallbackClassName="bg-teal/10 text-teal"
+          />
           <div className="min-w-0 flex-1">
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">

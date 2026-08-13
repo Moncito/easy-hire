@@ -4,7 +4,9 @@ import { useState } from "react";
 import { HelpCircle, MapPin, Plus, Trash2 } from "lucide-react";
 import RichTextEditor from "@/components/ui/RichTextEditor";
 import EmployerActionBar from "@/components/employer/EmployerActionBar";
+import JobFormTopBar from "@/components/employer/JobFormTopBar";
 import EmployerFormSection from "@/components/employer/ui/EmployerFormSection";
+import EmployerFormSelect from "@/components/employer/ui/EmployerFormSelect";
 import { INDUSTRIES, ROLE_TYPES } from "@/lib/constants/job-categories";
 import { periodSuffix, type SalaryPeriod } from "@/lib/format";
 
@@ -151,16 +153,32 @@ export default function JobForm({ initialData, loading, onSubmit }: Props) {
   ];
   const checklistDone = checklist.filter((item) => item.done).length;
 
+  const roleTypeOptions = ROLE_TYPES.map((rt) => ({ value: rt.label, label: rt.label }));
+  const industryOptions = INDUSTRIES.map((ind) => ({ value: ind.label, label: ind.label }));
+
   return (
-    <div className="pb-24">
+    <div>
       {error && (
-        <div className="mb-5 rounded-xl border border-ember/20 bg-ember/5 px-4 py-3 text-sm text-ember">
+        <div className="mb-4 rounded-xl border border-ember/20 bg-ember/5 px-4 py-3 text-sm text-ember">
           {error}
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-10 lg:grid-cols-3">
-        <div className="space-y-8 lg:col-span-2">
+      <JobFormTopBar
+        title={title}
+        category={category}
+        location={location}
+        remoteTypeLabel={remoteTypes.find((t) => t.value === remoteType)?.label ?? ""}
+        employmentType={employmentType}
+        employmentTypes={employmentTypes}
+        onEmploymentTypeChange={setEmploymentType}
+        targetHireCount={targetHireCount}
+        onTargetHireCountChange={setTargetHireCount}
+        checklist={checklist}
+        checklistDone={checklistDone}
+      />
+
+      <div className="space-y-5">
           <EmployerFormSection
             title="Job Information"
             description="Start with the role title and how you categorize this position."
@@ -172,43 +190,33 @@ export default function JobForm({ initialData, loading, onSubmit }: Props) {
               placeholder="What role are you hiring for?"
               className="w-full border-none bg-transparent py-1 font-display text-2xl font-bold tracking-tight text-ink outline-none placeholder:text-ink/30"
             />
-            <div className="mt-4 h-px bg-ink/10" />
-            <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="mt-3 h-px bg-ink/10" />
+            <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
-                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-ink/40">
+                <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-ink/40">
                   Role type
                 </label>
-                <select
+                <EmployerFormSelect
                   value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  className="w-full rounded-xl border border-ink/10 bg-white px-3 py-2.5 text-sm text-ink outline-none focus:border-teal"
-                >
-                  <option value="">Select a role type</option>
-                  {ROLE_TYPES.map((rt) => (
-                    <option key={rt.slug} value={rt.label}>
-                      {rt.label}
-                    </option>
-                  ))}
-                </select>
-                <p className="mt-1.5 text-[11px] text-ink/40">The specific VA function you&apos;re hiring for.</p>
+                  onChange={setCategory}
+                  options={roleTypeOptions}
+                  placeholder="Select a role type"
+                  ariaLabel="Role type"
+                />
+                <p className="mt-1 text-[11px] text-ink/40">The specific VA function you&apos;re hiring for.</p>
               </div>
               <div>
-                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-ink/40">
+                <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-ink/40">
                   Industry
                 </label>
-                <select
+                <EmployerFormSelect
                   value={industry}
-                  onChange={(e) => setIndustry(e.target.value)}
-                  className="w-full rounded-xl border border-ink/10 bg-white px-3 py-2.5 text-sm text-ink outline-none focus:border-teal"
-                >
-                  <option value="">Select an industry (optional)</option>
-                  {INDUSTRIES.map((ind) => (
-                    <option key={ind.slug} value={ind.label}>
-                      {ind.label}
-                    </option>
-                  ))}
-                </select>
-                <p className="mt-1.5 text-[11px] text-ink/40">The business domain this role supports.</p>
+                  onChange={setIndustry}
+                  options={industryOptions}
+                  placeholder="Select an industry (optional)"
+                  ariaLabel="Industry"
+                />
+                <p className="mt-1 text-[11px] text-ink/40">The business domain this role supports.</p>
               </div>
             </div>
           </EmployerFormSection>
@@ -220,7 +228,7 @@ export default function JobForm({ initialData, loading, onSubmit }: Props) {
             <RichTextEditor
               value={description}
               onChange={setDescription}
-              minHeight="280px"
+              minHeight="220px"
               placeholder="Describe the role responsibilities, team context, and day-to-day work..."
             />
           </EmployerFormSection>
@@ -232,7 +240,7 @@ export default function JobForm({ initialData, loading, onSubmit }: Props) {
             <RichTextEditor
               value={requirements}
               onChange={setRequirements}
-              minHeight="200px"
+              minHeight="160px"
               placeholder="e.g. 2+ years VA experience, fluent English, HubSpot..."
             />
           </EmployerFormSection>
@@ -244,7 +252,7 @@ export default function JobForm({ initialData, loading, onSubmit }: Props) {
             <RichTextEditor
               value={benefits}
               onChange={setBenefits}
-              minHeight="200px"
+              minHeight="160px"
               placeholder="e.g. Paid training, equipment provided, flexible schedule..."
             />
           </EmployerFormSection>
@@ -253,7 +261,7 @@ export default function JobForm({ initialData, loading, onSubmit }: Props) {
             title="Compensation"
             description="Set an expected salary range in Philippine Peso (PHP) and how it's paid out."
           >
-            <div className="mb-4">
+            <div className="mb-3">
               <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-ink/40">Pay period</p>
               <div className="flex flex-wrap gap-1.5">
                 {salaryPeriods.map((p) => (
@@ -268,7 +276,7 @@ export default function JobForm({ initialData, loading, onSubmit }: Props) {
                 ))}
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
                 <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-ink/45">
                   Minimum (PHP{periodSuffix(salaryPeriod)})
@@ -300,7 +308,7 @@ export default function JobForm({ initialData, loading, onSubmit }: Props) {
             title="Location"
             description="Where will this virtual assistant be working from?"
           >
-            <div className="space-y-4">
+            <div className="space-y-3">
               <div className="relative">
                 <MapPin className="absolute left-3 top-3 h-4 w-4 text-ink/35" aria-hidden="true" />
                 <input
@@ -396,103 +404,9 @@ export default function JobForm({ initialData, loading, onSubmit }: Props) {
               )}
             </div>
           </EmployerFormSection>
-        </div>
-
-        <div className="lg:sticky lg:top-24 lg:self-start">
-          <div className="space-y-5 rounded-2xl bg-white/80 p-5 backdrop-blur-sm">
-            <div>
-              <h3 className="text-sm font-bold text-ink">Job settings</h3>
-              <p className="mt-1 text-xs text-ink/45">Employment type and submission checklist.</p>
-            </div>
-
-            <div>
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-ink/40">Employment type</p>
-              <div className="flex flex-wrap gap-1.5">
-                {employmentTypes.map((type) => (
-                  <button
-                    key={type.value}
-                    type="button"
-                    onClick={() => setEmploymentType(type.value)}
-                    className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-all ${
-                      employmentType === type.value
-                        ? "border-ink bg-ink text-white"
-                        : "border-ink/10 text-ink/75 hover:border-ink/30 hover:bg-ink/5"
-                    }`}
-                  >
-                    {type.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <label
-                htmlFor="target-hire-count"
-                className="mb-2 block text-xs font-semibold uppercase tracking-wider text-ink/40"
-              >
-                Target hires
-              </label>
-              <input
-                id="target-hire-count"
-                type="number"
-                min={1}
-                max={99}
-                value={targetHireCount}
-                onChange={(e) => setTargetHireCount(e.target.value)}
-                className="w-full rounded-xl border border-ink/10 px-3 py-2.5 font-data text-sm text-ink outline-none focus:border-teal"
-              />
-              <p className="mt-1.5 text-[11px] leading-relaxed text-ink/45">
-                How many people you&apos;re hiring for this role. Used for progress tracking on your dashboard.
-              </p>
-            </div>
-
-            <div>
-              <div className="mb-2 flex items-center justify-between">
-                <p className="text-xs font-semibold uppercase tracking-wider text-ink/40">Checklist</p>
-                <span className="font-data text-[10px] font-bold text-teal">
-                  {checklistDone}/{checklist.length}
-                </span>
-              </div>
-              <ul className="space-y-1.5">
-                {checklist.map((item) => (
-                  <li key={item.label} className="flex items-center gap-2 text-xs text-ink/60">
-                    <span
-                      className={`h-1.5 w-1.5 shrink-0 rounded-full ${
-                        item.done ? "bg-teal" : "bg-ink/15"
-                      }`}
-                      aria-hidden="true"
-                    />
-                    {item.label}
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            <div className="border-t border-ink/5 pt-4">
-              <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-ink/40">Preview</p>
-              <div className="space-y-1">
-                <p className="font-display text-sm font-bold text-ink">
-                  {title.trim() || "Untitled role"}
-                </p>
-                <p className="text-xs text-ink/50">
-                  {[category, remoteTypes.find((t) => t.value === remoteType)?.label, location]
-                    .filter(Boolean)
-                    .join(" · ") || "Add role type and location"}
-                </p>
-                <p className="font-data text-[10px] text-ink/40">
-                  {employmentTypes.find((t) => t.value === employmentType)?.label}
-                </p>
-              </div>
-            </div>
-
-            <p className="text-[11px] leading-relaxed text-ink/45">
-              Submit for review when ready. Our team approves jobs before they appear to seekers.
-            </p>
-          </div>
-        </div>
       </div>
 
-      <EmployerActionBar align="6xl">
+      <EmployerActionBar>
         <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <span className="flex items-center gap-1.5 text-xs text-ink/40">
             <HelpCircle className="h-4 w-4 shrink-0" aria-hidden="true" />

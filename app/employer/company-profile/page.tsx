@@ -22,13 +22,14 @@ export default async function CompanyProfilePage() {
 
   return (
     <>
-      <div className="mb-8">
-        <h1 className="font-display text-3xl font-bold text-ink">Company Profile</h1>
-        <p className="mt-2 text-sm text-ink/60">
+      <div className="mb-4">
+        <h1 className="font-display text-2xl font-bold tracking-tight text-ink">Company Profile</h1>
+        <p className="mt-1 text-sm text-ink/50">
           Manage your company&apos;s public identity and attract top virtual assistant talent.
         </p>
       </div>
       <CompanyProfileEditor
+        companyId={company.id}
         initialData={{
           companyName: company.companyName,
           description: company.description,

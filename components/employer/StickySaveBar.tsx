@@ -13,7 +13,7 @@ type Props = {
 
 export default function StickySaveBar({ visible, loading, saved, error, onCancel }: Props) {
   return (
-    <EmployerActionBar visible={visible} align="7xl">
+    <EmployerActionBar visible={visible}>
       <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <span className="text-sm font-semibold text-ink">Unsaved changes</span>

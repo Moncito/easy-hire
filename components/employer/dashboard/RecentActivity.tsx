@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { RecentActivityItem } from "@/lib/employer-analytics";
+import EmployerAvatar from "@/components/employer/ui/EmployerAvatar";
 
 function formatRelativeTime(iso: string) {
   const date = new Date(iso);
@@ -18,12 +19,22 @@ function formatRelativeTime(iso: string) {
 
 type Props = {
   items: RecentActivityItem[];
+  sparse?: boolean;
+  embedded?: boolean;
 };
 
-export default function RecentActivity({ items }: Props) {
-  return (
-    <div className="rounded-2xl border border-ink/5 bg-white p-6 shadow-sm">
-      <h2 className="mb-4 text-sm font-bold text-ink">Recent activity</h2>
+const SPARSE_TIPS = [
+  "Add screening questions to filter stronger applicants early.",
+  "Complete your company profile — verified employers get more views.",
+  "Share job links on LinkedIn or Facebook to reach more VAs.",
+];
+
+export default function RecentActivity({ items, sparse = false, embedded = false }: Props) {
+  const content = (
+    <>
+      <h2 className={`font-bold text-ink ${embedded ? "mb-3 text-sm" : "mb-4 text-sm"}`}>
+        Recent activity
+      </h2>
       {items.length === 0 ? (
         <div className="py-6 text-center">
           <p className="text-sm font-medium text-ink/50">No applications yet</p>
@@ -46,11 +57,9 @@ export default function RecentActivity({ items }: Props) {
               className="group relative flex gap-3 rounded-lg p-1 transition hover:bg-ink/[0.02]"
             >
               {i < items.length - 1 && (
-                <div className="absolute bottom-[-12px] left-[13px] top-7 w-px bg-ink/8" />
+                <div className="absolute bottom-[-12px] left-[15px] top-8 w-px bg-ink/8" />
               )}
-              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-teal/12 text-[11px] font-bold text-teal">
-                {item.seekerName[0]?.toUpperCase()}
-              </div>
+              <EmployerAvatar name={item.seekerName} imageUrl={item.seekerPhotoUrl} size="sm" />
               <div className="min-w-0 flex-1 text-xs">
                 <p className="leading-snug text-ink/75">
                   <span className="font-semibold text-ink group-hover:text-teal">
@@ -65,8 +74,32 @@ export default function RecentActivity({ items }: Props) {
               </div>
             </Link>
           ))}
+          {sparse && items.length < 5 && (
+            <div className="mt-2 border-t border-ink/5 pt-4">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-ink/35">
+                Tips to get more applicants
+              </p>
+              <ul className="mt-2 space-y-1.5">
+                {SPARSE_TIPS.map((tip) => (
+                  <li key={tip} className="text-[11px] leading-relaxed text-ink/45">
+                    • {tip}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
       )}
-    </div>
+    </>
   );
+
+  if (embedded) {
+    return (
+      <div className="rounded-2xl border border-navy/[0.08] bg-white/90 p-5 shadow-[0_8px_24px_-6px_rgba(30,58,95,0.08)]">
+        {content}
+      </div>
+    );
+  }
+
+  return <div className="rounded-2xl border border-ink/5 bg-white p-6 shadow-sm">{content}</div>;
 }

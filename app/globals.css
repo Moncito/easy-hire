@@ -493,11 +493,17 @@ backdrop-filter:blur(6px);
   border-bottom: 1px solid rgba(32, 36, 43, 0.06);
 }
 
+.legal-nav-band {
+  background: transparent;
+  border-bottom: 1px solid rgba(32, 36, 43, 0.06);
+}
+
 .seeker-nav-band::before,
 .messages-nav-band::before,
 .jobs-nav-band::before,
 .companies-nav-band::before,
-.seekers-nav-band::before {
+.seekers-nav-band::before,
+.legal-nav-band::before {
   content: "";
   position: absolute;
   top: 0;
@@ -712,3 +718,468 @@ backdrop-filter:blur(6px);
     animation: none !important;
   }
 }
+
+/* Employer workspace canvas utilities */
+.employer-workspace-grain {
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 128px 128px;
+}
+
+.employer-jobs-scroll-hidden {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.employer-jobs-scroll-hidden::-webkit-scrollbar {
+  display: none;
+}
+
+/* =======================================================
+   EMPLOYER MARKETING PAGE — scoped light / dark theme
+   Only applies under .employer-marketing-page ( /employers )
+======================================================= */
+
+.employer-marketing-page {
+  --emp-bg: #f5f6f4;
+  --emp-bg-section: #f5f6f4;
+  --emp-bg-elevated: #ffffff;
+  --emp-bg-card: rgb(255 255 255 / 0.6);
+  --emp-bg-card-hover: rgb(255 255 255 / 0.92);
+  --emp-bg-muted: rgb(245 246 244 / 0.6);
+  --emp-text: #20242b;
+  --emp-text-secondary: rgb(32 36 43 / 0.65);
+  --emp-text-muted: rgb(32 36 43 / 0.45);
+  --emp-border: rgb(32 36 43 / 0.1);
+  --emp-border-subtle: rgb(32 36 43 / 0.08);
+  --emp-hero-glow: radial-gradient(ellipse 60% 55% at 92% 8%, rgba(31, 128, 115, 0.16) 0%, transparent 58%),
+    radial-gradient(ellipse 55% 50% at 4% 18%, rgba(30, 58, 95, 0.09) 0%, transparent 55%),
+    radial-gradient(ellipse 45% 40% at 50% 105%, rgba(242, 169, 59, 0.06) 0%, transparent 60%);
+  --emp-dot-opacity: 0.6;
+  --emp-grain-opacity: 0.04;
+  --emp-secondary-btn-bg: rgb(255 255 255 / 0.6);
+  --emp-secondary-btn-hover: #ffffff;
+  --emp-footer-watermark: rgb(32 36 43 / 0.12);
+  --emp-table-header: #f5f6f4;
+  --emp-table-row-hover: rgb(245 246 244 / 0.6);
+  color: var(--emp-text);
+  background-color: var(--emp-bg);
+  transition: background-color 0.35s ease, color 0.35s ease;
+}
+
+.employer-marketing-page[data-employer-theme="dark"] {
+  --emp-bg: #12151c;
+  --emp-bg-section: #12151c;
+  --emp-bg-elevated: #1a1f2a;
+  --emp-bg-card: rgb(255 255 255 / 0.04);
+  --emp-bg-card-hover: rgb(255 255 255 / 0.08);
+  --emp-bg-muted: rgb(255 255 255 / 0.03);
+  --emp-text: #f5f6f4;
+  --emp-text-secondary: rgb(245 246 244 / 0.68);
+  --emp-text-muted: rgb(245 246 244 / 0.42);
+  --emp-border: rgb(255 255 255 / 0.1);
+  --emp-border-subtle: rgb(255 255 255 / 0.06);
+  --emp-hero-glow: radial-gradient(ellipse 60% 55% at 92% 8%, rgba(31, 128, 115, 0.22) 0%, transparent 58%),
+    radial-gradient(ellipse 55% 50% at 4% 18%, rgba(30, 58, 95, 0.18) 0%, transparent 55%),
+    radial-gradient(ellipse 45% 40% at 50% 105%, rgba(31, 128, 115, 0.08) 0%, transparent 60%);
+  --emp-dot-opacity: 0.22;
+  --emp-grain-opacity: 0.07;
+  --emp-secondary-btn-bg: rgb(255 255 255 / 0.06);
+  --emp-secondary-btn-hover: rgb(255 255 255 / 0.1);
+  --emp-footer-watermark: rgb(245 246 244 / 0.07);
+  --emp-table-header: rgb(255 255 255 / 0.04);
+  --emp-table-row-hover: rgb(255 255 255 / 0.04);
+}
+
+.employer-marketing-page[data-employer-theme="dark"] .seeker-area-dots {
+  background-image: radial-gradient(circle, rgba(245, 246, 244, 0.07) 1px, transparent 1px);
+}
+
+.emp-bg {
+  background-color: var(--emp-bg);
+}
+
+.emp-bg-section {
+  background-color: var(--emp-bg-section);
+}
+
+.emp-bg-elevated {
+  background-color: var(--emp-bg-elevated);
+}
+
+.emp-bg-card {
+  background-color: var(--emp-bg-card);
+}
+
+.emp-text {
+  color: var(--emp-text);
+}
+
+.emp-text-secondary {
+  color: var(--emp-text-secondary);
+}
+
+.emp-text-muted {
+  color: var(--emp-text-muted);
+}
+
+.emp-border {
+  border-color: var(--emp-border);
+}
+
+.emp-border-subtle {
+  border-color: var(--emp-border-subtle);
+}
+
+.emp-card {
+  background-color: var(--emp-bg-card);
+  border-color: var(--emp-border-subtle);
+  transition: background-color 0.25s ease, border-color 0.25s ease;
+}
+
+.emp-card:hover {
+  background-color: var(--emp-bg-card-hover);
+}
+
+.emp-secondary-btn {
+  background-color: var(--emp-secondary-btn-bg);
+  border-color: var(--emp-border);
+  color: var(--emp-text);
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.emp-secondary-btn:hover {
+  background-color: var(--emp-secondary-btn-hover);
+}
+
+.employer-theme-toggle {
+  transition: background-color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.employer-marketing-page[data-employer-theme="dark"] .employer-theme-toggle {
+  background: rgb(255 255 255 / 0.08);
+  border-color: rgb(255 255 255 / 0.12);
+  color: #f5f6f4;
+}
+
+.employer-marketing-page[data-employer-theme="light"] .employer-theme-toggle {
+  background: rgb(32 36 43 / 0.75);
+  border-color: rgb(255 255 255 / 0.2);
+  color: #f5f6f4;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .employer-marketing-page,
+  .emp-card,
+  .employer-theme-toggle {
+    transition: none;
+  }
+}
+
+/* Employer workspace — design tokens + Pro preview dark */
+.employer-workspace {
+  --ew-bg: #f5f6f4;
+  --ew-surface: rgb(255 255 255 / 0.9);
+  --ew-surface-solid: #ffffff;
+  --ew-surface-muted: rgb(255 255 255 / 0.72);
+  --ew-border: rgb(30 58 95 / 0.08);
+  --ew-border-subtle: rgb(32 36 43 / 0.08);
+  --ew-text: #20242b;
+  --ew-text-muted: rgb(32 36 43 / 0.55);
+  --ew-shimmer-from: rgb(32 36 43 / 0.07);
+  --ew-shimmer-mid: rgb(32 36 43 / 0.12);
+  --ew-hero-banner: rgb(30 58 95 / 0.12);
+  --ew-playbook-teal-start: rgb(31 128 115 / 0.07);
+  --ew-playbook-navy-start: rgb(30 58 95 / 0.05);
+  --ew-getting-started-start: rgb(31 128 115 / 0.06);
+  --ew-shadow: 0 1px 0 0 rgb(255 255 255 / 0.8) inset, 0 8px 24px -6px rgb(30 58 95 / 0.08);
+  background-color: var(--ew-bg);
+  color: var(--ew-text);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.employer-workspace[data-employer-theme="dark"] {
+  --ew-bg: #12151c;
+  --ew-surface: rgb(26 31 42 / 0.94);
+  --ew-surface-solid: #1a1f2a;
+  --ew-surface-muted: rgb(26 31 42 / 0.78);
+  --ew-border: rgb(255 255 255 / 0.09);
+  --ew-border-subtle: rgb(255 255 255 / 0.06);
+  --ew-text: #f5f6f4;
+  --ew-text-muted: rgb(245 246 244 / 0.52);
+  --ew-shimmer-from: rgb(255 255 255 / 0.06);
+  --ew-shimmer-mid: rgb(255 255 255 / 0.12);
+  --ew-hero-banner: rgb(30 58 95 / 0.42);
+  --ew-playbook-teal-start: rgb(31 128 115 / 0.16);
+  --ew-playbook-navy-start: rgb(30 58 95 / 0.2);
+  --ew-getting-started-start: rgb(31 128 115 / 0.14);
+  --ew-shadow: 0 1px 0 0 rgb(255 255 255 / 0.04) inset, 0 8px 24px -6px rgb(0 0 0 / 0.35);
+}
+
+.employer-ws-surface {
+  background-color: var(--ew-surface);
+  border-color: var(--ew-border);
+  color: var(--ew-text);
+  box-shadow: var(--ew-shadow);
+  transition: background-color 0.25s ease, border-color 0.25s ease, color 0.25s ease;
+}
+
+.employer-ws-surface-muted {
+  background-color: var(--ew-surface-muted);
+}
+
+.employer-ws-bone {
+  background-color: var(--ew-shimmer-from);
+}
+
+.employer-ws-hero-banner {
+  background-color: var(--ew-hero-banner);
+}
+
+.employer-ws-playbook-card {
+  background: linear-gradient(
+    to bottom right,
+    var(--ew-playbook-accent-start) 0%,
+    var(--ew-surface) 52%,
+    var(--ew-surface-solid) 100%
+  );
+}
+
+.employer-ws-playbook-teal {
+  --ew-playbook-accent-start: var(--ew-playbook-teal-start);
+}
+
+.employer-ws-playbook-navy {
+  --ew-playbook-accent-start: var(--ew-playbook-navy-start);
+}
+
+.employer-ws-getting-started {
+  background: linear-gradient(
+    to bottom right,
+    var(--ew-getting-started-start) 0%,
+    var(--ew-surface) 45%,
+    var(--ew-surface-solid) 100%
+  );
+}
+
+.employer-ws-rail-fade-left {
+  background: linear-gradient(to right, var(--ew-bg) 0%, var(--ew-bg) 20%, transparent 100%);
+}
+
+.employer-ws-rail-fade-right {
+  background: linear-gradient(to left, var(--ew-bg) 0%, var(--ew-bg) 20%, transparent 100%);
+}
+
+.employer-ws-rail-nav-btn {
+  border-color: var(--ew-border);
+  background-color: var(--ew-surface);
+  color: var(--ew-text-muted);
+}
+
+.employer-ws-command-header {
+  background: linear-gradient(
+    to right,
+    rgb(30 58 95 / 0.04) 0%,
+    rgb(31 128 115 / 0.03) 100%
+  );
+}
+
+.employer-workspace[data-employer-theme="dark"] .employer-ws-command-header {
+  background: linear-gradient(
+    to right,
+    rgb(30 58 95 / 0.22) 0%,
+    rgb(31 128 115 / 0.12) 100%
+  );
+}
+
+.employer-topbar-search {
+  border-color: rgb(32 36 43 / 0.08);
+  background: rgb(255 255 255 / 0.7);
+  color: rgb(32 36 43 / 0.4);
+}
+
+.employer-topbar-search:hover {
+  border-color: rgb(32 36 43 / 0.12);
+  background: #ffffff;
+}
+
+.employer-workspace .employer-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--ew-shimmer-from) 0%,
+    var(--ew-shimmer-mid) 50%,
+    var(--ew-shimmer-from) 100%
+  );
+  background-size: 200% 100%;
+}
+
+.employer-workspace[data-employer-theme="dark"] .employer-topbar {
+  background: rgb(26 31 42 / 0.92);
+  border-bottom-color: rgb(255 255 255 / 0.08);
+  box-shadow: inset 0 1px 0 0 rgb(255 255 255 / 0.04);
+}
+
+.employer-workspace[data-employer-theme="dark"] .employer-topbar h1,
+.employer-workspace[data-employer-theme="dark"] .employer-topbar .employer-topbar-company-name {
+  color: #f5f6f4;
+}
+
+.employer-workspace[data-employer-theme="dark"] .employer-topbar .employer-topbar-company-role {
+  color: rgb(245 246 244 / 0.45);
+}
+
+.employer-workspace[data-employer-theme="dark"] .employer-topbar-verified {
+  background: rgb(255 255 255 / 0.06);
+  --tw-ring-color: rgb(255 255 255 / 0.08);
+  color: rgb(245 246 244 / 0.65);
+}
+
+.employer-workspace[data-employer-theme="dark"] .employer-topbar .employer-workspace-theme-toggle {
+  color: rgb(245 246 244 / 0.55);
+}
+
+.employer-workspace[data-employer-theme="dark"] .employer-topbar .employer-workspace-theme-toggle:hover {
+  background: rgb(255 255 255 / 0.06);
+  color: #f5f6f4;
+}
+
+.employer-workspace[data-employer-theme="dark"] .employer-topbar-search {
+  background: rgb(255 255 255 / 0.06);
+  border-color: rgb(255 255 255 / 0.1);
+  color: rgb(245 246 244 / 0.45);
+}
+
+.employer-workspace[data-employer-theme="dark"] .employer-topbar-search:hover {
+  background: rgb(255 255 255 / 0.09);
+  border-color: rgb(255 255 255 / 0.14);
+}
+
+.employer-workspace[data-employer-theme="dark"] .employer-topbar-search kbd {
+  background: rgb(255 255 255 / 0.08);
+  color: rgb(245 246 244 / 0.4);
+}
+
+.employer-workspace[data-employer-theme="dark"] .employer-workspace-backdrop-base {
+  background-color: #12151c;
+}
+
+.employer-workspace[data-employer-theme="dark"] .employer-workspace-backdrop svg {
+  opacity: 0.28;
+}
+
+.employer-workspace[data-employer-theme="dark"] .employer-workspace-backdrop .employer-workspace-grain {
+  opacity: 0.05;
+}
+
+.employer-workspace[data-employer-theme="dark"] .employer-sidebar.bg-navy {
+  background-color: #0f1218;
+  border-right-color: rgb(255 255 255 / 0.06);
+}
+
+.employer-workspace[data-employer-theme="dark"] .employer-sidebar.border-r.border-white\/40 {
+  background: rgb(26 31 42 / 0.88);
+  border-right-color: rgb(255 255 255 / 0.08);
+}
+
+/* Dark-mode shim — legacy light-only Tailwind in main content */
+.employer-workspace[data-employer-theme="dark"] main .bg-white {
+  background-color: var(--ew-surface-solid) !important;
+}
+
+.employer-workspace[data-employer-theme="dark"] main .bg-white\/95,
+.employer-workspace[data-employer-theme="dark"] main .bg-white\/90 {
+  background-color: var(--ew-surface) !important;
+}
+
+.employer-workspace[data-employer-theme="dark"] main .bg-white\/80,
+.employer-workspace[data-employer-theme="dark"] main .bg-white\/70,
+.employer-workspace[data-employer-theme="dark"] main .bg-white\/60 {
+  background-color: var(--ew-surface-muted) !important;
+}
+
+.employer-workspace[data-employer-theme="dark"] main .bg-white\/50,
+.employer-workspace[data-employer-theme="dark"] main .bg-white\/40 {
+  background-color: rgb(26 31 42 / 0.55) !important;
+}
+
+.employer-workspace[data-employer-theme="dark"] main .bg-mist,
+.employer-workspace[data-employer-theme="dark"] main .bg-mist\/60 {
+  background-color: rgb(255 255 255 / 0.04) !important;
+}
+
+.employer-workspace[data-employer-theme="dark"] main .text-ink {
+  color: var(--ew-text) !important;
+}
+
+.employer-workspace[data-employer-theme="dark"] main .text-ink\/75,
+.employer-workspace[data-employer-theme="dark"] main .text-ink\/70,
+.employer-workspace[data-employer-theme="dark"] main .text-ink\/65 {
+  color: rgb(245 246 244 / 0.72) !important;
+}
+
+.employer-workspace[data-employer-theme="dark"] main .text-ink\/60,
+.employer-workspace[data-employer-theme="dark"] main .text-ink\/55 {
+  color: rgb(245 246 244 / 0.58) !important;
+}
+
+.employer-workspace[data-employer-theme="dark"] main .text-ink\/50,
+.employer-workspace[data-employer-theme="dark"] main .text-ink\/45,
+.employer-workspace[data-employer-theme="dark"] main .text-ink\/40,
+.employer-workspace[data-employer-theme="dark"] main .text-ink\/35,
+.employer-workspace[data-employer-theme="dark"] main .text-ink\/30 {
+  color: rgb(245 246 244 / 0.42) !important;
+}
+
+.employer-workspace[data-employer-theme="dark"] main .border-ink\/5,
+.employer-workspace[data-employer-theme="dark"] main .border-ink\/6,
+.employer-workspace[data-employer-theme="dark"] main .border-ink\/8,
+.employer-workspace[data-employer-theme="dark"] main .border-ink\/10,
+.employer-workspace[data-employer-theme="dark"] main .border-ink\/15 {
+  border-color: var(--ew-border-subtle) !important;
+}
+
+.employer-workspace[data-employer-theme="dark"] main .border-navy\/\[0\.08\],
+.employer-workspace[data-employer-theme="dark"] main .border-navy\/\[0\.06\] {
+  border-color: var(--ew-border) !important;
+}
+
+.employer-workspace[data-employer-theme="dark"] main .divide-ink\/5 > :not([hidden]) ~ :not([hidden]),
+.employer-workspace[data-employer-theme="dark"] main .divide-ink\/8 > :not([hidden]) ~ :not([hidden]) {
+  border-color: var(--ew-border-subtle) !important;
+}
+
+.employer-workspace[data-employer-theme="dark"] main .ring-ink\/5 {
+  --tw-ring-color: rgb(255 255 255 / 0.06) !important;
+}
+
+/* Dark scrollbars inside employer workspace */
+.employer-workspace[data-employer-theme="dark"],
+.employer-workspace[data-employer-theme="dark"] * {
+  scrollbar-color: rgb(255 255 255 / 0.18) var(--ew-bg);
+}
+
+.employer-workspace[data-employer-theme="dark"] ::-webkit-scrollbar {
+  width: 10px;
+}
+
+.employer-workspace[data-employer-theme="dark"] ::-webkit-scrollbar-track {
+  background: var(--ew-bg);
+}
+
+.employer-workspace[data-employer-theme="dark"] ::-webkit-scrollbar-thumb {
+  background: rgb(255 255 255 / 0.18);
+  border: 3px solid var(--ew-bg);
+  border-radius: 999px;
+}
+
+.employer-workspace[data-employer-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+  background: rgb(255 255 255 / 0.28);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .employer-workspace,
+  .employer-ws-surface {
+    transition: none;
+  }
+}
+

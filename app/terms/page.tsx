@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { FileText } from "lucide-react";
 import LegalPageShell, { Section } from "@/components/legal/LegalPageShell";
 
 export const metadata: Metadata = {
@@ -11,6 +12,9 @@ export default function TermsPage() {
     <LegalPageShell
       title="Terms of Service"
       description="Last updated: July 2026. This is an MVP draft — have legal counsel review before public launch."
+      navSection="Terms of Service"
+      navIcon={FileText}
+      navHint="Platform agreement"
     >
       <Section title="Agreement">
         <p>

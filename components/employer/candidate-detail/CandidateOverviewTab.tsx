@@ -43,10 +43,13 @@ type Props = {
 
 export default function CandidateOverviewTab({ application, onRating }: Props) {
   const { seeker } = application;
+  const skills = seeker.skills ?? [];
+  const educationEntries = seeker.education ?? [];
+  const languages = seeker.languages ?? [];
   const salary = formatPesoRange(seeker.desiredSalaryMin, seeker.desiredSalaryMax);
-  const primarySkill = seeker.skills[0] ? skillName(seeker.skills[0]) : "—";
-  const education = seeker.education[0]?.trim() || "—";
-  const languages = seeker.languages.length > 0 ? seeker.languages.join(", ") : "—";
+  const primarySkill = skills[0] ? skillName(skills[0]) : "—";
+  const education = educationEntries[0]?.trim() || "—";
+  const languagesLabel = languages.length > 0 ? languages.join(", ") : "—";
 
   return (
     <div className="space-y-4">
@@ -62,7 +65,7 @@ export default function CandidateOverviewTab({ application, onRating }: Props) {
           <SnapshotCell icon={Briefcase} label="Availability" value={seeker.availability || "—"} />
           <SnapshotCell icon={Calendar} label="Experience" value={seeker.yearsExperience || "—"} />
           <SnapshotCell icon={Star} label="Primary skill" value={primarySkill} />
-          <SnapshotCell icon={Languages} label="Languages" value={languages} />
+          <SnapshotCell icon={Languages} label="Languages" value={languagesLabel} />
           <SnapshotCell icon={GraduationCap} label="Education" value={education} />
           <SnapshotCell icon={Clock} label="Notice period" value="—" />
         </div>
@@ -88,11 +91,11 @@ export default function CandidateOverviewTab({ application, onRating }: Props) {
         </div>
       </div>
 
-      {seeker.skills.length > 0 && (
+      {skills.length > 0 && (
         <div className="mt-3 border-t border-ink/5 pt-3">
           <p className="text-xs font-medium text-ink/45">Skills</p>
           <div className="mt-2 flex flex-wrap gap-1.5">
-            {seeker.skills.map((skill) => (
+            {skills.map((skill) => (
               <span
                 key={skill}
                 className="rounded-full bg-mist px-2.5 py-1 text-[11px] font-medium text-ink/70 ring-1 ring-ink/6"

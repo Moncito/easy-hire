@@ -8,11 +8,13 @@ import { listSavedSeekers } from "@/lib/client/saved-seekers";
 import SaveSeekerButton from "@/components/employer/SaveSeekerButton";
 import MessageSeekerButton from "@/components/employer/MessageSeekerButton";
 import EmployerEmptyState from "@/components/employer/ui/EmployerEmptyState";
+import EmployerAvatar from "@/components/employer/ui/EmployerAvatar";
 import Bone from "@/components/employer/skeletons/Bone";
 
 type TalentItem = {
   id: string;
   fullName: string;
+  photoUrl: string | null;
   headline: string | null;
   location: string | null;
   skills: string[];
@@ -221,15 +223,7 @@ export default function TalentSearchBoard() {
         />
       ) : (
         <div className="divide-y divide-ink/5 overflow-hidden rounded-2xl border border-ink/5 bg-white/60 shadow-sm">
-          {seekers.map((seeker) => {
-            const initials = seeker.fullName
-              .split(" ")
-              .map((n) => n[0])
-              .join("")
-              .slice(0, 2)
-              .toUpperCase();
-
-            return (
+          {seekers.map((seeker) => (
               <div
                 key={seeker.id}
                 className="flex flex-col gap-3 px-5 py-4 transition-colors hover:bg-ink/[0.02] sm:flex-row sm:items-center"
@@ -238,9 +232,11 @@ export default function TalentSearchBoard() {
                   href={`/employer/talent/${seeker.id}`}
                   className="flex min-w-0 flex-1 items-center gap-3"
                 >
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-teal/10 font-display text-sm font-bold text-teal">
-                    {initials}
-                  </div>
+                  <EmployerAvatar
+                    name={seeker.fullName}
+                    imageUrl={seeker.photoUrl}
+                    size="lg"
+                  />
                   <div className="min-w-0">
                     <p className="font-display font-bold text-ink hover:text-teal">{seeker.fullName}</p>
                     <p className="truncate text-xs text-ink/45">
@@ -277,8 +273,7 @@ export default function TalentSearchBoard() {
                   )}
                 </div>
               </div>
-            );
-          })}
+          ))}
         </div>
       )}
     </div>

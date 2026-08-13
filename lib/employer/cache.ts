@@ -1,5 +1,6 @@
 import { unstable_cache, revalidateTag } from "next/cache";
 import { getEmployerNavCounts, getEmployerAnalytics } from "@/lib/employer-analytics";
+import { getDashboardApplicantQueue } from "@/lib/employer/dashboard-panels";
 import { getEmployerJobsWithMetrics } from "@/lib/employer-jobs";
 import { searchTalent } from "@/lib/talent";
 import {
@@ -38,6 +39,14 @@ export function getEmployerAnalyticsCached(companyId: string) {
   return unstable_cache(
     async () => getEmployerAnalytics(companyId),
     [`employer-analytics`, companyId],
+    { revalidate: ANALYTICS_REVALIDATE, tags: [employerAnalyticsTag(companyId)] }
+  )();
+}
+
+export function getDashboardApplicantQueueCached(companyId: string) {
+  return unstable_cache(
+    async () => getDashboardApplicantQueue(companyId),
+    [`employer-dashboard-applicants`, companyId],
     { revalidate: ANALYTICS_REVALIDATE, tags: [employerAnalyticsTag(companyId)] }
   )();
 }

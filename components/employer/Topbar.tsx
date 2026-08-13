@@ -6,9 +6,12 @@ import { getEmployerPageTitle } from "@/lib/employer-nav";
 import { Search } from "lucide-react";
 import EmployerSearchTrigger from "@/components/employer/EmployerSearchTrigger";
 import EmployerNotificationBell from "@/components/employer/EmployerNotificationBell";
+import EmployerAvatar from "@/components/employer/ui/EmployerAvatar";
+import EmployerThemeToggle from "@/components/employers/EmployerThemeToggle";
 
 type Props = {
   companyName: string;
+  companyLogoUrl?: string | null;
   verifiedStatus: string;
   plan?: "FREE" | "PRO";
 };
@@ -25,29 +28,13 @@ const statusLabel: Record<string, string> = {
   REJECTED: "Rejected",
 };
 
-export default function Topbar({ companyName, verifiedStatus, plan = "FREE" }: Props) {
+export default function Topbar({ companyName, companyLogoUrl, verifiedStatus }: Props) {
   const pathname = usePathname();
   const title = getEmployerPageTitle(pathname);
   const isMessages = pathname.startsWith("/employer/messages");
-  const isPro = plan === "PRO";
-
-  const initials = companyName
-    ? companyName
-        .split(" ")
-        .map((n) => n[0])
-        .join("")
-        .slice(0, 2)
-        .toUpperCase()
-    : "CO";
 
   return (
-    <header
-      className={`sticky top-0 z-30 flex h-14 shrink-0 items-center gap-4 border-b px-4 backdrop-blur-md sm:px-6 ${
-        isPro
-          ? "border-ink/5 bg-white/60 shadow-sm shadow-ink/5"
-          : "border-ink/5 bg-mist/80"
-      }`}
-    >
+    <header className="employer-topbar sticky top-0 z-30 flex h-14 shrink-0 items-center gap-4 border-b border-navy/[0.08] bg-white/70 px-4 shadow-[0_1px_0_0_rgba(255,255,255,0.6)_inset] backdrop-blur-md sm:px-6">
       <h1
         className={`shrink-0 font-display text-lg font-bold tracking-tight text-ink ${
           isMessages ? "" : "lg:hidden"
@@ -74,8 +61,10 @@ export default function Topbar({ companyName, verifiedStatus, plan = "FREE" }: P
 
         <EmployerNotificationBell />
 
+        <EmployerThemeToggle variant="topbar" />
+
         <div
-          className="hidden items-center gap-2 rounded-full bg-white/60 px-2.5 py-1 ring-1 ring-ink/5 sm:flex"
+          className="employer-topbar-verified hidden items-center gap-2 rounded-full bg-white/60 px-2.5 py-1 ring-1 ring-ink/5 sm:flex"
           title={statusLabel[verifiedStatus] ?? verifiedStatus}
         >
           <span
@@ -91,12 +80,20 @@ export default function Topbar({ companyName, verifiedStatus, plan = "FREE" }: P
           href="/employer/company-profile"
           className="flex items-center gap-2 rounded-lg py-1 pl-1 pr-2 transition hover:bg-ink/[0.04]"
         >
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal text-xs font-bold text-white shadow-sm shadow-teal/25">
-            {initials}
-          </div>
+          <EmployerAvatar
+            name={companyName}
+            imageUrl={companyLogoUrl}
+            size="sm"
+            shape="rounded"
+            fallbackClassName="bg-teal text-white shadow-sm shadow-teal/25"
+          />
           <div className="hidden max-w-[140px] md:block">
-            <span className="block truncate text-sm font-medium text-ink">{companyName}</span>
-            <span className="block truncate text-[10px] text-ink/45">Employer</span>
+            <span className="employer-topbar-company-name block truncate text-sm font-medium text-ink">
+              {companyName}
+            </span>
+            <span className="employer-topbar-company-role block truncate text-[10px] text-ink/45">
+              Employer
+            </span>
           </div>
         </Link>
       </div>

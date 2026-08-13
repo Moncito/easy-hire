@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Check, Tag } from "lucide-react";
 import LegalPageShell, { Section } from "@/components/legal/LegalPageShell";
-import { Check } from "lucide-react";
+import PlanComparisonTable from "@/components/pricing/PlanComparisonTable";
 
 export const metadata: Metadata = {
   title: "Pricing — EasyHire",
@@ -19,7 +20,6 @@ const included = [
 
 const comingSoon = [
   { name: "Featured job placement", desc: "Priority visibility in search results" },
-  { name: "Employer Pro", desc: "Advanced analytics, talent search, and team tools" },
   { name: "AI hiring assistant", desc: "Candidate ranking and explainability — never auto-reject" },
 ];
 
@@ -28,6 +28,9 @@ export default function PricingPage() {
     <LegalPageShell
       title="Pricing"
       description="Free during MVP validation. We're building supply and trust before introducing paid features."
+      navSection="Pricing"
+      navIcon={Tag}
+      navHint="Employer plans & fees"
     >
       <div className="rounded-2xl border border-teal/20 bg-teal/5 p-8">
         <p className="text-xs font-bold uppercase tracking-wider text-teal">MVP — Free</p>
@@ -49,12 +52,27 @@ export default function PricingPage() {
         </Link>
       </div>
 
+      <PlanComparisonTable
+        className="!shadow-xs"
+        freePrice="₱0"
+        freePriceDetail="Free during MVP validation"
+        proPrice="After validation"
+        proPriceDetail="Optional paid tier for power employers"
+        showRecommendedBadge={false}
+        footer={
+          <p className="text-xs leading-relaxed text-ink/50">
+            Basic posting and messaging stay free. Employer Pro adds instant publishing and advanced
+            tools once we exit MVP validation.
+          </p>
+        }
+      />
+
       <Section title="Coming after validation">
         <p className="text-ink/55">
           Once we have proven hire outcomes and platform liquidity, we will introduce optional
           paid features. Basic posting and messaging will remain free.
         </p>
-        <div className="mt-4 grid gap-4 sm:grid-cols-3">
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
           {comingSoon.map((item) => (
             <div key={item.name} className="rounded-xl border border-ink/8 bg-white p-4 shadow-xs">
               <p className="font-semibold text-ink">{item.name}</p>

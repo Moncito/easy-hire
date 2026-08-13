@@ -5,6 +5,47 @@ import { notifyApplicationSubmitted, notifyApplicationRejected } from "@/lib/ema
 import { applicationCreateSchema, applicationUpdateSchema } from "@/lib/validations/application";
 import { invalidateEmployerWorkspace } from "@/lib/employer-cache";
 
+const candidateSeekerSelect = {
+  id: true,
+  fullName: true,
+  headline: true,
+  skills: true,
+  resumeUrl: true,
+  resumeLabel: true,
+  resumeUpdatedAt: true,
+  resumes: true,
+  location: true,
+  desiredSalaryMin: true,
+  desiredSalaryMax: true,
+  availability: true,
+  yearsExperience: true,
+  languages: true,
+  education: true,
+  linkedinUrl: true,
+  portfolioUrl: true,
+  certifications: true,
+  photoUrl: true,
+} as const;
+
+function normalizeCandidateSeeker<
+  T extends {
+    skills?: string[] | null;
+    languages?: string[] | null;
+    education?: string[] | null;
+    resumes?: string[] | null;
+    resumeUpdatedAt?: Date | null;
+  },
+>(seeker: T) {
+  return {
+    ...seeker,
+    skills: seeker.skills ?? [],
+    languages: seeker.languages ?? [],
+    education: seeker.education ?? [],
+    resumes: seeker.resumes ?? [],
+    resumeUpdatedAt: seeker.resumeUpdatedAt?.toISOString() ?? null,
+  };
+}
+
 export async function createApplication(seekerUserId: string, raw: unknown) {
   const input = applicationCreateSchema.parse(raw);
 
@@ -139,20 +180,7 @@ export async function updateApplication(applicationId: string, raw: unknown) {
     },
     include: {
       seeker: {
-        select: {
-          id: true,
-          fullName: true,
-          headline: true,
-          skills: true,
-          resumeUrl: true,
-          location: true,
-          desiredSalaryMin: true,
-          desiredSalaryMax: true,
-          linkedinUrl: true,
-          portfolioUrl: true,
-          certifications: true,
-          photoUrl: true,
-        },
+        select: candidateSeekerSelect,
       },
     },
   });
@@ -171,7 +199,10 @@ export async function updateApplication(applicationId: string, raw: unknown) {
   }
 
   invalidateEmployerWorkspace(existing.job.company.id);
-  return updated;
+  return {
+    ...updated,
+    seeker: normalizeCandidateSeeker(updated.seeker),
+  };
 }
 
 export async function listJobApplications(jobId: string, page = 1, pageSize = 50) {
@@ -185,20 +216,7 @@ export async function listJobApplications(jobId: string, page = 1, pageSize = 50
       take: pageSize,
       include: {
         seeker: {
-          select: {
-            id: true,
-            fullName: true,
-            headline: true,
-            skills: true,
-            resumeUrl: true,
-            location: true,
-            desiredSalaryMin: true,
-            desiredSalaryMax: true,
-            linkedinUrl: true,
-            portfolioUrl: true,
-            certifications: true,
-            photoUrl: true,
-          },
+          select: candidateSeekerSelect,
         },
         answers: {
           include: {
@@ -211,5 +229,14 @@ export async function listJobApplications(jobId: string, page = 1, pageSize = 50
     prisma.application.count({ where: { jobId } }),
   ]);
 
-  return { applications, total, page, pageSize, totalPages: Math.ceil(total / pageSize) };
+  return {
+    applications: applications.map((application) => ({
+      ...application,
+      seeker: normalizeCandidateSeeker(application.seeker),
+    })),
+    total,
+    page,
+    pageSize,
+    totalPages: Math.ceil(total / pageSize),
+  };
 }

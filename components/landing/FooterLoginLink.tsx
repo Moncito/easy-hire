@@ -3,9 +3,12 @@
 import Link from "next/link";
 import { useLoginModalOptional } from "@/components/auth/LoginModalProvider";
 
-export default function FooterLoginLink() {
+export default function FooterLoginLink({
+  className = "text-sm text-ink/70 transition-colors hover:text-ink",
+}: {
+  className?: string;
+}) {
   const loginModal = useLoginModalOptional();
-  const className = "text-sm text-ink/70 transition-colors hover:text-ink";
 
   if (loginModal) {
     return (

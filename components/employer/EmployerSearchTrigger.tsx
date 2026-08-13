@@ -11,7 +11,7 @@ export default function EmployerSearchTrigger() {
     <button
       type="button"
       onClick={openPalette}
-      className="hidden w-full max-w-md items-center gap-2 rounded-xl border border-ink/8 bg-white/70 px-3.5 py-2 text-sm text-ink/40 shadow-sm transition hover:border-ink/12 hover:bg-white md:flex"
+      className="employer-topbar-search hidden w-full max-w-md items-center gap-2 rounded-xl border px-3.5 py-2 text-sm shadow-sm transition md:flex"
     >
       <Search className="h-4 w-4 shrink-0" />
       <span className="flex-1 text-left">Search jobs, applicants, or skills…</span>

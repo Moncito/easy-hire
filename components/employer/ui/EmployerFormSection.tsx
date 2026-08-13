@@ -13,11 +13,11 @@ export default function EmployerFormSection({
   last = false,
 }: Props) {
   return (
-    <section className={last ? "pb-2" : "border-b border-ink/5 pb-8"}>
-      <div className="mb-5">
+    <section className={last ? "" : "border-b border-ink/5 pb-5"}>
+      <div className="mb-3">
         <h2 className="font-display text-base font-bold tracking-tight text-ink">{title}</h2>
         {description && (
-          <p className="mt-1.5 text-sm leading-relaxed text-ink/45">{description}</p>
+          <p className="mt-1 text-sm leading-snug text-ink/45">{description}</p>
         )}
       </div>
       {children}

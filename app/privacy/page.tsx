@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Shield } from "lucide-react";
 import LegalPageShell, { Section } from "@/components/legal/LegalPageShell";
 
 export const metadata: Metadata = {
@@ -11,6 +12,9 @@ export default function PrivacyPage() {
     <LegalPageShell
       title="Privacy Policy"
       description="Last updated: July 2026. This is an MVP draft — have legal counsel review before public launch."
+      navSection="Privacy Policy"
+      navIcon={Shield}
+      navHint="Data & privacy"
     >
       <Section title="Overview">
         <p>

@@ -10,6 +10,7 @@ export type CandidateApplication = {
     id: string;
     fullName: string;
     headline: string | null;
+    photoUrl: string | null;
     skills: string[];
     resumeUrl: string | null;
     resumeLabel: string | null;
