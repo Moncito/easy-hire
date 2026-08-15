@@ -12,6 +12,9 @@ type Props = {
   placeholder: string;
   ariaLabel: string;
   searchable?: boolean;
+  /** When true, omits the empty placeholder row (for required picks like sort). */
+  hidePlaceholder?: boolean;
+  className?: string;
 };
 
 export default function EmployerFormSelect({
@@ -21,13 +24,17 @@ export default function EmployerFormSelect({
   placeholder,
   ariaLabel,
   searchable,
+  hidePlaceholder = false,
+  className = "",
 }: Props) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const rootRef = useRef<HTMLDivElement>(null);
   const listboxId = useId();
 
-  const allOptions = [{ value: "", label: placeholder }, ...options];
+  const allOptions = hidePlaceholder
+    ? options
+    : [{ value: "", label: placeholder }, ...options];
   const selected = allOptions.find((opt) => opt.value === value) ?? allOptions[0];
   const showSearch = searchable ?? options.length > 8;
   const filtered = allOptions.filter((opt) => {
@@ -61,7 +68,7 @@ export default function EmployerFormSelect({
   }
 
   return (
-    <div ref={rootRef} className="relative">
+    <div ref={rootRef} className={`relative ${className}`}>
       <button
         type="button"
         aria-label={ariaLabel}
@@ -69,7 +76,7 @@ export default function EmployerFormSelect({
         aria-expanded={open}
         aria-controls={listboxId}
         onClick={() => setOpen((o) => !o)}
-        className={`flex w-full cursor-pointer items-center gap-2 rounded-xl border bg-white px-3 py-2.5 text-left text-sm outline-none transition hover:border-ink/20 focus-visible:border-teal focus-visible:ring-2 focus-visible:ring-teal/15 ${
+        className={`employer-ws-surface flex w-full cursor-pointer items-center gap-2 rounded-xl border px-3 py-2.5 text-left text-sm outline-none transition hover:border-ink/20 focus-visible:border-teal focus-visible:ring-2 focus-visible:ring-teal/15 ${
           open ? "border-teal ring-2 ring-teal/15" : "border-ink/10"
         }`}
       >
@@ -85,7 +92,7 @@ export default function EmployerFormSelect({
       </button>
 
       {open && (
-        <div className="absolute inset-x-0 z-50 mt-1.5 overflow-hidden rounded-xl border border-ink/10 bg-white shadow-[0_12px_40px_rgba(30,58,95,0.14)] ring-1 ring-navy/5">
+        <div className="employer-ws-surface absolute inset-x-0 z-50 mt-1.5 overflow-hidden rounded-xl border border-ink/10 shadow-[0_12px_40px_rgba(30,58,95,0.14)] ring-1 ring-navy/5">
           {showSearch && (
             <div className="border-b border-ink/6 p-2">
               <div className="relative">
@@ -98,7 +105,7 @@ export default function EmployerFormSelect({
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder="Search..."
-                  className="w-full rounded-lg border border-ink/8 bg-mist/40 py-2 pl-8 pr-2 text-xs outline-none focus:border-teal focus:ring-1 focus:ring-teal/20"
+                  className="employer-ws-surface-muted w-full rounded-lg border border-ink/8 py-2 pl-8 pr-2 text-xs outline-none focus:border-teal focus:ring-1 focus:ring-teal/20"
                   autoFocus
                 />
               </div>
