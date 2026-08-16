@@ -7,11 +7,13 @@ import { toast } from "sonner";
 import {
   BadgeCheck,
   CheckCheck,
+  ChevronDown,
   MessageSquare,
   MoreHorizontal,
   Paperclip,
   Search,
   Send,
+  Sparkles,
 } from "lucide-react";
 import MessagesNavBand from "@/components/messages/MessagesNavBand";
 import type { ConversationListItem } from "@/lib/messages";
@@ -21,7 +23,9 @@ import {
   pollConversationMessages,
   sendConversationMessage,
 } from "@/lib/client/conversations";
-import { noStore } from "@/lib/client/fetch-json";
+import { fetchJsonSafe, noStore } from "@/lib/client/fetch-json";
+import { useEmployerShell } from "@/components/employer/EmployerShellContext";
+import { callEasyAi } from "@/components/employer/pro/useEasyAi";
 
 type Conversation = ConversationListItem;
 
@@ -55,6 +59,15 @@ const THREAD_POLL_MS = 2000;
 const LIST_POLL_MS = 3000;
 
 const fetchOpts: RequestInit = noStore;
+
+const AI_DRAFT_TONES = [
+  { value: "first_outreach", label: "First outreach" },
+  { value: "follow_up", label: "Follow-up" },
+  { value: "interview_invite", label: "Interview invite" },
+  { value: "rejection", label: "Rejection" },
+] as const;
+
+type MessageDraftResult = { body: string };
 
 function formatTime(iso: string) {
   const d = new Date(iso);
@@ -163,12 +176,15 @@ export default function MessagesInbox({
   const searchParams = useSearchParams();
   const activeId = searchParams.get("c");
   const hasInitialData = initialConversations !== undefined;
+  const { isPro } = useEmployerShell();
 
   const [conversations, setConversations] = useState<Conversation[]>(initialConversations ?? []);
   const [thread, setThread] = useState<Thread | null>(null);
   const [loadingList, setLoadingList] = useState(!hasInitialData);
   const [loadingThread, setLoadingThread] = useState(false);
   const [draft, setDraft] = useState("");
+  const [aiToneMenuOpen, setAiToneMenuOpen] = useState(false);
+  const [aiDrafting, setAiDrafting] = useState(false);
   const [sendError, setSendError] = useState("");
   const [listError, setListError] = useState("");
   const [threadError, setThreadError] = useState("");
@@ -370,6 +386,43 @@ export default function MessagesInbox({
         prev ? { ...prev, messages: prev.messages.filter((m) => m.id !== optimisticId) } : prev
       );
       setDraft(text);
+    }
+  }
+
+  /**
+   * Employer Pro outreach draft. `message-draft` needs an `applicationId`,
+   * which conversations don't carry client-side — so this looks it up via
+   * the existing per-job applications endpoint (matched by seeker id) rather
+   * than adding a new API route. Fills the composer; never sends anything.
+   */
+  async function handleAiDraft(tone: (typeof AI_DRAFT_TONES)[number]["value"]) {
+    if (!thread?.job?.id) return;
+    setAiToneMenuOpen(false);
+    setAiDrafting(true);
+    try {
+      const appsResult = await fetchJsonSafe<Array<{ id: string; seeker: { id: string } }>>(
+        `/api/jobs/${thread.job.id}/applications`,
+        fetchOpts
+      );
+      if (!appsResult.ok) {
+        toast.error(appsResult.error || "Could not load this application");
+        return;
+      }
+      const application = appsResult.data.find((app) => app.seeker.id === thread.seeker.id);
+      if (!application) {
+        toast.error("Could not find this candidate's application for that job");
+        return;
+      }
+
+      const result = await callEasyAi<MessageDraftResult>("message-draft", {
+        applicationId: application.id,
+        tone,
+      });
+      if (result?.configured && result.data) {
+        setDraft(result.data.body);
+      }
+    } finally {
+      setAiDrafting(false);
     }
   }
 
@@ -873,6 +926,34 @@ export default function MessagesInbox({
               }`}
             >
               {sendError && <p className="mb-2 text-xs text-ember">{sendError}</p>}
+              {!isSeeker && isPro && thread.job && (
+                <div className="relative mb-2 inline-block">
+                  <button
+                    type="button"
+                    onClick={() => setAiToneMenuOpen((prev) => !prev)}
+                    disabled={aiDrafting}
+                    className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-teal/20 bg-teal/[0.06] px-2.5 py-1.5 text-xs font-semibold text-teal transition hover:bg-teal/10 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    <Sparkles className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden="true" />
+                    {aiDrafting ? "Drafting…" : "Draft with Easy AI"}
+                    <ChevronDown className="h-3 w-3" strokeWidth={2.5} aria-hidden="true" />
+                  </button>
+                  {aiToneMenuOpen && (
+                    <div className="absolute bottom-full left-0 z-10 mb-1.5 w-48 rounded-xl border border-ink/8 bg-white p-1.5 shadow-lg shadow-ink/10">
+                      {AI_DRAFT_TONES.map((t) => (
+                        <button
+                          key={t.value}
+                          type="button"
+                          onClick={() => handleAiDraft(t.value)}
+                          className="block w-full cursor-pointer rounded-lg px-2.5 py-1.5 text-left text-xs font-medium text-ink/70 transition hover:bg-teal/8 hover:text-teal"
+                        >
+                          {t.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
               <div className={composerWrap}>
                 <button
                   type="button"
