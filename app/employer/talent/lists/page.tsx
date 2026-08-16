@@ -1,10 +1,12 @@
 import Link from "next/link";
-import { Bookmark, FolderPlus, Lock, ArrowRight } from "lucide-react";
+import { Lock } from "lucide-react";
 import { requireEmployerPageContext } from "@/lib/employer-session";
+import { listTalentLists } from "@/lib/employer/talent-lists";
 import EmployerPageHeader from "@/components/employer/ui/EmployerPageHeader";
-import NeoSurface from "@/components/employer/pro/NeoSurface";
-import NeoButton from "@/components/employer/pro/NeoButton";
 import ProBadge from "@/components/employer/pro/ProBadge";
+import TalentListsBoard, {
+  type TalentListSummary,
+} from "@/components/employer/talent/TalentListsBoard";
 
 function TalentListsUpgradeGate() {
   return (
@@ -35,16 +37,20 @@ function TalentListsUpgradeGate() {
   );
 }
 
-// TODO(backend): this page is a UI shell. Once `SavedTalentList` (+ items)
-// exists in prisma/schema.prisma and an `/api/employer/talent-lists` route
-// is available (see plans/EMPLOYER_PRO_DASHBOARD_PLAN.md → "Schema / data"),
-// replace the static tiles below with real list data + create/rename/delete.
 export default async function TalentListsPage() {
-  const { plan } = await requireEmployerPageContext();
+  const { company, plan } = await requireEmployerPageContext();
 
   if (plan !== "PRO") {
     return <TalentListsUpgradeGate />;
   }
+
+  const lists = await listTalentLists(company.id);
+  const initialLists: TalentListSummary[] = lists.map((list) => ({
+    id: list.id,
+    name: list.name,
+    createdAt: list.createdAt.toISOString(),
+    itemCount: list._count.items,
+  }));
 
   return (
     <>
@@ -60,42 +66,9 @@ export default async function TalentListsPage() {
             Group candidates from Talent search into named shortlists for a role or a hiring round.
           </p>
         </div>
-        <NeoButton variant="primary" disabled icon={<FolderPlus className="h-4 w-4" strokeWidth={2.5} />}>
-          New list
-        </NeoButton>
       </div>
 
-      <NeoSurface variant="raised" pressable className="mb-4">
-        <Link href="/employer/talent" className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <span className="neo-inset-sm flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[color:var(--neo-teal)]">
-              <Bookmark className="h-5 w-5" strokeWidth={2.25} />
-            </span>
-            <div>
-              <p className="text-sm font-bold text-[color:var(--neo-ink)]">All saved candidates</p>
-              <p className="text-xs text-[color:var(--neo-muted)]">
-                Every candidate you&apos;ve bookmarked — open Talent search and toggle &ldquo;Saved&rdquo;.
-              </p>
-            </div>
-          </div>
-          <ArrowRight className="h-4 w-4 shrink-0 text-[color:var(--neo-muted)]" />
-        </Link>
-      </NeoSurface>
-
-      <NeoSurface variant="inset" className="flex flex-col items-center gap-3 py-12 text-center">
-        <span className="neo-raised-sm flex h-11 w-11 items-center justify-center rounded-full text-[color:var(--neo-gold)]">
-          <FolderPlus className="h-5 w-5" strokeWidth={2} />
-        </span>
-        <div>
-          <h3 className="font-display text-base font-bold text-[color:var(--neo-ink)]">
-            Named lists are coming soon
-          </h3>
-          <p className="mx-auto mt-1.5 max-w-sm text-xs leading-relaxed text-[color:var(--neo-muted)]">
-            Create shortlists like &ldquo;Q1 support hires&rdquo; or &ldquo;Bilingual VAs&rdquo; and add
-            candidates straight from their profile.
-          </p>
-        </div>
-      </NeoSurface>
+      <TalentListsBoard initialLists={initialLists} />
     </>
   );
 }
