@@ -10,6 +10,7 @@ import NeoButton from "@/components/employer/pro/NeoButton";
 
 type RankResult = { score: number; reasons: string[]; summary: string };
 type DraftResult = { body: string };
+type InterviewResult = { questions: string[] };
 
 const TONES = [
   { value: "first_outreach", label: "First outreach" },
@@ -22,15 +23,16 @@ type Tone = (typeof TONES)[number]["value"];
 
 type Props = { applicationId: string };
 
-/** Employer Pro candidate-detail panel: advisory match score + a reviewable
- * outreach draft. Both are pure suggestions — scoring never changes
- * `Application.status` and drafts never send on their own. */
+/** Employer Pro candidate-detail panel: advisory match score, interview kit,
+ * and a reviewable outreach draft. Scoring never changes Application.status
+ * and drafts never send on their own. */
 export default function CandidateEasyAiPanel({ applicationId }: Props) {
   const { isPro } = useEmployerShell();
   const { run, isLoading } = useEasyAi();
   const [rank, setRank] = useState<RankResult | null>(null);
   const [tone, setTone] = useState<Tone>("first_outreach");
   const [draft, setDraft] = useState("");
+  const [interview, setInterview] = useState<string[] | null>(null);
 
   if (!isPro) return null;
 
@@ -42,6 +44,11 @@ export default function CandidateEasyAiPanel({ applicationId }: Props) {
   async function handleDraft() {
     const result = await run<DraftResult>("message-draft", { applicationId, tone });
     if (result?.configured && result.data) setDraft(result.data.body);
+  }
+
+  async function handleInterview() {
+    const result = await run<InterviewResult>("interview", { applicationId });
+    if (result?.configured && result.data) setInterview(result.data.questions);
   }
 
   async function copyDraft() {
@@ -97,6 +104,30 @@ export default function CandidateEasyAiPanel({ applicationId }: Props) {
           >
             {isLoading("rank") ? "Scoring…" : "Rank this candidate"}
           </NeoButton>
+        )}
+      </div>
+
+      <div className="border-t border-[color:var(--neo-ink)]/[0.06] pt-3">
+        <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-[color:var(--neo-muted)]">
+          Interview kit
+        </p>
+        <NeoButton
+          variant="secondary"
+          size="sm"
+          className="w-full"
+          onClick={handleInterview}
+          disabled={isLoading("interview")}
+        >
+          {isLoading("interview") ? "Generating…" : interview ? "Refresh questions" : "Generate questions"}
+        </NeoButton>
+        {interview && interview.length > 0 && (
+          <ol className="neo-inset-sm mt-2 list-decimal space-y-1.5 rounded-xl p-3 pl-7">
+            {interview.map((q, i) => (
+              <li key={i} className="text-[11px] leading-relaxed text-[color:var(--neo-ink)]">
+                {q}
+              </li>
+            ))}
+          </ol>
         )}
       </div>
 

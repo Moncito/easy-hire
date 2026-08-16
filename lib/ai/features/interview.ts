@@ -3,10 +3,14 @@ import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/lib/api-error";
 import { generateAiObject } from "@/lib/ai/run";
 
-export const interviewInputSchema = z.object({
-  jobId: z.string().min(1),
-  applicationId: z.string().min(1).optional(),
-});
+export const interviewInputSchema = z
+  .object({
+    jobId: z.string().min(1).optional(),
+    applicationId: z.string().min(1).optional(),
+  })
+  .refine((v) => Boolean(v.jobId || v.applicationId), {
+    message: "Provide jobId or applicationId",
+  });
 export type InterviewInput = z.infer<typeof interviewInputSchema>;
 
 const interviewOutputSchema = z.object({
@@ -19,19 +23,15 @@ const interviewOutputSchema = z.object({
 export type InterviewOutput = z.infer<typeof interviewOutputSchema>;
 
 export async function generateInterviewKit(companyId: string, input: InterviewInput) {
-  const job = await prisma.job.findFirst({
-    where: { id: input.jobId, companyId },
-    select: { title: true, description: true, requirements: true, category: true },
-  });
-
-  if (!job) {
-    throw new ApiError("Job not found", 404);
-  }
-
+  let jobId = input.jobId ?? null;
   let candidateContext = "";
+
   if (input.applicationId) {
     const application = await prisma.application.findFirst({
-      where: { id: input.applicationId, job: { companyId, id: input.jobId } },
+      where: {
+        id: input.applicationId,
+        job: { companyId, ...(jobId ? { id: jobId } : {}) },
+      },
       include: {
         seeker: {
           select: {
@@ -45,8 +45,12 @@ export async function generateInterviewKit(companyId: string, input: InterviewIn
       },
     });
 
-    if (application) {
-      candidateContext = `
+    if (!application) {
+      throw new ApiError("Application not found", 404);
+    }
+
+    jobId = application.jobId;
+    candidateContext = `
 Candidate: ${application.seeker.fullName}
 Headline: ${application.seeker.headline ?? "N/A"}
 Skills: ${application.seeker.skills.join(", ") || "N/A"}
@@ -54,7 +58,19 @@ Years of experience: ${application.seeker.yearsExperience ?? "N/A"}
 Work experience: ${application.seeker.workExperience.join("; ") || "N/A"}
 Cover note: ${application.coverNote ?? "None provided"}
 `.trim();
-    }
+  }
+
+  if (!jobId) {
+    throw new ApiError("Job not found", 404);
+  }
+
+  const job = await prisma.job.findFirst({
+    where: { id: jobId, companyId },
+    select: { title: true, description: true, requirements: true, category: true },
+  });
+
+  if (!job) {
+    throw new ApiError("Job not found", 404);
   }
 
   const prompt = `
@@ -72,6 +88,6 @@ ${candidateContext ? `\n${candidateContext}` : ""}
     system:
       "You write practical interview question sets for hiring Virtual Assistants. Cover communication, reliability, relevant tools/skills, and role-specific scenarios. Keep questions open-ended and fair — no leading or discriminatory questions.",
     prompt,
-    metadata: { jobId: input.jobId, hasCandidate: !!candidateContext },
+    metadata: { jobId, hasCandidate: !!candidateContext },
   });
 }

@@ -6,6 +6,7 @@ import RichTextEditor from "@/components/ui/RichTextEditor";
 import EmployerActionBar from "@/components/employer/EmployerActionBar";
 import JobFormTopBar from "@/components/employer/JobFormTopBar";
 import EasyAiJobCopyPanel from "@/components/employer/EasyAiJobCopyPanel";
+import EasyAiScreeningPanel from "@/components/employer/EasyAiScreeningPanel";
 import JobSoftCapBanner from "@/components/employer/ui/JobSoftCapBanner";
 import EmployerFormSection from "@/components/employer/ui/EmployerFormSection";
 import EmployerFormSelect from "@/components/employer/ui/EmployerFormSelect";
@@ -365,6 +366,16 @@ export default function JobForm({ initialData, loading, onSubmit }: Props) {
             last
           >
             <div className="space-y-3">
+              <EasyAiScreeningPanel
+                title={title}
+                description={description}
+                requirements={requirements}
+                onApply={(questions) =>
+                  setScreeningQuestions((prev) =>
+                    [...prev, ...questions].slice(0, MAX_SCREENING_QUESTIONS)
+                  )
+                }
+              />
               {screeningQuestions.map((question, index) => (
                 <div
                   key={index}

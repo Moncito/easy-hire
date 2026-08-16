@@ -30,6 +30,7 @@ function toCardData(job: EmployerAnalytics["activeJobs"][number]): EmployerJobCa
     createdAt: job.updatedAt,
     updatedAt: job.updatedAt,
     publishedAt: null,
+    featuredUntil: null,
     reviewRejectionReason: null,
     applicantCount: job.applicantCount,
     unreviewedCount: 0,

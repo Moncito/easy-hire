@@ -23,6 +23,7 @@ import {
 import EmployerPipelineBar from "@/components/employer/ui/EmployerPipelineBar";
 import { useEmployerShell } from "@/components/employer/EmployerShellContext";
 import { fetchJsonSafe } from "@/lib/client/fetch-json";
+import { callEasyAi } from "@/components/employer/pro/useEasyAi";
 
 type Props = {
   job: EmployerJobCardData;
@@ -79,11 +80,12 @@ export default function EmployerJobCard({
   loading,
 }: Props) {
   const { isPro } = useEmployerShell();
-  // NOTE: EmployerJobCardData doesn't expose `featuredUntil` yet, so this
-  // only reflects toggles made this session — it resets to unfeatured on
-  // reload until that field is added to the jobs-board query.
-  const [featured, setFeatured] = useState(false);
+  const initiallyFeatured =
+    Boolean(job.featuredUntil) && new Date(job.featuredUntil as string).getTime() > Date.now();
+  const [featured, setFeatured] = useState(initiallyFeatured);
   const [featureLoading, setFeatureLoading] = useState(false);
+  const [tips, setTips] = useState<string[] | null>(null);
+  const [tipsLoading, setTipsLoading] = useState(false);
   const status = jobStatusDisplay(job, companyVerified);
   const primaryAction = getJobPrimaryAction(job, companyVerified);
   const ResolvedPrimaryIcon =
@@ -116,6 +118,16 @@ export default function EmployerJobCard({
       toast.error(result.error ?? "Could not update featured status");
     }
     setFeatureLoading(false);
+  }
+
+  async function handleJobTips() {
+    if (tipsLoading) return;
+    setTipsLoading(true);
+    const result = await callEasyAi<{ tips: string[] }>("job-tips", { jobId: job.id });
+    if (result?.configured && result.data?.tips) {
+      setTips(result.data.tips);
+    }
+    setTipsLoading(false);
   }
 
   const updatedLabel = new Date(job.updatedAt).toLocaleDateString(undefined, {
@@ -162,6 +174,14 @@ export default function EmployerJobCard({
       onClick: handleToggleFeatured,
       icon: Star,
       label: featureLoading ? "Updating…" : featured ? "Remove featured" : "Feature job",
+    });
+  }
+  if (isPro && (job.status === "ACTIVE" || job.status === "CLOSED")) {
+    secondaryActions.push({
+      key: "tips",
+      onClick: handleJobTips,
+      icon: AlertTriangle,
+      label: tipsLoading ? "Analyzing…" : "Easy AI tips",
     });
   }
   if (canClose) {
@@ -262,6 +282,17 @@ export default function EmployerJobCard({
         <div className="mt-3 rounded-lg border border-ember/15 bg-ember/5 px-2.5 py-2 text-[10px] leading-relaxed text-ember">
           <span className="font-semibold">Admin feedback: </span>
           {job.reviewRejectionReason}
+        </div>
+      )}
+
+      {tips && tips.length > 0 && (
+        <div className="mt-3 rounded-lg border border-teal/15 bg-teal/5 px-2.5 py-2 text-[10px] leading-relaxed text-ink/70">
+          <span className="font-semibold text-teal">Easy AI tips: </span>
+          <ul className="mt-1 space-y-1">
+            {tips.map((tip, i) => (
+              <li key={i}>• {tip}</li>
+            ))}
+          </ul>
         </div>
       )}
 
