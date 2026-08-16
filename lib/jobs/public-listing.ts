@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import type { JobSearchInput } from "@/lib/validations/job-search";
 import { ApiError } from "@/lib/api-error";
 import { fromMonthlyEquivalent, toMonthlyEquivalent, type SalaryPeriod } from "@/lib/format";
+import { isJobCurrentlyFeatured } from "@/lib/jobs/featured";
 
 export type PublicJobListItem = {
   id: string;
@@ -18,6 +19,7 @@ export type PublicJobListItem = {
   publishedAt: string | null;
   createdAt: string;
   expiresAt: string | null;
+  featured: boolean;
   company: {
     id: string;
     companyName: string;
@@ -122,16 +124,22 @@ function buildSalaryOverlapWhere(input: JobSearchInput): Prisma.JobWhereInput | 
   return { OR: branches };
 }
 
+/** Featured (Employer Pro) jobs always sort to the top of their tier before any secondary sort. */
+const FEATURED_FIRST: Prisma.JobOrderByWithRelationInput = {
+  featuredUntil: { sort: "desc", nulls: "last" },
+};
+
 function buildOrderBy(sort: JobSearchInput["sort"]): Prisma.JobOrderByWithRelationInput[] {
   if (sort === "salary_high") {
     return [
+      FEATURED_FIRST,
       { salaryMax: { sort: "desc", nulls: "last" } },
       { salaryMin: { sort: "desc", nulls: "last" } },
       { createdAt: "desc" },
       { id: "desc" },
     ];
   }
-  return [{ createdAt: "desc" }, { id: "desc" }];
+  return [FEATURED_FIRST, { createdAt: "desc" }, { id: "desc" }];
 }
 
 function mapJob(job: {
@@ -148,6 +156,7 @@ function mapJob(job: {
   publishedAt: Date | null;
   createdAt: Date;
   expiresAt?: Date | null;
+  featuredUntil?: Date | null;
   company: {
     id: string;
     companyName: string;
@@ -170,6 +179,7 @@ function mapJob(job: {
     publishedAt: job.publishedAt?.toISOString() ?? null,
     createdAt: job.createdAt.toISOString(),
     expiresAt: job.expiresAt?.toISOString() ?? null,
+    featured: isJobCurrentlyFeatured(job.featuredUntil ?? null),
     company: job.company,
   };
 }
@@ -224,9 +234,10 @@ async function searchPublicJobsFts(input: JobSearchInput): Promise<SearchResult>
   const cursorJob = input.cursor
     ? await prisma.job.findFirst({
         where: { id: input.cursor },
-        select: { createdAt: true, id: true },
+        select: { createdAt: true, id: true, featuredUntil: true },
       })
     : null;
+  const cursorRank = cursorJob ? (isJobCurrentlyFeatured(cursorJob.featuredUntil) ? 0 : 1) : null;
 
   type RawRow = {
     id: string;
@@ -242,6 +253,7 @@ async function searchPublicJobsFts(input: JobSearchInput): Promise<SearchResult>
     published_at: Date | null;
     created_at: Date;
     expires_at: Date | null;
+    featured_until: Date | null;
     company_id: string;
     company_name: string;
     logo_url: string | null;
@@ -267,6 +279,7 @@ async function searchPublicJobsFts(input: JobSearchInput): Promise<SearchResult>
       j.published_at,
       j.created_at,
       j.expires_at,
+      j.featured_until,
       c.id AS company_id,
       c.company_name,
       c.logo_url,
@@ -289,10 +302,16 @@ async function searchPublicJobsFts(input: JobSearchInput): Promise<SearchResult>
       ${postedCutoff ? Prisma.sql`AND COALESCE(j.published_at, j.created_at) >= ${postedCutoff}` : Prisma.empty}
       ${
         cursorJob
-          ? Prisma.sql`AND (j.created_at, j.id) < (${cursorJob.createdAt}, ${cursorJob.id})`
+          ? Prisma.sql`AND (
+              (CASE WHEN j.featured_until > NOW() THEN 0 ELSE 1 END) > ${cursorRank}
+              OR (
+                (CASE WHEN j.featured_until > NOW() THEN 0 ELSE 1 END) = ${cursorRank}
+                AND (j.created_at, j.id) < (${cursorJob.createdAt}, ${cursorJob.id})
+              )
+            )`
           : Prisma.empty
       }
-    ORDER BY j.created_at DESC, j.id DESC
+    ORDER BY (CASE WHEN j.featured_until > NOW() THEN 0 ELSE 1 END) ASC, j.created_at DESC, j.id DESC
     LIMIT ${limit + 1}
   `;
 
@@ -315,6 +334,7 @@ async function searchPublicJobsFts(input: JobSearchInput): Promise<SearchResult>
         publishedAt: row.published_at,
         createdAt: row.created_at,
         expiresAt: row.expires_at,
+        featuredUntil: row.featured_until,
         company: {
           id: row.company_id,
           companyName: row.company_name,
@@ -372,6 +392,7 @@ export async function listLandingJobs(limit = 12): Promise<PublicJobListItem[]> 
     const jobs = await prisma.job.findMany({
       where: { AND: baseActiveJobWhere() },
       orderBy: [
+        FEATURED_FIRST,
         { publishedAt: { sort: "desc", nulls: "last" } },
         { createdAt: "desc" },
         { id: "desc" },

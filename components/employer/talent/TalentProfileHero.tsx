@@ -39,7 +39,7 @@ export default function TalentProfileHero({
           fallbackClassName="bg-teal/20 text-mist ring-2 ring-white/20"
         />
         <div className="min-w-0 flex-1">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-mist/50">Talent profile</p>
+          <p className="text-xs font-bold uppercase tracking-wider text-mist/50">Talent profile</p>
           <h1 className="mt-0.5 font-display text-xl font-bold tracking-tight text-mist sm:text-2xl">
             {fullName}
           </h1>

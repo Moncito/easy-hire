@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { EmployerJobsSummary } from "@/lib/employer-jobs";
+import ExportCsvLink from "@/components/employer/ui/ExportCsvLink";
 
 type Props = {
   summary: EmployerJobsSummary;
@@ -9,11 +10,14 @@ type Props = {
 export default function ApplicantsPageHeader({ summary, jobsWithApplicants }: Props) {
   return (
     <div className="mb-6">
-      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <h1 className="font-display text-2xl font-bold tracking-tight text-ink">Applicants</h1>
-        <span className="font-data text-sm font-semibold text-ink/40">
-          {summary.totalApplicants} total
-        </span>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+          <h1 className="font-display text-2xl font-bold tracking-tight text-ink">Applicants</h1>
+          <span className="font-data text-sm font-semibold text-ink/40">
+            {summary.totalApplicants} total
+          </span>
+        </div>
+        <ExportCsvLink />
       </div>
       <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-ink/50">
         <span>

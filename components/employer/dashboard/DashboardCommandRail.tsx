@@ -23,25 +23,25 @@ export default function DashboardCommandRail({
     <div className="flex flex-col gap-3">
       <DashboardSurface className="overflow-hidden !p-0">
         <div className="employer-ws-command-header border-b border-navy/[0.06] px-4 py-3">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-navy/60">
+          <p className="text-xs font-bold uppercase tracking-wider text-navy/60">
             Command center
           </p>
         </div>
         <div className="grid grid-cols-2 gap-px bg-navy/[0.06]">
           <div className="employer-ws-surface-muted px-4 py-3">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-ink/40">Score</p>
+            <p className="text-xs font-bold uppercase tracking-wider text-ink/40">Score</p>
             <p className="mt-0.5 font-data text-2xl font-bold text-teal">{analytics.hiringScore}</p>
           </div>
           <div className="employer-ws-surface-muted px-4 py-3">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-ink/40">Active jobs</p>
+            <p className="text-xs font-bold uppercase tracking-wider text-ink/40">Active jobs</p>
             <p className="mt-0.5 font-data text-2xl font-bold text-ink">{metrics.activeJobs}</p>
           </div>
           <div className="employer-ws-surface-muted px-4 py-3">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-ink/40">Applicants</p>
+            <p className="text-xs font-bold uppercase tracking-wider text-ink/40">Applicants</p>
             <p className="mt-0.5 font-data text-2xl font-bold text-ink">{metrics.totalApplicants}</p>
           </div>
           <div className="employer-ws-surface-muted px-4 py-3">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-ink/40">In review</p>
+            <p className="text-xs font-bold uppercase tracking-wider text-ink/40">In review</p>
             <p className="mt-0.5 font-data text-2xl font-bold text-teal">{metrics.needsReview}</p>
           </div>
         </div>
@@ -74,7 +74,7 @@ export default function DashboardCommandRail({
           <div className="space-y-2.5">
             {insights.actionRequired && (
               <div className="rounded-xl bg-ember/5 px-3 py-2.5 ring-1 ring-ember/10">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-ember">
+                <p className="text-xs font-bold uppercase tracking-wider text-ember">
                   Action required
                 </p>
                 <p className="mt-1 text-xs leading-relaxed text-ink/70">{insights.actionRequired}</p>
@@ -82,7 +82,7 @@ export default function DashboardCommandRail({
             )}
             {insights.marketInsight && (
               <div className="rounded-xl bg-navy/5 px-3 py-2.5 ring-1 ring-navy/10">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-navy">This week</p>
+                <p className="text-xs font-bold uppercase tracking-wider text-navy">This week</p>
                 <p className="mt-1 text-xs leading-relaxed text-ink/70">{insights.marketInsight}</p>
               </div>
             )}

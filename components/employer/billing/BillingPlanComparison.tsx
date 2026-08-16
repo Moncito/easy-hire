@@ -33,14 +33,14 @@ export default function BillingPlanComparison({ plan, stripeSubscriptionId }: Pr
                   Current plan
                 </span>
               ) : (
-                <p className="text-center text-xs text-ink/40 sm:text-left">
+                <p className="text-center text-xs text-ink/55 sm:text-left">
                   Included with every employer account
                 </p>
               )}
             </div>
             <div className="sm:pl-2">
               {isPro ? (
-                <span className="inline-flex w-full items-center justify-center rounded-xl border border-teal/25 bg-teal/10 px-5 py-2.5 text-sm font-semibold text-teal">
+                <span className="inline-flex w-full items-center justify-center rounded-full bg-marigold px-5 py-2.5 text-sm font-semibold text-ink shadow-sm shadow-marigold/20">
                   Current plan
                 </span>
               ) : checkoutEnabled ? (
@@ -61,11 +61,22 @@ export default function BillingPlanComparison({ plan, stripeSubscriptionId }: Pr
           </div>
           <div className="shrink-0 text-center sm:text-right">
             {isPro && stripeSubscriptionId && (
-              <p className="mb-2 font-data text-[11px] text-ink/35">
-                Subscription {stripeSubscriptionId}
-              </p>
+              <>
+                <p className="mb-2 font-data text-[11px] text-ink/35">
+                  Subscription {stripeSubscriptionId}
+                </p>
+                <form action="/api/billing/portal" method="POST" className="mb-2 sm:inline-block">
+                  <button
+                    type="submit"
+                    className="w-full rounded-full border border-ink/10 bg-white px-4 py-2 text-xs font-semibold text-ink/75 transition-colors hover:border-ink/20 hover:bg-ink/[0.02] sm:w-auto"
+                  >
+                    Manage billing
+                  </button>
+                </form>
+                <br className="hidden sm:block" />
+              </>
             )}
-            <Link href="/pricing" className="text-xs font-medium text-teal hover:underline">
+            <Link href="/pricing" className="text-xs font-medium text-ink/55 hover:text-ink hover:underline">
               View public pricing details
             </Link>
           </div>

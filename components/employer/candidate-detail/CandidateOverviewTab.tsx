@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { formatPesoRange } from "@/lib/format";
 import { skillName } from "@/lib/seeker-profile-format";
+import CandidateEasyAiPanel from "./CandidateEasyAiPanel";
 import type { CandidateApplication } from "./types";
 
 function SnapshotCell({
@@ -53,6 +54,8 @@ export default function CandidateOverviewTab({ application, onRating }: Props) {
 
   return (
     <div className="space-y-4">
+      <CandidateEasyAiPanel applicationId={application.id} />
+
       <div className="rounded-[20px] bg-white p-4 shadow-sm ring-1 ring-ink/5">
         <h3 className="font-display text-sm font-semibold text-ink">Snapshot</h3>
         <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3">

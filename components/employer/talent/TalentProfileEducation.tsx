@@ -18,7 +18,7 @@ export default function TalentProfileEducation({ education, certifications }: Pr
     <DashboardSurface>
       {education.length > 0 && (
         <div>
-          <p className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-navy/60">
+          <p className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-navy/60">
             <GraduationCap className="h-3 w-3" aria-hidden="true" />
             Education
           </p>
@@ -48,7 +48,7 @@ export default function TalentProfileEducation({ education, certifications }: Pr
 
       {certifications.length > 0 && (
         <div className={education.length > 0 ? "mt-5 border-t border-ink/[0.06] pt-5" : ""}>
-          <p className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-navy/60">
+          <p className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-navy/60">
             <Award className="h-3 w-3" aria-hidden="true" />
             Certifications
           </p>

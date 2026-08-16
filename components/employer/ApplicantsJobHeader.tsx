@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { ArrowLeft, ExternalLink, Pencil } from "lucide-react";
 import EmployerPipelineBar from "@/components/employer/ui/EmployerPipelineBar";
+import ExportCsvLink from "@/components/employer/ui/ExportCsvLink";
+import EasyAiBulkShortlistButton from "@/components/employer/EasyAiBulkShortlistButton";
 import {
   formatJobSubtitle,
   jobStatusDisplay,
@@ -79,6 +81,8 @@ export default function ApplicantsJobHeader({
           Back to jobs
         </Link>
         <div className="flex flex-wrap items-center gap-2">
+          <ExportCsvLink jobId={job.id} label="Export applicants" />
+          <EasyAiBulkShortlistButton jobId={job.id} />
           {showPublicLink && (
             <Link
               href={`/jobs/${job.id}`}
@@ -107,7 +111,7 @@ export default function ApplicantsJobHeader({
               {job.title}
             </h1>
             <span
-              className={`shrink-0 rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${status.className}`}
+              className={`shrink-0 rounded-full border px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider ${status.className}`}
             >
               {status.label}
             </span>

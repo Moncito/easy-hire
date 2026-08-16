@@ -8,7 +8,7 @@ export type ConversationListItem = {
   lastMessageAt: string;
   job: { id: string; title: string } | null;
   company: { id: string; companyName: string; logoUrl: string | null };
-  seeker: { id: string; fullName: string; headline: string | null };
+  seeker: { id: string; fullName: string; headline: string | null; photoUrl: string | null };
   lastMessage: { body: string; createdAt: string; senderUserId: string } | null;
   unreadCount: number;
   applicationStatus: string | null;
@@ -40,7 +40,7 @@ export async function listConversationsForUser(userId: string, role: string) {
       lastMessageAt: true,
       seekerId: true,
       company: { select: { id: true, companyName: true, logoUrl: true } },
-      seeker: { select: { id: true, fullName: true, headline: true } },
+      seeker: { select: { id: true, fullName: true, headline: true, photoUrl: true } },
       job: { select: { id: true, title: true } },
     },
   });

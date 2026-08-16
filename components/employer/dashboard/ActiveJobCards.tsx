@@ -2,6 +2,7 @@ import Link from "next/link";
 import DashboardJobCard from "@/components/employer/dashboard/DashboardJobCard";
 import ActiveJobsRail from "@/components/employer/dashboard/ActiveJobsRail";
 import PostAnotherJobCard from "@/components/employer/dashboard/PostAnotherJobCard";
+import ProButton from "@/components/employer/pro/ProButton";
 import type { EmployerAnalytics } from "@/lib/employer-analytics";
 import type { EmployerJobCardData } from "@/lib/employer-jobs";
 
@@ -9,6 +10,7 @@ type Props = {
   jobs: EmployerAnalytics["activeJobs"];
   companyVerified: boolean;
   showPostAnother?: boolean;
+  variant?: "free" | "pro";
 };
 
 function toCardData(job: EmployerAnalytics["activeJobs"][number]): EmployerJobCardData {
@@ -30,6 +32,7 @@ function toCardData(job: EmployerAnalytics["activeJobs"][number]): EmployerJobCa
     createdAt: job.updatedAt,
     updatedAt: job.updatedAt,
     publishedAt: null,
+    featuredUntil: job.featuredUntil,
     reviewRejectionReason: null,
     applicantCount: job.applicantCount,
     unreviewedCount: 0,
@@ -48,26 +51,49 @@ function getGridClass(totalSlots: number) {
   return "grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3";
 }
 
-function JobCardSlot({ job, companyVerified }: { job: EmployerAnalytics["activeJobs"][number]; companyVerified: boolean }) {
+function JobCardSlot({
+  job,
+  companyVerified,
+  variant,
+}: {
+  job: EmployerAnalytics["activeJobs"][number];
+  companyVerified: boolean;
+  variant: "free" | "pro";
+}) {
   return (
     <div className="h-full min-w-0 sm:min-w-[300px] lg:min-w-0">
-      <DashboardJobCard job={toCardData(job)} companyVerified={companyVerified} />
+      <DashboardJobCard job={toCardData(job)} companyVerified={companyVerified} variant={variant} />
     </div>
   );
 }
 
-export default function ActiveJobCards({ jobs, companyVerified, showPostAnother = false }: Props) {
+export default function ActiveJobCards({
+  jobs,
+  companyVerified,
+  showPostAnother = false,
+  variant = "free",
+}: Props) {
   if (jobs.length === 0) {
+    const emptyShell =
+      variant === "pro"
+        ? "pro-card p-10 text-center"
+        : "rounded-2xl border border-navy/[0.08] bg-white/95 p-10 text-center shadow-sm";
     return (
-      <div className="rounded-2xl border border-navy/[0.08] bg-white/95 p-10 text-center shadow-sm">
+      <div className={emptyShell}>
         <p className="text-sm font-semibold text-ink">No active jobs</p>
         <p className="mt-1 text-xs text-ink/50">Post a job to start receiving applications.</p>
-        <Link
-          href="/employer/jobs/new"
-          className="mt-4 inline-block rounded-xl bg-teal px-4 py-2 text-xs font-semibold text-white"
-        >
-          Post a job
-        </Link>
+        {variant === "pro" ? (
+          <ProButton href="/employer/jobs/new" variant="primary" className="mt-4 min-h-10 text-xs">
+            Post a job
+          </ProButton>
+        ) : (
+          <Link
+            href="/employer/jobs/new"
+            className="mt-4 inline-block rounded-xl bg-teal px-4 py-2 text-xs font-semibold text-white"
+          >
+            Post a job
+          </Link>
+        )}
       </div>
     );
   }
@@ -80,7 +106,7 @@ export default function ActiveJobCards({ jobs, companyVerified, showPostAnother 
       <ActiveJobsRail>
         {jobs.map((job) => (
           <div key={job.id} className="w-[min(100%,340px)] shrink-0 snap-start">
-            <DashboardJobCard job={toCardData(job)} companyVerified={companyVerified} />
+            <DashboardJobCard job={toCardData(job)} companyVerified={companyVerified} variant={variant} />
           </div>
         ))}
         {showPostAnother && (
@@ -95,7 +121,7 @@ export default function ActiveJobCards({ jobs, companyVerified, showPostAnother 
   return (
     <div className={`${getGridClass(totalSlots)} items-stretch`}>
       {jobs.map((job) => (
-        <JobCardSlot key={job.id} job={job} companyVerified={companyVerified} />
+        <JobCardSlot key={job.id} job={job} companyVerified={companyVerified} variant={variant} />
       ))}
       {showPostAnother && (
         <div className="h-full min-h-[248px]">

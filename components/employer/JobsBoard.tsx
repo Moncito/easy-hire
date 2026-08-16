@@ -10,6 +10,10 @@ import EmployerJobCard from "@/components/employer/EmployerJobCard";
 import JobsBoardToolbar, { type SortOption } from "@/components/employer/JobsBoardToolbar";
 import type { EmployerJobCardData } from "@/lib/employer-jobs";
 import { createEmployerJob, patchJobStatus } from "@/lib/client/jobs";
+import { useEmployerShell } from "@/components/employer/EmployerShellContext";
+import ProPostAnotherJobCard from "@/components/employer/pro-dashboard/ProPostAnotherJobCard";
+import ProButton from "@/components/employer/pro/ProButton";
+import ProEmptyState from "@/components/employer/pro/ProEmptyState";
 
 type Props = {
   jobs: EmployerJobCardData[];
@@ -48,6 +52,7 @@ const SEARCH_EMPTY = {
 };
 
 export default function JobsBoard({ jobs: initialJobs, companyVerified }: Props) {
+  const { isPro } = useEmployerShell();
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialFilter = searchParams.get("filter") ?? FILTER_ALL;
@@ -168,6 +173,27 @@ export default function JobsBoard({ jobs: initialJobs, companyVerified }: Props)
 
   if (jobs.length === 0) {
     const copy = EMPTY_COPY.ALL;
+    if (isPro) {
+      return (
+        <ProEmptyState
+          title={
+            companyVerified
+              ? "Post your first role — it goes live instantly"
+              : "Post your first role"
+          }
+          description={
+            companyVerified
+              ? "Verified Pro listings skip the admin queue. Unlimited live jobs, and you can feature any of them."
+              : "Pro has unlimited listings. Finish company verification to publish instantly — verification is still required."
+          }
+          action={
+            <ProButton href="/employer/jobs/new" variant="primary">
+              Post your first job
+            </ProButton>
+          }
+        />
+      );
+    }
     return (
       <EmployerEmptyState
         title={copy.title}
@@ -191,21 +217,40 @@ export default function JobsBoard({ jobs: initialJobs, companyVerified }: Props)
       />
 
       {displayedJobs.length === 0 ? (
-        <EmployerEmptyState
-          title={query.trim() ? SEARCH_EMPTY.title : (EMPTY_COPY[filter]?.title ?? "No jobs found")}
-          description={
-            query.trim()
-              ? SEARCH_EMPTY.description
-              : (EMPTY_COPY[filter]?.description ?? "Try a different filter.")
-          }
-          action={
-            query.trim() ? undefined : filter !== FILTER_ALL ? (
-              <EmployerPrimaryButton href="/employer/jobs/new">Post a new job</EmployerPrimaryButton>
-            ) : undefined
-          }
-        />
+        isPro ? (
+          <ProEmptyState
+            compact
+            title={query.trim() ? SEARCH_EMPTY.title : (EMPTY_COPY[filter]?.title ?? "No jobs found")}
+            description={
+              query.trim()
+                ? SEARCH_EMPTY.description
+                : (EMPTY_COPY[filter]?.description ?? "Try a different filter.")
+            }
+            action={
+              query.trim() ? undefined : filter !== FILTER_ALL ? (
+                <ProButton href="/employer/jobs/new" variant="primary">
+                  Post a new job
+                </ProButton>
+              ) : undefined
+            }
+          />
+        ) : (
+          <EmployerEmptyState
+            title={query.trim() ? SEARCH_EMPTY.title : (EMPTY_COPY[filter]?.title ?? "No jobs found")}
+            description={
+              query.trim()
+                ? SEARCH_EMPTY.description
+                : (EMPTY_COPY[filter]?.description ?? "Try a different filter.")
+            }
+            action={
+              query.trim() ? undefined : filter !== FILTER_ALL ? (
+                <EmployerPrimaryButton href="/employer/jobs/new">Post a new job</EmployerPrimaryButton>
+              ) : undefined
+            }
+          />
+        )
       ) : (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-1 items-stretch gap-4 md:grid-cols-2 xl:grid-cols-3">
           {displayedJobs.map((job) => (
             <EmployerJobCard
               key={job.id}
@@ -216,6 +261,7 @@ export default function JobsBoard({ jobs: initialJobs, companyVerified }: Props)
               onClose={() => handleCloseJob(job.id)}
             />
           ))}
+          {isPro && filter === FILTER_ALL && !query.trim() && <ProPostAnotherJobCard />}
         </div>
       )}
     </>

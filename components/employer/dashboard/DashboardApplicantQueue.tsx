@@ -37,7 +37,7 @@ export default function DashboardApplicantQueue({ items, needsReview }: Props) {
     <DashboardSurface>
       <div className="mb-4 flex items-center justify-between gap-3">
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-wider text-teal">Pipeline</p>
+          <p className="text-xs font-bold uppercase tracking-wider text-teal">Pipeline</p>
           <h2 className="font-display text-lg font-bold tracking-tight text-ink">
             {needsReview > 0 ? "Applicants waiting" : "Recent applicants"}
           </h2>

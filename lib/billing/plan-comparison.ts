@@ -1,3 +1,5 @@
+import { FREE_ACTIVE_JOB_SOFT_CAP } from "@/lib/billing/entitlements";
+
 export type PlanComparisonFeature = {
   label: string;
   free: boolean;
@@ -10,25 +12,23 @@ export const PLAN_COMPARISON_FEATURES: PlanComparisonFeature[] = [
   { label: "Applicant tracking", free: true, pro: true },
   { label: "Candidate messaging", free: true, pro: true },
   { label: "Admin review before publishing", free: true, pro: false },
-  { label: "Instant job publishing", free: false, pro: true },
+  { label: "Instant job publishing", free: false, pro: true, note: "Requires verified company" },
   {
-    label: "Featured job listings",
-    free: false,
+    label: "Active jobs at once",
+    free: true,
     pro: true,
-    note: "Coming soon",
+    note: `Free: up to ${FREE_ACTIVE_JOB_SOFT_CAP} live or pending review · Pro: unlimited`,
   },
-  {
-    label: "Advanced analytics",
-    free: false,
-    pro: true,
-    note: "Coming soon",
-  },
-  {
-    label: "Candidate exports",
-    free: false,
-    pro: true,
-    note: "Coming soon",
-  },
+  { label: "Featured job listings", free: false, pro: true },
+  { label: "Advanced analytics + date-range reports", free: false, pro: true },
+  { label: "Candidate CSV exports", free: false, pro: true },
+  { label: "Saved talent lists / collections", free: false, pro: true },
+  { label: "Easy AI — job description writer", free: false, pro: true },
+  { label: "Easy AI — candidate match & rank", free: false, pro: true },
+  { label: "Easy AI — interview kit generator", free: false, pro: true },
+  { label: "Easy AI — outreach message drafts", free: false, pro: true },
+  { label: "Easy AI — hiring insights narrative", free: false, pro: true },
+  { label: "Neomorphic Pro workspace UI", free: false, pro: true },
   { label: "Priority support", free: false, pro: true },
 ];
 

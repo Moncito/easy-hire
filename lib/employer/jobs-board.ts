@@ -20,6 +20,7 @@ export type EmployerJobCardData = {
   createdAt: string;
   updatedAt: string;
   publishedAt: string | null;
+  featuredUntil: string | null;
   reviewRejectionReason: string | null;
   applicantCount: number;
   unreviewedCount: number;
@@ -67,6 +68,7 @@ function enrichJob(
     createdAt: Date;
     updatedAt: Date;
     publishedAt: Date | null;
+    featuredUntil: Date | null;
     reviewRejectionReason: string | null;
     targetHireCount: number;
     _count: { applications: number };
@@ -100,6 +102,7 @@ function enrichJob(
     createdAt: job.createdAt.toISOString(),
     updatedAt: job.updatedAt.toISOString(),
     publishedAt: job.publishedAt?.toISOString() ?? null,
+    featuredUntil: job.featuredUntil?.toISOString() ?? null,
     reviewRejectionReason: job.reviewRejectionReason,
     applicantCount: job._count.applications,
     unreviewedCount,

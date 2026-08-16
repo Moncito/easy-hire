@@ -1183,3 +1183,185 @@ backdrop-filter:blur(6px);
   }
 }
 
+/* =======================================================
+   EMPLOYER PRO — Clean SaaS workspace (navbar layout)
+   Pro-only. Gated by [data-employer-plan="pro"].
+======================================================= */
+
+.employer-workspace[data-employer-plan="pro"],
+.employer-pro-workspace {
+  --pro-bg: #eef2f6;
+  --pro-surface: #ffffff;
+  --pro-accent: #f2a93b;
+  --pro-accent-ink: #20242b;
+  --pro-border: rgb(32 36 43 / 0.08);
+  --pro-shadow: 0 1px 2px rgb(32 36 43 / 0.04), 0 8px 24px -8px rgb(32 36 43 / 0.08);
+
+  --font-display: var(--font-inter), Inter, sans-serif;
+  --font-body: var(--font-inter), Inter, sans-serif;
+
+  --ew-bg: var(--pro-bg);
+  --ew-surface: var(--pro-surface);
+  --ew-surface-solid: var(--pro-surface);
+  --ew-surface-muted: rgb(255 255 255 / 0.85);
+  --ew-border: var(--pro-border);
+  --ew-border-subtle: rgb(32 36 43 / 0.06);
+  --ew-text: #20242b;
+  --ew-text-muted: rgb(32 36 43 / 0.55);
+  --ew-shadow: var(--pro-shadow);
+
+  background-color: var(--pro-bg);
+  color: var(--ew-text);
+  font-family: var(--font-body);
+}
+
+.employer-workspace[data-employer-plan="pro"][data-employer-theme="dark"],
+.employer-pro-workspace[data-employer-theme="dark"] {
+  --pro-bg: #1c1612;
+  --pro-surface: #2a221c;
+  --pro-accent: #f2a93b;
+  --pro-accent-ink: #f2a93b;
+  --pro-border: rgb(242 169 59 / 0.12);
+  --pro-shadow: 0 8px 28px -12px rgb(0 0 0 / 0.45);
+
+  --ew-bg: var(--pro-bg);
+  --ew-surface: var(--pro-surface);
+  --ew-surface-solid: var(--pro-surface);
+  --ew-surface-muted: rgb(42 34 28 / 0.9);
+  --ew-text: #f5f6f4;
+  --ew-text-muted: rgb(245 246 244 / 0.55);
+}
+
+.employer-pro-workspace .pro-card {
+  border-radius: 1.75rem;
+  border: 1px solid rgb(32 36 43 / 0.06);
+  background-color: #ffffff;
+  box-shadow: var(--pro-shadow);
+}
+
+.employer-pro-workspace .font-display,
+.employer-pro-workspace h1 {
+  font-weight: 900;
+  letter-spacing: -0.045em;
+}
+
+.employer-pro-workspace .employer-pro-navbar {
+  background-color: rgb(255 255 255 / 0.88);
+  border-bottom-color: rgb(32 36 43 / 0.06);
+}
+
+.employer-pro-workspace[data-employer-theme="dark"] .employer-pro-navbar {
+  background-color: rgb(42 34 28 / 0.92);
+  border-bottom-color: var(--pro-border);
+}
+
+.employer-pro-workspace .employer-pro-canvas {
+  padding-top: 2rem;
+  padding-bottom: 2rem;
+}
+
+@media (min-width: 1024px) {
+  .employer-pro-workspace .employer-pro-canvas {
+    padding-top: 2.5rem;
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+}
+
+/* Legacy neo-* classes on non-dashboard Pro pages → flat cards */
+.employer-workspace[data-employer-plan="pro"] .neo-raised,
+.employer-workspace[data-employer-plan="pro"] .neo-raised-sm,
+.employer-workspace[data-employer-plan="pro"] .neo-raised-xs {
+  background-color: var(--pro-surface);
+  box-shadow: var(--pro-shadow);
+  border: 1px solid var(--pro-border);
+}
+
+.employer-workspace[data-employer-plan="pro"] .neo-inset,
+.employer-workspace[data-employer-plan="pro"] .neo-inset-sm {
+  background-color: var(--pro-surface);
+  box-shadow: none;
+  border: 1px solid var(--pro-border);
+}
+
+.employer-workspace[data-employer-plan="pro"] .employer-ws-surface,
+.employer-workspace[data-employer-plan="pro"] main .rounded-2xl.bg-white,
+.employer-workspace[data-employer-plan="pro"] main .rounded-2xl.bg-white\/60,
+.employer-workspace[data-employer-plan="pro"] main .rounded-2xl.bg-white\/70,
+.employer-workspace[data-employer-plan="pro"] main .rounded-2xl.bg-white\/80,
+.employer-workspace[data-employer-plan="pro"] main .rounded-lg.bg-white {
+  background-color: var(--pro-surface);
+  border-color: var(--pro-border);
+  box-shadow: var(--pro-shadow);
+}
+
+.employer-workspace[data-employer-plan="pro"] main .rounded-2xl.bg-white:hover,
+.employer-workspace[data-employer-plan="pro"] main .rounded-lg.bg-white:hover {
+  box-shadow: var(--pro-shadow);
+}
+
+/* Pro workspace: remap leftover teal slab CTAs → marigold pills (not success chips) */
+.employer-pro-workspace a.rounded-xl.bg-teal.px-4,
+.employer-pro-workspace a.rounded-xl.bg-teal.px-5,
+.employer-pro-workspace a.rounded-xl.bg-teal.px-6,
+.employer-pro-workspace a.rounded-xl.bg-teal.py-2\.5,
+.employer-pro-workspace button.rounded-xl.bg-teal.px-4,
+.employer-pro-workspace button.rounded-xl.bg-teal.px-5,
+.employer-pro-workspace button.rounded-xl.bg-teal.px-6,
+.employer-pro-workspace button.rounded-xl.bg-teal.py-2\.5 {
+  border-radius: 9999px;
+  border: none;
+  background-color: var(--pro-accent);
+  color: var(--ew-text);
+  box-shadow: 0 1px 2px rgb(242 169 59 / 0.2);
+}
+
+.employer-pro-workspace a.rounded-xl.bg-teal.px-4:hover,
+.employer-pro-workspace a.rounded-xl.bg-teal.px-5:hover,
+.employer-pro-workspace a.rounded-xl.bg-teal.px-6:hover,
+.employer-pro-workspace a.rounded-xl.bg-teal.py-2\.5:hover,
+.employer-pro-workspace button.rounded-xl.bg-teal.px-4:hover,
+.employer-pro-workspace button.rounded-xl.bg-teal.px-5:hover,
+.employer-pro-workspace button.rounded-xl.bg-teal.px-6:hover,
+.employer-pro-workspace button.rounded-xl.bg-teal.py-2\.5:hover {
+  background-color: rgb(242 169 59 / 0.9);
+  color: var(--ew-text);
+}
+
+.employer-pro-workspace .pro-nav-link {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  padding: 0.5rem 0.875rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: rgb(32 36 43 / 0.55);
+  transition: color 0.15s ease;
+}
+
+.employer-pro-workspace button.pro-nav-link {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.employer-pro-workspace .pro-nav-link:hover {
+  color: var(--ew-text);
+}
+
+.employer-pro-workspace .pro-nav-link[aria-current="page"] {
+  color: var(--ew-text);
+  font-weight: 600;
+}
+
+.employer-pro-workspace .pro-nav-link[aria-current="page"]::after {
+  content: "";
+  position: absolute;
+  right: 0.875rem;
+  bottom: 0.25rem;
+  left: 0.875rem;
+  height: 2px;
+  border-radius: 9999px;
+  background-color: var(--pro-accent);
+}
+

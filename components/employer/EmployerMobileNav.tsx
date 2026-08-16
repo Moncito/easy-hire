@@ -13,6 +13,8 @@ import {
   Search,
   Building2,
   BarChart3,
+  CreditCard,
+  Sparkles,
   LogOut,
   X,
 } from "lucide-react";
@@ -24,21 +26,32 @@ const primaryTabs = [
   { label: "Messages", href: "/employer/messages", icon: MessageSquare },
 ] as const;
 
+// Billing always appears here for nav parity with the desktop sidebar
+// (previously missing from mobile — see plan doc "Baseline notes").
 const overflowLinks = [
   { label: "Talent search", href: "/employer/talent", icon: Search },
   { label: "Reports", href: "/employer/reports", icon: BarChart3 },
   { label: "Company profile", href: "/employer/company-profile", icon: Building2 },
+  { label: "Billing", href: "/employer/billing", icon: CreditCard },
 ] as const;
+
+const proOverflowLinks = [{ label: "Easy AI", href: "/employer/easy-ai", icon: Sparkles }] as const;
 
 function isActive(pathname: string, href: string) {
   if (href === "/employer/dashboard") return pathname === href;
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export default function EmployerMobileNav() {
+type Props = {
+  plan?: "FREE" | "PRO";
+};
+
+export default function EmployerMobileNav({ plan = "FREE" }: Props) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
-  const overflowActive = overflowLinks.some((link) => isActive(pathname, link.href));
+  const isPro = plan === "PRO";
+  const links = isPro ? [...proOverflowLinks, ...overflowLinks] : overflowLinks;
+  const overflowActive = links.some((link) => isActive(pathname, link.href));
 
   return (
     <>
@@ -52,29 +65,36 @@ export default function EmployerMobileNav() {
       )}
 
       {menuOpen && (
-        <div className="employer-sheet-enter fixed bottom-16 left-0 right-0 z-50 rounded-t-2xl border border-ink/8 bg-white p-4 shadow-2xl lg:hidden">
+        <div
+          className={`employer-sheet-enter fixed bottom-16 left-0 right-0 z-50 rounded-t-2xl border border-ink/8 bg-white p-4 shadow-2xl lg:hidden`}
+        >
           <div className="mb-3 flex items-center justify-between">
             <p className="text-sm font-bold text-ink">More</p>
             <button
               type="button"
               onClick={() => setMenuOpen(false)}
-              className="rounded-lg p-1.5 text-ink/40 hover:bg-ink/5 hover:text-ink"
+              className="rounded-lg p-1.5 text-ink/40 transition hover:bg-ink/5 hover:text-ink"
               aria-label="Close menu"
             >
               <X className="h-4 w-4" />
             </button>
           </div>
           <div className="space-y-1">
-            {overflowLinks.map((link) => {
+            {links.map((link) => {
               const Icon = link.icon;
               const active = isActive(pathname, link.href);
+              const isEasyAi = link.href === "/employer/easy-ai";
               return (
                 <Link
                   key={link.href}
                   href={link.href}
                   onClick={() => setMenuOpen(false)}
                   className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
-                    active ? "bg-teal/10 text-teal" : "text-ink/70 hover:bg-ink/[0.03]"
+                    active
+                      ? "bg-teal/10 text-teal"
+                      : isEasyAi
+                        ? "text-teal"
+                        : "text-ink/70 hover:bg-ink/[0.03]"
                   }`}
                 >
                   <Icon className="h-4 w-4" strokeWidth={2} />
@@ -85,7 +105,7 @@ export default function EmployerMobileNav() {
             <button
               type="button"
               onClick={() => signOut({ callbackUrl: "/" })}
-              className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-ember transition-colors hover:bg-ember/5"
+              className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-ink/65 transition-colors hover:bg-ink/[0.04] hover:text-ink"
             >
               <LogOut className="h-4 w-4" strokeWidth={2} />
               Log out

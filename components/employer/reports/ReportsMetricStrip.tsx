@@ -37,7 +37,7 @@ export default function ReportsMetricStrip({ analytics }: Props) {
           value={metrics.needsReview}
           change={null}
           changeLabel=""
-          sparkline={metrics.appsTodaySparkline}
+          sparkline={[]}
           emptyHint="All caught up — no new applications waiting."
         />
         <DashboardMetricCard
@@ -45,7 +45,7 @@ export default function ReportsMetricStrip({ analytics }: Props) {
           value={metrics.activeJobs}
           change={null}
           changeLabel=""
-          sparkline={metrics.interviewsSparkline}
+          sparkline={[]}
           sparklineColor="#1E3A5F"
           emptyHint="Post a job to start collecting applicants."
         />
@@ -54,23 +54,23 @@ export default function ReportsMetricStrip({ analytics }: Props) {
       <DashboardSurface className="!py-3">
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-wider text-ink/40">
+            <p className="text-xs font-bold uppercase tracking-wider text-ink/40">
               Total applicants
             </p>
             <p className="mt-1 font-data text-xl font-bold text-ink">{metrics.totalApplicants}</p>
           </div>
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-wider text-ink/40">Review rate</p>
+            <p className="text-xs font-bold uppercase tracking-wider text-ink/40">Review rate</p>
             <p className="mt-1 font-data text-xl font-bold text-ink">{reviewRate.value}</p>
             <p className="mt-0.5 text-[10px] text-ink/40">{reviewRate.hint}</p>
           </div>
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-wider text-ink/40">Hire rate</p>
+            <p className="text-xs font-bold uppercase tracking-wider text-ink/40">Hire rate</p>
             <p className="mt-1 font-data text-xl font-bold text-ink">{hireRate.value}</p>
             <p className="mt-0.5 text-[10px] text-ink/40">{hireRate.hint}</p>
           </div>
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-wider text-ink/40">
+            <p className="text-xs font-bold uppercase tracking-wider text-ink/40">
               Hiring score
             </p>
             <p className="mt-1 font-data text-xl font-bold text-teal">{analytics.hiringScore}</p>

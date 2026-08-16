@@ -12,7 +12,7 @@ export default function DashboardPipelineSnapshot({
 }: Props) {
   return (
     <div className="rounded-2xl border border-ink/5 bg-white p-4 shadow-sm">
-      <p className="text-[10px] font-bold uppercase tracking-wider text-ink/40">Pipeline snapshot</p>
+      <p className="text-xs font-bold uppercase tracking-wider text-ink/40">Pipeline snapshot</p>
       <div className="mt-3 grid grid-cols-2 gap-3">
         <div className="rounded-xl bg-ink/[0.03] px-3 py-2.5">
           <div className="flex items-center gap-1.5 text-ink/45">

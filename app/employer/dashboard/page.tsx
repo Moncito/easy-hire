@@ -12,6 +12,7 @@ import {
 } from "@/lib/employer/dashboard-sparse";
 import DashboardHero from "@/components/employer/dashboard/DashboardHero";
 import HiringScoreGauge from "@/components/employer/dashboard/HiringScoreGauge";
+import ProDashboardBoard from "@/components/employer/pro-dashboard/ProDashboardBoard";
 import HiringFunnel from "@/components/employer/dashboard/HiringFunnel";
 import ActiveJobCards from "@/components/employer/dashboard/ActiveJobCards";
 import AttentionStrip from "@/components/employer/dashboard/AttentionStrip";
@@ -75,7 +76,8 @@ function VerificationBanners({
 }
 
 export default async function EmployerDashboardPage() {
-  const { company } = await requireEmployerPageContext();
+  const { company, plan } = await requireEmployerPageContext();
+  const isPro = plan === "PRO";
   const [analytics, applicantQueue] = await Promise.all([
     getEmployerAnalyticsCached(company.id),
     getDashboardApplicantQueueCached(company.id),
@@ -112,7 +114,27 @@ export default async function EmployerDashboardPage() {
         rejectionReason={company.verificationRejectionReason}
       />
 
-      {sparse && chartIsEmpty ? (
+      {isPro ? (
+        <ProDashboardBoard
+          company={{
+            companyName: company.companyName,
+            logoUrl: company.logoUrl,
+            description: company.description,
+            headquarters: company.headquarters,
+            industry: company.industry,
+            verifiedStatus: company.verifiedStatus,
+          }}
+          analytics={analytics}
+          applicantQueue={applicantQueue}
+          chartData={chartData}
+          sparse={sparse}
+          scoreHint={scoreHint}
+          chartIsEmpty={chartIsEmpty}
+          showGettingStarted={showGettingStarted}
+          gettingStartedSteps={gettingStartedSteps}
+          onboardingItems={onboardingItems}
+        />
+      ) : sparse && chartIsEmpty ? (
         <DashboardSparseBoard
           companyName={company.companyName}
           analytics={analytics}
@@ -197,7 +219,7 @@ export default async function EmployerDashboardPage() {
                   <div className="space-y-3">
                     {insights.actionRequired && (
                       <div className="rounded-xl bg-ember/5 px-3 py-2.5 ring-1 ring-ember/10">
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-ember">
+                        <p className="text-xs font-bold uppercase tracking-wider text-ember">
                           Action required
                         </p>
                         <p className="mt-1 text-xs leading-relaxed text-ink/70">
@@ -207,7 +229,7 @@ export default async function EmployerDashboardPage() {
                     )}
                     {insights.marketInsight && (
                       <div className="rounded-xl bg-navy/5 px-3 py-2.5 ring-1 ring-navy/10">
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-navy">
+                        <p className="text-xs font-bold uppercase tracking-wider text-navy">
                           This week
                         </p>
                         <p className="mt-1 text-xs leading-relaxed text-ink/70">

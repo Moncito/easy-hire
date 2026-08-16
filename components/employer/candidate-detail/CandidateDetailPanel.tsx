@@ -66,8 +66,26 @@ export default function CandidateDetailPanel({
   const [tab, setTab] = useState<CandidateDetailTab>("overview");
   const [stageOpen, setStageOpen] = useState(false);
   const stageRef = useRef<HTMLDivElement>(null);
+  const moveButtonRef = useRef<HTMLButtonElement>(null);
+  const moveMenuRef = useRef<HTMLDivElement>(null);
   const progress = stageIndex(application.status);
   const isRejected = application.status === "REJECTED";
+
+  const stageOptions = [
+    ...PIPELINE,
+    { value: "REJECTED", label: "Rejected" },
+    ...(isRejected ? [{ value: "APPLIED", label: "Restore" }] : []),
+  ];
+
+  function closeStageMenu(returnFocus = true) {
+    setStageOpen(false);
+    if (returnFocus) moveButtonRef.current?.focus();
+  }
+
+  function selectStage(status: string) {
+    onStatusChange(status);
+    closeStageMenu();
+  }
 
   useEffect(() => {
     setTab("overview");
@@ -84,8 +102,54 @@ export default function CandidateDetailPanel({
   }, []);
 
   useEffect(() => {
+    if (!stageOpen) return;
+
+    function onMenuKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        e.stopPropagation();
+        closeStageMenu();
+        return;
+      }
+
+      const menu = moveMenuRef.current;
+      if (!menu) return;
+      const items = Array.from(
+        menu.querySelectorAll<HTMLButtonElement>('button[role="menuitem"]:not([disabled])')
+      );
+      if (items.length === 0) return;
+
+      const currentIndex = items.findIndex((el) => el === document.activeElement);
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        items[(currentIndex + 1 + items.length) % items.length]?.focus();
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        items[(currentIndex - 1 + items.length) % items.length]?.focus();
+      } else if (e.key === "Home") {
+        e.preventDefault();
+        items[0]?.focus();
+      } else if (e.key === "End") {
+        e.preventDefault();
+        items[items.length - 1]?.focus();
+      }
+    }
+
+    document.addEventListener("keydown", onMenuKeyDown);
+    const focusTimer = window.setTimeout(() => {
+      moveMenuRef.current?.querySelector<HTMLButtonElement>('button[role="menuitem"]')?.focus();
+    }, 0);
+
+    return () => {
+      document.removeEventListener("keydown", onMenuKeyDown);
+      window.clearTimeout(focusTimer);
+    };
+  }, [stageOpen]);
+
+  useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (stageOpen) return;
       if (e.key === "Escape") onClose();
       if (e.key === "ArrowUp" || e.key === "k") {
         e.preventDefault();
@@ -98,7 +162,7 @@ export default function CandidateDetailPanel({
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [onClose, onNavigate]);
+  }, [onClose, onNavigate, stageOpen]);
 
   const statusLabel =
     PIPELINE.find((s) => s.value === application.status)?.label ??
@@ -157,20 +221,20 @@ export default function CandidateDetailPanel({
                 />
               ))}
             </div>
-            <div className="mt-1 flex justify-between">
-              {PIPELINE.map((stage, i) => (
-                <button
-                  key={stage.value}
-                  type="button"
-                  onClick={() => onStatusChange(stage.value)}
-                  className={`text-[9px] font-medium transition hover:text-teal ${
-                    i === progress ? "text-teal" : i < progress ? "text-ink/45" : "text-ink/30"
-                  }`}
-                >
-                  {stage.label}
-                </button>
-              ))}
-            </div>
+          <div className="mt-1 flex justify-between">
+            {PIPELINE.map((stage, i) => (
+              <button
+                key={stage.value}
+                type="button"
+                onClick={() => onStatusChange(stage.value)}
+                className={`max-w-[4rem] truncate text-xs font-medium transition hover:text-teal ${
+                  i === progress ? "text-teal" : i < progress ? "text-ink/45" : "text-ink/30"
+                }`}
+              >
+                {stage.label}
+              </button>
+            ))}
+          </div>
           </div>
         ) : (
           <p className="mt-2 rounded-lg bg-ink/5 px-2 py-1.5 text-center text-[10px] font-medium text-ink/55">
@@ -226,23 +290,31 @@ export default function CandidateDetailPanel({
             )}
             <div className="relative" ref={stageRef}>
               <button
+                ref={moveButtonRef}
                 type="button"
+                aria-haspopup="menu"
+                aria-expanded={stageOpen}
+                aria-controls={stageOpen ? "candidate-move-menu" : undefined}
                 onClick={() => setStageOpen((v) => !v)}
                 className="inline-flex items-center gap-0.5 rounded-lg px-2 py-1.5 text-[11px] font-semibold text-ink/55 transition hover:bg-ink/5"
               >
                 Move
-                <ChevronDown className="h-3 w-3" />
+                <ChevronDown className="h-3 w-3" aria-hidden="true" />
               </button>
               {stageOpen && (
-                <div className="absolute right-0 top-full z-20 mt-1 w-36 overflow-hidden rounded-xl border border-ink/8 bg-white py-1 shadow-lg">
-                  {[...PIPELINE, { value: "REJECTED", label: "Rejected" }].map((stage) => (
+                <div
+                  id="candidate-move-menu"
+                  ref={moveMenuRef}
+                  role="menu"
+                  aria-label="Move candidate to stage"
+                  className="absolute right-0 top-full z-20 mt-1 w-36 overflow-hidden rounded-xl border border-ink/8 bg-white py-1 shadow-lg"
+                >
+                  {stageOptions.map((stage) => (
                     <button
-                      key={stage.value}
+                      key={`${stage.value}-${stage.label}`}
                       type="button"
-                      onClick={() => {
-                        onStatusChange(stage.value);
-                        setStageOpen(false);
-                      }}
+                      role="menuitem"
+                      onClick={() => selectStage(stage.value)}
                       className={`block w-full px-3 py-2 text-left text-xs font-medium hover:bg-ink/3 ${
                         application.status === stage.value ? "text-teal" : "text-ink/70"
                       }`}
@@ -250,18 +322,6 @@ export default function CandidateDetailPanel({
                       {stage.label}
                     </button>
                   ))}
-                  {isRejected && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        onStatusChange("APPLIED");
-                        setStageOpen(false);
-                      }}
-                      className="block w-full px-3 py-2 text-left text-xs font-medium text-ink/70 hover:bg-ink/3"
-                    >
-                      Restore
-                    </button>
-                  )}
                 </div>
               )}
             </div>

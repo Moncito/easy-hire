@@ -11,7 +11,7 @@ export default function TalentProfileExperience({ workExperience }: Props) {
 
   return (
     <DashboardSurface>
-      <p className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-navy/60">
+      <p className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-navy/60">
         <Briefcase className="h-3 w-3" aria-hidden="true" />
         Experience
       </p>

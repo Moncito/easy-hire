@@ -2,8 +2,8 @@ import { requireEmployerPageContext } from "@/lib/employer-session";
 import { getCompanySubscription } from "@/lib/subscriptions";
 import BillingPlanComparison from "@/components/employer/billing/BillingPlanComparison";
 import BillingStatusStrip from "@/components/employer/billing/BillingStatusStrip";
-import BillingUpgradeBanner from "@/components/employer/billing/BillingUpgradeBanner";
 import EmployerPageHeader from "@/components/employer/ui/EmployerPageHeader";
+import ProBillingBoard from "@/components/employer/pro-dashboard/ProBillingBoard";
 
 export default async function EmployerBillingPage({
   searchParams,
@@ -15,14 +15,31 @@ export default async function EmployerBillingPage({
   const { upgraded } = await searchParams;
   const showUpgradeBanner = upgraded === "1" && plan === "PRO";
 
+  if (plan === "PRO") {
+    return (
+      <ProBillingBoard
+        verifiedStatus={company.verifiedStatus}
+        activeJobs={navCounts.activeJobs}
+        showWelcome={showUpgradeBanner}
+        subscription={
+          subscription
+            ? {
+                status: subscription.status,
+                stripeCustomerId: subscription.stripeCustomerId,
+                currentPeriodEnd: subscription.currentPeriodEnd,
+              }
+            : null
+        }
+      />
+    );
+  }
+
   return (
     <>
       <EmployerPageHeader
         title="Billing"
         description="Compare plans, see your publishing privileges, and manage Employer Pro."
       />
-
-      {showUpgradeBanner && <BillingUpgradeBanner />}
 
       <div className="space-y-4">
         <BillingStatusStrip

@@ -14,8 +14,10 @@ import {
   Search,
   PanelLeft,
   CreditCard,
+  Sparkles,
 } from "lucide-react";
 import { useEmployerShell } from "@/components/employer/EmployerShellContext";
+import ProBadge from "@/components/employer/pro/ProBadge";
 
 type NavCounts = {
   activeJobs: number;
@@ -58,10 +60,10 @@ function NavLink({
       } ${
         isActive
           ? isPro
-            ? "bg-ink/90 text-white shadow-md shadow-ink/15"
+            ? "bg-marigold text-ink shadow-sm shadow-marigold/25"
             : "bg-teal text-white shadow-lg shadow-teal/30"
           : isPro
-            ? "text-ink/55 hover:bg-ink/5 hover:text-ink"
+            ? "text-ink/50 hover:bg-ink/[0.04] hover:text-ink"
             : "text-mist/55 hover:bg-white/8 hover:text-mist"
       }`}
     >
@@ -75,7 +77,13 @@ function NavLink({
       {badge !== undefined && badge > 0 && (
         <span
           className={`flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[10px] font-bold ${
-            isActive ? "bg-white/20 text-white" : "bg-teal/20 text-teal"
+            isActive
+              ? isPro
+                ? "bg-ink/10 text-ink"
+                : "bg-white/20 text-white"
+              : isPro
+                ? "bg-marigold text-ink"
+                : "bg-teal/20 text-teal"
           } ${expanded ? "" : "absolute -right-0.5 -top-0.5 h-4 min-w-4 text-[9px]"}`}
         >
           {badge > 99 ? "99+" : badge}
@@ -108,17 +116,10 @@ export default function Sidebar({
         expanded ? "w-52" : "w-[60px]"
       } ${
         isPro
-          ? "border-r border-white/40 bg-white/55 shadow-[inset_-1px_0_0_rgba(255,255,255,0.6)] backdrop-blur-2xl backdrop-saturate-150"
+          ? "border-r border-ink/[0.06] bg-white"
           : "bg-navy"
       }`}
     >
-      {isPro && expanded && (
-        <div className="flex shrink-0 items-center gap-1.5 px-4 pt-3">
-          <span className="h-2.5 w-2.5 rounded-full bg-[#ff5f57]" aria-hidden />
-          <span className="h-2.5 w-2.5 rounded-full bg-[#febc2e]" aria-hidden />
-          <span className="h-2.5 w-2.5 rounded-full bg-[#28c840]" aria-hidden />
-        </div>
-      )}
       <div
         className={`flex h-14 shrink-0 items-center ${
           isPro ? "border-b border-ink/5" : "border-b border-white/5"
@@ -129,8 +130,11 @@ export default function Sidebar({
           className="flex items-center gap-2.5 transition-transform hover:scale-[1.02]"
           title="EasyHire home"
         >
-          <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-full shadow-md shadow-black/20">
-            <div className="absolute inset-0 bg-teal" style={{ clipPath: "polygon(0 0, 100% 0, 0 100%)" }} />
+          <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-full shadow-sm">
+            <div
+              className={`absolute inset-0 ${isPro ? "bg-marigold" : "bg-teal"}`}
+              style={{ clipPath: "polygon(0 0, 100% 0, 0 100%)" }}
+            />
             <div
               className="absolute inset-0 bg-mist/90"
               style={{ clipPath: "polygon(100% 0, 100% 100%, 0 100%)" }}
@@ -138,11 +142,12 @@ export default function Sidebar({
           </div>
           {expanded && (
             <span
-              className={`font-display text-base font-bold tracking-tight ${
+              className={`flex items-center gap-1.5 font-display text-base font-black tracking-tighter ${
                 isPro ? "text-ink" : "text-mist"
               }`}
             >
-              EasyHire{isPro ? " Pro" : ""}
+              EasyHire
+              {isPro && <ProBadge size="sm" />}
             </span>
           )}
         </Link>
@@ -150,7 +155,11 @@ export default function Sidebar({
           <button
             type="button"
             onClick={toggleExpanded}
-            className="rounded-lg p-1.5 text-mist/40 transition hover:bg-white/8 hover:text-mist"
+            className={`rounded-lg p-1.5 transition ${
+              isPro
+                ? "text-ink/40 hover:bg-ink/[0.04] hover:text-ink"
+                : "text-mist/40 hover:bg-white/8 hover:text-mist"
+            }`}
             aria-label="Collapse sidebar"
           >
             <PanelLeft className="h-4 w-4" />
@@ -163,7 +172,11 @@ export default function Sidebar({
           <button
             type="button"
             onClick={toggleExpanded}
-            className="rounded-lg p-1.5 text-mist/40 transition hover:bg-white/8 hover:text-mist"
+            className={`rounded-lg p-1.5 transition ${
+              isPro
+                ? "text-ink/40 hover:bg-ink/[0.04] hover:text-ink"
+                : "text-mist/40 hover:bg-white/8 hover:text-mist"
+            }`}
             aria-label="Expand sidebar"
           >
             <PanelLeft className="h-4 w-4 rotate-180" />
@@ -194,14 +207,38 @@ export default function Sidebar({
         })}
       </nav>
 
-      <div className={`shrink-0 border-t border-white/5 py-3 ${expanded ? "px-3" : "flex justify-center px-2"}`}>
+      {isPro && (
+        <div className={`shrink-0 py-2 ${expanded ? "px-3" : "flex justify-center px-2"}`}>
+          <Link
+            href="/employer/easy-ai"
+            title={expanded ? undefined : "Easy AI"}
+            className={`group relative flex items-center rounded-xl text-[var(--pro-accent-ink,#9a5b12)] transition-colors ${
+              pathname.startsWith("/employer/easy-ai")
+                ? "bg-marigold/20"
+                : "hover:bg-marigold/10"
+            } ${expanded ? "gap-3 px-3 py-2.5" : "h-10 w-10 justify-center"}`}
+          >
+            <Sparkles className="h-[18px] w-[18px] shrink-0" strokeWidth={2} />
+            {expanded && <span className="text-sm font-semibold">Easy AI</span>}
+            {!expanded && (
+              <span className="pointer-events-none absolute left-full z-50 ml-3 whitespace-nowrap rounded-lg bg-ink px-2.5 py-1.5 text-xs font-medium text-mist opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100">
+                Easy AI
+              </span>
+            )}
+          </Link>
+        </div>
+      )}
+
+      <div
+        className={`shrink-0 py-3 ${isPro ? "border-t border-ink/[0.06]" : "border-t border-white/5"} ${expanded ? "px-3" : "flex justify-center px-2"}`}
+      >
         <button
           type="button"
           onClick={() => signOut({ callbackUrl: "/" })}
           title={expanded ? undefined : "Log out"}
-          className={`group relative flex w-full items-center rounded-xl text-mist/50 transition hover:bg-ember/15 hover:text-ember ${
-            expanded ? "gap-3 px-3 py-2.5" : "h-10 w-10 justify-center"
-          }`}
+          className={`group relative flex w-full items-center rounded-xl transition hover:bg-ink/[0.04] hover:text-ink ${
+            isPro ? "text-ink/45" : "text-mist/50"
+          } ${expanded ? "gap-3 px-3 py-2.5" : "h-10 w-10 justify-center"}`}
         >
           <LogOut className="h-[18px] w-[18px] shrink-0" strokeWidth={2} />
           {expanded && <span className="text-sm font-medium">Log out</span>}

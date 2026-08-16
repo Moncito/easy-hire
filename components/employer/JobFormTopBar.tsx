@@ -1,5 +1,7 @@
 "use client";
 
+import InstantPublishNote from "@/components/employer/ui/InstantPublishNote";
+
 type ChecklistItem = { label: string; done: boolean };
 
 type EmploymentType = { value: string; label: string };
@@ -42,7 +44,7 @@ export default function JobFormTopBar({
     <div className="mb-5 rounded-2xl border border-navy/[0.08] bg-white/90 p-4 shadow-[0_8px_24px_-6px_rgba(30,58,95,0.08)] sm:p-5">
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)_minmax(0,0.85fr)] lg:gap-5">
         <div className="rounded-xl bg-gradient-to-br from-navy/[0.05] to-teal/[0.04] p-3.5 ring-1 ring-navy/[0.06]">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-navy/60">Live preview</p>
+          <p className="text-xs font-bold uppercase tracking-wider text-navy/60">Live preview</p>
           <p className="mt-2 font-display text-base font-bold tracking-tight text-ink">
             {title.trim() || "Untitled role"}
           </p>
@@ -52,7 +54,7 @@ export default function JobFormTopBar({
 
         <div className="space-y-3">
           <div>
-            <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-ink/40">
+            <p className="mb-2 text-xs font-bold uppercase tracking-wider text-ink/40">
               Employment type
             </p>
             <div className="flex flex-wrap gap-1.5">
@@ -75,7 +77,7 @@ export default function JobFormTopBar({
           <div>
             <label
               htmlFor="target-hire-count"
-              className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-ink/40"
+              className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-ink/40"
             >
               Target hires
             </label>
@@ -93,7 +95,7 @@ export default function JobFormTopBar({
 
         <div>
           <div className="mb-2 flex items-center justify-between gap-2">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-ink/40">Checklist</p>
+            <p className="text-xs font-bold uppercase tracking-wider text-ink/40">Checklist</p>
             <span className="font-data text-[10px] font-bold text-teal">
               {checklistDone}/{checklist.length}
             </span>
@@ -120,9 +122,7 @@ export default function JobFormTopBar({
         </div>
       </div>
 
-      <p className="mt-4 border-t border-ink/[0.06] pt-3 text-[11px] leading-relaxed text-ink/45">
-        Submit for review when ready. Our team approves jobs before they appear to seekers.
-      </p>
+      <InstantPublishNote />
     </div>
   );
 }

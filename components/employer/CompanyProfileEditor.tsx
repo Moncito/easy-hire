@@ -9,8 +9,11 @@ import {
   Camera,
   Globe,
   Share2,
+  Sparkles,
 } from "lucide-react";
 import CompanyProfileTopBar from "@/components/employer/CompanyProfileTopBar";
+import ProCompanyIdentityCard from "@/components/employer/pro-dashboard/ProCompanyIdentityCard";
+import ProCompanyWorkspace from "@/components/employer/pro-dashboard/ProCompanyWorkspace";
 import CompanyVerificationBanner from "@/components/employer/CompanyVerificationBanner";
 import StickySaveBar from "@/components/employer/StickySaveBar";
 import EmployerFormSection from "@/components/employer/ui/EmployerFormSection";
@@ -18,6 +21,9 @@ import EmployerFormSelect from "@/components/employer/ui/EmployerFormSelect";
 import VerificationDocumentsPanel, {
   type VerificationDoc,
 } from "@/components/employer/VerificationDocumentsPanel";
+import { useEmployerShell } from "@/components/employer/EmployerShellContext";
+import { useEasyAi } from "@/components/employer/pro/useEasyAi";
+import ProBadge from "@/components/employer/pro/ProBadge";
 
 const industryOptions = [
   "E-commerce",
@@ -145,15 +151,26 @@ function XIcon({ className }: { className?: string }) {
   );
 }
 
-const inputClassName =
-  "w-full rounded-xl border border-ink/10 bg-white px-4 py-2.5 text-sm text-ink outline-none transition-colors focus-visible:border-teal focus-visible:ring-2 focus-visible:ring-teal/20";
+function inputClassName(isPro: boolean) {
+  return isPro
+    ? "w-full rounded-xl border border-ink/10 bg-white px-4 py-2.5 text-sm text-ink outline-none transition-colors focus-visible:border-ink/25 focus-visible:ring-2 focus-visible:ring-ink/10"
+    : "w-full rounded-xl border border-ink/10 bg-white px-4 py-2.5 text-sm text-ink outline-none transition-colors focus-visible:border-teal focus-visible:ring-2 focus-visible:ring-teal/20";
+}
 
-const chipClassName = (selected: boolean) =>
-  `rounded-xl border px-3.5 py-2 text-xs font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal/30 ${
+function chipClassName(selected: boolean, isPro: boolean) {
+  if (isPro) {
+    return `rounded-full border px-3.5 py-2 text-xs font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/15 ${
+      selected
+        ? "border-ink bg-ink text-white"
+        : "border-ink/10 text-ink/75 hover:border-ink/20 hover:bg-ink/[0.03]"
+    }`;
+  }
+  return `rounded-xl border px-3.5 py-2 text-xs font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal/30 ${
     selected
       ? "scale-[1.02] border-teal bg-teal text-white shadow-xs"
       : "border-ink/10 text-ink/75 hover:border-teal/30 hover:bg-teal/5 hover:scale-[1.01]"
   }`;
+}
 
 export default function CompanyProfileEditor({
   companyId,
@@ -162,6 +179,8 @@ export default function CompanyProfileEditor({
   verificationDocuments = [],
 }: Props) {
   const router = useRouter();
+  const { isPro } = useEmployerShell();
+  const { run, isLoading } = useEasyAi();
   const logoInputRef = useRef<HTMLInputElement>(null);
   const bannerInputRef = useRef<HTMLInputElement>(null);
   const [logoUrl, setLogoUrl] = useState(initialData.logoUrl);
@@ -226,6 +245,25 @@ export default function CompanyProfileEditor({
         .slice(0, 2)
         .toUpperCase()
     : "CO";
+
+  async function handleRewriteAbout() {
+    const result = await run<{ description: string; highlights: string[] }>("company-brand", {
+      companyName: form.companyName || "This company",
+      industry: form.industry || undefined,
+      existingDescription: form.description || undefined,
+      highlights: form.highlights.length > 0 ? form.highlights : undefined,
+    });
+    if (!result?.configured || !result.data) return;
+
+    updateField("description", result.data.description.slice(0, MAX_DESCRIPTION_LENGTH));
+    if (result.data.highlights.length > 0) {
+      setForm((prev) => ({
+        ...prev,
+        highlights: Array.from(new Set([...prev.highlights, ...result.data!.highlights])),
+      }));
+      setSaved(false);
+    }
+  }
 
   function updateField<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -373,6 +411,29 @@ export default function CompanyProfileEditor({
 
   return (
     <form onSubmit={handleSubmit}>
+      {isPro ? (
+        <ProCompanyIdentityCard
+          bannerUrl={bannerUrl}
+          logoUrl={logoUrl}
+          logoInitials={logoInitials}
+          companyName={form.companyName}
+          industry={form.industry}
+          website={form.website}
+          verificationStatus={verificationStatus}
+          bannerUploading={bannerUploading}
+          logoUploading={logoUploading}
+          bannerInputRef={bannerInputRef}
+          logoInputRef={logoInputRef}
+          onBannerChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) void handleBannerUpload(file);
+          }}
+          onLogoChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) void handleLogoUpload(file);
+          }}
+        />
+      ) : (
       <section className="mb-5 overflow-hidden rounded-2xl border border-navy/[0.08] bg-white/90 shadow-[0_8px_24px_-6px_rgba(30,58,95,0.08)]">
         <div className="group relative h-36 w-full overflow-hidden sm:h-44">
           {bannerUrl ? (
@@ -444,17 +505,17 @@ export default function CompanyProfileEditor({
                   {form.companyName || "Your Company"}
                 </h2>
                 {verificationStatus === "verified" && (
-                  <span className="rounded-full bg-teal/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-teal">
+                  <span className="rounded-full bg-teal/10 px-2 py-0.5 text-xs font-bold uppercase tracking-wider text-teal">
                     Verified
                   </span>
                 )}
                 {verificationStatus === "pending" && (
-                  <span className="rounded-full bg-navy/8 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-navy">
+                  <span className="rounded-full bg-navy/8 px-2 py-0.5 text-xs font-bold uppercase tracking-wider text-navy">
                     Pending review
                   </span>
                 )}
                 {verificationStatus === "rejected" && (
-                  <span className="rounded-full bg-ember/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-ember">
+                  <span className="rounded-full bg-ember/10 px-2 py-0.5 text-xs font-bold uppercase tracking-wider text-ember">
                     Needs update
                   </span>
                 )}
@@ -481,12 +542,34 @@ export default function CompanyProfileEditor({
             </div>
         </div>
       </section>
+      )}
 
       <CompanyVerificationBanner
         status={verificationStatus}
         rejectionReason={initialData.verificationRejectionReason}
       />
 
+      {isPro ? (
+        <ProCompanyWorkspace
+          logoInitials={logoInitials}
+          logoUrl={logoUrl}
+          bannerUrl={bannerUrl}
+          companyName={form.companyName}
+          industry={form.industry}
+          description={form.description}
+          highlights={form.highlights}
+          headquarters={form.headquarters}
+          teamSize={form.teamSize}
+          website={form.website}
+          activeJobsCount={stats.activeJobsCount}
+          totalApplicantsCount={stats.totalApplicantsCount}
+          verified={verificationStatus === "verified"}
+          companyId={companyId}
+          profileStrength={profileStrength}
+          strengthLabel={strengthLabel}
+          checklist={checklist}
+        />
+      ) : (
       <CompanyProfileTopBar
         logoInitials={logoInitials}
         logoUrl={logoUrl}
@@ -506,6 +589,7 @@ export default function CompanyProfileEditor({
         strengthLabel={strengthLabel}
         checklist={checklist}
       />
+      )}
 
       {error && !isDirty && (
         <div className="mb-4 rounded-xl border border-ember/20 bg-ember/5 px-4 py-3 text-sm text-ember">
@@ -513,8 +597,9 @@ export default function CompanyProfileEditor({
         </div>
       )}
 
-      <div className="space-y-5">
-          <EmployerFormSection title="Company information">
+      <div className={isPro ? "space-y-4" : "space-y-5"}>
+          <div className={isPro ? "pro-card p-5 sm:p-6" : undefined}>
+          <EmployerFormSection title="Company information" last={isPro}>
             <div className="space-y-4">
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
@@ -526,7 +611,7 @@ export default function CompanyProfileEditor({
                     type="text"
                     value={form.companyName}
                     onChange={(e) => updateField("companyName", e.target.value)}
-                    className={inputClassName}
+                    className={inputClassName(isPro)}
                     placeholder="e.g. Acme Tech Inc."
                   />
                 </div>
@@ -539,7 +624,7 @@ export default function CompanyProfileEditor({
                     type="url"
                     value={form.website}
                     onChange={(e) => updateField("website", e.target.value)}
-                    className={inputClassName}
+                    className={inputClassName(isPro)}
                     placeholder="https://acme.co"
                   />
                 </div>
@@ -553,7 +638,7 @@ export default function CompanyProfileEditor({
                       key={opt}
                       type="button"
                       onClick={() => updateField("industry", opt)}
-                      className={chipClassName(form.industry === opt)}
+                      className={chipClassName(form.industry === opt, isPro)}
                       aria-pressed={form.industry === opt}
                     >
                       {opt}
@@ -585,7 +670,7 @@ export default function CompanyProfileEditor({
                       value={form.foundedYear}
                       onChange={(e) => updateField("foundedYear", e.target.value)}
                       placeholder="2020"
-                      className={inputClassName}
+                      className={inputClassName(isPro)}
                     />
                   </div>
                   <div>
@@ -598,17 +683,41 @@ export default function CompanyProfileEditor({
                       value={form.headquarters}
                       onChange={(e) => updateField("headquarters", e.target.value)}
                       placeholder="San Francisco, CA"
-                      className={inputClassName}
+                      className={inputClassName(isPro)}
                     />
                   </div>
                 </div>
             </div>
           </EmployerFormSection>
+          </div>
 
+          <div className={isPro ? "pro-card p-5 sm:p-6" : undefined}>
           <EmployerFormSection
             title="About company"
             description="Tell candidates about your culture, mission, values, and what makes your company unique."
+            last={isPro}
           >
+            {isPro && (
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-full border border-marigold/25 bg-marigold/10 px-3.5 py-2">
+                <div className="flex items-center gap-2 text-xs text-ink/65">
+                  <Sparkles className="h-3.5 w-3.5 shrink-0 text-[#9A5B12]" aria-hidden="true" />
+                  <span>Let Easy AI draft or rewrite your About copy from what&apos;s here.</span>
+                  <ProBadge size="sm" />
+                </div>
+                <button
+                  type="button"
+                  onClick={handleRewriteAbout}
+                  disabled={isLoading("company-brand")}
+                  className="shrink-0 rounded-full bg-marigold px-3 py-1.5 text-xs font-semibold text-ink transition hover:bg-marigold/90 disabled:opacity-60"
+                >
+                  {isLoading("company-brand")
+                    ? "Writing…"
+                    : form.description
+                      ? "Rewrite About"
+                      : "Draft with Easy AI"}
+                </button>
+              </div>
+            )}
             <textarea
               id="description"
               value={form.description}
@@ -617,7 +726,11 @@ export default function CompanyProfileEditor({
               maxLength={MAX_DESCRIPTION_LENGTH}
               placeholder="Share your story, team culture, and what makes working with you special..."
               aria-describedby="description-counter"
-              className="w-full rounded-2xl border border-ink/10 bg-white p-5 text-sm leading-relaxed text-ink outline-none transition-colors focus-visible:border-teal focus-visible:ring-2 focus-visible:ring-teal/20"
+              className={`w-full rounded-2xl border border-ink/10 bg-white p-5 text-sm leading-relaxed text-ink outline-none transition-colors ${
+                isPro
+                  ? "focus-visible:border-ink/25 focus-visible:ring-2 focus-visible:ring-ink/10"
+                  : "focus-visible:border-teal focus-visible:ring-2 focus-visible:ring-teal/20"
+              }`}
             />
             <div id="description-counter" className="mt-2 flex items-center justify-between font-data text-[11px] text-ink/40">
               <span>Recommended: 150–300 characters</span>
@@ -626,10 +739,13 @@ export default function CompanyProfileEditor({
               </span>
             </div>
           </EmployerFormSection>
+          </div>
 
+          <div className={isPro ? "pro-card p-5 sm:p-6" : undefined}>
           <EmployerFormSection
             title="Company highlights"
             description="Select benefits and perks that will appear on your public job postings."
+            last={isPro}
           >
             <div className="flex flex-wrap gap-2">
               {highlightOptions.map((highlight) => {
@@ -639,7 +755,7 @@ export default function CompanyProfileEditor({
                     key={highlight}
                     type="button"
                     onClick={() => toggleHighlight(highlight)}
-                    className={chipClassName(selected)}
+                      className={chipClassName(selected, isPro)}
                     aria-pressed={selected}
                   >
                     {highlight}
@@ -653,7 +769,7 @@ export default function CompanyProfileEditor({
                     key={highlight}
                     type="button"
                     onClick={() => toggleHighlight(highlight)}
-                    className={chipClassName(true)}
+                    className={chipClassName(true, isPro)}
                     aria-pressed
                   >
                     {highlight}
@@ -661,8 +777,10 @@ export default function CompanyProfileEditor({
                 ))}
             </div>
           </EmployerFormSection>
+          </div>
 
-          <EmployerFormSection title="Social presence">
+          <div className={isPro ? "pro-card p-5 sm:p-6" : undefined}>
+          <EmployerFormSection title="Social presence" last={isPro}>
             <div className="mb-3 flex items-center gap-2 text-ink/40">
               <Share2 className="h-4 w-4" aria-hidden="true" />
               <span className="text-xs">Links shown on your public company page.</span>
@@ -686,7 +804,7 @@ export default function CompanyProfileEditor({
                         value={field.value}
                         onChange={(e) => field.onChange(e.target.value)}
                         placeholder={field.placeholder}
-                        className={`${inputClassName} pl-10`}
+                        className={`${inputClassName(isPro)} pl-10`}
                       />
                     </div>
                   </div>
@@ -697,7 +815,9 @@ export default function CompanyProfileEditor({
               YouTube, GitHub, Behance, and Dribbble — more platforms coming soon.
             </p>
           </EmployerFormSection>
+          </div>
 
+          <div id="verification" className={isPro ? "pro-card p-5 sm:p-6" : undefined}>
           <EmployerFormSection title="Verification" last>
             <VerificationDocumentsPanel
               embedded
@@ -706,6 +826,7 @@ export default function CompanyProfileEditor({
               initialDocuments={verificationDocuments}
             />
           </EmployerFormSection>
+          </div>
       </div>
 
       <StickySaveBar

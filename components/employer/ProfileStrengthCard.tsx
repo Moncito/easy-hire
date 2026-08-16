@@ -23,7 +23,7 @@ export default function ProfileStrengthCard({ percentage, statusLabel, checklist
         <h3 id="profile-strength-heading" className="text-sm font-bold tracking-tight text-ink">
           Profile Strength
         </h3>
-        <span className="rounded-full bg-teal/8 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-teal">
+        <span className="rounded-full bg-teal/8 px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider text-teal">
           {statusLabel}
         </span>
       </div>

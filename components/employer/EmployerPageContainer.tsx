@@ -31,11 +31,14 @@ function isDashboard(pathname: string) {
   );
 }
 
+// 1296px is the single authoritative standard width for all employer pages.
+// "full" is preserved for Messages and per-job Kanban workspaces only.
+// "6xl" (72rem / 1152px) is kept for job-form and company-profile column layouts.
 const widthClasses: Record<ContentWidth, string> = {
   full: "w-full max-w-none",
-  "7xl": "mx-auto w-full max-w-7xl",
+  "7xl": "mx-auto w-full max-w-[1296px]",
   "6xl": "mx-auto w-full max-w-6xl",
-  dashboard: "mx-auto w-full max-w-[1480px]",
+  dashboard: "mx-auto w-full max-w-[1296px]",
 };
 
 export default function EmployerPageContainer({
@@ -61,7 +64,7 @@ export default function EmployerPageContainer({
 
   return (
     <div
-      className={`${isFixedWorkspace ? workspaceClasses : dashboard ? "px-4 py-4 pb-24 sm:px-5 lg:px-6 lg:pb-20" : jobForm || companyProfile ? "px-6 py-5 pb-0 sm:px-8" : "px-6 py-6 pb-28 sm:px-8 lg:pb-24"} ${widthClasses[width]}`}
+      className={`${isFixedWorkspace ? workspaceClasses : dashboard ? "px-5 py-5 pb-24 sm:px-6 lg:px-8 lg:pb-20" : jobForm || companyProfile ? "px-6 py-5 pb-0 sm:px-8" : "px-6 py-6 pb-28 sm:px-8 lg:pb-24"} ${widthClasses[width]} ${pro && !isFixedWorkspace ? "employer-pro-canvas" : ""}`}
     >
       {children}
     </div>

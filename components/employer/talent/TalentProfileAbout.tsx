@@ -12,7 +12,7 @@ export default function TalentProfileAbout({ bio, languages }: Props) {
 
   return (
     <DashboardSurface>
-      <p className="text-[10px] font-bold uppercase tracking-wider text-navy/60">About</p>
+      <p className="text-xs font-bold uppercase tracking-wider text-navy/60">About</p>
       {bio ? (
         <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-ink/75">{bio}</p>
       ) : (
@@ -21,7 +21,7 @@ export default function TalentProfileAbout({ bio, languages }: Props) {
 
       {languages.length > 0 && (
         <div className="mt-4 border-t border-ink/[0.06] pt-4">
-          <p className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-navy/60">
+          <p className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-navy/60">
             <Languages className="h-3 w-3" aria-hidden="true" />
             Languages
           </p>

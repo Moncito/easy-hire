@@ -8,6 +8,8 @@ import EmployerSearchTrigger from "@/components/employer/EmployerSearchTrigger";
 import EmployerNotificationBell from "@/components/employer/EmployerNotificationBell";
 import EmployerAvatar from "@/components/employer/ui/EmployerAvatar";
 import EmployerThemeToggle from "@/components/employers/EmployerThemeToggle";
+import ProBadge from "@/components/employer/pro/ProBadge";
+import EasyAiChip from "@/components/employer/pro/EasyAiChip";
 
 type Props = {
   companyName: string;
@@ -28,10 +30,11 @@ const statusLabel: Record<string, string> = {
   REJECTED: "Rejected",
 };
 
-export default function Topbar({ companyName, companyLogoUrl, verifiedStatus }: Props) {
+export default function Topbar({ companyName, companyLogoUrl, verifiedStatus, plan = "FREE" }: Props) {
   const pathname = usePathname();
   const title = getEmployerPageTitle(pathname);
   const isMessages = pathname.startsWith("/employer/messages");
+  const isPro = plan === "PRO";
 
   return (
     <header className="employer-topbar sticky top-0 z-30 flex h-14 shrink-0 items-center gap-4 border-b border-navy/[0.08] bg-white/70 px-4 shadow-[0_1px_0_0_rgba(255,255,255,0.6)_inset] backdrop-blur-md sm:px-6">
@@ -48,6 +51,10 @@ export default function Topbar({ companyName, companyLogoUrl, verifiedStatus }: 
       </div>
 
       <div className="ml-auto flex items-center gap-2 sm:gap-3">
+        {isPro && (
+          <EasyAiChip variant="chip" className="hidden sm:inline-flex" />
+        )}
+
         <button
           type="button"
           onClick={() =>
@@ -88,8 +95,9 @@ export default function Topbar({ companyName, companyLogoUrl, verifiedStatus }: 
             fallbackClassName="bg-teal text-white shadow-sm shadow-teal/25"
           />
           <div className="hidden max-w-[140px] md:block">
-            <span className="employer-topbar-company-name block truncate text-sm font-medium text-ink">
+            <span className="employer-topbar-company-name flex items-center gap-1.5 truncate text-sm font-medium text-ink">
               {companyName}
+              {isPro && <ProBadge size="sm" />}
             </span>
             <span className="employer-topbar-company-role block truncate text-[10px] text-ink/45">
               Employer

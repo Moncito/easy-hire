@@ -38,7 +38,7 @@ export default function HiringScoreGauge({ score, percentile, hint, compact = fa
         <div className="min-w-0">
           <p className="text-xs font-bold text-ink">Overall Hiring Score</p>
           {percentile !== null && percentile >= 90 && (
-            <p className="mt-0.5 text-[10px] font-bold uppercase tracking-wider text-teal">
+            <p className="mt-0.5 text-xs font-bold uppercase tracking-wider text-teal">
               Top {100 - percentile}%
             </p>
           )}
@@ -75,7 +75,7 @@ export default function HiringScoreGauge({ score, percentile, hint, compact = fa
       </div>
       <p className="mt-2 text-center text-xs font-semibold text-ink">Overall Hiring Score</p>
       {percentile !== null && percentile >= 90 && (
-        <p className="mt-0.5 text-[10px] font-bold uppercase tracking-wider text-teal">
+        <p className="mt-0.5 text-xs font-bold uppercase tracking-wider text-teal">
           Top {100 - percentile}%
         </p>
       )}
