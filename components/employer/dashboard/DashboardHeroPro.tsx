@@ -1,10 +1,10 @@
 import Link from "next/link";
-import { Plus, Users, Sparkles } from "lucide-react";
+import { Plus, Users } from "lucide-react";
 import type { EmployerAnalytics } from "@/lib/employer-analytics";
 import NeoSurface from "@/components/employer/pro/NeoSurface";
 import NeoButton from "@/components/employer/pro/NeoButton";
 import ProBadge from "@/components/employer/pro/ProBadge";
-import EasyAiChip from "@/components/employer/pro/EasyAiChip";
+import EasyAiInsightBox from "@/components/employer/dashboard/EasyAiInsightBox";
 
 function getGreeting() {
   const hour = new Date().getHours();
@@ -78,20 +78,7 @@ export default function DashboardHeroPro({ companyName, analytics }: Props) {
         </div>
       </div>
 
-      {/* Easy AI insight — TODO: replace with live `/api/employer/ai/insights`
-          response once the Easy AI backend lands (see plans/EMPLOYER_PRO_DASHBOARD_PLAN.md). */}
-      <div className="neo-inset-sm mt-5 flex items-start gap-3 rounded-xl px-4 py-3">
-        <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--neo-gold)]" strokeWidth={2.25} />
-        <div className="min-w-0 flex-1">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-[color:var(--neo-gold)]">
-            Easy AI insight
-          </p>
-          <p className="mt-1 text-xs leading-relaxed text-[color:var(--neo-muted)]">
-            {insight ?? "Easy AI will summarize your hiring health here once it's live — check back soon."}
-          </p>
-        </div>
-        <EasyAiChip variant="inline" label="Open Easy AI" className="shrink-0" />
-      </div>
+      <EasyAiInsightBox fallback={insight ?? null} />
     </NeoSurface>
   );
 }
