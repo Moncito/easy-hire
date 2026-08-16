@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Users } from "lucide-react";
+import { ArrowRight, Star, Users } from "lucide-react";
 import type { EmployerJobCardData } from "@/lib/employer-jobs";
 import {
   jobStatusDisplay,
@@ -7,11 +7,14 @@ import {
   getJobPrimaryAction,
   canViewPublicListing,
 } from "@/lib/employer-jobs";
+import { isJobCurrentlyFeatured } from "@/lib/jobs/featured";
 import EmployerPipelineBar from "@/components/employer/ui/EmployerPipelineBar";
+import ProButton from "@/components/employer/pro/ProButton";
 
 type Props = {
   job: EmployerJobCardData;
   companyVerified: boolean;
+  variant?: "free" | "pro";
 };
 
 function splitTitle(title: string) {
@@ -20,10 +23,23 @@ function splitTitle(title: string) {
   return { main: title.slice(0, pipe), suffix: title.slice(pipe + 3) };
 }
 
-export default function DashboardJobCard({ job, companyVerified }: Props) {
+function proStatusPillClass(statusClassName: string) {
+  if (statusClassName.includes("amber") || statusClassName.includes("ember")) {
+    return `rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide border-0 ${statusClassName.replace(/border-\S+/g, "").trim()}`;
+  }
+  if (statusClassName.includes("text-ink/45") || statusClassName.includes("text-ink/55")) {
+    return "rounded-full bg-ink/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-ink/60";
+  }
+  return "rounded-full bg-ink px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-white";
+}
+
+export default function DashboardJobCard({ job, companyVerified, variant = "free" }: Props) {
   const status = jobStatusDisplay(job, companyVerified);
   const primaryAction = getJobPrimaryAction(job, companyVerified);
   const showPublicLink = canViewPublicListing(job, companyVerified);
+  const featured = isJobCurrentlyFeatured(
+    job.featuredUntil ? new Date(job.featuredUntil) : null
+  );
   const { main, suffix } = splitTitle(job.title);
   const hireProgress = Math.min(
     100,
@@ -40,24 +56,41 @@ export default function DashboardJobCard({ job, companyVerified }: Props) {
       ? { applied: job.applicantCount, shortlisted: 0, interview: 0, hired: 0 }
       : job.pipeline;
 
+  const surfaceClass =
+    variant === "pro"
+      ? "pro-card flex h-full min-h-[248px] flex-col p-4 transition hover:shadow-md"
+      : "employer-ws-surface flex h-full min-h-[248px] flex-col rounded-2xl border p-4 transition hover:border-teal/20";
+
   return (
-    <div className="employer-ws-surface flex h-full min-h-[248px] flex-col rounded-2xl border p-4 transition hover:border-teal/20">
+    <div className={surfaceClass}>
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
-          <Link
-            href={primaryAction.href}
-            className="line-clamp-2 font-display text-[15px] font-bold leading-snug text-ink transition-colors hover:text-teal"
-            title={job.title}
-          >
-            {main}
-          </Link>
+          <div className="flex flex-wrap items-center gap-2">
+            <Link
+              href={primaryAction.href}
+              className="line-clamp-2 font-display text-[15px] font-bold leading-snug text-ink transition-colors hover:text-teal"
+              title={job.title}
+            >
+              {main}
+            </Link>
+            {featured && (
+              <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-teal/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-teal">
+                <Star className="h-3 w-3 fill-teal" strokeWidth={0} aria-hidden="true" />
+                Featured
+              </span>
+            )}
+          </div>
           {suffix && (
             <p className="mt-0.5 line-clamp-1 text-[11px] font-medium text-ink/45">{suffix}</p>
           )}
           <p className="mt-1 line-clamp-1 text-[11px] text-ink/45">{formatJobSubtitle(job)}</p>
         </div>
         <span
-          className={`shrink-0 rounded-full border px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider ${status.className}`}
+          className={
+            variant === "pro"
+              ? `shrink-0 ${proStatusPillClass(status.className)}`
+              : `shrink-0 rounded-full border px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider ${status.className}`
+          }
         >
           {status.label}
         </span>
@@ -101,7 +134,26 @@ export default function DashboardJobCard({ job, companyVerified }: Props) {
             {job.hiredCount}/{job.targetHireCount} hired
           </span>
         </div>
-        {job.applicantCount === 0 && (
+        {job.applicantCount === 0 && job.viewCount === 0 && (
+          <p className="text-[11px] leading-relaxed text-ink/45">
+            <span className="font-semibold text-ember">Not getting seen</span> —{" "}
+            {showPublicLink ? (
+              <>
+                <Link href={`/jobs/${job.id}`} className="font-semibold text-teal hover:underline">
+                  share listing
+                </Link>{" "}
+                or{" "}
+              </>
+            ) : null}
+            <Link
+              href={`/employer/jobs/${job.id}/edit`}
+              className="font-semibold text-teal hover:underline"
+            >
+              refresh listing
+            </Link>
+          </p>
+        )}
+        {job.applicantCount === 0 && job.viewCount > 0 && (
           <p className="text-[11px] leading-relaxed text-ink/45">
             No applicants yet —{" "}
             {showPublicLink ? (
@@ -109,7 +161,10 @@ export default function DashboardJobCard({ job, companyVerified }: Props) {
                 share listing
               </Link>
             ) : (
-              <Link href={`/employer/jobs/${job.id}/edit`} className="font-semibold text-teal hover:underline">
+              <Link
+                href={`/employer/jobs/${job.id}/edit`}
+                className="font-semibold text-teal hover:underline"
+              >
                 polish listing
               </Link>
             )}
@@ -117,17 +172,30 @@ export default function DashboardJobCard({ job, companyVerified }: Props) {
         )}
       </div>
 
-      <Link
-        href={primaryAction.href}
-        className={`mt-4 flex w-full items-center justify-center gap-1.5 rounded-xl py-2.5 text-xs font-semibold transition ${
-          primaryAction.variant === "primary"
-            ? "bg-teal text-white shadow-sm shadow-teal/20 hover:bg-teal/95"
-            : "border border-ink/10 bg-ink/[0.02] text-ink/75 hover:bg-ink/5"
-        }`}
-      >
-        <Users className="h-3.5 w-3.5" strokeWidth={2.25} />
-        {primaryAction.label}
-      </Link>
+      {variant === "pro" ? (
+        <ProButton
+          href={primaryAction.href}
+          variant={primaryAction.variant === "primary" ? "secondary" : "ghost"}
+          fullWidth
+          className="mt-4 min-h-10 text-xs"
+          icon={<Users className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden="true" />}
+        >
+          {primaryAction.label}
+          <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+        </ProButton>
+      ) : (
+        <Link
+          href={primaryAction.href}
+          className={`mt-4 flex w-full items-center justify-center gap-1.5 rounded-xl py-2.5 text-xs font-semibold transition ${
+            primaryAction.variant === "primary"
+              ? "bg-teal text-white shadow-sm shadow-teal/20 hover:bg-teal/95"
+              : "border border-ink/10 bg-ink/[0.02] text-ink/75 hover:bg-ink/5"
+          }`}
+        >
+          <Users className="h-3.5 w-3.5" strokeWidth={2.25} />
+          {primaryAction.label}
+        </Link>
+      )}
     </div>
   );
 }

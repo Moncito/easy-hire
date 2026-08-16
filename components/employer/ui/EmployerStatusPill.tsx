@@ -22,7 +22,7 @@ export default function EmployerStatusPill({ status, label }: Props) {
 
   return (
     <span
-      className={`inline-flex shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${styles[key] ?? styles.DRAFT}`}
+      className={`inline-flex shrink-0 rounded-full px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider ${styles[key] ?? styles.DRAFT}`}
     >
       {text}
     </span>

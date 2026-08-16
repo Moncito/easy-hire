@@ -1,4 +1,5 @@
 import Sparkline from "@/components/employer/charts/Sparkline";
+import MetricLabel from "@/components/employer/ui/MetricLabel";
 
 type Props = {
   label: string;
@@ -23,7 +24,7 @@ export default function DashboardMetricCard({
 
   return (
     <div className="rounded-2xl border border-ink/5 bg-white p-4 shadow-sm">
-      <p className="text-[10px] font-bold uppercase tracking-wider text-ink/40">{label}</p>
+      <MetricLabel className="text-ink/40">{label}</MetricLabel>
       {isEmpty && emptyHint ? (
         <div className="mt-2">
           <p className="font-data text-2xl font-bold text-ink/25">—</p>

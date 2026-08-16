@@ -40,3 +40,8 @@ export const verificationDot: Record<string, string> = {
   APPROVED: "bg-teal",
   REJECTED: "bg-ember",
 };
+
+export function formatBillingPeriodEnd(date: Date | null | undefined): string | null {
+  if (!date) return null;
+  return date.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+}

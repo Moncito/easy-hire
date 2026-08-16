@@ -17,6 +17,7 @@ import {
   Trash2,
   Upload,
 } from "lucide-react";
+import { useEmployerShell } from "@/components/employer/EmployerShellContext";
 
 export type VerificationDoc = {
   id: string;
@@ -51,6 +52,7 @@ export default function VerificationDocumentsPanel({
   initialDocuments,
   embedded = false,
 }: Props) {
+  const { isPro } = useEmployerShell();
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [documents, setDocuments] = useState(initialDocuments);
@@ -190,13 +192,13 @@ export default function VerificationDocumentsPanel({
               key={doc.id}
               className="flex items-center gap-2 rounded-lg bg-ink/[0.02] p-2.5"
             >
-              <FileText className="h-4 w-4 shrink-0 text-teal" aria-hidden="true" />
+              <FileText className={`h-4 w-4 shrink-0 ${isPro ? "text-ink/40" : "text-teal"}`} aria-hidden="true" />
               <div className="min-w-0 flex-1">
                 <a
                   href={doc.fileUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="block truncate text-xs font-semibold text-ink hover:text-teal"
+                  className={`block truncate text-xs font-semibold text-ink ${isPro ? "hover:text-[#9A5B12]" : "hover:text-teal"}`}
                 >
                   {doc.fileName}
                 </a>
@@ -227,7 +229,7 @@ export default function VerificationDocumentsPanel({
           <div>
             <label
               htmlFor="verification-doc-type"
-              className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-ink/45"
+              className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-ink/45"
             >
               Document type
             </label>
@@ -237,7 +239,7 @@ export default function VerificationDocumentsPanel({
               onChange={(e) =>
                 setDocType(e.target.value as (typeof DOC_TYPE_OPTIONS)[number]["value"])
               }
-              className="w-full rounded-xl border border-ink/10 bg-white px-3 py-2 text-xs text-ink outline-none focus:border-teal"
+              className={`w-full rounded-xl border border-ink/10 bg-white px-3 py-2 text-xs text-ink outline-none ${isPro ? "focus:border-ink/25" : "focus:border-teal"}`}
             >
               {DOC_TYPE_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>
@@ -262,7 +264,11 @@ export default function VerificationDocumentsPanel({
             type="button"
             disabled={uploading || atCap}
             onClick={() => fileInputRef.current?.click()}
-            className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-ink/15 bg-white px-3 py-2.5 text-xs font-semibold text-ink/70 transition hover:border-teal/40 hover:bg-teal/5 hover:text-teal disabled:cursor-not-allowed disabled:opacity-50"
+            className={`flex w-full cursor-pointer items-center justify-center gap-2 border border-dashed border-ink/15 bg-white px-3 py-2.5 text-xs font-semibold text-ink/70 transition disabled:cursor-not-allowed disabled:opacity-50 ${
+              isPro
+                ? "rounded-full hover:border-ink/25 hover:bg-ink/[0.03] hover:text-ink"
+                : "rounded-xl hover:border-teal/40 hover:bg-teal/5 hover:text-teal"
+            }`}
           >
             {uploading ? (
               <>
@@ -285,7 +291,11 @@ export default function VerificationDocumentsPanel({
               type="button"
               disabled={requesting}
               onClick={() => void handleRequestReview()}
-              className="w-full cursor-pointer rounded-xl bg-teal px-3 py-2.5 text-xs font-semibold text-white shadow-sm transition hover:bg-teal/95 disabled:opacity-60"
+              className={`w-full cursor-pointer px-3 py-2.5 text-xs font-semibold shadow-sm transition disabled:opacity-60 ${
+                isPro
+                  ? "rounded-full bg-marigold text-ink hover:bg-marigold/90"
+                  : "rounded-xl bg-teal text-white hover:bg-teal/95"
+              }`}
             >
               {requesting ? "Requesting…" : "Request re-review"}
             </button>

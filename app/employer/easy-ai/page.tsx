@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { requireEmployerPageContext } from "@/lib/employer-session";
 import EmployerPageHeader from "@/components/employer/ui/EmployerPageHeader";
-import NeoSurface from "@/components/employer/pro/NeoSurface";
+import ProPageHeader from "@/components/employer/pro-dashboard/ProPageHeader";
 import EasyAiChip from "@/components/employer/pro/EasyAiChip";
 import EasyAiUsagePanel from "@/components/employer/pro/EasyAiUsagePanel";
 import ProBadge from "@/components/employer/pro/ProBadge";
@@ -43,7 +43,7 @@ const wave1Shortcuts = [
     label: "Outreach Drafts",
     description: "First message, follow-up, and rejection drafts for a candidate thread.",
     icon: Send,
-    href: "/employer/applicants",
+    href: "/employer/messages",
   },
   {
     label: "Funnel Narrative",
@@ -113,29 +113,18 @@ export default async function EasyAiHubPage() {
 
   return (
     <>
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="font-display text-2xl font-bold tracking-tight text-[color:var(--neo-ink)] sm:text-3xl">
-              Easy AI
-            </h1>
-            <ProBadge />
-          </div>
-          <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-[color:var(--neo-muted)]">
-            AI shortcuts for the moments that eat the most time in hiring. Every suggestion is a
-            draft — nothing sends, rejects, or publishes without you.
-          </p>
-        </div>
+      <ProPageHeader
+        title="Easy AI"
+        description="AI shortcuts for the moments that eat the most time in hiring. Every suggestion is a draft — nothing sends, rejects, or publishes without you."
+        actions={<ProBadge size="md" />}
+      />
+
+      <div className="pro-card mb-6 p-5 sm:p-6">
+        <EasyAiUsagePanel />
       </div>
 
-      <NeoSurface variant="raised" className="mb-5 p-5">
-        <EasyAiUsagePanel />
-      </NeoSurface>
-
       <div>
-        <p className="mb-2.5 text-[10px] font-bold uppercase tracking-wider text-[color:var(--neo-muted)]">
-          Drafting, ranking &amp; outreach
-        </p>
+        <p className="mb-3 text-sm font-semibold text-ink/60">Drafting, ranking & outreach</p>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {wave1Shortcuts.map((shortcut) => (
             <EasyAiChip
@@ -150,10 +139,8 @@ export default async function EasyAiHubPage() {
         </div>
       </div>
 
-      <div className="mt-5">
-        <p className="mb-2.5 text-[10px] font-bold uppercase tracking-wider text-[color:var(--neo-muted)]">
-          Job quality &amp; brand
-        </p>
+      <div className="mt-6">
+        <p className="mb-3 text-sm font-semibold text-ink/60">Job quality & brand</p>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {wave23Shortcuts.map((shortcut) => (
             <EasyAiChip
@@ -168,13 +155,13 @@ export default async function EasyAiHubPage() {
         </div>
       </div>
 
-      <NeoSurface variant="inset" className="mt-5">
-        <p className="text-xs leading-relaxed text-[color:var(--neo-muted)]">
-          <span className="font-semibold text-[color:var(--neo-ink)]">Human-in-the-loop, always.</span>{" "}
-          Easy AI never auto-rejects a candidate or sends a message on its own — every draft needs
-          your review and confirmation first.
+      <div className="pro-card mt-6 border-teal/15 bg-teal/[0.03] p-4">
+        <p className="text-sm leading-relaxed text-ink/60">
+          <span className="font-semibold text-ink">Human-in-the-loop, always.</span> Easy AI never
+          auto-rejects a candidate or sends a message on its own — every draft needs your review
+          first.
         </p>
-      </NeoSurface>
+      </div>
     </>
   );
 }

@@ -13,7 +13,7 @@ export default function NeoInput({ label, hint, wrapperClassName = "", className
       {label && (
         <label
           htmlFor={id}
-          className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-[color:var(--neo-muted)]"
+          className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-[color:var(--neo-muted)]"
         >
           {label}
         </label>

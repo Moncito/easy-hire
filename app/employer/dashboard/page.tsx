@@ -11,8 +11,8 @@ import {
   shouldShowGettingStarted,
 } from "@/lib/employer/dashboard-sparse";
 import DashboardHero from "@/components/employer/dashboard/DashboardHero";
-import DashboardHeroPro from "@/components/employer/dashboard/DashboardHeroPro";
 import HiringScoreGauge from "@/components/employer/dashboard/HiringScoreGauge";
+import ProDashboardBoard from "@/components/employer/pro-dashboard/ProDashboardBoard";
 import HiringFunnel from "@/components/employer/dashboard/HiringFunnel";
 import ActiveJobCards from "@/components/employer/dashboard/ActiveJobCards";
 import AttentionStrip from "@/components/employer/dashboard/AttentionStrip";
@@ -24,7 +24,6 @@ import DashboardSurface from "@/components/employer/dashboard/DashboardSurface";
 import DashboardApplicantQueue from "@/components/employer/dashboard/DashboardApplicantQueue";
 import DashboardJobPerformance from "@/components/employer/dashboard/DashboardJobPerformance";
 import WeeklyTrendChart from "@/components/employer/charts/WeeklyTrendChart";
-import { NeoSurface, NeoMetric, NeoGauge } from "@/components/employer/pro";
 import {
   getJobPerformanceRows,
   shouldShowApplicantQueue,
@@ -115,7 +114,27 @@ export default async function EmployerDashboardPage() {
         rejectionReason={company.verificationRejectionReason}
       />
 
-      {sparse && chartIsEmpty ? (
+      {isPro ? (
+        <ProDashboardBoard
+          company={{
+            companyName: company.companyName,
+            logoUrl: company.logoUrl,
+            description: company.description,
+            headquarters: company.headquarters,
+            industry: company.industry,
+            verifiedStatus: company.verifiedStatus,
+          }}
+          analytics={analytics}
+          applicantQueue={applicantQueue}
+          chartData={chartData}
+          sparse={sparse}
+          scoreHint={scoreHint}
+          chartIsEmpty={chartIsEmpty}
+          showGettingStarted={showGettingStarted}
+          gettingStartedSteps={gettingStartedSteps}
+          onboardingItems={onboardingItems}
+        />
+      ) : sparse && chartIsEmpty ? (
         <DashboardSparseBoard
           companyName={company.companyName}
           analytics={analytics}
@@ -131,31 +150,17 @@ export default async function EmployerDashboardPage() {
         <div className="space-y-5">
           <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-3">
             <div className="space-y-4 xl:col-span-2">
-              {isPro ? (
-                <DashboardHeroPro companyName={company.companyName} analytics={analytics} />
-              ) : (
-                <DashboardHero companyName={company.companyName} analytics={analytics} />
-              )}
+              <DashboardHero companyName={company.companyName} analytics={analytics} />
               <AttentionStrip items={analytics.attentionItems} fallbackItems={onboardingItems} />
             </div>
             <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-3 xl:grid-cols-1">
-              {isPro ? (
-                <NeoSurface variant="raised">
-                  <NeoGauge
-                    score={analytics.hiringScore}
-                    percentile={analytics.scorePercentile}
-                    hint={scoreHint}
-                  />
-                </NeoSurface>
-              ) : (
-                <DashboardSurface>
-                  <HiringScoreGauge
-                    score={analytics.hiringScore}
-                    percentile={analytics.scorePercentile}
-                    hint={scoreHint}
-                  />
-                </DashboardSurface>
-              )}
+              <DashboardSurface>
+                <HiringScoreGauge
+                  score={analytics.hiringScore}
+                  percentile={analytics.scorePercentile}
+                  hint={scoreHint}
+                />
+              </DashboardSurface>
               {metricsEmpty ? (
                 <div className="sm:col-span-2 xl:col-span-1">
                   <DashboardPipelineSnapshot
@@ -163,26 +168,6 @@ export default async function EmployerDashboardPage() {
                     interviewsChange={metrics.interviewsChange}
                   />
                 </div>
-              ) : isPro ? (
-                <>
-                  <NeoMetric
-                    label="Apps today"
-                    value={metrics.appsToday}
-                    change={metrics.appsTodayChange}
-                    changeLabel="vs yesterday"
-                    sparkline={metrics.appsTodaySparkline}
-                    emptyHint="No applications yet today. Share your job posts to attract candidates."
-                  />
-                  <NeoMetric
-                    label="In interview"
-                    value={metrics.interviewsActive}
-                    change={metrics.interviewsChange}
-                    changeLabel="vs last week"
-                    sparkline={metrics.interviewsSparkline}
-                    sparklineColor="#0d2750"
-                    emptyHint="No candidates in interview stage. Review applicants to move promising ones forward."
-                  />
-                </>
               ) : (
                 <>
                   <DashboardMetricCard
@@ -234,7 +219,7 @@ export default async function EmployerDashboardPage() {
                   <div className="space-y-3">
                     {insights.actionRequired && (
                       <div className="rounded-xl bg-ember/5 px-3 py-2.5 ring-1 ring-ember/10">
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-ember">
+                        <p className="text-xs font-bold uppercase tracking-wider text-ember">
                           Action required
                         </p>
                         <p className="mt-1 text-xs leading-relaxed text-ink/70">
@@ -244,7 +229,7 @@ export default async function EmployerDashboardPage() {
                     )}
                     {insights.marketInsight && (
                       <div className="rounded-xl bg-navy/5 px-3 py-2.5 ring-1 ring-navy/10">
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-navy">
+                        <p className="text-xs font-bold uppercase tracking-wider text-navy">
                           This week
                         </p>
                         <p className="mt-1 text-xs leading-relaxed text-ink/70">

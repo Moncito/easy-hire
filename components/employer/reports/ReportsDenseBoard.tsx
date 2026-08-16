@@ -40,7 +40,7 @@ export default function ReportsDenseBoard({
           <DashboardSurface>
             <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-wider text-navy/60">
+                <p className="text-xs font-bold uppercase tracking-wider text-navy/60">
                   Activity
                 </p>
                 <h2 className="font-display text-lg font-bold tracking-tight text-ink">

@@ -66,7 +66,7 @@ export default function KanbanColumn({
       <div className="kanban-column-body flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto rounded-xl border border-ink/5 bg-white/60 p-2">
         {applications.length === 0 ? (
           <div className="flex flex-1 flex-col items-center justify-center px-3 py-10 text-center">
-            <Inbox className="mb-2 h-5 w-5 text-ink/15" aria-hidden="true" />
+            <Inbox className="mb-2 h-5 w-5 text-ink/30" aria-hidden="true" />
             <p className="text-xs font-medium text-ink/35">Empty</p>
             <p className="mt-1 max-w-[180px] text-[10px] leading-relaxed text-ink/30">{emptyHint}</p>
           </div>

@@ -45,9 +45,33 @@ export default function WeeklyTrendChart({ data, compact = false }: Props) {
 
   const max = Math.max(...data.flatMap((d) => [d.applications, d.interviews]), 1);
 
+  const totalAppsLabel = `${totalApps} application${totalApps === 1 ? "" : "s"}`;
+  const totalInterviewsLabel = `${totalInterviews} interview move${totalInterviews === 1 ? "" : "s"}`;
+  const chartAriaLabel = `Weekly hiring activity bar chart. ${totalAppsLabel} and ${totalInterviewsLabel} over the last 7 days.`;
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-4 text-xs">
+      {/* Visually-hidden data table for screen readers */}
+      <table className="sr-only" aria-label="Weekly hiring activity data">
+        <thead>
+          <tr>
+            <th scope="col">Day</th>
+            <th scope="col">Applications</th>
+            <th scope="col">Interview moves</th>
+          </tr>
+        </thead>
+        <tbody>
+          {data.map((day) => (
+            <tr key={day.label}>
+              <th scope="row">{day.label}</th>
+              <td>{day.applications}</td>
+              <td>{day.interviews}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <div aria-hidden="true" className="flex items-center gap-4 text-xs">
         <span className="flex items-center gap-1.5">
           <span className="h-2.5 w-2.5 rounded-sm bg-navy" />
           Applications
@@ -57,7 +81,12 @@ export default function WeeklyTrendChart({ data, compact = false }: Props) {
           Interviews
         </span>
       </div>
-      <div className="flex items-end justify-between gap-2" style={{ height: 140 }}>
+      <div
+        role="img"
+        aria-label={chartAriaLabel}
+        className="flex items-end justify-between gap-2"
+        style={{ height: 140 }}
+      >
         {data.map((day) => (
           <div key={day.label} className="flex flex-1 flex-col items-center gap-1">
             <div className="flex w-full items-end justify-center gap-0.5" style={{ height: 120 }}>
@@ -66,14 +95,12 @@ export default function WeeklyTrendChart({ data, compact = false }: Props) {
                 style={{
                   height: `${Math.max((day.applications / max) * 100, day.applications > 0 ? 8 : 0)}%`,
                 }}
-                title={`${day.applications} applications`}
               />
               <div
                 className="w-[42%] rounded-t-md bg-teal transition-all duration-500"
                 style={{
                   height: `${Math.max((day.interviews / max) * 100, day.interviews > 0 ? 8 : 0)}%`,
                 }}
-                title={`${day.interviews} interviews`}
               />
             </div>
             <span className="text-[10px] font-medium text-ink/40">{day.label}</span>

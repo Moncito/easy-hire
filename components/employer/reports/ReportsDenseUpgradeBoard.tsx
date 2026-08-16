@@ -23,7 +23,7 @@ export default function ReportsDenseUpgradeBoard({ analytics }: Props) {
 
       <DashboardSurface className="relative overflow-hidden">
         <div aria-hidden="true" className="pointer-events-none select-none opacity-40 blur-[2px]">
-          <p className="mb-3 text-[10px] font-bold uppercase tracking-wider text-navy/60">
+          <p className="mb-3 text-xs font-bold uppercase tracking-wider text-navy/60">
             7-day hiring trend
           </p>
           <div className="flex h-32 items-end gap-2">

@@ -60,10 +60,10 @@ function NavLink({
       } ${
         isActive
           ? isPro
-            ? "neo-inset-sm text-[color:var(--neo-teal)]"
+            ? "bg-marigold text-ink shadow-sm shadow-marigold/25"
             : "bg-teal text-white shadow-lg shadow-teal/30"
           : isPro
-            ? "employer-sidebar-navlink-pro text-[color:var(--neo-muted)] hover:text-[color:var(--neo-ink)]"
+            ? "text-ink/50 hover:bg-ink/[0.04] hover:text-ink"
             : "text-mist/55 hover:bg-white/8 hover:text-mist"
       }`}
     >
@@ -79,9 +79,11 @@ function NavLink({
           className={`flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[10px] font-bold ${
             isActive
               ? isPro
-                ? "bg-[color:var(--neo-teal)]/15 text-[color:var(--neo-teal)]"
+                ? "bg-ink/10 text-ink"
                 : "bg-white/20 text-white"
-              : "bg-teal/20 text-teal"
+              : isPro
+                ? "bg-marigold text-ink"
+                : "bg-teal/20 text-teal"
           } ${expanded ? "" : "absolute -right-0.5 -top-0.5 h-4 min-w-4 text-[9px]"}`}
         >
           {badge > 99 ? "99+" : badge}
@@ -114,7 +116,7 @@ export default function Sidebar({
         expanded ? "w-52" : "w-[60px]"
       } ${
         isPro
-          ? "border-r border-transparent bg-[color:var(--neo-bg,#edf1f4)] shadow-[10px_0_30px_-14px_rgba(13,39,80,0.28)]"
+          ? "border-r border-ink/[0.06] bg-white"
           : "bg-navy"
       }`}
     >
@@ -128,8 +130,11 @@ export default function Sidebar({
           className="flex items-center gap-2.5 transition-transform hover:scale-[1.02]"
           title="EasyHire home"
         >
-          <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-full shadow-md shadow-black/20">
-            <div className="absolute inset-0 bg-teal" style={{ clipPath: "polygon(0 0, 100% 0, 0 100%)" }} />
+          <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-full shadow-sm">
+            <div
+              className={`absolute inset-0 ${isPro ? "bg-marigold" : "bg-teal"}`}
+              style={{ clipPath: "polygon(0 0, 100% 0, 0 100%)" }}
+            />
             <div
               className="absolute inset-0 bg-mist/90"
               style={{ clipPath: "polygon(100% 0, 100% 100%, 0 100%)" }}
@@ -137,8 +142,8 @@ export default function Sidebar({
           </div>
           {expanded && (
             <span
-              className={`flex items-center gap-1.5 font-display text-base font-bold tracking-tight ${
-                isPro ? "text-[color:var(--neo-ink)]" : "text-mist"
+              className={`flex items-center gap-1.5 font-display text-base font-black tracking-tighter ${
+                isPro ? "text-ink" : "text-mist"
               }`}
             >
               EasyHire
@@ -152,7 +157,7 @@ export default function Sidebar({
             onClick={toggleExpanded}
             className={`rounded-lg p-1.5 transition ${
               isPro
-                ? "text-[color:var(--neo-muted)] hover:text-[color:var(--neo-ink)]"
+                ? "text-ink/40 hover:bg-ink/[0.04] hover:text-ink"
                 : "text-mist/40 hover:bg-white/8 hover:text-mist"
             }`}
             aria-label="Collapse sidebar"
@@ -169,7 +174,7 @@ export default function Sidebar({
             onClick={toggleExpanded}
             className={`rounded-lg p-1.5 transition ${
               isPro
-                ? "text-[color:var(--neo-muted)] hover:text-[color:var(--neo-ink)]"
+                ? "text-ink/40 hover:bg-ink/[0.04] hover:text-ink"
                 : "text-mist/40 hover:bg-white/8 hover:text-mist"
             }`}
             aria-label="Expand sidebar"
@@ -207,10 +212,10 @@ export default function Sidebar({
           <Link
             href="/employer/easy-ai"
             title={expanded ? undefined : "Easy AI"}
-            className={`neo-pressable group relative flex items-center rounded-xl text-[color:var(--neo-gold)] transition-colors ${
+            className={`group relative flex items-center rounded-xl text-[var(--pro-accent-ink,#9a5b12)] transition-colors ${
               pathname.startsWith("/employer/easy-ai")
-                ? "neo-inset-sm"
-                : "employer-sidebar-navlink-pro"
+                ? "bg-marigold/20"
+                : "hover:bg-marigold/10"
             } ${expanded ? "gap-3 px-3 py-2.5" : "h-10 w-10 justify-center"}`}
           >
             <Sparkles className="h-[18px] w-[18px] shrink-0" strokeWidth={2} />
@@ -225,14 +230,14 @@ export default function Sidebar({
       )}
 
       <div
-        className={`shrink-0 py-3 ${isPro ? "border-t border-[rgba(91,107,124,0.14)]" : "border-t border-white/5"} ${expanded ? "px-3" : "flex justify-center px-2"}`}
+        className={`shrink-0 py-3 ${isPro ? "border-t border-ink/[0.06]" : "border-t border-white/5"} ${expanded ? "px-3" : "flex justify-center px-2"}`}
       >
         <button
           type="button"
           onClick={() => signOut({ callbackUrl: "/" })}
           title={expanded ? undefined : "Log out"}
-          className={`group relative flex w-full items-center rounded-xl transition hover:bg-ember/15 hover:text-ember ${
-            isPro ? "text-[color:var(--neo-muted)]" : "text-mist/50"
+          className={`group relative flex w-full items-center rounded-xl transition hover:bg-ink/[0.04] hover:text-ink ${
+            isPro ? "text-ink/45" : "text-mist/50"
           } ${expanded ? "gap-3 px-3 py-2.5" : "h-10 w-10 justify-center"}`}
         >
           <LogOut className="h-[18px] w-[18px] shrink-0" strokeWidth={2} />

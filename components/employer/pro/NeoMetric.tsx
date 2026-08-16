@@ -26,7 +26,7 @@ export default function NeoMetric({
 
   return (
     <NeoSurface variant="raised" className="p-4">
-      <p className="text-[10px] font-bold uppercase tracking-wider text-[color:var(--neo-muted)]">
+      <p className="text-xs font-bold uppercase tracking-wider text-[color:var(--neo-muted)]">
         {label}
       </p>
       {isEmpty && emptyHint ? (

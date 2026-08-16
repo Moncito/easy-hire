@@ -61,7 +61,7 @@ export default function TalentProfileRail({ data, seekerId, canDownloadResume }:
     <div className="flex flex-col gap-3 lg:sticky lg:top-24">
       <DashboardSurface className="overflow-hidden !p-0">
         <div className="border-b border-navy/[0.06] bg-gradient-to-r from-navy/[0.04] to-teal/[0.03] px-4 py-3">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-navy/60">
+          <p className="text-xs font-bold uppercase tracking-wider text-navy/60">
             At a glance
           </p>
         </div>
@@ -118,7 +118,7 @@ export default function TalentProfileRail({ data, seekerId, canDownloadResume }:
 
       {skills.length > 0 && (
         <DashboardSurface>
-          <p className="text-[10px] font-bold uppercase tracking-wider text-navy/60">Skills</p>
+          <p className="text-xs font-bold uppercase tracking-wider text-navy/60">Skills</p>
           <div className="mt-2 flex flex-wrap gap-1.5">
             {skills.map((skill) => (
               <span
@@ -134,7 +134,7 @@ export default function TalentProfileRail({ data, seekerId, canDownloadResume }:
 
       {(canDownloadResume || data.linkedinUrl || data.portfolioUrl) && (
         <DashboardSurface>
-          <p className="text-[10px] font-bold uppercase tracking-wider text-navy/60">Links</p>
+          <p className="text-xs font-bold uppercase tracking-wider text-navy/60">Links</p>
           <div className="mt-2 flex flex-wrap gap-2">
             {canDownloadResume && data.resumeUrl && (
               <a

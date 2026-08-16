@@ -60,7 +60,7 @@ export default function CompanyProfileTopBar({
     <div className="mb-5 rounded-2xl border border-navy/[0.08] bg-white/90 p-4 shadow-[0_8px_24px_-6px_rgba(30,58,95,0.08)] sm:p-5">
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)_minmax(0,0.75fr)] xl:gap-5">
         <div className="overflow-hidden rounded-xl border border-ink/8 bg-white ring-1 ring-navy/[0.04]">
-          <p className="border-b border-ink/[0.06] bg-gradient-to-r from-navy/[0.03] to-teal/[0.02] px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-navy/50">
+          <p className="border-b border-ink/[0.06] bg-gradient-to-r from-navy/[0.03] to-teal/[0.02] px-3 py-2 text-xs font-bold uppercase tracking-wider text-navy/50">
             Seeker preview
           </p>
           <div className="h-20 overflow-hidden sm:h-24">
@@ -118,12 +118,12 @@ export default function CompanyProfileTopBar({
         <div>
           <div className="mb-2 flex items-center justify-between gap-2">
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-ink/40">
+              <p className="text-xs font-bold uppercase tracking-wider text-ink/40">
                 Profile strength
               </p>
               <p className="font-display text-2xl font-bold text-ink">{profileStrength}%</p>
             </div>
-            <span className="rounded-full bg-teal/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-teal">
+            <span className="rounded-full bg-teal/10 px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider text-teal">
               {strengthLabel}
             </span>
           </div>
@@ -148,7 +148,7 @@ export default function CompanyProfileTopBar({
         </div>
 
         <div className="flex flex-col gap-3">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-ink/40">Company pulse</p>
+          <p className="text-xs font-bold uppercase tracking-wider text-ink/40">Company pulse</p>
           <dl className="space-y-2.5">
             {pulseStats.map((stat) => {
               const Icon = stat.icon;

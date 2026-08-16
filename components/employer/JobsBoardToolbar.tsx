@@ -2,6 +2,7 @@
 
 import { Search } from "lucide-react";
 import EmployerFormSelect from "@/components/employer/ui/EmployerFormSelect";
+import { useEmployerShell } from "@/components/employer/EmployerShellContext";
 
 type SortOption = "updated" | "applicants" | "attention";
 
@@ -26,6 +27,7 @@ export default function JobsBoardToolbar({
   onSortChange,
   resultCount,
 }: Props) {
+  const { isPro } = useEmployerShell();
   return (
     <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div className="relative max-w-md flex-1">
@@ -35,7 +37,9 @@ export default function JobsBoardToolbar({
           value={query}
           onChange={(e) => onQueryChange(e.target.value)}
           placeholder="Search by title, location, or category…"
-          className="employer-ws-surface w-full rounded-xl border border-ink/10 py-2.5 pl-9 pr-4 text-sm text-ink outline-none transition placeholder:text-ink/35 focus:border-teal"
+          className={`employer-ws-surface w-full rounded-xl border border-ink/10 py-2.5 pl-9 pr-4 text-sm text-ink outline-none transition placeholder:text-ink/35 ${
+            isPro ? "focus:border-ink/30" : "focus:border-teal"
+          }`}
         />
       </div>
       <div className="flex items-center gap-2">

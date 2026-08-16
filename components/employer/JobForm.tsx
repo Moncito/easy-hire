@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { HelpCircle, MapPin, Plus, Trash2 } from "lucide-react";
+import { HelpCircle, MapPin, Plus, Trash2, Zap } from "lucide-react";
+import { useEmployerShell } from "@/components/employer/EmployerShellContext";
 import RichTextEditor from "@/components/ui/RichTextEditor";
 import EmployerActionBar from "@/components/employer/EmployerActionBar";
 import JobFormTopBar from "@/components/employer/JobFormTopBar";
@@ -62,6 +63,7 @@ type Props = {
 };
 
 export default function JobForm({ initialData, loading, onSubmit }: Props) {
+  const { isPro } = useEmployerShell();
   const [title, setTitle] = useState(initialData?.title || "");
   const [description, setDescription] = useState(initialData?.description || "");
   const [requirements, setRequirements] = useState(initialData?.requirements || "");
@@ -301,7 +303,7 @@ export default function JobForm({ initialData, loading, onSubmit }: Props) {
             </div>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
-                <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-ink/45">
+                <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-ink/45">
                   Minimum (PHP{periodSuffix(salaryPeriod)})
                 </label>
                 <input
@@ -313,7 +315,7 @@ export default function JobForm({ initialData, loading, onSubmit }: Props) {
                 />
               </div>
               <div>
-                <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-ink/45">
+                <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-ink/45">
                   Maximum (PHP{periodSuffix(salaryPeriod)})
                 </label>
                 <input
@@ -382,7 +384,7 @@ export default function JobForm({ initialData, loading, onSubmit }: Props) {
                   className="rounded-xl bg-ink/[0.02] p-3"
                 >
                   <div className="mb-2 flex items-center justify-between gap-2">
-                    <label className="text-[10px] font-bold uppercase tracking-wider text-ink/45">
+                    <label className="text-xs font-bold uppercase tracking-wider text-ink/45">
                       Question {index + 1}
                     </label>
                     <button
@@ -441,10 +443,17 @@ export default function JobForm({ initialData, loading, onSubmit }: Props) {
 
       <EmployerActionBar>
         <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <span className="flex items-center gap-1.5 text-xs text-ink/40">
-            <HelpCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
-            Jobs are reviewed before going live
-          </span>
+          {isPro ? (
+              <span className="flex items-center gap-1.5 text-xs text-teal/70">
+                <Zap className="h-4 w-4 shrink-0" aria-hidden="true" />
+                Verified Pro companies publish instantly — no admin queue
+              </span>
+            ) : (
+              <span className="flex items-center gap-1.5 text-xs text-ink/40">
+                <HelpCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
+                Jobs are reviewed before going live
+              </span>
+            )}
           <div className="flex flex-wrap gap-3">
             <button
               type="button"

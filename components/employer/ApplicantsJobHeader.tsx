@@ -111,7 +111,7 @@ export default function ApplicantsJobHeader({
               {job.title}
             </h1>
             <span
-              className={`shrink-0 rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${status.className}`}
+              className={`shrink-0 rounded-full border px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider ${status.className}`}
             >
               {status.label}
             </span>

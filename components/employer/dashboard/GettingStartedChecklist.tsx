@@ -17,7 +17,7 @@ export default function GettingStartedChecklist({ steps }: Props) {
     <div className="employer-ws-getting-started rounded-2xl border border-teal/15 p-5 shadow-sm ring-1 ring-teal/10">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-wider text-teal">Getting started</p>
+          <p className="text-xs font-bold uppercase tracking-wider text-teal">Getting started</p>
           <h2 className="mt-1 font-display text-lg font-bold tracking-tight text-ink">
             Set up your hiring workspace
           </h2>

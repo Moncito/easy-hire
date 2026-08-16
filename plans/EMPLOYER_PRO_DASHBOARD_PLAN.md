@@ -1,527 +1,378 @@
-# EasyHire Employer Pro Dashboard — Build Guide & Notes
+# EasyHire Employer Pro — Implementation Guide
 
-**Status:** Planning complete — ready to build by phase  
-**Visual system:** Neomorphism for **Employer Pro only** (Free keeps Harbor teal)  
-**Navigation:** Collapsible sidebar + topbar (desktop); bottom tabs + More sheet (mobile)  
-**Trust rule:** Pro never skips **company verification**. Pro skips **job admin review** only when company is `APPROVED`.
-
-Use this doc to track progress. Fill **Notes** under each phase as you go.
+**Last reconciled:** 2026-08-17  
+**Direction:** Clean SaaS workspace — Pro top navbar, standard grid, premium through workflows  
+**Status key:** ✅ Shipped · 🔧 In progress / partial · ☐ Not started
 
 ---
 
-## Locked decisions
+## 1. Product Thesis
 
-| Decision | Choice |
-|----------|--------|
-| Who gets neo UI | **A — Pro only** |
-| Easy AI scope | Full recommended suite (Wave 1 → 3) |
-| Nav pattern | Enhanced **sidebar** (not navbar-only) |
-| Cache | Keep Next.js tag cache + add **Upstash Redis** (L3) |
-| AI hard rule | Never auto-reject candidates; human confirm always |
+Employer Pro earns its price through **decision-first workflows, not decoration**.
+Premium is perceived via faster hiring actions, richer analytics, contextual AI assists,
+and saved-talent depth — not visual gimmicks. Every Pro UI surface must answer
+"what should I do next?" before the employer has to ask.
 
-### Working notes
-
-```
-Date:
-Decision changes:
-Open questions:
-```
+**Non-negotiable business rules:**
+- Pro never skips **company verification**. Pro skips **admin job review** only when the company's `verifiedStatus === "APPROVED"`. This is enforced in `lib/billing/subscriptions.ts` → `canAutoPublishJob`.
+- Easy AI is **human-confirm always** — no auto-reject, no auto-publish, no auto-send. Every AI output is a draft the employer must act on.
 
 ---
 
-## Current baseline (as of plan)
+## 2. Design Tokens (authoritative)
 
-| Area | Today |
-|------|--------|
-| Routes | Dashboard, Jobs (+ new/edit/applicants), Applicants, Messages, Talent, Company, Reports, Billing |
-| Nav | Sidebar + Topbar; mobile bottom tabs (**Billing missing** from mobile) |
-| Pro shipped | Instant publish when Pro + verified company |
-| Pro marketed / missing | Featured listings, advanced analytics exclusivity, CSV exports, AI |
-| Cache | `unstable_cache` + tags in `lib/employer/cache.ts` — no Redis |
-| AI | Marketing “coming soon” only |
+### Grid & Spacing
 
-### Baseline notes
+| Token | Value | Use |
+|-------|-------|-----|
+| Content max-width | **1296px** (`max-w-[1296px]`) | All employer pages — single unified value |
+| Page gutter mobile | `px-6` (24px) | `EmployerPageContainer` |
+| Page gutter desktop | `px-8` (32px) | `EmployerPageContainer` lg+ |
+| Page top padding | `py-8` (32px) desktop | Canvas top |
+| Related section gap | `space-y-8` (32px) | Within a page section |
+| Major section gap | `space-y-12` (48px) | Between top-level page sections |
+| Card inner padding compact | `p-5` (20px) | KPI row, metric strip, tight surfaces |
+| Card inner padding standard | `p-6` (24px) | Charts, job cards, candidate detail |
+| Card inner padding generous | `p-8` (32px) | Job form, company profile sections |
 
+**Current issue:** `EmployerPageContainer` uses `max-w-[1480px]` for dashboard/reports and `max-w-7xl` (1280px) for other pages. All pages must migrate to `max-w-[1296px]`. Track in Phase 1.
+
+### Typography
+
+| Role | Font | Size / Weight | Class |
+|------|------|--------------|-------|
+| Page headline (Pro) | Space Grotesk | 36px–48px / 700 | `font-display text-4xl sm:text-[3rem]` |
+| Page headline (Free) | Space Grotesk | 28px–32px / 700 | `font-display text-3xl` |
+| Section heading | Space Grotesk | 20px / 700 | `font-display text-xl font-bold` |
+| Card heading | Space Grotesk | 16px / 700 | `font-display text-base font-bold` |
+| Body | Inter | 14px / 400 | `font-body text-sm` |
+| Body large (Pro descriptions) | Inter | 16px–18px / 400 | `text-base sm:text-lg` |
+| **Metric label** | Inter | **12px** / 600 uppercase | `text-xs font-bold uppercase tracking-wider` |
+| Metric value | IBM Plex Mono | 36px (KPI) / 24px (card) / 20px (strip) | `font-data text-4xl font-bold` |
+| Data inline | IBM Plex Mono | 14px | `font-data text-sm` |
+
+**Current issue:** `text-[10px]` metric labels appear in 8+ components. Must be raised to `text-xs` (12px) globally. This is the single largest accessible typography fix remaining.
+
+### Colors
+
+| Color | Hex | Approved uses |
+|-------|-----|--------------|
+| Signal Teal | `#1F8073` | Primary CTAs, active nav, verified badge, AI accents, positive trends |
+| Harbor Navy | `#1E3A5F` | Applications bar, structural headings, PENDING dot, nav structure |
+| Ember | `#D9553A` | **Genuine warnings / rejection only** — REJECTED status, `actionRequired` insight, overdue review (>5 days) |
+| Mist White | `#F5F6F4` | Page canvas bg |
+| Deep Ink | `#20242B` | All primary text |
+| Marigold | `#F2A93B` | Seeker-side only — **do not use in employer surfaces** |
+
+**Log Out must use `text-ink/65`** — fixed 2026-08-17. Ember is for warnings only.
+**"Needs review" KPI accent** must be `navy` by default; `ember` only when oldest unreviewed application is >5 days old (requires data-layer prop addition).
+
+### Border Radius
+
+| Surface | Radius |
+|---------|--------|
+| Pro card (`.pro-card`) | `rounded-[1.25rem]` (20px) |
+| Nested inner card | `rounded-xl` (12px) |
+| Input, dropdown menu | `rounded-xl` (12px) |
+| Badge, pill, status | `rounded-full` |
+| Tooltip / popover | `rounded-lg` (8px) |
+
+### Shadows
+
+```css
+--pro-shadow: 0 1px 3px rgb(30 58 95 / 0.04), 0 12px 32px -16px rgb(30 58 95 / 0.1);
+--pro-shadow-hover: 0 1px 3px rgb(30 58 95 / 0.06), 0 16px 40px -12px rgb(30 58 95 / 0.16);
+--pro-shadow-focus: 0 0 0 3px rgba(31, 128, 115, 0.25);
 ```
-Gaps spotted during build:
-```
+
+These are navy-tinted flat shadows — not neomorphic extrusions. No `box-shadow` with `#FFFFFF` highlights.
 
 ---
 
-## Design system — Neomorphism Premium (Pro)
+## 3. Navigation
 
-### Color tokens (`[data-employer-plan="pro"]`)
+### Pro Shell (implemented ✅)
 
-| Token | Hex | Use |
-|-------|-----|-----|
-| `--neo-bg` | `#EDF1F4` | Workspace canvas |
-| `--neo-surface` | `#EDF1F4` | Extruded panels (shape from shadows) |
-| `--neo-ink` | `#1A2332` | Primary text |
-| `--neo-muted` | `#5B6B7C` | Secondary copy |
-| `--neo-navy` | `#0D2750` | Dark shadow + structural accents |
-| `--neo-teal` | `#1F8073` | Employer accent / CTAs |
-| `--neo-gold` | `#C9A227` | Pro prestige (badges, Easy AI) — not Marigold |
-| `--neo-ember` | `#D9553A` | Errors / rejections only |
+- **Top navbar** (`components/employer/pro-shell/EmployerProNavbar.tsx`) — pill nav centered, logo left, search + AI chip + avatar right.
+- **Mobile** (`components/employer/EmployerMobileNav.tsx`) — fixed bottom tabs: Home · Jobs · Applicants · Messages · More.
+- More sheet includes: Talent, Reports, Company Profile, Billing, Easy AI (Pro only).
+- Free uses sidebar (`Sidebar.tsx` + `Topbar.tsx`). Sidebar is **not** coming to Pro.
 
-### Shadow recipes
+### Remaining Nav Issues
 
-- **Raised:** `-20px -20px 28px #FFFFFF`, `20px 20px 28px rgba(13,39,80,0.18)`
-- **Pressed:** same pair as inner shadows
-- **Convex-in-concave:** mix for primary CTAs, Easy AI orb, hiring gauge
-
-### Typography (Pro — load only when `plan === PRO`)
-
-| Role | Face | Use |
-|------|------|-----|
-| Display | **Syne** | EasyHire Pro wordmark + page H1 |
-| Body | **Source Sans 3** | Body copy |
-| Data | **IBM Plex Mono** (keep) | Salaries, IDs, chart ticks, AI scores |
-
-### Motion (fast, intentional)
-
-1. Page enter — soft opacity + 4px lift  
-2. Press feedback — raised → inset (~120ms)  
-3. Easy AI reveal — shimmer while streaming  
-
-Respect `prefers-reduced-motion`. No parallax / particles / glow spam.
-
-### Pro component kit (`components/employer/pro/`)
-
-- [ ] `NeoSurface` (raised / inset / flat)
-- [ ] `NeoButton`, `NeoIconButton`
-- [ ] `NeoMetric`, `NeoGauge`
-- [ ] `NeoInput` (inset fields)
-- [ ] `ProBadge`, `EasyAiChip`
-- [ ] Chart wrappers (inset wells)
-
-### Design notes
-
-```
-Contrast / a11y checks:
-Font loading impact on Free path:
-Motion tweaks:
-```
+| Issue | Status |
+|-------|--------|
+| `aria-current="page"` on active pill links | ✅ Fixed 2026-08-17 |
+| Logo mark divs need `aria-hidden="true"` | ☐ Phase 1 |
+| Easy AI mobile active state | ✅ Fixed 2026-08-17 |
+| Log out color (ember → ink/65) | ✅ Fixed 2026-08-17 |
 
 ---
 
-## Pro entitlements matrix
+## 4. Component Inventory & Migration
+
+### Shared atoms to extract (Phase 1–2)
+
+| Atom | Problem | Target file |
+|------|---------|------------|
+| `<MetricLabel>` | `text-[10px]` duplicated 8+ times | `components/employer/ui/MetricLabel.tsx` |
+| `<StatusDot>` | Inline in Topbar, BillingStatusStrip, KanbanColumn | `components/employer/ui/StatusDot.tsx` |
+| `<MetricCard>` | `DashboardMetricCard` + `NeoMetric` use different trend arrow styles | Merge with `variant` prop |
+| `<InlineStatRow>` | Pro page header stats re-created as ad-hoc JSX per page | `components/employer/ui/InlineStatRow.tsx` |
+| `<ProUsageBar>` | Easy AI usage panel has no quota progress | `components/employer/pro/ProUsageBar.tsx` |
+
+### Parallel Free / Pro components (intentional divergence — document only)
+
+| Free | Pro | Notes |
+|------|-----|-------|
+| `EmployerPageHeader` (text-2xl/3xl) | `ProPageHeader` (text-3xl/4xl) | Size divergence intentional; keep both |
+| `AttentionStrip` (pill cards) | `ProAttentionLinks` (inline text) | Visual treatment intentional |
+| `DashboardHero` | `ProCompanyBand` | Fundamentally different layout |
+| `JobsPageHeader` | `ProJobsPageHeader` | Acceptable |
+
+### Pro-only components (implemented ✅ unless noted)
+
+- `EmployerProNavbar` ✅ · `ProBadge` ✅ · `EasyAiChip` ✅ · `ProDashboardBoard` ✅
+- `ProCompanyBand` ✅ · `ProKpiRow` ✅ · `ProApplicantList` ✅ · `ProActiveJobsSection` ✅
+- `ProJobsPageHeader` ✅ · `ProApplicantsPageHeader` ✅ · `ProAttentionLinks` ✅
+- `ProPageHeader` ✅ · `ProReportsBoard` ✅ · `EasyAiUsagePanel` ✅
+- `EasyAiJobCopyPanel` ✅ · `EasyAiScreeningPanel` ✅ · `ReportsAiInsightsPanel` ✅
+- `EasyAiBulkShortlistButton` ✅ · `TalentResumeHighlights` ✅ · `TalentApplicationHistory` ✅
+- `NeoButton` ✅ (used sparingly; renders as flat card under `[data-employer-plan="pro"]`)
+- `NeoSurface` ✅ (same — neo-* overridden to flat-card in Pro CSS scope)
+- `ProUsageBar` ☐ Phase 2
+
+---
+
+## 5. Dashboard vs Reports — Information Architecture
+
+### Dashboard (`/employer/dashboard`)
+
+**Purpose:** Real-time hiring health + one clear next action per session.
+
+| Section | Current | Target |
+|---------|---------|--------|
+| Company band (hero) | ✅ ProCompanyBand | Clamp company name to 2 lines |
+| KPI row (4 cards) | ✅ ProKpiRow | Fix Ember accent rule (see §2) |
+| Weekly trend chart | ✅ WeeklyTrendChart | Accessible table added ✅ 2026-08-17 |
+| Applicant queue | ✅ ProApplicantList | — |
+| Active jobs section | ✅ ProActiveJobsSection | — |
+| Easy AI insight box | ✅ EasyAiInsightBox | — |
+| Quick links strip | ✅ conditional | Always show for Pro (collapsed toolbar) |
+
+**Exclusively Dashboard:** live queue, attention items, active job cards with current counts.
+
+### Reports (`/employer/reports`)
+
+**Purpose:** Historical pattern recognition, not real-time status.
+
+| Section | Current | Target |
+|---------|---------|--------|
+| KPI row (4 cards) | ✅ ProKpiRow | Same 4 as dashboard — **add at least 2 exclusive metrics** |
+| Weekly trend chart | ✅ WeeklyTrendChart | — |
+| Hiring funnel | ✅ HiringFunnel | — |
+| AI narrative | ✅ ReportsAiInsightsPanel | — |
+| Job performance table | ✅ DashboardJobPerformance | — |
+| "Back" link icon | ✅ ArrowLeft fixed 2026-08-17 | — |
+
+**Exclusively Reports (to build):** best-performing job by apply rate · days-to-hire average · 30-day rolling trend (requires analytics rollup) · candidate source breakdown (source-dependent, defer to analytics rollup phase).
+
+**Feasible now (Phase 3):**
+- Best-performing job card: derive from `activeJobs` array, sort by `applicantCount / viewCount`
+- Days-to-hire: derive from `hired` applications' `appliedAt` → `updatedAt` delta
+
+**Requires rollup (Phase 4):**
+- 30-day trend, source breakdown — needs `AnalyticsDailyRollup` table or Redis cache
+
+---
+
+## 6. Page-by-Page Target States
+
+### `/employer/dashboard` ✅ Mostly shipped
+- ☐ Unified max-width (Phase 1)
+- ☐ Company name `line-clamp-2` (Phase 1)
+- ☐ Greeting emoji `aria-hidden` (Phase 1)
+- ☐ Quick links always-visible toolbar for Pro (Phase 2)
+- ☐ Ember KPI accent only when >5 days stale (Phase 2, needs data prop)
+
+### `/employer/jobs` ✅ Core shipped
+- ☐ Unified max-width (Phase 1)
+- ☐ Job form action bar: conditional copy for Pro verified ("Your job will go live immediately") (Phase 1)
+- ☐ Featured jobs toggle — needs `Job.featuredUntil` schema addition (backend Phase 3)
+- ☐ Free active-job soft-cap: `JobSoftCapBanner` exists — verify gate logic (Phase 1 check)
+
+### `/employer/applicants` ✅ Core shipped (Kanban)
+- ☐ Unified max-width — kanban is `full` width, correct; hub page needs fix (Phase 1)
+- ☐ Kanban empty-state icon contrast: `text-ink/15` → `text-ink/30` (Phase 1)
+- ☐ Pipeline stage labels `text-xs` ✅ Fixed 2026-08-17
+- ☐ "Move" dropdown: add `role="menu"`, keyboard trap (Escape + Tab) (Phase 2)
+- ☐ Kanban list-view toggle for <lg viewports (Phase 3)
+- ☐ Bulk CSV export (Phase 3, needs backend route)
+
+### `/employer/talent` 🔧 Basic shipped
+- ☐ Saved talent lists (`/employer/talent/lists` route exists, check completeness) (Phase 3)
+- ☐ Easy AI rank-to-open-job scoring (Phase 3)
+
+### `/employer/messages` ✅ Core shipped
+- ☐ Easy AI outreach draft chip in compose area for Pro (Phase 2)
+- ☐ Outreach Drafts Easy AI hub link ✅ Fixed to `/employer/messages` 2026-08-17
+
+### `/employer/reports` 🔧 Partial
+- ☐ Unified max-width (Phase 1)
+- ☐ "Back to dashboard" ArrowLeft ✅ Fixed 2026-08-17
+- ☐ "Needs review" sparkline ✅ Fixed (now `[]`) 2026-08-17
+- ☐ Add 2 exclusive Report metrics: best-performing job + days-to-hire avg (Phase 3)
+- ☐ CSV export (Phase 3)
+
+### `/employer/billing` ✅ Core shipped
+- ☐ "Current plan" Pro chip: solid `bg-teal text-white` (currently ghost) (Phase 1)
+- ☐ Free column footer `text-ink/40` → `text-ink/55` (Phase 1)
+- ☐ Stripe Customer Portal (stub → real, backend Phase 3)
+- ☐ Post-upgrade welcome state (Phase 2)
+
+### `/employer/company-profile` ✅ Core shipped
+- ☐ Replace raw `<div>` header with `ProPageHeader` when Pro (Phase 1)
+- ☐ Show `activeJobsCount` + `totalApplicantsCount` in header stats (Phase 1)
+
+### `/employer/easy-ai` ✅ Shipped
+- ☐ Add `ProUsageBar` progress bar with quota fill (Phase 2)
+- ☐ Group label contrast `text-ink/45` → `text-ink/60` (Phase 1)
+
+---
+
+## 7. Loading / Empty / Error Requirements
+
+| State | Requirement |
+|-------|------------|
+| Loading | Every async page has a `loading.tsx` with `EmployerSkeletonSurface` or `Bone` shimmer — verify all exist |
+| Empty — no jobs | Show `EmployerEmptyState` with "Post your first job" CTA; never show broken chart |
+| Empty — chart | `WeeklyTrendChart` empty state ✅ shows "No hiring activity" + "Post a job →" |
+| Empty — kanban column | ✅ Inline with `<Inbox>` icon; fix contrast to `text-ink/30` (Phase 1) |
+| Error | `app/employer/error.tsx` exists ✅ — verify it shows a human-readable message |
+| Upgrade gate | `EasyAiUpgradeGate` pattern ✅ — use for any Pro feature behind a Free wall |
+
+**Responsive requirements:**
+- All pages readable at 390px (iPhone SE) — no horizontal overflow except intentional kanban scroll
+- Kanban: horizontal scroll on all viewports; list-view toggle at <lg (Phase 3)
+- Tab navigation: all interactive elements reachable by keyboard; focus ring uses `--pro-shadow-focus`
+
+---
+
+## 8. Phased Implementation Order
+
+### Phase 0 — Correctness (done in session 2026-08-17) ✅
+
+All 8 confirmed low-risk bugs fixed: ArrowLeft back link · Outreach Drafts href · sparkline data integrity · Mobile Easy AI active state · Log Out ink color · aria-current on nav · WeeklyTrendChart accessible table · pipeline label text-xs.
+
+### Phase 1 — Foundation (next sprint)
+
+**Goal:** Tokens, a11y baseline, and cross-page consistency locked. Zero feature additions.
+
+- ☐ Unify all pages to `max-w-[1296px]` in `EmployerPageContainer`
+- ☐ Raise all `text-[10px]` labels to `text-xs` across 8+ components
+- ☐ Extract `<MetricLabel>` atom
+- ☐ Extract `<StatusDot>` atom
+- ☐ Company Profile page: use `ProPageHeader`; add stats slot
+- ☐ Billing: solid Pro current-plan chip + footer contrast fix
+- ☐ Easy AI group labels: `text-ink/45` → `text-ink/60`
+- ☐ Kanban empty-state icon contrast
+- ☐ Job form action bar: conditional publish copy for Pro verified
+- ☐ Logo mark `aria-hidden="true"` in EmployerProNavbar
+- ☐ Greeting emoji `aria-hidden="true"` in ProCompanyBand
+- ☐ Verify all `loading.tsx` files are populated (not just `export default function Loading() {}`)
+
+**Exit criteria:** Lints clean; no `text-[10px]` in employer components; all pages at 1296px; a11y sweep passes on Navigation, Dashboard, Billing, Company Profile.
+
+### Phase 2 — Core Workflow Polish
+
+**Goal:** Interaction quality and Pro contextual AI entry points.
+
+- ☐ Easy AI outreach chip in Messages compose (Pro only)
+- ☐ `ProUsageBar` in Easy AI hub
+- ☐ `ProEmptyState` component (Pro-styled empty state using `pro-card`)
+- ☐ "Move" dropdown keyboard trap (Escape closes, Tab contained)
+- ☐ Quick links always-visible toolbar on Pro dashboard
+- ☐ Post-upgrade billing welcome state
+- ☐ Ember KPI accent only when unreviewed >5 days (needs analytics data prop)
+
+**Exit criteria:** Messages compose has AI entry point; keyboard can fully operate candidate detail panel; Easy AI hub shows meaningful quota bar.
+
+### Phase 3 — Analytics & Exports
+
+**Goal:** Reports earns its own page; Pro can extract data.
+
+- ☐ Best-performing job metric (derive from existing `activeJobs` data)
+- ☐ Days-to-hire avg metric (derive from hired applications)
+- ☐ Candidate CSV export (backend `/api/employer/export`)
+- ☐ Kanban list-view toggle for <lg viewports
+- ☐ Saved talent lists (`/employer/talent/lists`) completeness check + polish
+- ☐ Stripe Customer Portal (backend: replace stub with `stripe.billingPortal.sessions.create`)
+- ☐ Featured jobs — requires `Job.featuredUntil` schema addition (backend agent)
+
+**Exit criteria:** Reports has ≥2 metrics not on dashboard; CSV export works end-to-end; Portal opens for Pro subscriptions.
+
+### Phase 4 — Easy AI Depth (Wave 2–3)
+
+**Goal:** Retention via AI features that compound over time.
+
+- ☐ Easy AI Wave 2: company brand copy, bulk shortlist, resume highlights (Wire routes exist; confirm end-to-end)
+- ☐ Easy AI Wave 3: weekly digest email (Resend), job performance tips, spam heuristics
+- ☐ Analytics rollup (`AnalyticsDailyRollup`) for 30-day Reports chart
+- ☐ Redis L3 (Upstash) for rate limits and analytics rollup cache
+
+**Exit criteria:** Wave 2 usable in production; Wave 3 at least partially shipped; 30-day chart populated from rollup.
+
+### Phase 5 — QA Hardening
+
+- ☐ Full keyboard navigation audit across all employer routes
+- ☐ Dark mode regression pass (dark-mode shim covers `bg-white/*` — any new `bg-white/65` etc. needs explicit coverage)
+- ☐ Free path smoke test: Pro fonts/animations must not load or run
+- ☐ Stripe webhook `constructEvent` signature verification (currently stub)
+- ☐ `prefers-reduced-motion` coverage for all employer animations
+
+---
+
+## 9. Entitlements Matrix
 
 | Capability | Free | Pro | Status |
 |------------|------|-----|--------|
-| Post jobs / ATS / messaging / talent | Yes | Yes | Exists |
-| Company verification required | Yes | Yes | Exists |
-| Admin job review before go-live | Yes | No (if verified) | Exists (`canAutoPublishJob`) |
-| Instant publish UX copy | — | Yes | Todo |
-| Neo premium UI | No | Yes | Todo |
-| Featured job listings | No | Yes | Todo |
-| Advanced analytics + exports | Basic | Full + CSV | Todo |
-| Priority support flag | No | Yes | Partial (copy only) |
-| Easy AI (all waves) | No | Yes | Todo |
-| Saved talent lists / bulk depth | Limited | Full | Todo |
-| Active jobs soft-cap | e.g. 3 | Unlimited / high | Todo |
-
-### Entitlements notes
-
-```
-Soft-cap number chosen:
-Featured ranking rules:
-Export PII / audit decisions:
-```
+| Post jobs / ATS / messaging / talent | ✅ | ✅ | Shipped |
+| Company verification required | ✅ | ✅ | Shipped |
+| Admin review before go-live | ✅ | Skipped if verified | ✅ Shipped (`canAutoPublishJob`) |
+| Instant publish UX copy | — | ✅ | ☐ Phase 1 (job form action bar) |
+| Pro top navbar + Pro canvas | — | ✅ | ✅ Shipped |
+| Easy AI hub + Wave 1 | — | ✅ | ✅ Shipped (hub + JD writer + rank + interview + outreach + insights) |
+| Easy AI Wave 2 | — | ✅ | 🔧 Routes exist, polish needed |
+| Easy AI Wave 3 | — | ✅ | ☐ Phase 4 |
+| Advanced Reports | Basic | ✅ exclusive metrics | ☐ Phase 3 |
+| CSV export | — | ✅ | ☐ Phase 3 |
+| Featured job listings | — | ✅ | ☐ Phase 3 (schema needed) |
+| Saved talent lists | Limited | ✅ | 🔧 Route exists, check depth |
+| Active-job soft-cap for Free | 3 | Unlimited | 🔧 Banner exists, verify gate |
+| Stripe Customer Portal | — | ✅ | ☐ Phase 3 (backend stub) |
 
 ---
 
-## Easy AI roadmap
-
-**Provider:** Vercel AI SDK + LLM via env (OpenAI or Anthropic)  
-**Code home:** `/lib/ai/` · **Routes:** `/api/employer/ai/*` · **Gate:** Pro + Redis rate limit
-
-### Wave 1 — highest ROI
-
-| Feature | Where | Behavior | Done |
-|---------|-------|----------|------|
-| JD Writer / Improver | Jobs new/edit | Draft/rewrite title, description, requirements | [ ] |
-| Match Rank + Explain | Applicants + Talent | Score 0–100 + 3 reasons; sort assist only | [ ] |
-| Interview Kit | Candidate detail | 8–12 questions from JD + resume | [ ] |
-| Outreach Drafts | Messages | First / follow-up / rejection drafts | [ ] |
-| Funnel Narrative | Reports / Dashboard | NL hiring-health summary | [ ] |
-
-### Wave 2
-
-| Feature | Done |
-|---------|------|
-| Screening question generator (job form) | [ ] |
-| Company brand / About rewrite | [ ] |
-| Bulk shortlist assist (“top 10”) with confirm | [ ] |
-| Resume highlight extractor (talent profile) | [ ] |
-
-### Wave 3
-
-| Feature | Done |
-|---------|------|
-| Weekly hiring digest email (Resend) | [ ] |
-| Job performance tips (views vs applies) | [ ] |
-| Duplicate / spam heuristics (flag only) | [ ] |
-
-### Easy AI notes
-
-```
-LLM provider chosen:
-Rate limits per company:
-Prompt failures / fallbacks:
-Usage metering decisions:
-```
-
----
-
-## Page-by-page checklist
-
-### Dashboard — `/employer/dashboard`
-
-- [ ] Pro hero: EasyHire Pro brand + company + Easy AI insight + one CTA
-- [ ] Neo metric row, gauge, funnel well, attention strip, jobs, queue
-- [ ] Sparse onboarding path unchanged for incomplete companies
-- [ ] Wire unused `pro` container prop
-
-**Notes:**
-
-```
-```
-
-### Jobs — `/employer/jobs`, new, edit
-
-- [ ] Neo job cards + inset status pills
-- [ ] Instant Publish path + clear copy (verified Pro)
-- [ ] Featured toggle (Pro)
-- [ ] Easy AI JD writer panel
-- [ ] Free soft-cap banner
-
-**Notes:**
-
-```
-```
-
-### Applicants — hub + Kanban
-
-- [ ] Neo columns (inset) + raised cards
-- [ ] Easy AI rank sort + explain panel
-- [ ] Bulk CSV export (Pro)
-- [ ] Human-only status changes
-
-**Notes:**
-
-```
-```
-
-### Company Profile — `/employer/company-profile`
-
-- [ ] Neo form sections
-- [ ] Verification trust rail (unlocks instant publish)
-- [ ] Easy AI brand copy (Wave 2)
-
-**Notes:**
-
-```
-```
-
-### Messages — `/employer/messages`
-
-- [ ] Neo thread list + inset composer
-- [ ] Easy AI outreach drafts
-- [ ] Unread badges (cached)
-
-**Notes:**
-
-```
-```
-
-### Talent — `/employer/talent`
-
-- [ ] Neo filters (inset inputs)
-- [ ] Rank-to-open-job + deeper save lists (Pro)
-- [ ] AI highlight strip (Wave 2)
-
-**Notes:**
-
-```
-```
-
-### Reports — `/employer/reports`
-
-- [ ] Free: sparse board
-- [ ] Pro: date range, funnel, time-to-hire, view→apply, job compare
-- [ ] Easy AI narrative
-- [ ] CSV / PDF export
-- [ ] Charts in inset wells; Plex Mono numbers
-
-**Notes:**
-
-```
-```
-
-### Billing — `/employer/billing`
-
-- [ ] Matrix matches real entitlements (no false “coming soon”)
-- [ ] Stripe Customer Portal
-- [ ] Harden webhook signature verification
-- [ ] Upgrade → welcome neo state
-
-**Notes:**
-
-```
-```
-
-### New Pro routes
-
-| Route | Purpose | Done |
-|-------|---------|------|
-| `/employer/easy-ai` | Hub: recent runs, usage, shortcuts | [ ] |
-| `/employer/talent/lists` | Saved talent collections | [ ] |
-| `/employer/reports/export` | Export history (optional) | [ ] |
-
-**Shell / mobile**
-
-- [ ] Sidebar Pro neo rail (no macOS traffic lights)
-- [ ] Topbar: Easy AI trigger + plan pill
-- [ ] Mobile More sheet: **Billing** + **Easy AI**
-
-**Notes:**
-
-```
-```
-
----
-
-## Backend & caching
-
-### Layers
-
-| Layer | Tool | Use |
-|-------|------|-----|
-| L1 | React `cache()` + Prisma | Per-request dedupe |
-| L2 | `unstable_cache` + tags | Page data (`lib/employer/cache.ts`) |
-| L3 | **Upstash Redis** | AI rate limits, featured IDs, analytics rollups, short-TTL AI responses, badge counts |
-
-### Schema / data (prefer extend before new tables)
-
-- [ ] `Job.featuredUntil` (DateTime?)
-- [ ] `Subscription` period end / portal fields if missing
-- [ ] `AiUsageEvent` (companyId, feature, tokens, createdAt)
-- [ ] `SavedTalentList` (+ items) if not covered by `saved_seekers`
-- [ ] Optional `AnalyticsDailyRollup` for Reports speed
-
-### Infra
-
-- [ ] `lib/redis.ts` (Upstash)
-- [ ] Invalidate: writes → `revalidateTag` + Redis `DEL`
-- [ ] Analytics rollup cron / scheduled path
-- [ ] Stripe `constructEvent` (replace stub)
-- [ ] Thin `/app/api` routes; logic in `/lib`
-
-### Backend notes
-
-```
-Redis env vars:
-Rollup strategy:
-Stripe portal test results:
-```
-
----
-
-## Delivery phases
-
-### P0 — Foundations
-
-**Goal:** Pro can be themed without breaking Free.
-
-- [ ] Pro neo tokens in `app/globals.css`
-- [ ] Syne + Source Sans 3 gated load
-- [ ] `data-employer-plan="pro"` on shell
-- [ ] Neo primitives scaffold
-- [ ] Mobile Billing link
-- [ ] Align `CLAUDE.md` + `plan-comparison.ts` with instant-publish rule
-
-**Exit criteria:** Free UI unchanged; Pro shell shows neo tokens on one smoke page.
-
-**Notes:**
-
-```
-Started:
-Finished:
-Blockers:
-```
-
----
-
-### P1 — Neo shell + entitlements + pages
-
-**Goal:** Pro feels premium and paid features exist beyond chrome.
-
-- [ ] Reskin Pro shell (sidebar / topbar / mobile)
-- [ ] Reskin core pages (Dashboard → Billing)
-- [ ] Featured jobs field + public ranking
-- [ ] Free active-job soft-cap
-- [ ] Candidate CSV export
-- [ ] Reports Pro dense gate
-
-**Exit criteria:** Pro vs Free clearly different; featured + export + soft-cap work.
-
-**Notes:**
-
-```
-Started:
-Finished:
-Blockers:
-```
-
----
-
-### P2 — Easy AI Wave 1
-
-**Goal:** Five AI assists live, Pro-gated, never auto-reject.
-
-- [ ] `/lib/ai/*` + provider wiring
-- [ ] APIs: job-copy, rank, interview, message-draft, insights
-- [ ] Global Easy AI drawer + contextual panels
-- [ ] `AiUsageEvent` logging
-- [ ] Rate limit (Redis or in-memory fallback)
-
-**Exit criteria:** Each Wave 1 feature usable end-to-end on Pro; Free gets upgrade CTA.
-
-**Notes:**
-
-```
-Started:
-Finished:
-Blockers:
-```
-
----
-
-### P3 — Redis, analytics, Stripe, Easy AI hub
-
-**Goal:** Fast responses + production billing hygiene.
-
-- [ ] Upstash Redis L3
-- [ ] Analytics rollups for Reports
-- [ ] Stripe webhook harden + Customer Portal
-- [ ] `/employer/easy-ai` hub page
-
-**Exit criteria:** Reports load from rollup/cache; webhook verified; portal works.
-
-**Notes:**
-
-```
-Started:
-Finished:
-Blockers:
-```
-
----
-
-### P4 — AI Wave 2–3 + polish
-
-**Goal:** Depth + retention features.
-
-- [ ] Easy AI Wave 2
-- [ ] Easy AI Wave 3
-- [ ] Talent lists
-- [ ] Digest email
-- [ ] a11y / motion / visual regression polish
-
-**Exit criteria:** Wave 2–3 shipped or consciously deferred; a11y pass on neo greys.
-
-**Notes:**
-
-```
-Started:
-Finished:
-Blockers:
-```
-
----
-
-## Master checklist
-
-### Design
-
-- [ ] Pro-only neo token set + shadows
-- [ ] Pro fonts gated
-- [ ] Neo primitive kit
-- [ ] Sidebar / topbar / mobile Pro skin
-- [ ] Motion + reduced-motion
-- [ ] Pricing / marketing Pro continuity
-
-### Product
-
-- [ ] Instant publish UX
-- [ ] Featured jobs
-- [ ] Free soft-cap
-- [ ] Advanced Reports exclusivity
-- [ ] CSV export
-- [ ] Priority support affordance
-- [ ] Plan comparison + pricing copy updated
-
-### Pages
-
-- [ ] All core Pro page passes
-- [ ] Easy AI hub
-- [ ] Talent lists
-- [ ] Mobile nav parity
-
-### Easy AI
-
-- [ ] Provider + gates
-- [ ] Wave 1
-- [ ] Wave 2–3
-- [ ] Usage + rate limits
-- [ ] Never auto-reject enforced
-
-### Backend
-
-- [ ] Schema extensions
-- [ ] Tag cache kept + Redis L3
-- [ ] Analytics rollups
-- [ ] Stripe webhook + portal
-
-### Quality
-
-- [ ] Neo contrast a11y
-- [ ] Free path not slowed by Pro fonts/animations
-- [ ] Pro / Free shell smoke tests
-
----
-
-## Key files (when building)
+## 10. Key Files
 
 | Area | Paths |
-|------|--------|
-| Tokens | `app/globals.css` |
-| Shell | `components/employer/EmployerShell.tsx`, `Sidebar.tsx`, `Topbar.tsx`, `EmployerMobileNav.tsx` |
-| Billing | `lib/billing/subscriptions.ts`, `lib/billing/plan-comparison.ts` |
-| Cache | `lib/employer/cache.ts`, new `lib/redis.ts`, `lib/ai/*` |
-| Schema | `prisma/schema.prisma` |
+|------|-------|
+| Tokens + CSS | `app/globals.css` |
+| Shell | `components/employer/EmployerShell.tsx` · `pro-shell/EmployerProNavbar.tsx` · `EmployerMobileNav.tsx` · `EmployerPageContainer.tsx` |
+| Pro primitives | `components/employer/pro/` · `components/employer/pro-dashboard/` |
+| Billing logic | `lib/billing/subscriptions.ts` · `lib/billing/plan-comparison.ts` |
+| Analytics | `lib/employer/analytics.ts` · `lib/employer/cache.ts` · `lib/employer/dashboard-panels.ts` |
+| AI routes | `app/api/employer/ai/*` · `lib/ai/` |
 | Pages | `app/employer/**` |
+| Schema | `prisma/schema.prisma` |
 
-**Subagent split:** `ui-ux-designer` → Pro UI components/pages · `backend-engineer` → schema, entitlements, Redis, AI APIs · do not cross-edit.
-
----
-
-## Parking lot / ideas
-
-```
-Ideas not in scope yet:
-Nice-to-haves:
-Deferred forever?:
-```
+**Subagent split:** `ui-ux-designer` → components, pages, tokens, accessibility · `backend-engineer` → schema, API routes, lib business logic, Redis, Stripe. Do not cross-edit.
 
 ---
 
-## Session log
+## 11. Session Log
 
-| Date | Phase | What landed | What broke | Next |
-|------|-------|-------------|------------|------|
-| | | | | |
-
-```
-Additional freeform notes:
-```
+| Date | Phase | Landed | Notes |
+|------|-------|--------|-------|
+| 2026-08-17 | Audit | Full UI/UX audit — 26 issues identified across all employer routes | See audit output in parent chat |
+| 2026-08-17 | P0 | 8 accessibility/bug fixes: ArrowLeft · Outreach href · sparkline integrity · mobile active state · Log Out color · aria-current · chart a11y table · text-[9px]→text-xs | Zero lint errors |

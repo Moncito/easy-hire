@@ -3,9 +3,11 @@
 import { useEffect, useState } from "react";
 import { Sparkles } from "lucide-react";
 import { fetchJsonSafe } from "@/lib/client/fetch-json";
+import ProUsageBar from "@/components/employer/pro/ProUsageBar";
 
 type UsageSummaryRow = { feature: string; count: number; tokens: number };
-type UsageResponse = { summary: UsageSummaryRow[]; recent: unknown[]; limit: number };
+type RecentUsageRow = { feature: string; createdAt: string };
+type UsageResponse = { summary: UsageSummaryRow[]; recent: RecentUsageRow[]; limit: number };
 
 const FEATURE_LABELS: Record<string, string> = {
   "job-copy": "JD Writer",
@@ -90,6 +92,13 @@ export default function EasyAiUsagePanel() {
           ))}
         </div>
       )}
+
+      <ProUsageBar
+        limit={usage?.limit ?? 30}
+        recent={usage?.recent ?? []}
+        loading={loading}
+        monthlyTotal={totalCount}
+      />
     </div>
   );
 }

@@ -25,7 +25,7 @@ async function requireConversationAccess(userId: string, role: string, conversat
     where: { id: conversationId },
     include: {
       company: { select: { id: true, userId: true, companyName: true, logoUrl: true } },
-      seeker: { select: { id: true, userId: true, fullName: true, headline: true } },
+      seeker: { select: { id: true, userId: true, fullName: true, headline: true, photoUrl: true } },
       job: { select: { id: true, title: true } },
     },
   });
@@ -194,14 +194,14 @@ export async function createOrGetConversation(employerUserId: string, raw: unkno
     },
     include: {
       company: { select: { id: true, companyName: true, logoUrl: true } },
-      seeker: { select: { id: true, fullName: true, headline: true } },
+      seeker: { select: { id: true, fullName: true, headline: true, photoUrl: true } },
       job: { select: { id: true, title: true } },
     },
   });
 
   const conversationInclude = {
     company: { select: { id: true, companyName: true, logoUrl: true } },
-    seeker: { select: { id: true, fullName: true, headline: true } },
+    seeker: { select: { id: true, fullName: true, headline: true, photoUrl: true } },
     job: { select: { id: true, title: true } },
   } as const;
 

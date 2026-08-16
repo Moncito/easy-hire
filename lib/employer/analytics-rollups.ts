@@ -29,10 +29,26 @@ function dayRange(date: Date): { start: Date; end: Date } {
 export async function computeDailyRollup(companyId: string, date: Date): Promise<DailyRollupMetrics> {
   const { start, end } = dayRange(date);
 
-  const [statusGroups, views, activeJobs] = await Promise.all([
+  // Three separate queries so each metric is keyed to the correct event date:
+  //
+  // • `applications`  — applications created on this day (appliedAt bucket). Immutable once set.
+  // • `statusChanges` — applications whose last write fell on this day AND whose current status
+  //   is non-APPLIED. This approximates "pipeline events on this day." The approximation is that
+  //   `updatedAt` also advances on non-status writes (internal notes, ratings), so the count is
+  //   an upper bound. True per-stage event timestamps require Phase D's ApplicationStatusEvent log.
+  // • `views`         — raw job-page views recorded on this day.
+  // • `activeJobs`    — point-in-time gauge of live jobs (not a flow metric; use the day's value).
+  const [applications, statusChanges, views, activeJobs] = await Promise.all([
+    prisma.application.count({
+      where: { job: { companyId }, appliedAt: { gte: start, lt: end } },
+    }),
     prisma.application.groupBy({
       by: ["status"],
-      where: { job: { companyId }, appliedAt: { gte: start, lt: end } },
+      where: {
+        job: { companyId },
+        updatedAt: { gte: start, lt: end },
+        status: { not: "APPLIED" },
+      },
       _count: { _all: true },
     }),
     prisma.jobView.count({
@@ -43,14 +59,11 @@ export async function computeDailyRollup(companyId: string, date: Date): Promise
     }),
   ]);
 
-  const statusMap = Object.fromEntries(statusGroups.map((g) => [g.status, g._count._all])) as Record<
-    string,
-    number
-  >;
+  const statusMap = Object.fromEntries(
+    statusChanges.map((g) => [g.status, g._count._all])
+  ) as Record<string, number>;
 
-  const applications = statusGroups.reduce((sum, g) => sum + g._count._all, 0);
-  const reviewed =
-    (statusMap.SHORTLISTED ?? 0) + (statusMap.INTERVIEW ?? 0) + (statusMap.HIRED ?? 0) + (statusMap.REJECTED ?? 0);
+  const reviewed = statusChanges.reduce((sum, g) => sum + g._count._all, 0);
 
   return {
     applications,
@@ -76,6 +89,13 @@ export async function upsertDailyRollup(companyId: string, date: Date): Promise<
   return metrics;
 }
 
+/**
+ * How many companies to process concurrently in the daily cron. Keeps the
+ * total connection count inside Supabase's pooler limit while still being
+ * ~ROLLUP_BATCH_SIZE× faster than the previous serial loop.
+ */
+const ROLLUP_BATCH_SIZE = 20;
+
 /** Runs the previous day's rollup for every company with at least one job — intended for a daily cron. */
 export async function runDailyRollupsForAllCompanies(
   date: Date = new Date(Date.now() - 24 * 60 * 60 * 1000)
@@ -85,12 +105,16 @@ export async function runDailyRollupsForAllCompanies(
     select: { id: true },
   });
 
-  for (const company of companies) {
-    try {
-      await upsertDailyRollup(company.id, date);
-    } catch (error) {
-      console.error(`[analytics-rollups] failed for company ${company.id}:`, error);
-    }
+  for (let i = 0; i < companies.length; i += ROLLUP_BATCH_SIZE) {
+    await Promise.allSettled(
+      companies.slice(i, i + ROLLUP_BATCH_SIZE).map(async (company) => {
+        try {
+          await upsertDailyRollup(company.id, date);
+        } catch (error) {
+          console.error(`[analytics-rollups] failed for company ${company.id}:`, error);
+        }
+      })
+    );
   }
 
   return { companies: companies.length };

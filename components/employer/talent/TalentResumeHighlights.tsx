@@ -27,7 +27,7 @@ export default function TalentResumeHighlights({ seekerId }: Props) {
   return (
     <NeoSurface variant="raised" className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[color:var(--neo-gold)]">
+        <p className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[color:var(--neo-gold)]">
           <Sparkles className="h-3.5 w-3.5" strokeWidth={2.25} />
           Easy AI highlights
         </p>

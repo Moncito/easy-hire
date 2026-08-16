@@ -21,7 +21,7 @@ export default function ReportsSparseBoard({ analytics, scoreHint }: Props) {
 
       <div>
         <div className="mb-3">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-teal">Hiring playbook</p>
+          <p className="text-xs font-bold uppercase tracking-wider text-teal">Hiring playbook</p>
           <h2 className="font-display text-lg font-bold tracking-tight text-ink">
             Build momentum in your pipeline
           </h2>
@@ -42,7 +42,7 @@ export default function ReportsSparseBoard({ analytics, scoreHint }: Props) {
           />
         </DashboardSurface>
         <DashboardSurface>
-          <p className="mb-3 text-[10px] font-bold uppercase tracking-wider text-navy/60">
+          <p className="mb-3 text-xs font-bold uppercase tracking-wider text-navy/60">
             Pipeline snapshot
           </p>
           <HiringFunnel funnel={analytics.funnel} />

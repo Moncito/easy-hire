@@ -55,7 +55,7 @@ export default function DashboardSparseBoard({
         <div>
           <div className="mb-3 flex items-end justify-between gap-3">
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-teal">Hiring playbook</p>
+              <p className="text-xs font-bold uppercase tracking-wider text-teal">Hiring playbook</p>
               <h2 className="font-display text-lg font-bold tracking-tight text-ink">
                 Jump-start your pipeline
               </h2>
@@ -70,7 +70,7 @@ export default function DashboardSparseBoard({
           <div>
             <div className="mb-3 flex items-center justify-between">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-wider text-navy/60">Live listings</p>
+                <p className="text-xs font-bold uppercase tracking-wider text-navy/60">Live listings</p>
                 <h2 className="font-display text-lg font-bold tracking-tight text-ink">Active jobs</h2>
               </div>
               <Link

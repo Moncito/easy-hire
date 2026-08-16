@@ -21,6 +21,7 @@ type Props = {
   items: RecentActivityItem[];
   sparse?: boolean;
   embedded?: boolean;
+  variant?: "free" | "pro";
 };
 
 const SPARSE_TIPS = [
@@ -29,7 +30,12 @@ const SPARSE_TIPS = [
   "Share job links on LinkedIn or Facebook to reach more VAs.",
 ];
 
-export default function RecentActivity({ items, sparse = false, embedded = false }: Props) {
+export default function RecentActivity({
+  items,
+  sparse = false,
+  embedded = false,
+  variant = "free",
+}: Props) {
   const content = (
     <>
       <h2 className={`font-bold text-ink ${embedded ? "mb-3 text-sm" : "mb-4 text-sm"}`}>
@@ -62,7 +68,11 @@ export default function RecentActivity({ items, sparse = false, embedded = false
               <EmployerAvatar name={item.seekerName} imageUrl={item.seekerPhotoUrl} size="sm" />
               <div className="min-w-0 flex-1 text-xs">
                 <p className="leading-snug text-ink/75">
-                  <span className="font-semibold text-ink group-hover:text-teal">
+                  <span
+                    className={`font-semibold text-ink ${
+                      variant === "pro" ? "group-hover:text-[#9A5B12]" : "group-hover:text-teal"
+                    }`}
+                  >
                     {item.seekerName}
                   </span>{" "}
                   applied for{" "}
@@ -76,7 +86,7 @@ export default function RecentActivity({ items, sparse = false, embedded = false
           ))}
           {sparse && items.length < 5 && (
             <div className="mt-2 border-t border-ink/5 pt-4">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-ink/35">
+              <p className="text-xs font-bold uppercase tracking-wider text-ink/35">
                 Tips to get more applicants
               </p>
               <ul className="mt-2 space-y-1.5">
@@ -94,11 +104,11 @@ export default function RecentActivity({ items, sparse = false, embedded = false
   );
 
   if (embedded) {
-    return (
-      <div className="rounded-2xl border border-navy/[0.08] bg-white/90 p-5 shadow-[0_8px_24px_-6px_rgba(30,58,95,0.08)]">
-        {content}
-      </div>
-    );
+    const shellClass =
+      variant === "pro"
+        ? "pro-card p-5"
+        : "rounded-2xl border border-navy/[0.08] bg-white/90 p-5 shadow-[0_8px_24px_-6px_rgba(30,58,95,0.08)]";
+    return <div className={shellClass}>{content}</div>;
   }
 
   return <div className="rounded-2xl border border-ink/5 bg-white p-6 shadow-sm">{content}</div>;

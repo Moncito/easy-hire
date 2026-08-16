@@ -43,7 +43,7 @@ type Thread = {
   id: string;
   job: { id: string; title: string } | null;
   company: { id: string; companyName: string; logoUrl: string | null };
-  seeker: { id: string; fullName: string; headline: string | null };
+  seeker: { id: string; fullName: string; headline: string | null; photoUrl?: string | null };
   messages: ThreadMessage[];
 };
 
@@ -53,7 +53,7 @@ type Props = {
   initialConversations?: Conversation[];
 };
 
-type ListFilter = "ALL" | "UNREAD" | "INTERVIEWS";
+type ListFilter = "ALL" | "UNREAD" | "INTERVIEWS" | "HIRED";
 
 const THREAD_POLL_MS = 2000;
 const LIST_POLL_MS = 3000;
@@ -191,6 +191,8 @@ export default function MessagesInbox({
   const [listFilter, setListFilter] = useState<ListFilter>("ALL");
   const [searchQuery, setSearchQuery] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
+  const aiToneButtonRef = useRef<HTMLButtonElement>(null);
+  const aiToneMenuRef = useRef<HTMLDivElement>(null);
   const lastMessageIdRef = useRef<string | null>(null);
   const activeIdRef = useRef<string | null>(activeId);
   const pollingRef = useRef(false);
@@ -198,6 +200,70 @@ export default function MessagesInbox({
   useEffect(() => {
     activeIdRef.current = activeId;
   }, [activeId]);
+
+  const didAutoOpen = useRef(false);
+  useEffect(() => {
+    if (role !== "EMPLOYER" || didAutoOpen.current || activeId || loadingList) return;
+    if (conversations.length === 0) return;
+    if (typeof window === "undefined") return;
+    if (!window.matchMedia("(min-width: 1024px)").matches) return;
+    didAutoOpen.current = true;
+    router.replace(`/employer/messages?c=${conversations[0].id}`);
+  }, [role, activeId, loadingList, conversations, router]);
+
+  useEffect(() => {
+    if (!aiToneMenuOpen) return;
+
+    function onPointerDown(e: MouseEvent) {
+      const root = aiToneButtonRef.current?.parentElement;
+      if (root && !root.contains(e.target as Node)) {
+        setAiToneMenuOpen(false);
+      }
+    }
+
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        setAiToneMenuOpen(false);
+        aiToneButtonRef.current?.focus();
+        return;
+      }
+
+      const menu = aiToneMenuRef.current;
+      if (!menu) return;
+      const items = Array.from(
+        menu.querySelectorAll<HTMLButtonElement>('button[role="menuitem"]:not([disabled])')
+      );
+      if (items.length === 0) return;
+
+      const currentIndex = items.findIndex((el) => el === document.activeElement);
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        items[(currentIndex + 1 + items.length) % items.length]?.focus();
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        items[(currentIndex - 1 + items.length) % items.length]?.focus();
+      } else if (e.key === "Home") {
+        e.preventDefault();
+        items[0]?.focus();
+      } else if (e.key === "End") {
+        e.preventDefault();
+        items[items.length - 1]?.focus();
+      }
+    }
+
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    const focusTimer = window.setTimeout(() => {
+      aiToneMenuRef.current?.querySelector<HTMLButtonElement>('button[role="menuitem"]')?.focus();
+    }, 0);
+
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+      window.clearTimeout(focusTimer);
+    };
+  }, [aiToneMenuOpen]);
 
   const syncCursor = useCallback((messages: ThreadMessage[]) => {
     lastMessageIdRef.current = lastConfirmedMessage(messages)?.id ?? null;
@@ -221,6 +287,7 @@ export default function MessagesInbox({
   }, []);
 
   const loadThread = useCallback(async (id: string) => {
+    setAiToneMenuOpen(false);
     setLoadingThread(true);
     setThreadError("");
     try {
@@ -427,26 +494,37 @@ export default function MessagesInbox({
   }
 
   const isSeeker = role === "SEEKER";
+  const isEmployerPro = !isSeeker && isPro;
   const basePath = isSeeker ? "/seeker" : "/employer";
-  const accentDot = isSeeker ? "bg-marigold" : "bg-teal";
+  const accentDot = isSeeker ? "bg-marigold" : isEmployerPro ? "bg-marigold" : "bg-teal";
   const activeRow = isSeeker ? "bg-navy/[0.06]" : "";
   const filterActive = isSeeker
     ? "bg-marigold/20 text-[#8a5a10]"
-    : "bg-teal/15 text-teal";
+    : isEmployerPro
+      ? "bg-ink text-white"
+      : "bg-teal/15 text-teal";
   const filterIdle = "bg-ink/[0.04] text-ink/50 hover:bg-ink/8 hover:text-ink/70";
-  const avatarBg = isSeeker ? "bg-navy/10 text-navy" : "bg-teal/10 text-teal";
-  const unreadBadge = isSeeker ? "bg-marigold text-ink" : "bg-teal text-white";
-  const mineBubble = isSeeker ? "bg-navy text-mist" : "bg-teal text-white";
-  const minePending = isSeeker ? "bg-navy/75 text-mist" : "bg-teal/75 text-white";
+  const avatarBg = isSeeker ? "bg-navy/10 text-navy" : isEmployerPro ? "bg-ink/10 text-ink" : "bg-teal/10 text-teal";
+  const unreadBadge = isSeeker ? "bg-marigold text-ink" : isEmployerPro ? "bg-ink text-white" : "bg-teal text-white";
+  const mineBubble = isSeeker ? "bg-navy text-mist" : isEmployerPro ? "bg-ink text-mist" : "bg-teal text-white";
+  const minePending = isSeeker
+    ? "bg-navy/75 text-mist"
+    : isEmployerPro
+      ? "bg-ink/75 text-mist"
+      : "bg-teal/75 text-white";
   const theirsBubble = isSeeker
     ? "border border-navy/10 bg-navy/[0.05] text-ink"
     : "border border-ink/8 bg-white text-ink";
   const sendBtn = isSeeker
     ? "bg-navy text-mist hover:bg-navy/90"
-    : "bg-teal text-white hover:bg-teal/95";
+    : isEmployerPro
+      ? "bg-marigold text-ink hover:bg-marigold/90"
+      : "bg-teal text-white hover:bg-teal/95";
   const composerWrap = isSeeker
     ? "flex items-center gap-2 rounded-full border border-navy/10 bg-navy/[0.04] py-1.5 pl-2 pr-1.5 transition focus-within:border-navy/25 focus-within:bg-white focus-within:ring-2 focus-within:ring-navy/10"
-    : "flex items-center gap-2 rounded-xl border border-ink/8 bg-ink/[0.02] px-2 py-1.5 transition focus-within:border-teal/30 focus-within:bg-white focus-within:ring-2 focus-within:ring-teal/10";
+    : isEmployerPro
+      ? "flex items-center gap-2 rounded-full border border-ink/10 bg-white px-2 py-1.5 transition focus-within:border-ink/25 focus-within:ring-2 focus-within:ring-ink/10"
+      : "flex items-center gap-2 rounded-xl border border-ink/8 bg-ink/[0.02] px-2 py-1.5 transition focus-within:border-teal/30 focus-within:bg-white focus-within:ring-2 focus-within:ring-teal/10";
 
   function conversationRowClass(convId: string) {
     const active = activeId === convId;
@@ -455,8 +533,12 @@ export default function MessagesInbox({
         active ? activeRow : ""
       }`;
     }
-    return `flex w-full cursor-pointer gap-3 border-l-2 px-3 py-3 text-left transition-colors duration-200 sm:px-4 ${
-      active ? "border-teal bg-teal/[0.04]" : "border-transparent hover:bg-ink/[0.03]"
+    return `flex w-full cursor-pointer gap-3 border-l-2 px-3 py-2.5 text-left transition-colors duration-200 sm:px-4 ${
+      active
+        ? isEmployerPro
+          ? "border-marigold bg-marigold/[0.08]"
+          : "border-teal bg-teal/[0.04]"
+        : "border-transparent hover:bg-ink/[0.03]"
     }`;
   }
 
@@ -467,6 +549,8 @@ export default function MessagesInbox({
       list = list.filter((c) => c.unreadCount > 0);
     } else if (listFilter === "INTERVIEWS") {
       list = list.filter((c) => c.applicationStatus === "INTERVIEW");
+    } else if (listFilter === "HIRED") {
+      list = list.filter((c) => c.applicationStatus === "HIRED");
     }
 
     const q = searchQuery.trim().toLowerCase();
@@ -487,6 +571,7 @@ export default function MessagesInbox({
   }, [conversations, listFilter, searchQuery, role]);
 
   function selectConversation(id: string) {
+    setAiToneMenuOpen(false);
     router.push(`${basePath}/messages?c=${id}`);
   }
 
@@ -501,19 +586,38 @@ export default function MessagesInbox({
 
   function threadPeerLogo() {
     if (!thread) return null;
-    return role === "SEEKER" ? thread.company.logoUrl : null;
+    return role === "SEEKER" ? thread.company.logoUrl : thread.seeker.photoUrl ?? null;
   }
 
-  const filters: { id: ListFilter; label: string }[] = [
-    { id: "ALL", label: "All" },
-    { id: "UNREAD", label: "Unread" },
-    { id: "INTERVIEWS", label: "Interviews" },
-  ];
+  function listPeerPhoto(conv: Conversation) {
+    return role === "SEEKER" ? conv.company.logoUrl : conv.seeker.photoUrl;
+  }
 
   const unreadTotal = useMemo(
     () => conversations.reduce((sum, c) => sum + c.unreadCount, 0),
     [conversations]
   );
+  const interviewCount = useMemo(
+    () => conversations.filter((c) => c.applicationStatus === "INTERVIEW").length,
+    [conversations]
+  );
+  const hiredCount = useMemo(
+    () => conversations.filter((c) => c.applicationStatus === "HIRED").length,
+    [conversations]
+  );
+
+  const filters: { id: ListFilter; label: string; count?: number }[] = isSeeker
+    ? [
+        { id: "ALL", label: "All" },
+        { id: "UNREAD", label: "Unread" },
+        { id: "INTERVIEWS", label: "Interviews" },
+      ]
+    : [
+        { id: "ALL", label: "All", count: conversations.length },
+        { id: "UNREAD", label: "Unread", count: unreadTotal },
+        { id: "INTERVIEWS", label: "Interviews", count: interviewCount },
+        { id: "HIRED", label: "Hired", count: hiredCount },
+      ];
 
   const activeBandLabel = useMemo(() => {
     if (!activeId) return null;
@@ -532,9 +636,7 @@ export default function MessagesInbox({
 
   return (
     <div
-      className={`animate-fade-in flex h-full min-h-0 flex-1 flex-col overflow-hidden ${
-        isSeeker ? "bg-white" : "bg-mist/30"
-      }`}
+      className={`animate-fade-in flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-white`}
     >
       {fillNavClearance && (
         <MessagesNavBand unreadCount={unreadTotal} activeLabel={activeBandLabel} />
@@ -543,8 +645,8 @@ export default function MessagesInbox({
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden lg:flex-row">
       {/* ── Sidebar ── */}
       <aside
-        className={`flex w-full flex-col border-ink/8 lg:w-[min(320px,34%)] lg:max-w-[380px] lg:shrink-0 lg:border-r ${
-          isSeeker ? "bg-mist/40" : "bg-mist/50"
+        className={`flex w-full flex-col border-ink/8 lg:shrink-0 lg:border-r ${
+          isSeeker ? "bg-mist/40 lg:w-[min(320px,34%)] lg:max-w-[380px]" : "bg-white lg:w-[300px] lg:max-w-[340px]"
         } ${activeId ? "hidden lg:flex" : "flex"}`}
       >
         <div
@@ -556,22 +658,22 @@ export default function MessagesInbox({
               <p className="mt-0.5 text-sm text-ink/45">In-platform conversations</p>
             </>
           ) : (
-            <div className="flex items-center gap-2 lg:hidden">
-              <h2 className="font-display text-base font-bold text-ink">Inbox</h2>
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="font-display text-lg font-black tracking-tighter text-ink">Inbox</h2>
               {unreadTotal > 0 && (
-                <span className="rounded-full bg-teal/15 px-2 py-0.5 font-data text-[10px] font-bold tabular-nums text-teal">
+                <span
+                  className={`rounded-full px-2 py-0.5 font-data text-xs font-bold tabular-nums ${
+                    isEmployerPro ? "bg-ink text-white" : "bg-teal/15 text-teal"
+                  }`}
+                >
                   {unreadTotal} unread
                 </span>
               )}
             </div>
           )}
 
-          <div
-            className={`flex flex-col gap-2.5 sm:flex-row sm:items-center ${
-              isSeeker ? "mt-4" : "mt-2 lg:mt-0"
-            }`}
-          >
-            <div className="flex flex-wrap gap-1.5 sm:shrink-0">
+          <div className={`flex flex-col gap-3 ${isSeeker ? "mt-4" : "mt-3"}`}>
+            <div className="flex flex-wrap gap-1.5">
               {filters.map((f) => (
                 <button
                   key={f.id}
@@ -582,11 +684,16 @@ export default function MessagesInbox({
                   }`}
                 >
                   {f.label}
+                  {f.count !== undefined && (
+                    <span className={`ml-1.5 font-data tabular-nums ${listFilter === f.id ? "opacity-70" : "text-ink/35"}`}>
+                      {f.count}
+                    </span>
+                  )}
                 </button>
               ))}
             </div>
 
-            <label className="relative block min-w-0 flex-1">
+            <label className="relative block w-full">
               <Search
                 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/30"
                 aria-hidden="true"
@@ -595,21 +702,17 @@ export default function MessagesInbox({
                 type="search"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search conversations..."
-                className={`w-full rounded-xl border border-ink/8 py-2 pl-9 pr-3 text-sm text-ink outline-none transition-colors placeholder:text-ink/35 focus:bg-white ${
+                placeholder={isSeeker ? "Search conversations..." : "Search name, job, or message…"}
+                className={`w-full rounded-xl border border-ink/8 py-2.5 pl-9 pr-3 text-sm text-ink outline-none transition-colors placeholder:text-ink/35 focus:bg-white ${
                   isSeeker
                     ? "bg-ink/[0.03] focus:border-navy/25"
-                    : "bg-white/80 focus:border-teal/30 focus:ring-2 focus:ring-teal/10"
+                    : isEmployerPro
+                      ? "bg-ink/[0.03] focus:border-ink/25 focus:ring-2 focus:ring-ink/10"
+                      : "bg-white/80 focus:border-teal/30 focus:ring-2 focus:ring-teal/10"
                 }`}
               />
             </label>
           </div>
-
-          {!isSeeker && unreadTotal > 0 && (
-            <p className="mt-2 hidden text-xs text-ink/45 lg:block">
-              <span className="font-data font-semibold text-teal">{unreadTotal}</span> unread
-            </p>
-          )}
         </div>
 
         <div className={`flex-1 overflow-y-auto ${isSeeker ? "px-4 py-2 sm:px-5" : "divide-y divide-ink/5 px-0 py-0"}`}>
@@ -625,7 +728,7 @@ export default function MessagesInbox({
               </p>
               <p className="mt-1 text-xs text-ink/40">
                 {role === "EMPLOYER"
-                  ? "Message candidates from your applicant board or talent search."
+                  ? "Message a candidate from Applicants or Talent — threads show up here."
                   : "Employers will appear here when they message you."}
               </p>
               {isSeeker && !searchQuery && listFilter === "ALL" && (
@@ -635,6 +738,26 @@ export default function MessagesInbox({
                 >
                   Browse jobs
                 </Link>
+              )}
+              {!isSeeker && !searchQuery && listFilter === "ALL" && (
+                <div className="mt-4 flex flex-wrap justify-center gap-2">
+                  <Link
+                    href="/employer/applicants"
+                    className={`rounded-full px-4 py-2 text-xs font-semibold ${
+                      isEmployerPro
+                        ? "bg-marigold text-ink hover:bg-marigold/90"
+                        : "bg-teal text-white hover:bg-teal/95"
+                    }`}
+                  >
+                    Review applicants
+                  </Link>
+                  <Link
+                    href="/employer/talent"
+                    className="rounded-full border border-ink/10 bg-white px-4 py-2 text-xs font-semibold text-ink hover:bg-ink/[0.02]"
+                  >
+                    Browse talent
+                  </Link>
+                </div>
               )}
             </div>
           )}
@@ -650,7 +773,7 @@ export default function MessagesInbox({
               <div className="relative shrink-0">
                 <PeerAvatar
                   label={peerLabel(conv)}
-                  logoUrl={role === "SEEKER" ? conv.company.logoUrl : null}
+                  logoUrl={listPeerPhoto(conv)}
                   avatarClass={avatarBg}
                   size="md"
                 />
@@ -724,8 +847,28 @@ export default function MessagesInbox({
             <p className="mt-1 max-w-xs text-sm text-ink/35">
               {isSeeker
                 ? "Pick a thread from the list to read and reply."
-                : "Choose a candidate from your inbox to continue the conversation."}
+                : "Choose a candidate from your inbox, or start a thread from Applicants or Talent."}
             </p>
+            {!isSeeker && (
+              <div className="mt-5 flex flex-wrap justify-center gap-2">
+                <Link
+                  href="/employer/applicants"
+                  className={`rounded-full px-4 py-2 text-sm font-semibold ${
+                    isEmployerPro
+                      ? "bg-marigold text-ink hover:bg-marigold/90"
+                      : "bg-teal text-white hover:bg-teal/95"
+                  }`}
+                >
+                  Applicants
+                </Link>
+                <Link
+                  href="/employer/talent"
+                  className="rounded-full border border-ink/10 bg-white px-4 py-2 text-sm font-semibold text-ink hover:bg-ink/[0.02]"
+                >
+                  Talent
+                </Link>
+              </div>
+            )}
           </div>
         ) : loadingThread || !thread ? (
           <div className="flex flex-1 items-center justify-center text-sm text-ink/45">
@@ -734,12 +877,12 @@ export default function MessagesInbox({
         ) : (
           <>
             {/* Thread header */}
-            <div className="flex shrink-0 items-center justify-between gap-3 border-b border-ink/8 px-4 py-3.5 sm:px-6">
+            <div className={`flex shrink-0 items-center justify-between gap-3 border-b border-ink/8 px-4 sm:px-6 ${isSeeker ? "py-3.5" : "py-2.5"}`}>
               <div className="flex min-w-0 items-center gap-3">
                 <button
                   type="button"
                   className={`shrink-0 cursor-pointer text-xs font-semibold lg:hidden ${
-                    isSeeker ? "text-marigold" : "text-teal"
+                    isSeeker ? "text-marigold" : isEmployerPro ? "text-[#9A5B12]" : "text-teal"
                   }`}
                   onClick={() => router.push(`${basePath}/messages`)}
                 >
@@ -795,7 +938,9 @@ export default function MessagesInbox({
                 {!isSeeker && thread.job && (
                   <Link
                     href={`/employer/jobs/${thread.job.id}/applicants`}
-                    className="hidden cursor-pointer rounded-lg border border-ink/10 bg-white px-3 py-1.5 text-xs font-semibold text-ink/65 transition hover:border-teal/25 hover:text-teal sm:inline-flex"
+                    className={`hidden cursor-pointer rounded-full border border-ink/10 bg-white px-3 py-1.5 text-xs font-semibold text-ink/65 transition sm:inline-flex ${
+                      isEmployerPro ? "hover:border-ink/20 hover:text-ink" : "hover:border-teal/25 hover:text-teal"
+                    }`}
                   >
                     View pipeline
                   </Link>
@@ -803,7 +948,9 @@ export default function MessagesInbox({
                 {!isSeeker && (
                   <Link
                     href={`/employer/talent/${thread.seeker.id}`}
-                    className="hidden cursor-pointer rounded-lg border border-ink/10 bg-white px-3 py-1.5 text-xs font-semibold text-ink/65 transition hover:border-teal/25 hover:text-teal sm:inline-flex"
+                    className={`hidden cursor-pointer rounded-full border border-ink/10 bg-white px-3 py-1.5 text-xs font-semibold text-ink/65 transition sm:inline-flex ${
+                      isEmployerPro ? "hover:border-ink/20 hover:text-ink" : "hover:border-teal/25 hover:text-teal"
+                    }`}
                   >
                     View profile
                   </Link>
@@ -816,18 +963,20 @@ export default function MessagesInbox({
                     View application
                   </Link>
                 )}
-                <button
-                  type="button"
-                  className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-ink/40 transition hover:bg-ink/5 hover:text-ink/65"
-                  aria-label="More options"
-                >
-                  <MoreHorizontal className="h-4 w-4" />
-                </button>
+                {isSeeker && (
+                  <button
+                    type="button"
+                    className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-ink/40 transition hover:bg-ink/5 hover:text-ink/65"
+                    aria-label="More options"
+                  >
+                    <MoreHorizontal className="h-4 w-4" />
+                  </button>
+                )}
               </div>
             </div>
 
             {!isSeeker && (activeConversation?.applicationStatus || thread.job) && (
-              <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-ink/5 bg-mist/30 px-4 py-2 sm:px-6">
+              <div className={`flex shrink-0 flex-wrap items-center gap-2 border-b border-ink/5 px-4 sm:px-6 ${isSeeker ? "bg-mist/30 py-2" : "bg-mist/20 py-1.5"}`}>
                 {activeConversation?.applicationStatus && (
                   <span
                     className={`rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide ${statusBadgeClass(activeConversation.applicationStatus, false)}`}
@@ -840,7 +989,9 @@ export default function MessagesInbox({
                     Re:{" "}
                     <Link
                       href={`/employer/jobs/${thread.job.id}/applicants`}
-                      className="font-medium text-ink/60 transition hover:text-teal"
+                      className={`font-medium text-ink/60 transition ${
+                        isEmployerPro ? "hover:text-[#9A5B12]" : "hover:text-teal"
+                      }`}
                     >
                       {thread.job.title}
                     </Link>
@@ -851,42 +1002,53 @@ export default function MessagesInbox({
 
             {/* Messages */}
             <div
-              className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-5 sm:px-6"
+              className={`min-h-0 flex-1 overflow-y-auto px-4 sm:px-6 ${
+                isSeeker ? "space-y-4 py-5" : "py-3"
+              }`}
               aria-live="polite"
               aria-relevant="additions"
             >
               {thread.messages.map((msg, idx) => {
                 const prev = thread.messages[idx - 1];
+                const next = thread.messages[idx + 1];
                 const showDate = !prev || !sameDay(prev.createdAt, msg.createdAt);
+                const isGroupStart = !prev || prev.isMine !== msg.isMine || showDate;
+                const showMeta =
+                  !next || next.isMine !== msg.isMine || !sameDay(msg.createdAt, next.createdAt);
+                const showIncomingAvatar = !msg.isMine && isGroupStart;
 
                 return (
-                  <div key={msg.id}>
+                  <div key={msg.id} className={showDate ? "mt-3 first:mt-0" : isGroupStart ? "mt-2.5" : "mt-0.5"}>
                     {showDate && (
-                      <div className="mb-4 flex justify-center animate-fade-in">
-                        <span className="rounded-full bg-navy/[0.06] px-3 py-1 text-[10px] font-semibold tracking-wide text-navy/70">
+                      <div className="mb-2 flex justify-center">
+                        <span className="rounded-full bg-ink/[0.05] px-2.5 py-0.5 text-[10px] font-semibold tracking-wide text-ink/50">
                           {formatDateSeparator(msg.createdAt)}
                         </span>
                       </div>
                     )}
 
                     <div
-                      className={`flex items-end gap-2 animate-slide-up ${
+                      className={`flex items-end gap-2 ${
                         msg.isMine ? "justify-end" : "justify-start"
                       }`}
-                      style={{ animationDelay: `${Math.min(idx * 30, 300)}ms` }}
                     >
-                      {!msg.isMine && (
-                        <PeerAvatar
-                          label={threadPeerLabel()}
-                          logoUrl={threadPeerLogo()}
-                          avatarClass={avatarBg}
-                          size="sm"
-                        />
-                      )}
+                      {!msg.isMine &&
+                        (showIncomingAvatar ? (
+                          <PeerAvatar
+                            label={threadPeerLabel()}
+                            logoUrl={threadPeerLogo()}
+                            avatarClass={avatarBg}
+                            size="sm"
+                          />
+                        ) : (
+                          <span className="inline-block h-8 w-8 shrink-0" aria-hidden="true" />
+                        ))}
 
-                      <div className={`max-w-[min(80%,28rem)] ${msg.isMine ? "order-first" : ""}`}>
+                      <div className={`${isSeeker ? "max-w-[min(78%,40rem)]" : "max-w-[min(86%,56rem)]"} ${msg.isMine ? "order-first" : ""}`}>
                         <div
-                          className={`rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
+                          className={`px-3.5 py-2 text-sm leading-snug ${
+                            isSeeker ? "rounded-2xl py-2.5 leading-relaxed" : "rounded-2xl"
+                          } ${
                             msg.isMine
                               ? msg.pending
                                 ? `${minePending} rounded-br-sm`
@@ -896,18 +1058,20 @@ export default function MessagesInbox({
                         >
                           <p>{msg.body}</p>
                         </div>
-                        <div
-                          className={`mt-1 flex items-center gap-1 px-1 ${
-                            msg.isMine ? "justify-end" : "justify-start"
-                          }`}
-                        >
-                          <span className="font-data text-[10px] text-ink/35">
-                            {msg.pending ? "Sending…" : formatTime(msg.createdAt)}
-                          </span>
-                          {msg.isMine && !msg.pending && msg.readAt && (
-                            <CheckCheck className="h-3 w-3 text-navy/50" aria-label="Read" />
-                          )}
-                        </div>
+                        {showMeta && (
+                          <div
+                            className={`mt-0.5 flex items-center gap-1 px-1 ${
+                              msg.isMine ? "justify-end" : "justify-start"
+                            }`}
+                          >
+                            <span className="font-data text-[10px] text-ink/35">
+                              {msg.pending ? "Sending…" : formatTime(msg.createdAt)}
+                            </span>
+                            {msg.isMine && !msg.pending && msg.readAt && (
+                              <CheckCheck className="h-3 w-3 text-navy/50" aria-label="Read" />
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -919,33 +1083,52 @@ export default function MessagesInbox({
             {/* Composer — extra right padding keeps clear of any fixed UI; search pill hidden on this route */}
             <form
               onSubmit={handleSend}
-              className={`shrink-0 border-t border-ink/8 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] ${
+              className={`shrink-0 border-t border-ink/8 pb-[max(0.5rem,env(safe-area-inset-bottom,0px))] ${
                 isSeeker
-                  ? "px-4 sm:px-6"
-                  : "bg-white px-4 shadow-[0_-4px_12px_rgba(32,36,43,0.04)] sm:px-5"
+                  ? "px-4 py-3 sm:px-6"
+                  : "bg-white px-4 py-2 shadow-[0_-4px_12px_rgba(32,36,43,0.04)] sm:px-5"
               }`}
             >
               {sendError && <p className="mb-2 text-xs text-ember">{sendError}</p>}
               {!isSeeker && isPro && thread.job && (
                 <div className="relative mb-2 inline-block">
                   <button
+                    ref={aiToneButtonRef}
                     type="button"
+                    aria-haspopup="menu"
+                    aria-expanded={aiToneMenuOpen}
+                    aria-controls={aiToneMenuOpen ? "message-ai-tone-menu" : undefined}
                     onClick={() => setAiToneMenuOpen((prev) => !prev)}
                     disabled={aiDrafting}
-                    className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-teal/20 bg-teal/[0.06] px-2.5 py-1.5 text-xs font-semibold text-teal transition hover:bg-teal/10 disabled:cursor-not-allowed disabled:opacity-60"
+                    className={`inline-flex cursor-pointer items-center gap-1.5 rounded-full px-2.5 py-1.5 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-60 ${
+                      isEmployerPro
+                        ? "border border-marigold/30 bg-marigold/12 text-[#9A5B12] hover:bg-marigold/18"
+                        : "border border-teal/20 bg-teal/[0.06] text-teal hover:bg-teal/10"
+                    }`}
                   >
                     <Sparkles className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden="true" />
                     {aiDrafting ? "Drafting…" : "Draft with Easy AI"}
                     <ChevronDown className="h-3 w-3" strokeWidth={2.5} aria-hidden="true" />
                   </button>
                   {aiToneMenuOpen && (
-                    <div className="absolute bottom-full left-0 z-10 mb-1.5 w-48 rounded-xl border border-ink/8 bg-white p-1.5 shadow-lg shadow-ink/10">
+                    <div
+                      id="message-ai-tone-menu"
+                      ref={aiToneMenuRef}
+                      role="menu"
+                      aria-label="Easy AI outreach draft tone"
+                      className="absolute bottom-full left-0 z-10 mb-1.5 w-48 rounded-xl border border-ink/8 bg-white p-1.5 shadow-lg shadow-ink/10"
+                    >
                       {AI_DRAFT_TONES.map((t) => (
                         <button
                           key={t.value}
                           type="button"
+                          role="menuitem"
                           onClick={() => handleAiDraft(t.value)}
-                          className="block w-full cursor-pointer rounded-lg px-2.5 py-1.5 text-left text-xs font-medium text-ink/70 transition hover:bg-teal/8 hover:text-teal"
+                          className={`block w-full cursor-pointer rounded-lg px-2.5 py-1.5 text-left text-xs font-medium text-ink/70 transition ${
+                            isEmployerPro
+                              ? "hover:bg-marigold/10 hover:text-[#9A5B12]"
+                              : "hover:bg-teal/8 hover:text-teal"
+                          }`}
                         >
                           {t.label}
                         </button>
@@ -987,9 +1170,11 @@ export default function MessagesInbox({
                   <Send className="h-4 w-4" />
                 </button>
               </div>
-              <p className="mt-2 hidden text-[11px] text-ink/30 sm:block">
-                Enter to send · Ctrl+K still opens global search
-              </p>
+              {isSeeker && (
+                <p className="mt-2 hidden text-[11px] text-ink/30 sm:block">
+                  Enter to send · Ctrl+K still opens global search
+                </p>
+              )}
             </form>
           </>
         )}

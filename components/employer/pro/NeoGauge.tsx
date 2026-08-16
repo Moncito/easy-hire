@@ -51,7 +51,7 @@ export default function NeoGauge({ score, percentile, hint, compact = false }: P
         Overall Hiring Score
       </p>
       {percentile !== null && percentile >= 90 && (
-        <p className="mt-0.5 text-[10px] font-bold uppercase tracking-wider text-[color:var(--neo-gold)]">
+        <p className="mt-0.5 text-xs font-bold uppercase tracking-wider text-[color:var(--neo-gold)]">
           Top {100 - percentile}%
         </p>
       )}

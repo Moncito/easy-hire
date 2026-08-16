@@ -18,11 +18,6 @@ type Props = {
   plan?: "FREE" | "PRO";
   navCounts: { activeJobs: number; needsReview: number; unreadMessages: number };
   children: React.ReactNode;
-  /** Pro font CSS variable classNames (Syne + Source Sans 3), wired from
-   * app/employer/layout.tsx via next/font. Applied to the workspace root so
-   * the `[data-employer-plan="pro"]` CSS scope in globals.css can use them —
-   * Free renders without these classes and never touches the fonts. */
-  proFontClassName?: string;
 };
 
 function EmployerShellInner({
@@ -32,7 +27,6 @@ function EmployerShellInner({
   plan = "FREE",
   navCounts,
   children,
-  proFontClassName = "",
 }: Props) {
   const { expanded } = useEmployerShell();
   const pathname = usePathname();
@@ -45,11 +39,47 @@ function EmployerShellInner({
     pathname === "/employer/jobs/new" || !!pathname.match(/\/employer\/jobs\/[^/]+\/edit$/);
   const isCompanyProfile = pathname === "/employer/company-profile";
 
+  if (isPro) {
+    return (
+      <div
+        className="employer-workspace employer-pro-workspace flex h-screen overflow-hidden"
+        data-employer-theme={mounted ? theme : "light"}
+        data-employer-plan="pro"
+        suppressHydrationWarning
+      >
+        <Sidebar navCounts={navCounts} plan={plan} />
+        <EmployerMobileNav plan={plan} />
+        <div
+          className={`relative flex min-w-0 flex-1 flex-col transition-[padding] duration-200 ease-out ${
+            expanded ? "lg:pl-52" : "lg:pl-[60px]"
+          }`}
+        >
+          <EmployerRouteProgress />
+          <Topbar
+            companyName={companyName}
+            companyLogoUrl={companyLogoUrl}
+            verifiedStatus={verifiedStatus}
+            plan={plan}
+          />
+          <main
+            className={`relative z-[1] flex min-h-0 flex-1 flex-col ${
+              isFixedWorkspace ? "overflow-hidden pb-16 lg:pb-0" : "overflow-y-auto pb-16 lg:pb-0"
+            } ${isJobForm || isCompanyProfile ? "scroll-pb-20" : ""}`}
+          >
+            <EmployerPageContainer pro>
+              <EmployerPageEnter fill={isFixedWorkspace}>{children}</EmployerPageEnter>
+            </EmployerPageContainer>
+          </main>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
-      className={`employer-workspace flex h-screen overflow-hidden bg-mist ${isPro ? proFontClassName : ""}`}
+      className="employer-workspace flex h-screen overflow-hidden bg-mist"
       data-employer-theme={mounted ? theme : "light"}
-      data-employer-plan={isPro ? "pro" : "free"}
+      data-employer-plan="free"
       suppressHydrationWarning
     >
       <Sidebar navCounts={navCounts} plan={plan} />
@@ -70,10 +100,10 @@ function EmployerShellInner({
         <main
           className={`relative z-[1] flex min-h-0 flex-1 flex-col ${
             isFixedWorkspace ? "overflow-hidden pb-16 lg:pb-0" : "overflow-y-auto pb-16 lg:pb-0"
-          } ${isPro ? "lg:px-1" : ""} ${isJobForm || isCompanyProfile ? "scroll-pb-20" : ""}`}
+          } ${isJobForm || isCompanyProfile ? "scroll-pb-20" : ""}`}
         >
-          <EmployerPageContainer pro={isPro}>
-            <EmployerPageEnter>{children}</EmployerPageEnter>
+          <EmployerPageContainer pro={false}>
+            <EmployerPageEnter fill={isFixedWorkspace}>{children}</EmployerPageEnter>
           </EmployerPageContainer>
         </main>
       </div>

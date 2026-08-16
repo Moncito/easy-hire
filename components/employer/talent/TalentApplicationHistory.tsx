@@ -97,7 +97,7 @@ export default function TalentApplicationHistory({
     <DashboardSurface>
       <div className="mb-4 flex items-center justify-between gap-3">
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-wider text-navy/60">Your company</p>
+          <p className="text-xs font-bold uppercase tracking-wider text-navy/60">Your company</p>
           <h2 className="font-display text-lg font-bold tracking-tight text-ink">
             Application history
           </h2>

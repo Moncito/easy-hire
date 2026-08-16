@@ -66,24 +66,14 @@ export default function EmployerMobileNav({ plan = "FREE" }: Props) {
 
       {menuOpen && (
         <div
-          className={`employer-sheet-enter fixed bottom-16 left-0 right-0 z-50 rounded-t-2xl border p-4 shadow-2xl lg:hidden ${
-            isPro
-              ? "border-transparent bg-[color:var(--neo-bg,#edf1f4)]"
-              : "border-ink/8 bg-white"
-          }`}
+          className={`employer-sheet-enter fixed bottom-16 left-0 right-0 z-50 rounded-t-2xl border border-ink/8 bg-white p-4 shadow-2xl lg:hidden`}
         >
           <div className="mb-3 flex items-center justify-between">
-            <p className={`text-sm font-bold ${isPro ? "text-[color:var(--neo-ink)]" : "text-ink"}`}>
-              More
-            </p>
+            <p className="text-sm font-bold text-ink">More</p>
             <button
               type="button"
               onClick={() => setMenuOpen(false)}
-              className={`rounded-lg p-1.5 transition ${
-                isPro
-                  ? "text-[color:var(--neo-muted)] hover:text-[color:var(--neo-ink)]"
-                  : "text-ink/40 hover:bg-ink/5 hover:text-ink"
-              }`}
+              className="rounded-lg p-1.5 text-ink/40 transition hover:bg-ink/5 hover:text-ink"
               aria-label="Close menu"
             >
               <X className="h-4 w-4" />
@@ -100,14 +90,10 @@ export default function EmployerMobileNav({ plan = "FREE" }: Props) {
                   href={link.href}
                   onClick={() => setMenuOpen(false)}
                   className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
-                    isPro
-                      ? isEasyAi
-                        ? "text-[color:var(--neo-gold)]"
-                        : active
-                          ? "neo-inset-sm text-[color:var(--neo-teal)]"
-                          : "text-[color:var(--neo-muted)] hover:text-[color:var(--neo-ink)]"
-                      : active
-                        ? "bg-teal/10 text-teal"
+                    active
+                      ? "bg-teal/10 text-teal"
+                      : isEasyAi
+                        ? "text-teal"
                         : "text-ink/70 hover:bg-ink/[0.03]"
                   }`}
                 >
@@ -119,7 +105,7 @@ export default function EmployerMobileNav({ plan = "FREE" }: Props) {
             <button
               type="button"
               onClick={() => signOut({ callbackUrl: "/" })}
-              className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-ember transition-colors hover:bg-ember/5"
+              className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-ink/65 transition-colors hover:bg-ink/[0.04] hover:text-ink"
             >
               <LogOut className="h-4 w-4" strokeWidth={2} />
               Log out
@@ -129,11 +115,7 @@ export default function EmployerMobileNav({ plan = "FREE" }: Props) {
       )}
 
       <nav
-        className={`fixed bottom-0 left-0 right-0 z-40 flex h-16 items-stretch backdrop-blur-md lg:hidden ${
-          isPro
-            ? "border-t border-transparent bg-[color:var(--neo-bg,#edf1f4)]/95"
-            : "border-t border-ink/8 bg-mist/95"
-        }`}
+        className="fixed bottom-0 left-0 right-0 z-40 flex h-16 items-stretch border-t border-ink/8 bg-mist/95 backdrop-blur-md lg:hidden"
         aria-label="Employer mobile navigation"
       >
         {primaryTabs.map((tab) => {
@@ -144,13 +126,7 @@ export default function EmployerMobileNav({ plan = "FREE" }: Props) {
               key={tab.href}
               href={tab.href}
               className={`flex flex-1 flex-col items-center justify-center gap-0.5 text-[10px] font-semibold transition-colors ${
-                isPro
-                  ? active
-                    ? "text-[color:var(--neo-teal)]"
-                    : "text-[color:var(--neo-muted)]"
-                  : active
-                    ? "text-teal"
-                    : "text-ink/45"
+                active ? "text-teal" : "text-ink/45"
               }`}
             >
               <Icon className={`h-5 w-5 ${active ? "scale-105" : ""}`} strokeWidth={active ? 2.25 : 2} />
@@ -163,13 +139,7 @@ export default function EmployerMobileNav({ plan = "FREE" }: Props) {
           type="button"
           onClick={() => setMenuOpen((v) => !v)}
           className={`flex flex-1 flex-col items-center justify-center gap-0.5 text-[10px] font-semibold transition-colors ${
-            isPro
-              ? menuOpen || overflowActive
-                ? "text-[color:var(--neo-teal)]"
-                : "text-[color:var(--neo-muted)]"
-              : menuOpen || overflowActive
-                ? "text-teal"
-                : "text-ink/45"
+            menuOpen || overflowActive ? "text-teal" : "text-ink/45"
           }`}
           aria-expanded={menuOpen}
           aria-label="More navigation options"

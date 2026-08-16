@@ -62,7 +62,7 @@ export default function CandidateEasyAiPanel({ applicationId }: Props) {
 
   return (
     <NeoSurface variant="raised" className="space-y-3">
-      <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[color:var(--neo-gold)]">
+      <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[color:var(--neo-gold)]">
         <Sparkles className="h-3.5 w-3.5" strokeWidth={2.25} />
         Easy AI
       </div>
@@ -108,7 +108,7 @@ export default function CandidateEasyAiPanel({ applicationId }: Props) {
       </div>
 
       <div className="border-t border-[color:var(--neo-ink)]/[0.06] pt-3">
-        <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-[color:var(--neo-muted)]">
+        <p className="mb-2 text-xs font-bold uppercase tracking-wider text-[color:var(--neo-muted)]">
           Interview kit
         </p>
         <NeoButton
@@ -132,7 +132,7 @@ export default function CandidateEasyAiPanel({ applicationId }: Props) {
       </div>
 
       <div className="border-t border-[color:var(--neo-ink)]/[0.06] pt-3">
-        <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-[color:var(--neo-muted)]">
+        <p className="mb-2 text-xs font-bold uppercase tracking-wider text-[color:var(--neo-muted)]">
           Draft outreach
         </p>
         <div className="flex flex-wrap gap-1.5">

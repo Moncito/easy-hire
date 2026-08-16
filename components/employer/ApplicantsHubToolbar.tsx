@@ -1,6 +1,7 @@
 "use client";
 
 import { Search } from "lucide-react";
+import { useEmployerShell } from "@/components/employer/EmployerShellContext";
 
 export type ApplicantsSortOption = "updated" | "applicants" | "review" | "title";
 
@@ -19,6 +20,7 @@ export default function ApplicantsHubToolbar({
   onSortChange,
   resultCount,
 }: Props) {
+  const { isPro } = useEmployerShell();
   return (
     <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div className="relative max-w-md flex-1">
@@ -28,7 +30,9 @@ export default function ApplicantsHubToolbar({
           value={query}
           onChange={(e) => onQueryChange(e.target.value)}
           placeholder="Search by title or location…"
-          className="w-full rounded-xl border border-ink/10 bg-white py-2.5 pl-9 pr-4 text-sm text-ink outline-none transition placeholder:text-ink/35 focus:border-teal"
+          className={`w-full rounded-xl border border-ink/10 bg-white py-2.5 pl-9 pr-4 text-sm text-ink outline-none transition placeholder:text-ink/35 ${
+            isPro ? "focus:border-ink/30" : "focus:border-teal"
+          }`}
         />
       </div>
       <div className="flex items-center gap-2">
@@ -39,7 +43,9 @@ export default function ApplicantsHubToolbar({
           id="applicants-sort"
           value={sort}
           onChange={(e) => onSortChange(e.target.value as ApplicantsSortOption)}
-          className="rounded-xl border border-ink/10 bg-white px-3 py-2 text-sm font-medium text-ink outline-none focus:border-teal"
+          className={`rounded-xl border border-ink/10 bg-white px-3 py-2 text-sm font-medium text-ink outline-none ${
+            isPro ? "focus:border-ink/30" : "focus:border-teal"
+          }`}
         >
           <option value="updated">Recently updated</option>
           <option value="applicants">Most applicants</option>

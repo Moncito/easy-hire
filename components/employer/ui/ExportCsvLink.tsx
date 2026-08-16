@@ -27,9 +27,9 @@ export default function ExportCsvLink({ jobId, className = "", label = "Export C
   return (
     <a
       href={href}
-      className={`inline-flex items-center gap-1.5 rounded-xl border border-ink/10 bg-white px-3 py-2 text-xs font-semibold text-ink/70 transition-colors hover:border-teal/25 hover:text-teal ${className}`}
+      className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-ink/10 bg-white px-5 text-sm font-semibold text-ink transition hover:border-ink/15 hover:bg-ink/[0.02] ${className}`}
     >
-      <Download className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden="true" />
+      <Download className="h-4 w-4" strokeWidth={2.25} aria-hidden="true" />
       {label}
     </a>
   );

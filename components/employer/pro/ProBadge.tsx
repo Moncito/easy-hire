@@ -18,11 +18,11 @@ const iconSize: Record<Size, string> = {
   md: "h-3 w-3",
 };
 
-/** Gold "Pro" mark — sidebar wordmark, topbar chip, page badges. */
+/** Marigold Pro mark — navbar, badges. */
 export default function ProBadge({ size = "md", className = "", label = "Pro" }: Props) {
   return (
     <span
-      className={`inline-flex shrink-0 items-center rounded-full bg-[color:var(--neo-gold)]/15 font-bold uppercase tracking-wider text-[color:var(--neo-gold)] ring-1 ring-[color:var(--neo-gold)]/30 ${sizeClass[size]} ${className}`}
+      className={`inline-flex shrink-0 items-center rounded-full bg-marigold/15 font-bold uppercase tracking-wider text-[var(--pro-accent-ink)] ring-1 ring-marigold/30 ${sizeClass[size]} ${className}`}
     >
       <Crown className={iconSize[size]} strokeWidth={2.5} />
       {label}
