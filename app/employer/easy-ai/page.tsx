@@ -1,15 +1,26 @@
 import Link from "next/link";
-import { Sparkles, FileText, Target, MessagesSquare, Send, LineChart, Lock } from "lucide-react";
+import {
+  FileText,
+  Target,
+  MessagesSquare,
+  Send,
+  LineChart,
+  Lock,
+  ListChecks,
+  Building2,
+  TrendingUp,
+} from "lucide-react";
 import { requireEmployerPageContext } from "@/lib/employer-session";
 import EmployerPageHeader from "@/components/employer/ui/EmployerPageHeader";
 import NeoSurface from "@/components/employer/pro/NeoSurface";
 import EasyAiChip from "@/components/employer/pro/EasyAiChip";
+import EasyAiUsagePanel from "@/components/employer/pro/EasyAiUsagePanel";
 import ProBadge from "@/components/employer/pro/ProBadge";
 
-// Wave 1 shortcuts from plans/EMPLOYER_PRO_DASHBOARD_PLAN.md — UI shell only.
-// TODO(backend): wire each tile to its `/api/employer/ai/*` route once the
-// Easy AI provider + rate limiting land (see plan doc "Easy AI roadmap").
-const shortcuts = [
+// Wave 1 — drafting, ranking and outreach assists wired to their
+// `/api/employer/ai/*` routes from where they're actually used (job form,
+// candidate detail, reports/dashboard). These tiles are quick jump-offs.
+const wave1Shortcuts = [
   {
     label: "JD Writer",
     description: "Draft or rewrite a job title, description and requirements from a few notes.",
@@ -32,13 +43,35 @@ const shortcuts = [
     label: "Outreach Drafts",
     description: "First message, follow-up, and rejection drafts for a candidate thread.",
     icon: Send,
-    href: "/employer/messages",
+    href: "/employer/applicants",
   },
   {
     label: "Funnel Narrative",
     description: "A natural-language summary of this week's hiring health.",
     icon: LineChart,
     href: "/employer/reports",
+  },
+] as const;
+
+// Wave 2–3 — self-serve shortcuts that live inside their existing flows.
+const wave23Shortcuts = [
+  {
+    label: "Screening Questions",
+    description: "Suggest up to 5 screening questions from your job title and description.",
+    icon: ListChecks,
+    href: "/employer/jobs/new",
+  },
+  {
+    label: "Company Brand Copy",
+    description: "Rewrite your public \"About\" copy and highlight chips from a few notes.",
+    icon: Building2,
+    href: "/employer/company-profile",
+  },
+  {
+    label: "Job Performance Tips",
+    description: "Concrete, numbers-based tips to improve a job's views and apply rate.",
+    icon: TrendingUp,
+    href: "/employer/jobs",
   },
 ] as const;
 
@@ -71,9 +104,6 @@ function EasyAiUpgradeGate() {
   );
 }
 
-// TODO(backend): add "/employer/easy-ai" → "Easy AI" and
-// "/employer/talent/lists" → "Saved lists" entries to
-// getEmployerPageTitle() in lib/employer/nav.ts (mobile Topbar title).
 export default async function EasyAiHubPage() {
   const { plan } = await requireEmployerPageContext();
 
@@ -98,34 +128,44 @@ export default async function EasyAiHubPage() {
         </div>
       </div>
 
-      <NeoSurface variant="raised" className="mb-5 flex flex-wrap items-center justify-between gap-4 p-5">
-        <div className="flex items-center gap-3">
-          <span className="neo-inset-sm flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[color:var(--neo-gold)]">
-            <Sparkles className="h-5 w-5" strokeWidth={2.25} />
-          </span>
-          <div>
-            <p className="text-sm font-semibold text-[color:var(--neo-ink)]">Usage this month</p>
-            {/* TODO(backend): replace with live AiUsageEvent rollup once
-                lib/ai/* + Redis rate limiting ship. */}
-            <p className="text-xs text-[color:var(--neo-muted)]">
-              — of — assists used · usage tracking coming soon
-            </p>
-          </div>
-        </div>
-        <EasyAiChip variant="chip" label="What's new" href="/employer/easy-ai" />
+      <NeoSurface variant="raised" className="mb-5 p-5">
+        <EasyAiUsagePanel />
       </NeoSurface>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        {shortcuts.map((shortcut) => (
-          <EasyAiChip
-            key={shortcut.label}
-            variant="tile"
-            href={shortcut.href}
-            label={shortcut.label}
-            description={shortcut.description}
-            icon={<shortcut.icon className="h-4 w-4" strokeWidth={2.25} />}
-          />
-        ))}
+      <div>
+        <p className="mb-2.5 text-[10px] font-bold uppercase tracking-wider text-[color:var(--neo-muted)]">
+          Drafting, ranking &amp; outreach
+        </p>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {wave1Shortcuts.map((shortcut) => (
+            <EasyAiChip
+              key={shortcut.label}
+              variant="tile"
+              href={shortcut.href}
+              label={shortcut.label}
+              description={shortcut.description}
+              icon={<shortcut.icon className="h-4 w-4" strokeWidth={2.25} />}
+            />
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-5">
+        <p className="mb-2.5 text-[10px] font-bold uppercase tracking-wider text-[color:var(--neo-muted)]">
+          Job quality &amp; brand
+        </p>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {wave23Shortcuts.map((shortcut) => (
+            <EasyAiChip
+              key={shortcut.label}
+              variant="tile"
+              href={shortcut.href}
+              label={shortcut.label}
+              description={shortcut.description}
+              icon={<shortcut.icon className="h-4 w-4" strokeWidth={2.25} />}
+            />
+          ))}
+        </div>
       </div>
 
       <NeoSurface variant="inset" className="mt-5">
