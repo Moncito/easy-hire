@@ -50,5 +50,5 @@ EasyHire VA Solutions is a two-sided recruitment marketplace connecting Virtual 
 ## Do Not
 
 - Do not add new database tables or major features without checking against the project build plan first
-- Do not skip the admin approval step for employer job postings — it's a fraud-prevention requirement
+- Do not skip the admin approval step for Free-plan employer job postings — it's a fraud-prevention requirement. Employer Pro companies that are also verified (`verifiedStatus: APPROVED`) may instant-publish instead of going through admin review (see `canAutoPublishJob` in `lib/billing/subscriptions.ts`); Pro never skips company verification itself, only the job review step.
 - Do not use Ember (red) for anything except genuine warnings/rejections

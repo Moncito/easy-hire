@@ -18,9 +18,11 @@ export function getEmployerPageTitle(pathname: string): string {
   if (pathname === "/employer/applicants") return "Applicants";
   if (pathname.startsWith("/employer/messages")) return "Messages";
   if (pathname.match(/\/employer\/talent\/[^/]+$/)) return "Candidate profile";
+  if (pathname === "/employer/talent/lists") return "Saved lists";
   if (pathname === "/employer/talent") return "Talent search";
   if (pathname === "/employer/company-profile") return "Company profile";
   if (pathname === "/employer/reports") return "Reports";
   if (pathname === "/employer/billing") return "Billing";
+  if (pathname === "/employer/easy-ai") return "Easy AI";
   return "Employer";
 }

@@ -22,10 +22,11 @@ model User {
   updatedAt    DateTime @updatedAt @map("updated_at")
 
   // Relations
-  seekerProfile SeekerProfile?
-  company       Company?
-  notifications Notification[]
-  messagesSent  Message[]
+  seekerProfile   SeekerProfile?
+  company         Company?
+  notifications   Notification[]
+  messagesSent    Message[]
+  exportAuditLogs ExportAuditLog[]
 
   @@map("users")
 }
@@ -76,12 +77,13 @@ model SeekerProfile {
   resumes          String[]          @default([])
 
   // Relations
-  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user          User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
   applications  Application[]
   savedJobs     SavedJob[]
   jobAlerts     JobAlert[]
   conversations Conversation[]
   savedBy       SavedSeeker[]
+  savedInLists  SavedTalentListItem[]
 
   @@map("seeker_profiles")
 }
@@ -119,6 +121,10 @@ model Company {
   conversations         Conversation[]
   savedSeekers          SavedSeeker[]
   verificationDocuments VerificationDocument[]
+  aiUsageEvents         AiUsageEvent[]
+  savedTalentLists      SavedTalentList[]
+  analyticsDailyRollups AnalyticsDailyRollup[]
+  exportAuditLogs       ExportAuditLog[]
 
   @@index([verifiedStatus])
   @@map("companies")
@@ -154,27 +160,28 @@ enum VerificationStatus {
 // ============================================================================
 
 model Job {
-  id             String         @id @default(cuid())
-  companyId      String         @map("company_id")
-  title          String
-  description    String
-  requirements   String?
-  benefits       String?
-  category       String
-  industry       String?
-  employmentType EmploymentType @map("employment_type")
-  salaryMin      Int?           @map("salary_min")
-  salaryMax      Int?           @map("salary_max")
-  salaryPeriod   SalaryPeriod   @default(MONTHLY) @map("salary_period")
-  location       String
-  remoteType     RemoteType     @default(REMOTE) @map("remote_type")
-  status          JobStatus      @default(DRAFT)
-  targetHireCount Int            @default(1) @map("target_hire_count")
-  publishedAt     DateTime?      @map("published_at")
-  reviewRejectionReason String?  @map("review_rejection_reason")
-  createdAt       DateTime       @default(now()) @map("created_at")
-  updatedAt       DateTime       @updatedAt @map("updated_at")
-  expiresAt       DateTime?      @map("expires_at")
+  id                    String         @id @default(cuid())
+  companyId             String         @map("company_id")
+  title                 String
+  description           String
+  requirements          String?
+  benefits              String?
+  category              String
+  industry              String?
+  employmentType        EmploymentType @map("employment_type")
+  salaryMin             Int?           @map("salary_min")
+  salaryMax             Int?           @map("salary_max")
+  salaryPeriod          SalaryPeriod   @default(MONTHLY) @map("salary_period")
+  location              String
+  remoteType            RemoteType     @default(REMOTE) @map("remote_type")
+  status                JobStatus      @default(DRAFT)
+  targetHireCount       Int            @default(1) @map("target_hire_count")
+  publishedAt           DateTime?      @map("published_at")
+  reviewRejectionReason String?        @map("review_rejection_reason")
+  featuredUntil         DateTime?      @map("featured_until")
+  createdAt             DateTime       @default(now()) @map("created_at")
+  updatedAt             DateTime       @updatedAt @map("updated_at")
+  expiresAt             DateTime?      @map("expires_at")
 
   // Relations
   company            Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
@@ -188,6 +195,7 @@ model Job {
   @@index([industry])
   @@index([status])
   @@index([companyId, status])
+  @@index([featuredUntil])
   @@map("jobs")
 }
 
@@ -368,6 +376,7 @@ model Subscription {
   status               SubscriptionStatus
   stripeCustomerId     String?            @map("stripe_customer_id")
   stripeSubscriptionId String?            @map("stripe_subscription_id")
+  currentPeriodEnd     DateTime?          @map("current_period_end")
   createdAt            DateTime           @default(now()) @map("created_at")
   updatedAt            DateTime           @updatedAt @map("updated_at")
 
@@ -446,4 +455,112 @@ model SavedSeeker {
   @@unique([companyId, seekerId])
   @@index([companyId])
   @@map("saved_seekers")
+}
+
+// ============================================================================
+// EMPLOYER PRO — EASY AI USAGE
+// ============================================================================
+
+/**
+ * One row per Easy AI generation call — used for usage metering and rate limiting context.
+ */
+model AiUsageEvent {
+  id        String   @id @default(cuid())
+  companyId String   @map("company_id")
+  feature   String
+  tokens    Int?
+  metadata  Json?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@index([companyId, feature])
+  @@index([companyId, createdAt])
+  @@map("ai_usage_events")
+}
+
+// ============================================================================
+// EMPLOYER PRO — SAVED TALENT LISTS (Pro collections; SavedSeeker stays as
+// the simple bookmark used on Free)
+// ============================================================================
+
+model SavedTalentList {
+  id        String   @id @default(cuid())
+  companyId String   @map("company_id")
+  name      String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  company Company               @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  items   SavedTalentListItem[]
+
+  @@unique([companyId, name])
+  @@index([companyId])
+  @@map("saved_talent_lists")
+}
+
+model SavedTalentListItem {
+  id       String   @id @default(cuid())
+  listId   String   @map("list_id")
+  seekerId String   @map("seeker_id")
+  note     String?
+  addedAt  DateTime @default(now()) @map("added_at")
+
+  // Relations
+  list   SavedTalentList @relation(fields: [listId], references: [id], onDelete: Cascade)
+  seeker SeekerProfile   @relation(fields: [seekerId], references: [id], onDelete: Cascade)
+
+  @@unique([listId, seekerId])
+  @@index([listId])
+  @@index([seekerId])
+  @@map("saved_talent_list_items")
+}
+
+// ============================================================================
+// EMPLOYER PRO — ANALYTICS ROLLUPS (precomputed daily metrics for fast Reports)
+// ============================================================================
+
+model AnalyticsDailyRollup {
+  id        String   @id @default(cuid())
+  companyId String   @map("company_id")
+  date      DateTime @db.Date
+  metrics   Json
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, date])
+  @@index([companyId, date])
+  @@map("analytics_daily_rollups")
+}
+
+// ============================================================================
+// EMPLOYER PRO — EXPORT AUDIT LOG
+// ============================================================================
+
+/**
+ * Tracks who exported candidate data and when. `meta` never stores the raw
+ * export payload (which contains seeker PII) — only counts/filters used to
+ * build the export — so this log itself stays safe to retain indefinitely.
+ */
+model ExportAuditLog {
+  id        String   @id @default(cuid())
+  companyId String   @map("company_id")
+  userId    String   @map("user_id")
+  kind      String
+  meta      Json?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@index([companyId, createdAt])
+  @@map("export_audit_logs")
 }

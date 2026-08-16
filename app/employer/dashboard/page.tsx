@@ -11,6 +11,7 @@ import {
   shouldShowGettingStarted,
 } from "@/lib/employer/dashboard-sparse";
 import DashboardHero from "@/components/employer/dashboard/DashboardHero";
+import DashboardHeroPro from "@/components/employer/dashboard/DashboardHeroPro";
 import HiringScoreGauge from "@/components/employer/dashboard/HiringScoreGauge";
 import HiringFunnel from "@/components/employer/dashboard/HiringFunnel";
 import ActiveJobCards from "@/components/employer/dashboard/ActiveJobCards";
@@ -23,6 +24,7 @@ import DashboardSurface from "@/components/employer/dashboard/DashboardSurface";
 import DashboardApplicantQueue from "@/components/employer/dashboard/DashboardApplicantQueue";
 import DashboardJobPerformance from "@/components/employer/dashboard/DashboardJobPerformance";
 import WeeklyTrendChart from "@/components/employer/charts/WeeklyTrendChart";
+import { NeoSurface, NeoMetric, NeoGauge } from "@/components/employer/pro";
 import {
   getJobPerformanceRows,
   shouldShowApplicantQueue,
@@ -75,7 +77,8 @@ function VerificationBanners({
 }
 
 export default async function EmployerDashboardPage() {
-  const { company } = await requireEmployerPageContext();
+  const { company, plan } = await requireEmployerPageContext();
+  const isPro = plan === "PRO";
   const [analytics, applicantQueue] = await Promise.all([
     getEmployerAnalyticsCached(company.id),
     getDashboardApplicantQueueCached(company.id),
@@ -128,17 +131,31 @@ export default async function EmployerDashboardPage() {
         <div className="space-y-5">
           <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-3">
             <div className="space-y-4 xl:col-span-2">
-              <DashboardHero companyName={company.companyName} analytics={analytics} />
+              {isPro ? (
+                <DashboardHeroPro companyName={company.companyName} analytics={analytics} />
+              ) : (
+                <DashboardHero companyName={company.companyName} analytics={analytics} />
+              )}
               <AttentionStrip items={analytics.attentionItems} fallbackItems={onboardingItems} />
             </div>
             <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-3 xl:grid-cols-1">
-              <DashboardSurface>
-                <HiringScoreGauge
-                  score={analytics.hiringScore}
-                  percentile={analytics.scorePercentile}
-                  hint={scoreHint}
-                />
-              </DashboardSurface>
+              {isPro ? (
+                <NeoSurface variant="raised">
+                  <NeoGauge
+                    score={analytics.hiringScore}
+                    percentile={analytics.scorePercentile}
+                    hint={scoreHint}
+                  />
+                </NeoSurface>
+              ) : (
+                <DashboardSurface>
+                  <HiringScoreGauge
+                    score={analytics.hiringScore}
+                    percentile={analytics.scorePercentile}
+                    hint={scoreHint}
+                  />
+                </DashboardSurface>
+              )}
               {metricsEmpty ? (
                 <div className="sm:col-span-2 xl:col-span-1">
                   <DashboardPipelineSnapshot
@@ -146,6 +163,26 @@ export default async function EmployerDashboardPage() {
                     interviewsChange={metrics.interviewsChange}
                   />
                 </div>
+              ) : isPro ? (
+                <>
+                  <NeoMetric
+                    label="Apps today"
+                    value={metrics.appsToday}
+                    change={metrics.appsTodayChange}
+                    changeLabel="vs yesterday"
+                    sparkline={metrics.appsTodaySparkline}
+                    emptyHint="No applications yet today. Share your job posts to attract candidates."
+                  />
+                  <NeoMetric
+                    label="In interview"
+                    value={metrics.interviewsActive}
+                    change={metrics.interviewsChange}
+                    changeLabel="vs last week"
+                    sparkline={metrics.interviewsSparkline}
+                    sparklineColor="#0d2750"
+                    emptyHint="No candidates in interview stage. Review applicants to move promising ones forward."
+                  />
+                </>
               ) : (
                 <>
                   <DashboardMetricCard

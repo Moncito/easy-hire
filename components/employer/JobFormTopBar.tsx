@@ -1,5 +1,7 @@
 "use client";
 
+import InstantPublishNote from "@/components/employer/ui/InstantPublishNote";
+
 type ChecklistItem = { label: string; done: boolean };
 
 type EmploymentType = { value: string; label: string };
@@ -120,9 +122,7 @@ export default function JobFormTopBar({
         </div>
       </div>
 
-      <p className="mt-4 border-t border-ink/[0.06] pt-3 text-[11px] leading-relaxed text-ink/45">
-        Submit for review when ready. Our team approves jobs before they appear to seekers.
-      </p>
+      <InstantPublishNote />
     </div>
   );
 }

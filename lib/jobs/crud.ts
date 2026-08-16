@@ -7,6 +7,7 @@ import {
 } from "@/lib/job-status";
 import { canAutoPublishJob, publishJobLive } from "@/lib/subscriptions";
 import { invalidateEmployerWorkspace } from "@/lib/employer-cache";
+import { canCreateOrActivateJob } from "@/lib/billing/entitlements";
 
 const SUBMITTABLE_STATUSES: JobStatus[] = ["DRAFT", "PENDING_REVIEW"];
 
@@ -29,6 +30,8 @@ export async function listEmployerJobs(companyId: string) {
 }
 
 export async function createJob(companyId: string, raw: unknown) {
+  // Drafts don't occupy a soft-cap slot — the cap is enforced at submit time
+  // (see submitJobForReview) so employers can always draft freely.
   const input = jobInputSchema.parse(raw);
   const job = await prisma.job.create({
     data: {
@@ -121,6 +124,14 @@ export async function submitJobForReview(
 
   if (!job.title || !job.description || !job.category || !job.location) {
     throw new ApiError("Complete all required fields before submitting for review", 400);
+  }
+
+  // Free plan: block once a company already has FREE_ACTIVE_JOB_SOFT_CAP jobs
+  // live or pending review. Exclude this job itself so re-submitting a job
+  // that's already PENDING_REVIEW doesn't double-count against the cap.
+  const cap = await canCreateOrActivateJob(companyId, { excludeJobId: job.id });
+  if (!cap.allowed) {
+    throw new ApiError(cap.reason!, 403);
   }
 
   const autoPublish = await canAutoPublishJob(companyId);

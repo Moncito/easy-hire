@@ -18,6 +18,11 @@ type Props = {
   plan?: "FREE" | "PRO";
   navCounts: { activeJobs: number; needsReview: number; unreadMessages: number };
   children: React.ReactNode;
+  /** Pro font CSS variable classNames (Syne + Source Sans 3), wired from
+   * app/employer/layout.tsx via next/font. Applied to the workspace root so
+   * the `[data-employer-plan="pro"]` CSS scope in globals.css can use them —
+   * Free renders without these classes and never touches the fonts. */
+  proFontClassName?: string;
 };
 
 function EmployerShellInner({
@@ -27,6 +32,7 @@ function EmployerShellInner({
   plan = "FREE",
   navCounts,
   children,
+  proFontClassName = "",
 }: Props) {
   const { expanded } = useEmployerShell();
   const pathname = usePathname();
@@ -41,12 +47,13 @@ function EmployerShellInner({
 
   return (
     <div
-      className="employer-workspace flex h-screen overflow-hidden bg-mist"
+      className={`employer-workspace flex h-screen overflow-hidden bg-mist ${isPro ? proFontClassName : ""}`}
       data-employer-theme={mounted ? theme : "light"}
+      data-employer-plan={isPro ? "pro" : "free"}
       suppressHydrationWarning
     >
       <Sidebar navCounts={navCounts} plan={plan} />
-      <EmployerMobileNav />
+      <EmployerMobileNav plan={plan} />
       <div
         className={`relative flex min-w-0 flex-1 flex-col transition-[padding] duration-200 ease-out ${
           expanded ? "lg:pl-52" : "lg:pl-[60px]"
@@ -76,7 +83,7 @@ function EmployerShellInner({
 
 export default function EmployerShell(props: Props) {
   return (
-    <EmployerShellProvider>
+    <EmployerShellProvider plan={props.plan ?? "FREE"}>
       <EmployerThemeProvider>
         <EmployerShellInner {...props} />
       </EmployerThemeProvider>

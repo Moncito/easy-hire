@@ -1183,3 +1183,213 @@ backdrop-filter:blur(6px);
   }
 }
 
+/* =======================================================
+   EMPLOYER PRO — Neomorphism design system
+   Pro-only. Gated by [data-employer-plan="pro"] on the
+   `.employer-workspace` root (see EmployerShell.tsx).
+   Free keeps the Harbor teal `--ew-*` workspace above —
+   nothing in this section may leak outside the Pro scope.
+======================================================= */
+
+.employer-workspace[data-employer-plan="pro"] {
+  --neo-bg: #edf1f4;
+  --neo-surface: #edf1f4;
+  --neo-ink: #1a2332;
+  --neo-muted: #5b6b7c;
+  --neo-navy: #0d2750;
+  --neo-teal: #1f8073;
+  --neo-gold: #c9a227;
+  --neo-ember: #d9553a;
+
+  --neo-shadow-raised: -20px -20px 28px #ffffff, 20px 20px 28px rgba(13, 39, 80, 0.18);
+  --neo-shadow-raised-sm: -8px -8px 14px #ffffff, 8px 8px 14px rgba(13, 39, 80, 0.16);
+  --neo-shadow-raised-xs: -4px -4px 8px #ffffff, 4px 4px 8px rgba(13, 39, 80, 0.14);
+  --neo-shadow-inset: inset -20px -20px 28px #ffffff, inset 20px 20px 28px rgba(13, 39, 80, 0.18);
+  --neo-shadow-inset-sm: inset -8px -8px 14px #ffffff, inset 8px 8px 14px rgba(13, 39, 80, 0.16);
+
+  /* Redirect the shared workspace tokens so any component still
+     styled with `.employer-ws-*` classes automatically reskins. */
+  --ew-bg: var(--neo-bg);
+  --ew-surface: var(--neo-surface);
+  --ew-surface-solid: var(--neo-surface);
+  --ew-surface-muted: var(--neo-surface);
+  --ew-border: transparent;
+  --ew-border-subtle: transparent;
+  --ew-text: var(--neo-ink);
+  --ew-text-muted: var(--neo-muted);
+  --ew-shadow: var(--neo-shadow-raised-sm);
+
+  background-color: var(--neo-bg);
+  color: var(--neo-ink);
+}
+
+/* Dark-mode toggle still works on Pro — keep it legible with a
+   deep-navy neo variant instead of inheriting the Free dark tokens. */
+.employer-workspace[data-employer-plan="pro"][data-employer-theme="dark"] {
+  --neo-bg: #0d1420;
+  --neo-surface: #0f1826;
+  --neo-ink: #edf1f4;
+  --neo-muted: rgb(237 241 244 / 0.6);
+  --neo-shadow-raised: -16px -16px 26px rgba(255, 255, 255, 0.045), 16px 16px 26px rgba(0, 0, 0, 0.55);
+  --neo-shadow-raised-sm: -7px -7px 12px rgba(255, 255, 255, 0.04), 7px 7px 12px rgba(0, 0, 0, 0.5);
+  --neo-shadow-raised-xs: -3px -3px 6px rgba(255, 255, 255, 0.035), 3px 3px 6px rgba(0, 0, 0, 0.45);
+  --neo-shadow-inset: inset -16px -16px 26px rgba(255, 255, 255, 0.045), inset 16px 16px 26px rgba(0, 0, 0, 0.55);
+  --neo-shadow-inset-sm: inset -7px -7px 12px rgba(255, 255, 255, 0.04), inset 7px 7px 12px rgba(0, 0, 0, 0.5);
+}
+
+/* ---- Fonts (Pro only) — Syne display / Source Sans 3 body ---- */
+.employer-workspace[data-employer-plan="pro"] {
+  font-family: var(--font-source-sans, var(--font-inter)), sans-serif;
+}
+
+.employer-workspace[data-employer-plan="pro"] .font-display,
+.employer-workspace[data-employer-plan="pro"] h1,
+.employer-workspace[data-employer-plan="pro"] h2,
+.employer-workspace[data-employer-plan="pro"] h3 {
+  font-family: var(--font-syne, var(--font-space-grotesk)), sans-serif;
+}
+
+/* `.font-data` (IBM Plex Mono) is intentionally left untouched for
+   salaries, IDs and chart ticks in both Free and Pro. */
+
+/* ---- Core primitives ---- */
+.employer-workspace[data-employer-plan="pro"] .neo-surface {
+  background-color: var(--neo-surface);
+  color: var(--neo-ink);
+}
+
+.employer-workspace[data-employer-plan="pro"] .neo-raised {
+  background-color: var(--neo-surface);
+  box-shadow: var(--neo-shadow-raised);
+}
+
+.employer-workspace[data-employer-plan="pro"] .neo-raised-sm {
+  background-color: var(--neo-surface);
+  box-shadow: var(--neo-shadow-raised-sm);
+}
+
+.employer-workspace[data-employer-plan="pro"] .neo-inset {
+  background-color: var(--neo-surface);
+  box-shadow: var(--neo-shadow-inset);
+}
+
+.employer-workspace[data-employer-plan="pro"] .neo-inset-sm {
+  background-color: var(--neo-surface);
+  box-shadow: var(--neo-shadow-inset-sm);
+}
+
+.employer-workspace[data-employer-plan="pro"] .neo-raised-xs {
+  background-color: var(--neo-surface);
+  box-shadow: var(--neo-shadow-raised-xs);
+}
+
+/* Sidebar nav links: flat by default, lift to a light raised chip on hover. */
+.employer-workspace[data-employer-plan="pro"] .employer-sidebar-navlink-pro:hover {
+  box-shadow: var(--neo-shadow-raised-xs);
+}
+
+/* Press feedback: raised → inset in ~120ms, per the locked motion spec. */
+.employer-workspace[data-employer-plan="pro"] .neo-pressable {
+  transition: box-shadow 120ms ease, transform 120ms ease;
+}
+
+.employer-workspace[data-employer-plan="pro"] .neo-pressable:active {
+  box-shadow: var(--neo-shadow-inset-sm);
+  transform: translateY(1px) scale(0.997);
+}
+
+@keyframes neo-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.employer-workspace[data-employer-plan="pro"] .neo-shimmer {
+  background-image: linear-gradient(
+    90deg,
+    rgba(201, 162, 39, 0.08) 0%,
+    rgba(201, 162, 39, 0.28) 50%,
+    rgba(201, 162, 39, 0.08) 100%
+  );
+  background-size: 200% 100%;
+  animation: neo-shimmer 1.6s ease-in-out infinite;
+}
+
+/* ---- Page enter (Pro reuses the shared employer-page-enter class,
+   just documenting the intent here — no override needed). ---- */
+
+/* ---- Reskin existing surfaces without prop drilling ----
+   Mirrors the dark-mode shim pattern above: target the common
+   Tailwind utility combinations already used for "white card"
+   surfaces across Applicants / Messages / Talent / Company so Free
+   components don't need Pro-aware props. */
+.employer-workspace[data-employer-plan="pro"] .employer-ws-surface,
+.employer-workspace[data-employer-plan="pro"] .employer-ws-hero-banner {
+  border-color: transparent;
+  box-shadow: var(--neo-shadow-raised-sm);
+}
+
+.employer-workspace[data-employer-plan="pro"] .employer-ws-surface-muted {
+  box-shadow: var(--neo-shadow-inset-sm);
+}
+
+.employer-workspace[data-employer-plan="pro"] main .rounded-2xl.bg-white,
+.employer-workspace[data-employer-plan="pro"] main .rounded-2xl.bg-white\/60,
+.employer-workspace[data-employer-plan="pro"] main .rounded-2xl.bg-white\/70,
+.employer-workspace[data-employer-plan="pro"] main .rounded-2xl.bg-white\/80,
+.employer-workspace[data-employer-plan="pro"] main .rounded-2xl.bg-white\/90,
+.employer-workspace[data-employer-plan="pro"] main .rounded-lg.bg-white {
+  background-color: var(--neo-surface);
+  border-color: transparent;
+  box-shadow: var(--neo-shadow-raised-sm);
+  transition: box-shadow 200ms ease, transform 200ms ease;
+}
+
+.employer-workspace[data-employer-plan="pro"] main .rounded-2xl.bg-white:hover,
+.employer-workspace[data-employer-plan="pro"] main .rounded-lg.bg-white:hover {
+  box-shadow: var(--neo-shadow-raised);
+}
+
+/* Kanban column wells read as inset troughs; the cards inside stay raised. */
+.employer-workspace[data-employer-plan="pro"] main .kanban-column-body.bg-white\/60 {
+  background-color: var(--neo-surface);
+  border-color: transparent;
+  box-shadow: var(--neo-shadow-inset-sm);
+}
+
+/* Pro canvas — a touch more breathing room around the neo surfaces so
+   raised/inset shadows don't clip against the viewport edge. Wired via
+   the `pro` prop on EmployerPageContainer. */
+.employer-workspace[data-employer-plan="pro"] .employer-pro-canvas {
+  padding-top: 1.25rem;
+}
+
+@media (min-width: 1024px) {
+  .employer-workspace[data-employer-plan="pro"] .employer-pro-canvas {
+    padding-top: 1.75rem;
+    padding-left: 1.25rem;
+    padding-right: 1.25rem;
+  }
+}
+
+.employer-workspace[data-employer-plan="pro"] .employer-topbar {
+  background-color: var(--neo-bg);
+  border-bottom-color: transparent;
+  box-shadow: 0 10px 24px -20px rgba(13, 39, 80, 0.55);
+}
+
+.employer-workspace[data-employer-plan="pro"] main .rounded-2xl.border-dashed {
+  background-color: var(--neo-surface);
+  border-color: transparent;
+  box-shadow: var(--neo-shadow-inset-sm);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .employer-workspace[data-employer-plan="pro"] .neo-shimmer {
+    animation: none;
+  }
+
+  .employer-workspace[data-employer-plan="pro"] .neo-pressable {
+    transition: none;
+  }
+}
+

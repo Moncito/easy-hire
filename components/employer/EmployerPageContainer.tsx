@@ -61,7 +61,7 @@ export default function EmployerPageContainer({
 
   return (
     <div
-      className={`${isFixedWorkspace ? workspaceClasses : dashboard ? "px-4 py-4 pb-24 sm:px-5 lg:px-6 lg:pb-20" : jobForm || companyProfile ? "px-6 py-5 pb-0 sm:px-8" : "px-6 py-6 pb-28 sm:px-8 lg:pb-24"} ${widthClasses[width]}`}
+      className={`${isFixedWorkspace ? workspaceClasses : dashboard ? "px-4 py-4 pb-24 sm:px-5 lg:px-6 lg:pb-20" : jobForm || companyProfile ? "px-6 py-5 pb-0 sm:px-8" : "px-6 py-6 pb-28 sm:px-8 lg:pb-24"} ${widthClasses[width]} ${pro ? "employer-pro-canvas" : ""}`}
     >
       {children}
     </div>

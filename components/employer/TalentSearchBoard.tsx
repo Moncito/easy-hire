@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Search, SlidersHorizontal, Download } from "lucide-react";
+import { Search, SlidersHorizontal, Download, Bookmark } from "lucide-react";
 import { formatPesoRange } from "@/lib/format";
 import { listSavedSeekers } from "@/lib/client/saved-seekers";
 import SaveSeekerButton from "@/components/employer/SaveSeekerButton";
@@ -10,6 +10,7 @@ import MessageSeekerButton from "@/components/employer/MessageSeekerButton";
 import EmployerEmptyState from "@/components/employer/ui/EmployerEmptyState";
 import EmployerAvatar from "@/components/employer/ui/EmployerAvatar";
 import Bone from "@/components/employer/skeletons/Bone";
+import { useEmployerShell } from "@/components/employer/EmployerShellContext";
 
 type TalentItem = {
   id: string;
@@ -51,6 +52,7 @@ function TalentListSkeleton() {
 }
 
 export default function TalentSearchBoard() {
+  const { isPro } = useEmployerShell();
   const [query, setQuery] = useState("");
   const [skill, setSkill] = useState("");
   const [location, setLocation] = useState("");
@@ -122,9 +124,20 @@ export default function TalentSearchBoard() {
 
   return (
     <div>
-      <p className="mb-6 max-w-xl text-sm text-ink/50">
-        Search verified VA profiles. Save candidates or message them directly from the platform.
-      </p>
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <p className="max-w-xl text-sm text-ink/50">
+          Search verified VA profiles. Save candidates or message them directly from the platform.
+        </p>
+        {isPro && (
+          <Link
+            href="/employer/talent/lists"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-[color:var(--neo-gold)] hover:underline"
+          >
+            <Bookmark className="h-3.5 w-3.5" strokeWidth={2.25} />
+            Saved lists
+          </Link>
+        )}
+      </div>
 
       <div className="mb-4 flex flex-col gap-3 sm:flex-row">
         <div className="relative flex-1">
