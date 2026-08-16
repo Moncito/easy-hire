@@ -24,11 +24,20 @@ export async function GET() {
       canCreateOrActivateJob(company.id),
     ]);
 
+    const isVerified = company.verifiedStatus === "APPROVED";
+
     return NextResponse.json(
       {
         plan,
         canAutoPublish,
-        companyVerified: company.verifiedStatus === "APPROVED",
+        // Alias of `jobCap.allowed` — the soft cap is the only thing that
+        // can block job creation today, so this mirrors it under the name
+        // the UI reaches for at the create-job call site.
+        canCreateJob: jobCap.allowed,
+        activeJobCount: jobCap.activeJobCount,
+        softCap: FREE_ACTIVE_JOB_SOFT_CAP,
+        isVerified,
+        companyVerified: isVerified,
         activeJobSoftCap: {
           limit: FREE_ACTIVE_JOB_SOFT_CAP,
           current: jobCap.activeJobCount,

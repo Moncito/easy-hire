@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { redisGet, redisSet } from "@/lib/redis";
+import { isEmployerPro } from "@/lib/billing/subscriptions";
+import { ApiError } from "@/lib/api-error";
 
 /** Cache the assembled range summary for a short window — Pro reports poll fairly often. */
 const ROLLUP_CACHE_TTL_SECONDS = 120;
@@ -162,4 +164,25 @@ export async function getAnalyticsRange(
   const summary: RollupRangeSummary = { days, totals };
   await redisSet(cacheKey, summary, ROLLUP_CACHE_TTL_SECONDS);
   return summary;
+}
+
+/**
+ * Thin Pro gate in front of `getAnalyticsRange` — custom Reports date ranges
+ * read from the precomputed rollup table and are an Employer Pro perk, so
+ * `GET /api/employer/analytics` calls this instead of the unguarded range
+ * reader whenever a caller passes `from`/`to`.
+ */
+export async function getAnalyticsRangeForPro(
+  companyId: string,
+  from: Date,
+  to: Date
+): Promise<RollupRangeSummary> {
+  const pro = await isEmployerPro(companyId);
+  if (!pro) {
+    throw new ApiError(
+      "Custom date range reports are an Employer Pro feature. Upgrade to analyze any date range.",
+      403
+    );
+  }
+  return getAnalyticsRange(companyId, from, to);
 }
