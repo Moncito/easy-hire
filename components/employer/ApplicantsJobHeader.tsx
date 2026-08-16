@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ArrowLeft, ExternalLink, Pencil } from "lucide-react";
 import EmployerPipelineBar from "@/components/employer/ui/EmployerPipelineBar";
+import ExportCsvLink from "@/components/employer/ui/ExportCsvLink";
 import {
   formatJobSubtitle,
   jobStatusDisplay,
@@ -79,6 +80,7 @@ export default function ApplicantsJobHeader({
           Back to jobs
         </Link>
         <div className="flex flex-wrap items-center gap-2">
+          <ExportCsvLink jobId={job.id} label="Export applicants" />
           {showPublicLink && (
             <Link
               href={`/jobs/${job.id}`}
