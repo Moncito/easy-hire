@@ -3,10 +3,11 @@ import Link from "next/link";
 import { Check, Tag } from "lucide-react";
 import LegalPageShell, { Section } from "@/components/legal/LegalPageShell";
 import PlanComparisonTable from "@/components/pricing/PlanComparisonTable";
+import { isStripeCheckoutEnabled } from "@/lib/billing/plan-comparison";
 
 export const metadata: Metadata = {
   title: "Pricing — EasyHire",
-  description: "EasyHire is free during MVP. See what's included and what's coming.",
+  description: "EasyHire is free during MVP. See what's included, and what Employer Pro adds.",
 };
 
 const included = [
@@ -18,12 +19,20 @@ const included = [
   "Never charge job seekers — ever",
 ];
 
-const comingSoon = [
-  { name: "Featured job placement", desc: "Priority visibility in search results" },
-  { name: "AI hiring assistant", desc: "Candidate ranking and explainability — never auto-reject" },
+const employerProFeatures = [
+  { name: "Instant job publishing", desc: "Skip the admin review queue once your company is verified" },
+  { name: "Featured job placement", desc: "Priority visibility in search results for 30 days" },
+  { name: "Easy AI hiring assistant", desc: "JD drafts, candidate ranking, interview kits, outreach drafts — never auto-reject" },
+  { name: "Advanced analytics & reports", desc: "Day-by-day trends and per-job performance breakdowns" },
+  { name: "Candidate CSV exports", desc: "Export your applicant pipeline for offline review" },
+  { name: "Saved talent lists", desc: "Organize candidates into named shortlists across roles" },
 ];
 
 export default function PricingPage() {
+  const checkoutEnabled = isStripeCheckoutEnabled();
+  const proPrice = checkoutEnabled ? "Employer Pro" : "Early access";
+  const proPriceDetail = checkoutEnabled ? "Monthly billing via Stripe" : "Checkout opening soon";
+
   return (
     <LegalPageShell
       title="Pricing"
@@ -56,33 +65,39 @@ export default function PricingPage() {
         className="!shadow-xs"
         freePrice="₱0"
         freePriceDetail="Free during MVP validation"
-        proPrice="After validation"
-        proPriceDetail="Optional paid tier for power employers"
-        showRecommendedBadge={false}
+        proPrice={proPrice}
+        proPriceDetail={proPriceDetail}
+        showRecommendedBadge
         footer={
           <p className="text-xs leading-relaxed text-ink/50">
-            Basic posting and messaging stay free. Employer Pro adds instant publishing and advanced
-            tools once we exit MVP validation.
+            Basic posting, messaging, and the full applicant pipeline stay free — forever. Employer
+            Pro is an optional upgrade for teams hiring at volume.
           </p>
         }
       />
 
-      <Section title="Coming after validation">
+      <Section title="What Employer Pro adds">
         <p className="text-ink/55">
-          Once we have proven hire outcomes and platform liquidity, we will introduce optional
-          paid features. Basic posting and messaging will remain free.
+          Free covers everything you need to hire. Employer Pro layers on speed and scale for teams
+          posting multiple roles at once — including Easy AI, our human-in-the-loop hiring assistant.
         </p>
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
-          {comingSoon.map((item) => (
-            <div key={item.name} className="rounded-xl border border-ink/8 bg-white p-4 shadow-xs">
+          {employerProFeatures.map((item) => (
+            <div key={item.name} className="rounded-xl border border-teal/15 bg-teal/[0.03] p-4 shadow-xs">
               <p className="font-semibold text-ink">{item.name}</p>
               <p className="mt-1 text-xs text-ink/50">{item.desc}</p>
-              <span className="mt-3 inline-block rounded-md bg-ink/5 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-ink/40">
-                Coming soon
+              <span className="mt-3 inline-block rounded-md bg-teal/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-teal">
+                Employer Pro
               </span>
             </div>
           ))}
         </div>
+        <Link
+          href="/employer/billing"
+          className="mt-5 inline-block rounded-xl bg-teal px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-teal/95"
+        >
+          View Employer Pro
+        </Link>
       </Section>
 
       <Section title="For job seekers">
