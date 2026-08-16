@@ -9,6 +9,7 @@ import {
   Camera,
   Globe,
   Share2,
+  Sparkles,
 } from "lucide-react";
 import CompanyProfileTopBar from "@/components/employer/CompanyProfileTopBar";
 import CompanyVerificationBanner from "@/components/employer/CompanyVerificationBanner";
@@ -18,6 +19,9 @@ import EmployerFormSelect from "@/components/employer/ui/EmployerFormSelect";
 import VerificationDocumentsPanel, {
   type VerificationDoc,
 } from "@/components/employer/VerificationDocumentsPanel";
+import { useEmployerShell } from "@/components/employer/EmployerShellContext";
+import { useEasyAi } from "@/components/employer/pro/useEasyAi";
+import ProBadge from "@/components/employer/pro/ProBadge";
 
 const industryOptions = [
   "E-commerce",
@@ -162,6 +166,8 @@ export default function CompanyProfileEditor({
   verificationDocuments = [],
 }: Props) {
   const router = useRouter();
+  const { isPro } = useEmployerShell();
+  const { run, isLoading } = useEasyAi();
   const logoInputRef = useRef<HTMLInputElement>(null);
   const bannerInputRef = useRef<HTMLInputElement>(null);
   const [logoUrl, setLogoUrl] = useState(initialData.logoUrl);
@@ -226,6 +232,25 @@ export default function CompanyProfileEditor({
         .slice(0, 2)
         .toUpperCase()
     : "CO";
+
+  async function handleRewriteAbout() {
+    const result = await run<{ description: string; highlights: string[] }>("company-brand", {
+      companyName: form.companyName || "This company",
+      industry: form.industry || undefined,
+      existingDescription: form.description || undefined,
+      highlights: form.highlights.length > 0 ? form.highlights : undefined,
+    });
+    if (!result?.configured || !result.data) return;
+
+    updateField("description", result.data.description.slice(0, MAX_DESCRIPTION_LENGTH));
+    if (result.data.highlights.length > 0) {
+      setForm((prev) => ({
+        ...prev,
+        highlights: Array.from(new Set([...prev.highlights, ...result.data!.highlights])),
+      }));
+      setSaved(false);
+    }
+  }
 
   function updateField<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -609,6 +634,27 @@ export default function CompanyProfileEditor({
             title="About company"
             description="Tell candidates about your culture, mission, values, and what makes your company unique."
           >
+            {isPro && (
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-teal/15 bg-teal/[0.04] px-3.5 py-2.5">
+                <div className="flex items-center gap-2 text-xs text-ink/60">
+                  <Sparkles className="h-3.5 w-3.5 shrink-0 text-amber-500" aria-hidden="true" />
+                  <span>Let Easy AI draft or rewrite your About copy from what&apos;s here.</span>
+                  <ProBadge size="sm" />
+                </div>
+                <button
+                  type="button"
+                  onClick={handleRewriteAbout}
+                  disabled={isLoading("company-brand")}
+                  className="shrink-0 rounded-lg bg-teal px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-teal/95 disabled:opacity-60"
+                >
+                  {isLoading("company-brand")
+                    ? "Writing…"
+                    : form.description
+                      ? "Rewrite About"
+                      : "Draft with Easy AI"}
+                </button>
+              </div>
+            )}
             <textarea
               id="description"
               value={form.description}
