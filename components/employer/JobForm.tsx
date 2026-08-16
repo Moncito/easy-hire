@@ -5,6 +5,8 @@ import { HelpCircle, MapPin, Plus, Trash2 } from "lucide-react";
 import RichTextEditor from "@/components/ui/RichTextEditor";
 import EmployerActionBar from "@/components/employer/EmployerActionBar";
 import JobFormTopBar from "@/components/employer/JobFormTopBar";
+import EasyAiJobCopyPanel from "@/components/employer/EasyAiJobCopyPanel";
+import JobSoftCapBanner from "@/components/employer/ui/JobSoftCapBanner";
 import EmployerFormSection from "@/components/employer/ui/EmployerFormSection";
 import EmployerFormSelect from "@/components/employer/ui/EmployerFormSelect";
 import { INDUSTRIES, ROLE_TYPES } from "@/lib/constants/job-categories";
@@ -163,6 +165,26 @@ export default function JobForm({ initialData, loading, onSubmit }: Props) {
           {error}
         </div>
       )}
+
+      <JobSoftCapBanner />
+
+      <EasyAiJobCopyPanel
+        title={title}
+        category={category}
+        industry={industry}
+        employmentType={employmentType}
+        remoteType={remoteType}
+        location={location}
+        description={description}
+        requirements={requirements}
+        benefits={benefits}
+        onApply={(result) => {
+          setTitle(result.title);
+          setDescription(result.description);
+          setRequirements(result.requirements);
+          setBenefits(result.benefits);
+        }}
+      />
 
       <JobFormTopBar
         title={title}

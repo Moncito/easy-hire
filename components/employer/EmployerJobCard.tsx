@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import {
   Pencil,
@@ -9,7 +10,9 @@ import {
   XCircle,
   ExternalLink,
   Clock,
+  Star,
 } from "lucide-react";
+import { toast } from "sonner";
 import type { EmployerJobCardData } from "@/lib/employer-jobs";
 import {
   jobStatusDisplay,
@@ -18,6 +21,8 @@ import {
   canViewPublicListing,
 } from "@/lib/employer-jobs";
 import EmployerPipelineBar from "@/components/employer/ui/EmployerPipelineBar";
+import { useEmployerShell } from "@/components/employer/EmployerShellContext";
+import { fetchJsonSafe } from "@/lib/client/fetch-json";
 
 type Props = {
   job: EmployerJobCardData;
@@ -73,6 +78,12 @@ export default function EmployerJobCard({
   onClose,
   loading,
 }: Props) {
+  const { isPro } = useEmployerShell();
+  // NOTE: EmployerJobCardData doesn't expose `featuredUntil` yet, so this
+  // only reflects toggles made this session — it resets to unfeatured on
+  // reload until that field is added to the jobs-board query.
+  const [featured, setFeatured] = useState(false);
+  const [featureLoading, setFeatureLoading] = useState(false);
   const status = jobStatusDisplay(job, companyVerified);
   const primaryAction = getJobPrimaryAction(job, companyVerified);
   const ResolvedPrimaryIcon =
@@ -91,6 +102,21 @@ export default function EmployerJobCard({
   const showPublicLink = canViewPublicListing(job, companyVerified);
   const canClose =
     onClose && job.status !== "CLOSED" && job.status !== "PENDING_REVIEW";
+  const canFeature = isPro && job.status === "ACTIVE";
+
+  async function handleToggleFeatured() {
+    if (featureLoading) return;
+    setFeatureLoading(true);
+    const method = featured ? "DELETE" : "POST";
+    const result = await fetchJsonSafe(`/api/jobs/${job.id}/feature`, { method });
+    if (result.ok) {
+      setFeatured(!featured);
+      toast.success(featured ? "Removed from featured placement" : "Job featured for 30 days");
+    } else {
+      toast.error(result.error ?? "Could not update featured status");
+    }
+    setFeatureLoading(false);
+  }
 
   const updatedLabel = new Date(job.updatedAt).toLocaleDateString(undefined, {
     month: "short",
@@ -130,6 +156,14 @@ export default function EmployerJobCard({
       label: "Duplicate",
     });
   }
+  if (canFeature) {
+    secondaryActions.push({
+      key: "feature",
+      onClick: handleToggleFeatured,
+      icon: Star,
+      label: featureLoading ? "Updating…" : featured ? "Remove featured" : "Feature job",
+    });
+  }
   if (canClose) {
     secondaryActions.push({
       key: "close",
@@ -156,11 +190,19 @@ export default function EmployerJobCard({
           </Link>
           <p className="mt-1 text-xs leading-relaxed text-ink/50">{formatJobSubtitle(job)}</p>
         </div>
-        <span
-          className={`shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider ${status.className}`}
-        >
-          {status.label}
-        </span>
+        <div className="flex shrink-0 flex-col items-end gap-1">
+          <span
+            className={`rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider ${status.className}`}
+          >
+            {status.label}
+          </span>
+          {canFeature && featured && (
+            <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/25 bg-amber-500/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-700">
+              <Star className="h-2.5 w-2.5 fill-current" strokeWidth={0} />
+              Featured
+            </span>
+          )}
+        </div>
       </div>
 
       <div className="mt-4 flex gap-5 border-b border-ink/5 pb-4 text-xs">
