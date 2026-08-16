@@ -13,9 +13,10 @@ import ReportsSparseBoard from "@/components/employer/reports/ReportsSparseBoard
 import ReportsDenseBoard, {
   ReportsPageHeader,
 } from "@/components/employer/reports/ReportsDenseBoard";
+import ReportsDenseUpgradeBoard from "@/components/employer/reports/ReportsDenseUpgradeBoard";
 
 export default async function EmployerReportsPage() {
-  const { company } = await requireEmployerPageContext();
+  const { company, plan } = await requireEmployerPageContext();
   const analytics = await getEmployerAnalyticsCached(company.id);
 
   const sparse = isSparseReports(analytics);
@@ -28,7 +29,7 @@ export default async function EmployerReportsPage() {
       <ReportsPageHeader />
       {sparse ? (
         <ReportsSparseBoard analytics={analytics} scoreHint={scoreHint} />
-      ) : (
+      ) : plan === "PRO" ? (
         <ReportsDenseBoard
           analytics={analytics}
           chartData={chartData}
@@ -36,6 +37,8 @@ export default async function EmployerReportsPage() {
           metricsEmpty={metricsEmpty}
           sparse={isSparseDashboard(analytics)}
         />
+      ) : (
+        <ReportsDenseUpgradeBoard analytics={analytics} />
       )}
     </>
   );

@@ -6,6 +6,7 @@ import DashboardCommandRail from "@/components/employer/dashboard/DashboardComma
 import DashboardJobPerformance from "@/components/employer/dashboard/DashboardJobPerformance";
 import WeeklyTrendChart from "@/components/employer/charts/WeeklyTrendChart";
 import ReportsMetricStrip from "@/components/employer/reports/ReportsMetricStrip";
+import ReportsAiInsightsPanel from "@/components/employer/reports/ReportsAiInsightsPanel";
 import {
   getJobPerformanceRows,
   shouldShowJobPerformance,
@@ -32,6 +33,7 @@ export default function ReportsDenseBoard({
   return (
     <div className="space-y-4">
       <ReportsMetricStrip analytics={analytics} />
+      <ReportsAiInsightsPanel />
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_340px] 2xl:grid-cols-[minmax(0,1fr)_380px]">
         <div className="min-w-0 space-y-4">
