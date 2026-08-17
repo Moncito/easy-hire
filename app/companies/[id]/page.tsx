@@ -149,7 +149,7 @@ export default async function CompanyPage({ params }: { params: Promise<{ id: st
                 </span>
               </h2>
               <p className="mt-1 text-sm text-ink/45">
-                Direct applications — no middlemen, guaranteed PHP pay ranges where listed.
+                Direct applications — no middlemen, guaranteed USD pay ranges where listed.
               </p>
             </div>
             <Link

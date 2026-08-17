@@ -4,7 +4,6 @@ import CompanyProfileEditor from "@/components/employer/CompanyProfileEditor";
 import { requireEmployerPageContext } from "@/lib/employer-session";
 import { getEmployerCompanyProfile } from "@/lib/companies";
 import ProPageHeader from "@/components/employer/pro-dashboard/ProPageHeader";
-import ProCompanyPerkStrip from "@/components/employer/pro-dashboard/ProCompanyPerkStrip";
 import ProButton from "@/components/employer/pro/ProButton";
 import EmployerPageHeader from "@/components/employer/ui/EmployerPageHeader";
 
@@ -82,10 +81,6 @@ export default async function CompanyProfilePage() {
                 </ProButton>
               </>
             }
-          />
-          <ProCompanyPerkStrip
-            companyVerified={verified}
-            publicHref={`/companies/${company.id}`}
           />
         </>
       ) : (

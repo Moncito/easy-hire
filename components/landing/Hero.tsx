@@ -23,7 +23,7 @@ const CARDS = [
             Verified
           </span>
         </div>
-        <p className="font-data text-[12px] text-ink/70">₱45,000 / mo</p>
+        <p className="font-data text-[12px] text-ink/70">$800 / mo</p>
         <p className="text-[11px] text-ink/50">Remote · Full-time</p>
       </div>
     ),
@@ -48,7 +48,7 @@ const CARDS = [
     content: (
       <div className="flex flex-col gap-1">
         <p className="text-[10px] font-medium text-ink/50 uppercase tracking-wider">Avg. monthly</p>
-        <p className="font-data text-lg font-bold text-marigold">₱38,500</p>
+        <p className="font-data text-lg font-bold text-marigold">$680</p>
         <div className="flex items-center gap-1 text-teal">
           <TrendingUp className="h-3 w-3" />
           <span className="text-[10px] font-semibold">+12% this quarter</span>

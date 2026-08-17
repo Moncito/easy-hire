@@ -4,6 +4,8 @@ import { useState } from "react";
 import KanbanColumn from "./KanbanColumn";
 import KanbanBoardEmptyState from "./KanbanBoardEmptyState";
 import { ChevronDown, ChevronUp } from "lucide-react";
+import { useEmployerShell } from "@/components/employer/EmployerShellContext";
+import { PRO_STAGE_DOT } from "@/components/employer/pipeline-stage-styles";
 
 type Application = {
   id: string;
@@ -81,6 +83,7 @@ export default function KanbanBoard({
   activeStage,
   focusedApplicationId = null,
 }: Props) {
+  const { isPro } = useEmployerShell();
   const [showRejected, setShowRejected] = useState(false);
   const isEmpty = applications.length === 0;
 
@@ -110,7 +113,7 @@ export default function KanbanBoard({
             status={col.status}
             title={col.title}
             emptyHint={col.emptyHint}
-            dotClass={col.dotClass}
+            dotClass={isPro ? (PRO_STAGE_DOT[col.status] ?? col.dotClass) : col.dotClass}
             highlighted={activeStage === col.status}
             applications={applications.filter((app) => app.status === col.status)}
             onCardClick={onCardClick}
@@ -128,7 +131,12 @@ export default function KanbanBoard({
             className="mb-2.5 flex w-full items-center justify-between rounded-lg px-0.5 py-1.5 text-left transition-colors hover:bg-ink/[0.03]"
           >
             <div className="flex items-center gap-2">
-              <span className={`h-2 w-2 rounded-full ${rejectedColumn.dotClass}`} aria-hidden="true" />
+              <span
+                className={`h-2 w-2 rounded-full ${
+                  isPro ? (PRO_STAGE_DOT.REJECTED ?? rejectedColumn.dotClass) : rejectedColumn.dotClass
+                }`}
+                aria-hidden="true"
+              />
               <span className="text-xs font-semibold uppercase tracking-wide text-ink/55">
                 {rejectedColumn.title}
               </span>
@@ -149,7 +157,7 @@ export default function KanbanBoard({
               status={rejectedColumn.status}
               title={rejectedColumn.title}
               emptyHint={rejectedColumn.emptyHint}
-              dotClass={rejectedColumn.dotClass}
+              dotClass={isPro ? (PRO_STAGE_DOT.REJECTED ?? rejectedColumn.dotClass) : rejectedColumn.dotClass}
               highlighted={activeStage === "REJECTED"}
               applications={rejectedApps}
               onCardClick={onCardClick}

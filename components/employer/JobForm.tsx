@@ -11,6 +11,7 @@ import EasyAiScreeningPanel from "@/components/employer/EasyAiScreeningPanel";
 import JobSoftCapBanner from "@/components/employer/ui/JobSoftCapBanner";
 import EmployerFormSection from "@/components/employer/ui/EmployerFormSection";
 import EmployerFormSelect from "@/components/employer/ui/EmployerFormSelect";
+import ProButton from "@/components/employer/pro/ProButton";
 import { INDUSTRIES, ROLE_TYPES } from "@/lib/constants/job-categories";
 import { periodSuffix, type SalaryPeriod } from "@/lib/format";
 
@@ -144,11 +145,26 @@ export default function JobForm({ initialData, loading, onSubmit }: Props) {
   }
 
   const chipClass = (selected: boolean) =>
-    `rounded-lg border px-3 py-1.5 text-xs font-medium transition-all ${
+    `cursor-pointer rounded-lg border px-3 py-1.5 text-xs font-medium transition-all ${
       selected
-        ? "border-teal bg-teal text-white shadow-xs"
-        : "border-ink/10 text-ink/75 hover:border-teal/30 hover:bg-teal/5"
+        ? isPro
+          ? "border-ink bg-ink text-mist shadow-xs"
+          : "border-teal bg-teal text-white shadow-xs"
+        : isPro
+          ? "border-ink/10 text-ink/75 hover:border-ink/25 hover:bg-ink/5"
+          : "border-ink/10 text-ink/75 hover:border-teal/30 hover:bg-teal/5"
     }`;
+
+  const fieldFocus = isPro
+    ? "focus:border-ink/25"
+    : "focus:border-teal";
+
+  const salaryPlaceholders =
+    salaryPeriod === "HOURLY"
+      ? { min: "8", max: "15" }
+      : salaryPeriod === "ANNUAL"
+        ? { min: "12000", max: "24000" }
+        : { min: "800", max: "1500" };
 
   const checklist = [
     { label: "Job title", done: !!title.trim() },
@@ -162,7 +178,7 @@ export default function JobForm({ initialData, loading, onSubmit }: Props) {
   const industryOptions = INDUSTRIES.map((ind) => ({ value: ind.label, label: ind.label }));
 
   return (
-    <div>
+    <div className={isPro ? "pb-10 sm:pb-12" : undefined}>
       {error && (
         <div className="mb-4 rounded-xl border border-ember/20 bg-ember/5 px-4 py-3 text-sm text-ember">
           {error}
@@ -254,6 +270,7 @@ export default function JobForm({ initialData, loading, onSubmit }: Props) {
               value={description}
               onChange={setDescription}
               minHeight="220px"
+              accent={isPro ? "ink" : "teal"}
               placeholder="Describe the role responsibilities, team context, and day-to-day work..."
             />
           </EmployerFormSection>
@@ -266,6 +283,7 @@ export default function JobForm({ initialData, loading, onSubmit }: Props) {
               value={requirements}
               onChange={setRequirements}
               minHeight="160px"
+              accent={isPro ? "ink" : "teal"}
               placeholder="e.g. 2+ years VA experience, fluent English, HubSpot..."
             />
           </EmployerFormSection>
@@ -278,13 +296,14 @@ export default function JobForm({ initialData, loading, onSubmit }: Props) {
               value={benefits}
               onChange={setBenefits}
               minHeight="160px"
+              accent={isPro ? "ink" : "teal"}
               placeholder="e.g. Paid training, equipment provided, flexible schedule..."
             />
           </EmployerFormSection>
 
           <EmployerFormSection
             title="Compensation"
-            description="Set an expected salary range in Philippine Peso (PHP) and how it's paid out."
+            description="Set an expected salary range in US dollars (USD) and how it's paid out."
           >
             <div className="mb-3">
               <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-ink/40">Pay period</p>
@@ -304,26 +323,26 @@ export default function JobForm({ initialData, loading, onSubmit }: Props) {
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
                 <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-ink/45">
-                  Minimum (PHP{periodSuffix(salaryPeriod)})
+                  Minimum (USD{periodSuffix(salaryPeriod)})
                 </label>
                 <input
                   type="number"
                   value={salaryMin}
                   onChange={(e) => setSalaryMin(e.target.value)}
-                  placeholder="20000"
-                  className="w-full rounded-xl border border-ink/10 px-3 py-2.5 font-data text-sm text-ink outline-none focus:border-teal"
+                  placeholder={salaryPlaceholders.min}
+                  className={`w-full rounded-xl border border-ink/10 px-3 py-2.5 font-data text-sm text-ink outline-none ${fieldFocus}`}
                 />
               </div>
               <div>
                 <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-ink/45">
-                  Maximum (PHP{periodSuffix(salaryPeriod)})
+                  Maximum (USD{periodSuffix(salaryPeriod)})
                 </label>
                 <input
                   type="number"
                   value={salaryMax}
                   onChange={(e) => setSalaryMax(e.target.value)}
-                  placeholder="35000"
-                  className="w-full rounded-xl border border-ink/10 px-3 py-2.5 font-data text-sm text-ink outline-none focus:border-teal"
+                  placeholder={salaryPlaceholders.max}
+                  className={`w-full rounded-xl border border-ink/10 px-3 py-2.5 font-data text-sm text-ink outline-none ${fieldFocus}`}
                 />
               </div>
             </div>
@@ -341,7 +360,7 @@ export default function JobForm({ initialData, loading, onSubmit }: Props) {
                   value={location}
                   onChange={(e) => setLocation(e.target.value)}
                   placeholder="e.g. Philippines (Remote)"
-                  className="w-full rounded-xl border border-ink/10 bg-white py-2.5 pl-9 pr-4 text-sm text-ink outline-none focus:border-teal"
+                  className={`w-full rounded-xl border border-ink/10 bg-white py-2.5 pl-9 pr-4 text-sm text-ink outline-none ${fieldFocus}`}
                 />
               </div>
               <div>
@@ -390,7 +409,7 @@ export default function JobForm({ initialData, loading, onSubmit }: Props) {
                     <button
                       type="button"
                       onClick={() => removeScreeningQuestion(index)}
-                      className="rounded-lg p-1.5 text-ink/35 transition hover:bg-ember/5 hover:text-ember"
+                      className="cursor-pointer rounded-lg p-1.5 text-ink/35 transition hover:bg-ember/5 hover:text-ember"
                       aria-label={`Remove question ${index + 1}`}
                     >
                       <Trash2 className="h-3.5 w-3.5" />
@@ -402,7 +421,7 @@ export default function JobForm({ initialData, loading, onSubmit }: Props) {
                     rows={2}
                     maxLength={300}
                     placeholder="e.g. What timezone do you work in?"
-                    className="w-full rounded-xl border border-ink/10 bg-white px-3 py-2 text-sm text-ink outline-none focus:border-teal"
+                    className={`w-full rounded-xl border border-ink/10 bg-white px-3 py-2 text-sm text-ink outline-none ${fieldFocus}`}
                   />
                   <div className="mt-2 flex items-center justify-between">
                     <label className="flex cursor-pointer items-center gap-2 text-xs text-ink/60">
@@ -412,7 +431,7 @@ export default function JobForm({ initialData, loading, onSubmit }: Props) {
                         onChange={(e) =>
                           updateScreeningQuestion(index, { required: e.target.checked })
                         }
-                        className="rounded border-ink/20 text-teal focus:ring-teal"
+                        className={`rounded border-ink/20 ${isPro ? "text-ink focus:ring-ink/20" : "text-teal focus:ring-teal"}`}
                       />
                       Required
                     </label>
@@ -427,7 +446,11 @@ export default function JobForm({ initialData, loading, onSubmit }: Props) {
                 <button
                   type="button"
                   onClick={addScreeningQuestion}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-ink/15 px-3 py-2.5 text-xs font-semibold text-ink/60 transition hover:border-teal/40 hover:bg-teal/5 hover:text-teal"
+                  className={`flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed px-3 py-2.5 text-xs font-semibold transition ${
+                    isPro
+                      ? "border-ink/15 text-ink/60 hover:border-ink/30 hover:bg-ink/5 hover:text-ink"
+                      : "border-ink/15 text-ink/60 hover:border-teal/40 hover:bg-teal/5 hover:text-teal"
+                  }`}
                 >
                   <Plus className="h-3.5 w-3.5" />
                   Add question ({screeningQuestions.length}/{MAX_SCREENING_QUESTIONS})
@@ -444,9 +467,13 @@ export default function JobForm({ initialData, loading, onSubmit }: Props) {
       <EmployerActionBar>
         <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           {isPro ? (
-              <span className="flex items-center gap-1.5 text-xs text-teal/70">
-                <Zap className="h-4 w-4 shrink-0" aria-hidden="true" />
-                Verified Pro companies publish instantly — no admin queue
+              <span className="inline-flex max-w-full items-center gap-2 rounded-full bg-mist px-3 py-1.5 text-xs text-ink/55 ring-1 ring-ink/[0.06]">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-marigold/20 text-[#9A5B12]">
+                  <Zap className="h-3.5 w-3.5" aria-hidden="true" />
+                </span>
+                <span className="min-w-0 truncate">
+                  Verified Pro companies publish instantly — no admin queue
+                </span>
               </span>
             ) : (
               <span className="flex items-center gap-1.5 text-xs text-ink/40">
@@ -454,11 +481,24 @@ export default function JobForm({ initialData, loading, onSubmit }: Props) {
                 Jobs are reviewed before going live
               </span>
             )}
+          {isPro ? (
+            <div className="flex flex-wrap gap-2.5">
+              <ProButton type="button" variant="ghost" onClick={() => window.history.back()}>
+                Cancel
+              </ProButton>
+              <ProButton type="button" variant="secondary" disabled={loading} onClick={() => handleAction("draft")}>
+                {loading ? "Saving..." : "Save draft"}
+              </ProButton>
+              <ProButton type="button" variant="primary" disabled={loading} onClick={() => handleAction("submit")}>
+                {loading ? "Submitting..." : "Submit for review"}
+              </ProButton>
+            </div>
+          ) : (
           <div className="flex flex-wrap gap-3">
             <button
               type="button"
               onClick={() => window.history.back()}
-              className="rounded-xl border border-ink/10 px-5 py-2.5 text-sm font-semibold text-ink/75 transition-colors hover:bg-ink/5"
+              className="cursor-pointer rounded-xl border border-ink/10 px-5 py-2.5 text-sm font-semibold text-ink/75 transition-colors hover:bg-ink/5"
             >
               Cancel
             </button>
@@ -466,7 +506,7 @@ export default function JobForm({ initialData, loading, onSubmit }: Props) {
               type="button"
               disabled={loading}
               onClick={() => handleAction("draft")}
-              className="rounded-xl border border-ink/10 px-5 py-2.5 text-sm font-semibold text-ink transition-colors hover:bg-ink/5 disabled:opacity-60"
+              className="cursor-pointer rounded-xl border border-ink/10 px-5 py-2.5 text-sm font-semibold text-ink transition-colors hover:bg-ink/5 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {loading ? "Saving..." : "Save draft"}
             </button>
@@ -474,11 +514,12 @@ export default function JobForm({ initialData, loading, onSubmit }: Props) {
               type="button"
               disabled={loading}
               onClick={() => handleAction("submit")}
-              className="rounded-xl bg-teal px-6 py-2.5 text-sm font-semibold text-white shadow-sm shadow-teal/15 transition-all hover:bg-teal/95 disabled:opacity-60"
+              className="cursor-pointer rounded-xl bg-teal px-6 py-2.5 text-sm font-semibold text-white shadow-sm shadow-teal/15 transition-all hover:bg-teal/95 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {loading ? "Submitting..." : "Submit for review"}
             </button>
           </div>
+          )}
         </div>
       </EmployerActionBar>
     </div>

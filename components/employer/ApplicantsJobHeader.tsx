@@ -10,6 +10,8 @@ import {
   jobStatusDisplay,
   canViewPublicListing,
 } from "@/lib/employer-jobs";
+import { useEmployerShell } from "@/components/employer/EmployerShellContext";
+import { PRO_STAGE_CHIP_ACTIVE, PRO_STAGE_DOT } from "@/components/employer/pipeline-stage-styles";
 
 export type ApplicantsJobSummary = {
   id: string;
@@ -61,6 +63,7 @@ export default function ApplicantsJobHeader({
   onStageSelect,
   toolbar,
 }: Props) {
+  const { isPro } = useEmployerShell();
   const posted = new Date(job.createdAt).toLocaleDateString(undefined, {
     month: "short",
     day: "numeric",
@@ -75,7 +78,9 @@ export default function ApplicantsJobHeader({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Link
           href="/employer/jobs"
-          className="inline-flex items-center gap-1.5 text-sm font-medium text-ink/50 transition-colors hover:text-teal"
+          className={`inline-flex items-center gap-1.5 text-sm font-medium transition-colors ${
+            isPro ? "text-ink/50 hover:text-ink" : "text-ink/50 hover:text-teal"
+          }`}
         >
           <ArrowLeft className="h-4 w-4" aria-hidden="true" />
           Back to jobs
@@ -88,7 +93,9 @@ export default function ApplicantsJobHeader({
               href={`/jobs/${job.id}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 rounded-xl border border-ink/10 bg-white px-3 py-2 text-xs font-semibold text-ink/70 transition-colors hover:border-ink/20 hover:text-teal"
+              className={`inline-flex items-center gap-1.5 rounded-xl border border-ink/10 bg-white px-3 py-2 text-xs font-semibold text-ink/70 transition-colors hover:border-ink/20 ${
+                isPro ? "hover:text-ink" : "hover:text-teal"
+              }`}
             >
               <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
               View listing
@@ -140,6 +147,7 @@ export default function ApplicantsJobHeader({
               Pipeline overview
             </p>
             <EmployerPipelineBar
+              variant={isPro ? "pro" : "free"}
               applied={pipeline.applied}
               shortlisted={pipeline.shortlisted}
               interview={pipeline.interview}
@@ -161,11 +169,18 @@ export default function ApplicantsJobHeader({
                 onClick={() => onStageSelect(stage.key)}
                 className={`inline-flex items-center gap-2 rounded-xl border px-3 py-1.5 text-[11px] font-semibold transition ${
                   isActive
-                    ? "border-teal/25 bg-teal/8 text-teal"
+                    ? isPro
+                      ? (PRO_STAGE_CHIP_ACTIVE[stage.key] ?? "border-ink/20 bg-ink/5 text-ink")
+                      : "border-teal/25 bg-teal/8 text-teal"
                     : "border-ink/8 bg-white text-ink/65 hover:border-ink/15 hover:bg-ink/[0.02]"
                 }`}
               >
-                <span className={`h-1.5 w-1.5 rounded-full ${stage.dotClass}`} aria-hidden="true" />
+                <span
+                  className={`h-1.5 w-1.5 rounded-full ${
+                    isPro ? (PRO_STAGE_DOT[stage.key] ?? stage.dotClass) : stage.dotClass
+                  }`}
+                  aria-hidden="true"
+                />
                 {stage.label}
                 <span className="font-data text-xs opacity-80">{count}</span>
               </button>
@@ -177,7 +192,9 @@ export default function ApplicantsJobHeader({
               onClick={() => onStageSelect("REJECTED")}
               className={`inline-flex items-center gap-2 rounded-xl border px-3 py-1.5 text-[11px] font-semibold transition ${
                 activeStage === "REJECTED"
-                  ? "border-ink/20 bg-ink/5 text-ink/70"
+                  ? isPro
+                    ? "border-ember/30 bg-ember/10 text-ember"
+                    : "border-ink/20 bg-ink/5 text-ink/70"
                   : "border-ink/8 bg-white text-ink/50 hover:border-ink/15"
               }`}
             >

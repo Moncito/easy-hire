@@ -3,7 +3,7 @@
 import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import type { TooltipContentProps } from "recharts";
 
-const INK = "#20242B";
+const INK = "var(--pro-chart-ink, #20242B)";
 
 type Funnel = {
   applied: number;
@@ -16,14 +16,14 @@ const STAGES = [
   { key: "applied" as const, label: "Applied", fill: INK, opacity: 1 },
   { key: "reviewed" as const, label: "Reviewed", fill: INK, opacity: 0.62 },
   { key: "interview" as const, label: "Interview", fill: INK, opacity: 0.32 },
-  { key: "hired" as const, label: "Hired", fill: "#F2A93B", opacity: 1 },
+  { key: "hired" as const, label: "Hired", fill: "var(--pro-accent, #F2A93B)", opacity: 1 },
 ];
 
 function FunnelTooltip({ active, payload }: TooltipContentProps) {
   if (!active || !payload?.length) return null;
 
   return (
-    <div className="rounded-xl border border-ink/10 bg-white px-3 py-2 shadow-sm">
+    <div className="rounded-xl border border-ink/10 bg-[var(--pro-surface,#fff)] px-3 py-2 shadow-sm">
       <ul className="space-y-1">
         {payload.map((item) => (
           <li key={String(item.dataKey)} className="flex items-center justify-between gap-6 text-xs">

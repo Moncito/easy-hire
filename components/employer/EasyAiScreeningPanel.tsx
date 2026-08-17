@@ -4,7 +4,7 @@ import { useState } from "react";
 import { ListChecks, Sparkles } from "lucide-react";
 import { useEmployerShell } from "@/components/employer/EmployerShellContext";
 import { useEasyAi } from "@/components/employer/pro/useEasyAi";
-import NeoButton from "@/components/employer/pro/NeoButton";
+import ProButton from "@/components/employer/pro/ProButton";
 
 type ScreeningQuestion = { prompt: string; required: boolean };
 
@@ -36,47 +36,45 @@ export default function EasyAiScreeningPanel({ title, description, requirements,
   }
 
   return (
-    <div className="rounded-xl border border-[color:var(--neo-gold)]/20 bg-[color:var(--neo-gold)]/[0.04] p-3">
+    <div className="rounded-xl border border-ink/[0.08] bg-mist/50 p-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[color:var(--neo-gold)]">
+        <p className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[#9A5B12]">
           <Sparkles className="h-3.5 w-3.5" strokeWidth={2.25} />
           Easy AI screening
         </p>
-        <NeoButton
+        <ProButton
           variant="secondary"
-          size="sm"
           onClick={handleSuggest}
           disabled={isLoading("screening-questions") || !title.trim() || !description.trim()}
           icon={<ListChecks className="h-3.5 w-3.5" strokeWidth={2.25} />}
         >
           {isLoading("screening-questions") ? "Suggesting…" : "Suggest questions"}
-        </NeoButton>
+        </ProButton>
       </div>
       {preview && preview.length > 0 && (
         <div className="mt-3 space-y-2">
           <ul className="space-y-1.5">
             {preview.map((q, i) => (
-              <li key={i} className="text-xs leading-relaxed text-[color:var(--neo-muted)]">
+              <li key={i} className="text-xs leading-relaxed text-ink/55">
                 • {q.prompt}
                 {q.required ? (
-                  <span className="ml-1 text-[10px] font-semibold text-[color:var(--neo-teal)]">Required</span>
+                  <span className="ml-1 text-[10px] font-semibold text-ink/70">Required</span>
                 ) : null}
               </li>
             ))}
           </ul>
-          <NeoButton
+          <ProButton
             variant="primary"
-            size="sm"
             onClick={() => {
               onApply(preview);
               setPreview(null);
             }}
           >
             Add suggested questions
-          </NeoButton>
+          </ProButton>
         </div>
       )}
-      <p className="mt-2 text-[10px] leading-relaxed text-[color:var(--neo-muted)]">
+      <p className="mt-2 text-[10px] leading-relaxed text-ink/40">
         Suggestions only — answers never auto-reject candidates.
       </p>
     </div>

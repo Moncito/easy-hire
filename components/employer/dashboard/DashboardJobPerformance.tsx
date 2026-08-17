@@ -20,7 +20,7 @@ export default function DashboardJobPerformance({ rows, variant = "free" }: Prop
       <div className="mb-4">
         <p
           className={`text-xs font-bold uppercase tracking-wider ${
-            variant === "pro" ? "text-ink/45" : "text-navy/60"
+            variant === "pro" ? "text-ink/40" : "text-navy/60"
           }`}
         >
           Listing analytics

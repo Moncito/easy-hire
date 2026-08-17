@@ -25,3 +25,7 @@ export async function searchJobs(params: URLSearchParams) {
 export async function submitJobForReview(id: string) {
   return fetchJsonSafe<unknown>(`/api/jobs/${id}/submit`, { method: "POST" });
 }
+
+export async function deleteEmployerJob(id: string) {
+  return fetchJsonSafe<unknown>(`/api/jobs/${id}`, { method: "DELETE" });
+}

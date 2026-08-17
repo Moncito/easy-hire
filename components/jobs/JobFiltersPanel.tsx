@@ -13,10 +13,10 @@ import { ROLE_TYPES, INDUSTRIES } from "@/lib/constants/job-categories";
 import { periodSuffix, type SalaryPeriod } from "@/lib/format";
 
 const SALARY_PRESETS = [
-  { label: "₱30,000+", value: 30000 },
-  { label: "₱50,000+", value: 50000 },
-  { label: "₱80,000+", value: 80000 },
-  { label: "₱100,000+", value: 100000 },
+  { label: "$500+", value: 500 },
+  { label: "$1,000+", value: 1000 },
+  { label: "$1,500+", value: 1500 },
+  { label: "$2,000+", value: 2000 },
 ] as const;
 
 function Chip({
@@ -203,7 +203,7 @@ export default function JobFiltersPanel({
         </div>
       </JobFilterAccordion>
 
-      <JobFilterAccordion title="Pay range (PHP)" defaultOpen>
+      <JobFilterAccordion title="Pay range (USD)" defaultOpen>
         <div className="flex flex-wrap gap-1.5">
           {SALARY_PRESETS.map((preset) => (
             <Chip

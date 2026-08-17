@@ -24,7 +24,7 @@ type Props = {
   onChange: (value: string) => void;
   placeholder?: string;
   minHeight?: string;
-  accent?: "teal" | "marigold";
+  accent?: "teal" | "marigold" | "ink";
 };
 
 function ToolbarButton({
@@ -32,12 +32,21 @@ function ToolbarButton({
   onClick,
   title,
   children,
+  accent = "teal",
 }: {
   active?: boolean;
   onClick: () => void;
   title: string;
   children: React.ReactNode;
+  accent?: "teal" | "marigold" | "ink";
 }) {
+  const activeClass =
+    accent === "ink"
+      ? "bg-ink/10 text-ink"
+      : accent === "marigold"
+        ? "bg-marigold/15 text-[#9A5B12]"
+        : "bg-teal/15 text-teal";
+
   return (
     <button
       type="button"
@@ -45,9 +54,7 @@ function ToolbarButton({
       aria-label={title}
       onClick={onClick}
       className={`inline-flex cursor-pointer items-center justify-center rounded-lg p-2 transition-colors ${
-        active
-          ? "bg-teal/15 text-teal"
-          : "text-ink/55 hover:bg-ink/5 hover:text-ink"
+        active ? activeClass : "text-ink/55 hover:bg-ink/5 hover:text-ink"
       }`}
     >
       {children}
@@ -69,9 +76,11 @@ export default function RichTextEditor({
 }: Props) {
   const lastEmitted = useRef(value);
   const accentRing =
-    accent === "marigold"
-      ? "focus-within:border-marigold focus-within:ring-marigold/20"
-      : "focus-within:border-teal focus-within:ring-teal/20";
+    accent === "ink"
+      ? "focus-within:border-ink/25 focus-within:ring-ink/10"
+      : accent === "marigold"
+        ? "focus-within:border-marigold focus-within:ring-marigold/20"
+        : "focus-within:border-teal focus-within:ring-teal/20";
 
   const editor = useEditor({
     immediatelyRender: false,
@@ -122,6 +131,7 @@ export default function RichTextEditor({
     >
       <div className="flex flex-wrap items-center gap-0.5 border-b border-ink/8 bg-mist/40 px-2 py-1.5">
         <ToolbarButton
+          accent={accent}
           active={editor.isActive("bold")}
           onClick={() => editor.chain().focus().toggleBold().run()}
           title="Bold (Ctrl+B)"
@@ -129,6 +139,7 @@ export default function RichTextEditor({
           <Bold className="h-4 w-4" />
         </ToolbarButton>
         <ToolbarButton
+          accent={accent}
           active={editor.isActive("italic")}
           onClick={() => editor.chain().focus().toggleItalic().run()}
           title="Italic (Ctrl+I)"
@@ -136,6 +147,7 @@ export default function RichTextEditor({
           <Italic className="h-4 w-4" />
         </ToolbarButton>
         <ToolbarButton
+          accent={accent}
           active={editor.isActive("underline")}
           onClick={() => editor.chain().focus().toggleUnderline().run()}
           title="Underline (Ctrl+U)"
@@ -143,6 +155,7 @@ export default function RichTextEditor({
           <Underline className="h-4 w-4" />
         </ToolbarButton>
         <ToolbarButton
+          accent={accent}
           active={editor.isActive("highlight")}
           onClick={() => editor.chain().focus().toggleHighlight().run()}
           title="Highlight"
@@ -153,6 +166,7 @@ export default function RichTextEditor({
         <ToolbarDivider />
 
         <ToolbarButton
+          accent={accent}
           active={editor.isActive("heading", { level: 2 })}
           onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
           title="Section heading"
@@ -160,6 +174,7 @@ export default function RichTextEditor({
           <Heading2 className="h-4 w-4" />
         </ToolbarButton>
         <ToolbarButton
+          accent={accent}
           active={editor.isActive("bulletList")}
           onClick={() => editor.chain().focus().toggleBulletList().run()}
           title="Bullet list"
@@ -167,6 +182,7 @@ export default function RichTextEditor({
           <List className="h-4 w-4" />
         </ToolbarButton>
         <ToolbarButton
+          accent={accent}
           active={editor.isActive("orderedList")}
           onClick={() => editor.chain().focus().toggleOrderedList().run()}
           title="Numbered list"
@@ -177,12 +193,14 @@ export default function RichTextEditor({
         <ToolbarDivider />
 
         <ToolbarButton
+          accent={accent}
           onClick={() => editor.chain().focus().undo().run()}
           title="Undo (Ctrl+Z)"
         >
           <Undo2 className="h-4 w-4" />
         </ToolbarButton>
         <ToolbarButton
+          accent={accent}
           onClick={() => editor.chain().focus().redo().run()}
           title="Redo (Ctrl+Shift+Z)"
         >

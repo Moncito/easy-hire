@@ -1,6 +1,7 @@
 "use client";
 
 import InstantPublishNote from "@/components/employer/ui/InstantPublishNote";
+import { useEmployerShell } from "@/components/employer/EmployerShellContext";
 
 type ChecklistItem = { label: string; done: boolean };
 
@@ -33,6 +34,7 @@ export default function JobFormTopBar({
   checklist,
   checklistDone,
 }: Props) {
+  const { isPro } = useEmployerShell();
   const employmentLabel =
     employmentTypes.find((t) => t.value === employmentType)?.label ?? "Full-Time";
   const previewMeta =
@@ -41,10 +43,10 @@ export default function JobFormTopBar({
   const progress = checklist.length > 0 ? (checklistDone / checklist.length) * 100 : 0;
 
   return (
-    <div className="mb-5 rounded-2xl border border-navy/[0.08] bg-white/90 p-4 shadow-[0_8px_24px_-6px_rgba(30,58,95,0.08)] sm:p-5">
+    <div className={`mb-5 ${isPro ? "border-b border-ink/8 pb-5" : "rounded-2xl border border-navy/[0.08] bg-white/90 p-4 shadow-[0_8px_24px_-6px_rgba(30,58,95,0.08)] sm:p-5"}`}>
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)_minmax(0,0.85fr)] lg:gap-5">
-        <div className="rounded-xl bg-gradient-to-br from-navy/[0.05] to-teal/[0.04] p-3.5 ring-1 ring-navy/[0.06]">
-          <p className="text-xs font-bold uppercase tracking-wider text-navy/60">Live preview</p>
+        <div className={isPro ? "rounded-2xl bg-mist/80 p-3.5 ring-1 ring-ink/[0.06]" : "rounded-xl bg-gradient-to-br from-navy/[0.05] to-teal/[0.04] p-3.5 ring-1 ring-navy/[0.06]"}>
+          <p className={`text-xs font-bold uppercase tracking-wider ${isPro ? "text-ink/40" : "text-navy/60"}`}>Live preview</p>
           <p className="mt-2 font-display text-base font-bold tracking-tight text-ink">
             {title.trim() || "Untitled role"}
           </p>
@@ -63,7 +65,7 @@ export default function JobFormTopBar({
                   key={type.value}
                   type="button"
                   onClick={() => onEmploymentTypeChange(type.value)}
-                  className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-all ${
+                  className={`cursor-pointer rounded-lg border px-3 py-1.5 text-xs font-medium transition-all ${
                     employmentType === type.value
                       ? "border-ink bg-ink text-white"
                       : "border-ink/10 text-ink/75 hover:border-ink/30 hover:bg-ink/5"
@@ -88,7 +90,9 @@ export default function JobFormTopBar({
               max={99}
               value={targetHireCount}
               onChange={(e) => onTargetHireCountChange(e.target.value)}
-              className="w-full max-w-[8rem] rounded-xl border border-ink/10 px-3 py-2 font-data text-sm text-ink outline-none focus:border-teal focus:ring-2 focus:ring-teal/15"
+              className={`w-full max-w-[8rem] rounded-xl border border-ink/10 px-3 py-2 font-data text-sm text-ink outline-none ${
+                isPro ? "focus:border-ink/25" : "focus:border-teal focus:ring-2 focus:ring-teal/15"
+              }`}
             />
           </div>
         </div>
@@ -96,13 +100,13 @@ export default function JobFormTopBar({
         <div>
           <div className="mb-2 flex items-center justify-between gap-2">
             <p className="text-xs font-bold uppercase tracking-wider text-ink/40">Checklist</p>
-            <span className="font-data text-[10px] font-bold text-teal">
+            <span className={`font-data text-[10px] font-bold ${isPro ? "text-ink/55" : "text-teal"}`}>
               {checklistDone}/{checklist.length}
             </span>
           </div>
           <div className="mb-3 h-1.5 overflow-hidden rounded-full bg-ink/8">
             <div
-              className="h-full rounded-full bg-teal transition-all duration-300"
+              className={`h-full rounded-full transition-all duration-300 ${isPro ? "bg-ink" : "bg-teal"}`}
               style={{ width: `${progress}%` }}
             />
           </div>
@@ -111,7 +115,7 @@ export default function JobFormTopBar({
               <li key={item.label} className="flex items-center gap-1.5 text-[11px] text-ink/60">
                 <span
                   className={`h-1.5 w-1.5 shrink-0 rounded-full ${
-                    item.done ? "bg-teal" : "bg-ink/15"
+                    item.done ? (isPro ? "bg-ink" : "bg-teal") : "bg-ink/15"
                   }`}
                   aria-hidden="true"
                 />

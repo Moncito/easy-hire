@@ -91,7 +91,7 @@ function buildFacts(seeker: PublicSeekerData): Fact[] {
       icon: Wallet,
       label: "Expected pay",
       value: formatPesoRange(seeker.desiredSalaryMin, seeker.desiredSalaryMax),
-      hint: "Monthly PHP range on profile",
+      hint: "Monthly USD range on profile",
       mono: true,
     });
   }

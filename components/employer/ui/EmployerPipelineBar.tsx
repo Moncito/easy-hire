@@ -27,9 +27,9 @@ export default function EmployerPipelineBar({
   const segments = isPro
     ? [
         { count: applied, className: "bg-ink", label: "Applied" },
-        { count: shortlisted, className: "bg-ink/60", label: "Shortlisted" },
-        { count: interview, className: "bg-ink/30", label: "Interview" },
-        { count: hired, className: "bg-marigold", label: "Hired" },
+        { count: shortlisted, className: "bg-marigold", label: "Shortlisted" },
+        { count: interview, className: "bg-navy", label: "Interview" },
+        { count: hired, className: "bg-teal", label: "Hired" },
       ]
     : [
         { count: applied, className: "bg-ink/25", label: "Applied" },

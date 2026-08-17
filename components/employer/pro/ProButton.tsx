@@ -47,7 +47,7 @@ export default function ProButton(props: Props) {
   } = props;
 
   const classes = [
-    "inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-full px-5 text-sm font-semibold transition active:scale-[0.98]",
+    "inline-flex min-h-11 shrink-0 cursor-pointer items-center justify-center gap-2 rounded-full px-5 text-sm font-semibold transition active:scale-[0.98]",
     variantClass(variant),
     fullWidth ? "w-full" : "",
     className,

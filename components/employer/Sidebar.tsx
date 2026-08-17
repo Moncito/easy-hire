@@ -116,7 +116,7 @@ export default function Sidebar({
         expanded ? "w-52" : "w-[60px]"
       } ${
         isPro
-          ? "border-r border-ink/[0.06] bg-white"
+          ? "employer-pro-sidebar border-r"
           : "bg-navy"
       }`}
     >

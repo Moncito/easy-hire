@@ -5,7 +5,7 @@ import { Globe, Wallet, ShieldCheck, ChevronDown } from "lucide-react";
 
 const perks = [
   { icon: Globe, label: "Work globally" },
-  { icon: Wallet, label: "Guaranteed PHP pay ranges" },
+  { icon: Wallet, label: "Guaranteed USD pay ranges" },
   { icon: ShieldCheck, label: "Verified employers" },
 ] as const;
 
@@ -49,7 +49,7 @@ export default function CollapsibleJobsHeader() {
           <p className="mt-0.5 font-display text-sm font-semibold text-navy/80">Premium Jobs for Filipino VAs</p>
           <p className="mt-2 text-xs leading-relaxed text-ink/55">
             Unlock remote careers that match your lifestyle. Browse 100% verified opportunities with
-            guaranteed PHP salary ranges and zero agency middlemen.
+            guaranteed USD salary ranges and zero agency middlemen.
           </p>
         </div>
       )}

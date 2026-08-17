@@ -17,14 +17,23 @@ import CandidateOverviewTab from "./CandidateOverviewTab";
 import CandidateApplicationTab from "./CandidateApplicationTab";
 import CandidateNotesTab from "./CandidateNotesTab";
 import EmployerAvatar from "@/components/employer/ui/EmployerAvatar";
+import { useEmployerShell } from "@/components/employer/EmployerShellContext";
 import type { CandidateApplication, CandidateDetailTab } from "./types";
 import { PIPELINE } from "./types";
 import { formatAppliedAt, stageIndex } from "./utils";
 
-const STATUS_STYLES: Record<string, string> = {
+const STATUS_STYLES_FREE: Record<string, string> = {
   APPLIED: "bg-ink/8 text-ink/70",
   SHORTLISTED: "bg-navy/10 text-navy",
   INTERVIEW: "bg-teal/10 text-teal",
+  HIRED: "bg-teal text-white",
+  REJECTED: "bg-ink/10 text-ink/50",
+};
+
+const STATUS_STYLES_PRO: Record<string, string> = {
+  APPLIED: "bg-ink/8 text-ink/70",
+  SHORTLISTED: "bg-ink/8 text-ink/70",
+  INTERVIEW: "bg-ink/8 text-ink",
   HIRED: "bg-teal text-white",
   REJECTED: "bg-ink/10 text-ink/50",
 };
@@ -62,8 +71,10 @@ export default function CandidateDetailPanel({
   onMessage,
   onNavigate,
 }: Props) {
+  const { isPro } = useEmployerShell();
   const { seeker } = application;
   const [tab, setTab] = useState<CandidateDetailTab>("overview");
+  const statusStyles = isPro ? STATUS_STYLES_PRO : STATUS_STYLES_FREE;
   const [stageOpen, setStageOpen] = useState(false);
   const stageRef = useRef<HTMLDivElement>(null);
   const moveButtonRef = useRef<HTMLButtonElement>(null);
@@ -178,8 +189,8 @@ export default function CandidateDetailPanel({
             imageUrl={seeker.photoUrl}
             size="md"
             shape="rounded"
-            className="!h-10 !w-10 !rounded-xl ring-1 ring-teal/10"
-            fallbackClassName="bg-teal/10 text-teal"
+            className={`!h-10 !w-10 !rounded-xl ring-1 ${isPro ? "ring-ink/10" : "ring-teal/10"}`}
+            fallbackClassName={isPro ? "bg-ink/8 text-ink" : "bg-teal/10 text-teal"}
           />
           <div className="min-w-0 flex-1">
             <div className="flex items-start justify-between gap-2">
@@ -199,7 +210,7 @@ export default function CandidateDetailPanel({
             <div className="mt-1.5 flex flex-wrap items-center gap-2">
               <span className="text-[10px] text-ink/40">Applied {formatAppliedAt(application.appliedAt)}</span>
               <span
-                className={`rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${STATUS_STYLES[application.status] ?? STATUS_STYLES.APPLIED}`}
+                className={`rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${statusStyles[application.status] ?? statusStyles.APPLIED}`}
               >
                 {statusLabel}
               </span>
@@ -217,7 +228,15 @@ export default function CandidateDetailPanel({
                   type="button"
                   onClick={() => onStatusChange(stage.value)}
                   title={stage.label}
-                  className={`h-full flex-1 transition ${i <= progress ? "bg-teal" : "bg-transparent hover:bg-ink/10"}`}
+                  className={`h-full flex-1 transition ${
+                    i <= progress
+                      ? isPro
+                        ? stage.value === "HIRED"
+                          ? "bg-teal"
+                          : "bg-ink"
+                        : "bg-teal"
+                      : "bg-transparent hover:bg-ink/10"
+                  }`}
                 />
               ))}
             </div>
@@ -227,8 +246,18 @@ export default function CandidateDetailPanel({
                 key={stage.value}
                 type="button"
                 onClick={() => onStatusChange(stage.value)}
-                className={`max-w-[4rem] truncate text-xs font-medium transition hover:text-teal ${
-                  i === progress ? "text-teal" : i < progress ? "text-ink/45" : "text-ink/30"
+                className={`max-w-[4rem] truncate text-xs font-medium transition ${
+                  isPro ? "hover:text-ink" : "hover:text-teal"
+                } ${
+                  i === progress
+                    ? isPro
+                      ? stage.value === "HIRED"
+                        ? "text-teal"
+                        : "text-ink"
+                      : "text-teal"
+                    : i < progress
+                      ? "text-ink/45"
+                      : "text-ink/30"
                 }`}
               >
                 {stage.label}
@@ -242,10 +271,10 @@ export default function CandidateDetailPanel({
           </p>
         )}
 
-        {/* Nav + actions row */}
-        <div className="mt-3 flex items-center justify-between gap-2">
+        {/* Actions — Pro: Message lives here so it stays on screen with the person */}
+        <div className="mt-3 flex items-center gap-2">
           {navTotal > 1 ? (
-            <div className="flex items-center gap-1">
+            <div className="flex shrink-0 items-center gap-1">
               <button
                 type="button"
                 onClick={() => onNavigate("prev")}
@@ -268,10 +297,23 @@ export default function CandidateDetailPanel({
                 <ChevronRight className="h-4 w-4" />
               </button>
             </div>
-          ) : (
-            <span />
+          ) : null}
+
+          {isPro && (
+            <button
+              type="button"
+              onClick={onMessage}
+              disabled={messageLoading}
+              className="inline-flex min-w-0 flex-1 items-center justify-center gap-2 rounded-full bg-marigold px-4 py-2 text-sm font-semibold text-ink shadow-sm shadow-marigold/20 transition hover:bg-marigold/90 disabled:opacity-50"
+            >
+              <MessageSquare className="h-4 w-4 shrink-0" />
+              {messageLoading ? "Opening…" : "Message"}
+            </button>
           )}
-          <div className="flex items-center gap-1">
+
+          {!isPro && navTotal <= 1 ? <span className="flex-1" /> : null}
+
+          <div className="flex shrink-0 items-center gap-1">
             <Link
               href={`/employer/talent/${seeker.id}`}
               className="rounded-lg p-1.5 text-ink/40 transition hover:bg-ink/5 hover:text-ink"
@@ -316,7 +358,11 @@ export default function CandidateDetailPanel({
                       role="menuitem"
                       onClick={() => selectStage(stage.value)}
                       className={`block w-full px-3 py-2 text-left text-xs font-medium hover:bg-ink/3 ${
-                        application.status === stage.value ? "text-teal" : "text-ink/70"
+                        application.status === stage.value
+                          ? isPro
+                            ? "text-ink"
+                            : "text-teal"
+                          : "text-ink/70"
                       }`}
                     >
                       {stage.label}
@@ -337,6 +383,9 @@ export default function CandidateDetailPanel({
             )}
           </div>
         </div>
+        {isPro && messageError && (
+          <p className="mt-1.5 text-xs text-ember">{messageError}</p>
+        )}
       </div>
 
       <CandidateDetailTabs active={tab} onChange={setTab} />
@@ -357,19 +406,21 @@ export default function CandidateDetailPanel({
         )}
       </div>
 
-      {/* Sticky footer — single primary CTA */}
-      <div className="shrink-0 border-t border-ink/6 bg-white px-4 py-3 shadow-[0_-4px_12px_rgba(32,36,43,0.04)] pb-[max(0.75rem,env(safe-area-inset-bottom,0px))]">
-        <button
-          type="button"
-          onClick={onMessage}
-          disabled={messageLoading}
-          className="flex w-full items-center justify-center gap-2 rounded-xl bg-teal py-2.5 text-sm font-semibold text-white shadow-sm shadow-teal/15 transition hover:bg-teal/95 disabled:opacity-50"
-        >
-          <MessageSquare className="h-4 w-4" />
-          {messageLoading ? "Opening…" : "Message candidate"}
-        </button>
-        {messageError && <p className="mt-1.5 text-center text-xs text-ember">{messageError}</p>}
-      </div>
+      {/* Free keeps the sticky footer CTA. Pro Message lives in the header. */}
+      {!isPro && (
+        <div className="shrink-0 border-t border-ink/6 bg-white px-4 py-3 shadow-[0_-4px_12px_rgba(32,36,43,0.04)] pb-[max(0.75rem,env(safe-area-inset-bottom,0px))]">
+          <button
+            type="button"
+            onClick={onMessage}
+            disabled={messageLoading}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-teal py-2.5 text-sm font-semibold text-white shadow-sm shadow-teal/15 transition hover:bg-teal/95 disabled:opacity-50"
+          >
+            <MessageSquare className="h-4 w-4" />
+            {messageLoading ? "Opening…" : "Message candidate"}
+          </button>
+          {messageError && <p className="mt-1.5 text-center text-xs text-ember">{messageError}</p>}
+        </div>
+      )}
     </div>
   );
 }

@@ -3,7 +3,7 @@ import { FilePlus2, ShieldCheck, Users2, Handshake } from "lucide-react";
 const STEPS = [
   {
     title: "Post your role",
-    detail: "Describe the job, set your PHP budget, and publish in under five minutes.",
+    detail: "Describe the job, set your USD budget, and publish in under five minutes.",
     icon: FilePlus2,
   },
   {

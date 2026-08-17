@@ -1,11 +1,15 @@
 import Link from "next/link";
-import { Lock } from "lucide-react";
+import { ArrowLeft, Lock } from "lucide-react";
 import { requireEmployerPageContext } from "@/lib/employer-session";
 import { listTalentLists } from "@/lib/employer/talent-lists";
+import { listSavedSeekers } from "@/lib/employer/talent";
 import EmployerPageHeader from "@/components/employer/ui/EmployerPageHeader";
+import ProPageHeader from "@/components/employer/pro-dashboard/ProPageHeader";
 import ProBadge from "@/components/employer/pro/ProBadge";
+import ProButton from "@/components/employer/pro/ProButton";
 import TalentListsBoard, {
   type TalentListSummary,
+  type SavedBookmark,
 } from "@/components/employer/talent/TalentListsBoard";
 
 function TalentListsUpgradeGate() {
@@ -38,13 +42,17 @@ function TalentListsUpgradeGate() {
 }
 
 export default async function TalentListsPage() {
-  const { company, plan } = await requireEmployerPageContext();
+  const { company, plan, session } = await requireEmployerPageContext();
 
   if (plan !== "PRO") {
     return <TalentListsUpgradeGate />;
   }
 
-  const lists = await listTalentLists(company.id);
+  const [lists, saved] = await Promise.all([
+    listTalentLists(company.id),
+    listSavedSeekers(session.user.id),
+  ]);
+
   const initialLists: TalentListSummary[] = lists.map((list) => ({
     id: list.id,
     name: list.name,
@@ -52,23 +60,43 @@ export default async function TalentListsPage() {
     itemCount: list._count.items,
   }));
 
+  const initialBookmarks: SavedBookmark[] = saved.map((seeker) => ({
+    id: seeker.id,
+    fullName: seeker.fullName,
+    headline: seeker.headline,
+    location: seeker.location,
+    photoUrl: seeker.photoUrl,
+  }));
+
   return (
     <>
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="font-display text-2xl font-bold tracking-tight text-[color:var(--neo-ink)] sm:text-3xl">
-              Saved lists
-            </h1>
+      <ProPageHeader
+        title="Saved lists"
+        description="Bookmarks from Talent, plus named shortlists for a role or hiring round."
+        stats={
+          <span className="inline-flex items-center gap-2">
             <ProBadge />
-          </div>
-          <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-[color:var(--neo-muted)]">
-            Group candidates from Talent search into named shortlists for a role or a hiring round.
-          </p>
-        </div>
-      </div>
+            <span>
+              <span className="font-data font-semibold text-ink">{initialBookmarks.length}</span>{" "}
+              {initialBookmarks.length === 1 ? "bookmark" : "bookmarks"}
+              {" · "}
+              <span className="font-data font-semibold text-ink">{initialLists.length}</span>{" "}
+              {initialLists.length === 1 ? "list" : "lists"}
+            </span>
+          </span>
+        }
+        actions={
+          <ProButton
+            href="/employer/talent"
+            variant="secondary"
+            icon={<ArrowLeft className="h-4 w-4" strokeWidth={2.25} />}
+          >
+            Talent search
+          </ProButton>
+        }
+      />
 
-      <TalentListsBoard initialLists={initialLists} />
+      <TalentListsBoard initialLists={initialLists} initialBookmarks={initialBookmarks} />
     </>
   );
 }

@@ -24,12 +24,8 @@ export default function ApplicantsWorkspace({ panelOpen, onClosePanel, board, pa
   useScrollLock(panelOpen && isMobile);
 
   return (
-    <div className="flex h-full min-h-0 flex-1 flex-col lg:flex-row">
-      <div
-        className={`flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden transition-[flex] duration-200 ${
-          panelOpen ? "lg:max-w-[58%]" : ""
-        }`}
-      >
+    <div className="flex h-full min-h-0 flex-1">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         {board}
       </div>
 
@@ -44,9 +40,9 @@ export default function ApplicantsWorkspace({ panelOpen, onClosePanel, board, pa
             {panel}
           </div>
 
-          <div className="employer-detail-panel-enter hidden h-full max-h-full min-h-0 w-[42%] min-w-[380px] max-w-[480px] shrink-0 flex-col overflow-hidden border-l border-ink/8 bg-mist lg:flex">
+          <aside className="employer-detail-panel-enter hidden h-full min-h-0 w-1/4 min-w-[360px] shrink-0 flex-col overflow-hidden border-l border-ink/8 bg-mist lg:flex">
             {panel}
-          </div>
+          </aside>
         </>
       )}
     </div>

@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { Check, ChevronDown, Search } from "lucide-react";
+import { useEmployerShell } from "@/components/employer/EmployerShellContext";
 
 export type EmployerFormSelectOption = { value: string; label: string };
 
@@ -27,6 +28,7 @@ export default function EmployerFormSelect({
   hidePlaceholder = false,
   className = "",
 }: Props) {
+  const { isPro } = useEmployerShell();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const rootRef = useRef<HTMLDivElement>(null);
@@ -76,8 +78,10 @@ export default function EmployerFormSelect({
         aria-expanded={open}
         aria-controls={listboxId}
         onClick={() => setOpen((o) => !o)}
-        className={`employer-ws-surface flex w-full cursor-pointer items-center gap-2 rounded-xl border px-3 py-2.5 text-left text-sm outline-none transition hover:border-ink/20 focus-visible:border-teal focus-visible:ring-2 focus-visible:ring-teal/15 ${
-          open ? "border-teal ring-2 ring-teal/15" : "border-ink/10"
+        className={`employer-ws-surface flex w-full cursor-pointer items-center gap-2 rounded-xl border px-3 py-2.5 text-left text-sm outline-none transition hover:border-ink/20 ${
+          isPro
+            ? `focus-visible:border-ink/25 focus-visible:ring-2 focus-visible:ring-ink/10 ${open ? "border-ink/25 ring-2 ring-ink/10" : "border-ink/10"}`
+            : `focus-visible:border-teal focus-visible:ring-2 focus-visible:ring-teal/15 ${open ? "border-teal ring-2 ring-teal/15" : "border-ink/10"}`
         }`}
       >
         <span
@@ -105,7 +109,11 @@ export default function EmployerFormSelect({
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder="Search..."
-                  className="employer-ws-surface-muted w-full rounded-lg border border-ink/8 py-2 pl-8 pr-2 text-xs outline-none focus:border-teal focus:ring-1 focus:ring-teal/20"
+                  className={`employer-ws-surface-muted w-full rounded-lg border border-ink/8 py-2 pl-8 pr-2 text-xs outline-none ${
+                    isPro
+                      ? "focus:border-ink/25 focus:ring-1 focus:ring-ink/10"
+                      : "focus:border-teal focus:ring-1 focus:ring-teal/20"
+                  }`}
                   autoFocus
                 />
               </div>
@@ -131,14 +139,16 @@ export default function EmployerFormSelect({
                       onClick={() => pick(opt.value)}
                       className={`flex w-full cursor-pointer items-center gap-2 px-3 py-2.5 text-left text-sm transition ${
                         isSelected
-                          ? "bg-teal/10 font-semibold text-ink"
+                          ? isPro
+                            ? "bg-ink/[0.06] font-semibold text-ink"
+                            : "bg-teal/10 font-semibold text-ink"
                           : opt.value
                             ? "text-ink/70 hover:bg-ink/[0.04]"
                             : "text-ink/45 hover:bg-ink/[0.04]"
                       }`}
                     >
                       <Check
-                        className={`h-3.5 w-3.5 shrink-0 text-teal ${isSelected ? "opacity-100" : "opacity-0"}`}
+                        className={`h-3.5 w-3.5 shrink-0 ${isPro ? "text-ink" : "text-teal"} ${isSelected ? "opacity-100" : "opacity-0"}`}
                         aria-hidden="true"
                       />
                       <span className="truncate">{opt.label}</span>
