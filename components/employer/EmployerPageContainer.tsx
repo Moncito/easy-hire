@@ -56,7 +56,9 @@ export default function EmployerPageContainer({
 
   const workspaceClasses = isMessages
     ? "flex h-full min-h-0 flex-1 flex-col overflow-hidden"
-    : "flex h-full min-h-0 flex-1 flex-col overflow-hidden px-4 py-3 sm:px-5 lg:px-5 lg:py-3";
+    : isApplicants
+      ? "flex h-full min-h-0 flex-1 flex-col overflow-hidden"
+      : "flex h-full min-h-0 flex-1 flex-col overflow-hidden px-4 py-3 sm:px-5 lg:px-5 lg:py-3";
 
   const dashboard = isDashboard(pathname);
   const jobForm = isJobForm(pathname);
@@ -64,7 +66,7 @@ export default function EmployerPageContainer({
 
   return (
     <div
-      className={`${isFixedWorkspace ? workspaceClasses : dashboard ? "px-5 py-5 pb-24 sm:px-6 lg:px-8 lg:pb-20" : jobForm || companyProfile ? "px-6 py-5 pb-0 sm:px-8" : "px-6 py-6 pb-28 sm:px-8 lg:pb-24"} ${widthClasses[width]} ${pro && !isFixedWorkspace ? "employer-pro-canvas" : ""}`}
+      className={`${isFixedWorkspace ? workspaceClasses : dashboard ? "px-5 py-5 pb-24 sm:px-6 lg:px-8 lg:pb-20" : jobForm || companyProfile ? "px-6 py-5 pb-0 sm:px-8" : "px-6 py-6 pb-28 sm:px-8 lg:pb-24"} ${widthClasses[width]} ${pro && !isFixedWorkspace && !jobForm ? "employer-pro-canvas" : ""}`}
     >
       {children}
     </div>

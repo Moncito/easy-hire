@@ -98,7 +98,7 @@ function buildGlanceMetrics(job: JobDetailData): GlanceMetric[] {
       icon: Wallet,
       label: "Base pay",
       value: formatPesoRange(job.salaryMin, job.salaryMax, job.salaryPeriod as SalaryPeriod),
-      hint: "Guaranteed PHP range · no hidden cuts",
+      hint: "Guaranteed USD range · no hidden cuts",
       accent: "marigold",
     },
     {

@@ -1,12 +1,12 @@
 function Bone({ className }: { className?: string }) {
   return (
-    <div className={`animate-pulse rounded-md bg-ink/8 ${className ?? ""}`} aria-hidden="true" />
+    <div className={`employer-shimmer employer-ws-bone rounded-md ${className ?? ""}`} aria-hidden="true" />
   );
 }
 
 export default function MessagesSkeleton({ showNavBand = false }: { showNavBand?: boolean }) {
   return (
-    <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-white">
+    <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-[var(--ew-bg,#fff)]">
       {showNavBand && (
         <div className="messages-nav-band relative flex h-14 shrink-0 items-center justify-between px-6 sm:h-16 sm:px-8">
           <Bone className="h-6 w-28" />
@@ -14,7 +14,7 @@ export default function MessagesSkeleton({ showNavBand = false }: { showNavBand?
         </div>
       )}
       <div className="flex min-h-0 flex-1 overflow-hidden lg:flex-row">
-        <aside className="flex w-full flex-col border-r border-ink/8 bg-mist/40 lg:w-[min(360px,38%)] lg:max-w-[420px]">
+        <aside className="flex w-full flex-col border-r border-ink/8 bg-[var(--ew-surface-muted,rgb(245_246_244/0.4))] lg:w-[min(360px,38%)] lg:max-w-[420px]">
           <div className="border-b border-ink/8 px-6 py-5 sm:px-8">
             <Bone className="h-7 w-32" />
             <Bone className="mt-2 h-3.5 w-44" />

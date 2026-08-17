@@ -1,5 +1,9 @@
+"use client";
+
 import CandidateCard from "./CandidateCard";
 import { Inbox } from "lucide-react";
+import { useEmployerShell } from "@/components/employer/EmployerShellContext";
+import { PRO_STAGE_COLUMN } from "@/components/employer/pipeline-stage-styles";
 
 type Application = {
   id: string;
@@ -44,12 +48,18 @@ export default function KanbanColumn({
   dotClass = "bg-ink/30",
   focusedApplicationId = null,
 }: Props) {
+  const { isPro } = useEmployerShell();
+  const bodyTone = isPro ? (PRO_STAGE_COLUMN[status] ?? "border-ink/5 bg-white/60") : "border-ink/5 bg-white/60";
+  const highlightRing = highlighted
+    ? isPro
+      ? "ring-2 ring-ink/15 ring-offset-2 ring-offset-[var(--pro-bg,#EEF2F6)] rounded-xl"
+      : "ring-2 ring-teal/20 ring-offset-2 ring-offset-[#F5F6F4] rounded-xl"
+    : "";
+
   return (
     <div
       id={`kanban-col-${status}`}
-      className={`flex h-full w-[min(100vw-3rem,20rem)] shrink-0 flex-col scroll-mt-28 transition ${
-        highlighted ? "ring-2 ring-teal/20 ring-offset-2 ring-offset-[#F5F6F4] rounded-xl" : ""
-      }`}
+      className={`flex h-full w-[min(100vw-3rem,20rem)] shrink-0 flex-col scroll-mt-28 transition ${highlightRing}`}
     >
       {!hideHeader && (
         <div className="mb-2.5 flex items-center justify-between px-0.5">
@@ -63,7 +73,7 @@ export default function KanbanColumn({
         </div>
       )}
 
-      <div className="kanban-column-body flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto rounded-xl border border-ink/5 bg-white/60 p-2">
+      <div className={`kanban-column-body flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto rounded-xl border p-2 ${bodyTone}`}>
         {applications.length === 0 ? (
           <div className="flex flex-1 flex-col items-center justify-center px-3 py-10 text-center">
             <Inbox className="mb-2 h-5 w-5 text-ink/30" aria-hidden="true" />

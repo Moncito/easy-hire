@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/Auth";
 import { errorResponse } from "@/lib/api-error";
 import { requireEmployerJob } from "@/lib/employer-auth";
-import { updateJob, updateJobStatus } from "@/lib/jobs";
+import { updateJob, updateJobStatus, deleteDraftJob } from "@/lib/jobs";
 import { jobStatusUpdateSchema } from "@/lib/validations/job";
 import { ZodError } from "zod";
 
@@ -44,6 +44,22 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     if (error instanceof ZodError) {
       return NextResponse.json({ error: error.issues[0]?.message ?? "Invalid input" }, { status: 400 });
     }
+    return errorResponse(error);
+  }
+}
+
+export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const session = await auth();
+    if (!session?.user || session.user.role !== "EMPLOYER") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { id } = await params;
+    const { job, company } = await requireEmployerJob(session.user.id, id);
+    await deleteDraftJob(id, job.status, company.id);
+    return NextResponse.json({ ok: true });
+  } catch (error) {
     return errorResponse(error);
   }
 }

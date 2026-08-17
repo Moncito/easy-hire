@@ -14,6 +14,7 @@ import { CheckSquare } from "lucide-react";
 import { appendInternalNote } from "@/lib/candidate-notes";
 import { patchApplication } from "@/lib/client/applications";
 import { startConversation } from "@/lib/client/conversations";
+import { useEmployerShell } from "@/components/employer/EmployerShellContext";
 
 type Application = CandidateApplication;
 
@@ -47,6 +48,7 @@ export default function ApplicantsBoard({
   employerName,
   initialApplications,
 }: Props) {
+  const { isPro } = useEmployerShell();
   const [applications, setApplications] = useState<Application[]>(initialApplications);
   const [activeStage, setActiveStage] = useState<string | null>(null);
   const [selectedApp, setSelectedApp] = useState<Application | null>(null);
@@ -288,7 +290,9 @@ export default function ApplicantsBoard({
       }}
       className={`inline-flex items-center gap-2 rounded-xl border px-3.5 py-2 text-xs font-semibold transition-colors ${
         selectionMode
-          ? "border-teal/30 bg-teal/8 text-teal"
+          ? isPro
+            ? "border-marigold/40 bg-marigold/15 text-ink"
+            : "border-teal/30 bg-teal/8 text-teal"
           : "border-ink/10 bg-white text-ink/70 hover:border-ink/20"
       }`}
     >
@@ -324,7 +328,7 @@ export default function ApplicantsBoard({
         onClosePanel={() => setSelectedApp(null)}
         board={
           <div className="flex h-full min-h-0 flex-col overflow-hidden">
-            <div className="shrink-0">
+            <div className="shrink-0 px-4 pt-4 sm:px-5">
               <ApplicantsJobHeader
                 job={job}
                 totalApplicants={applications.length}
@@ -352,7 +356,7 @@ export default function ApplicantsBoard({
               />
             </div>
 
-            <div className="min-h-0 flex-1 overflow-hidden">
+            <div className="min-h-0 flex-1 overflow-hidden px-4 pb-3 sm:px-5">
               <KanbanBoard
                 applications={applications}
                 job={job}

@@ -3,6 +3,8 @@
 import { Paperclip } from "lucide-react";
 import { displaySkill } from "@/lib/seeker-profile-format";
 import EmployerAvatar from "@/components/employer/ui/EmployerAvatar";
+import { useEmployerShell } from "@/components/employer/EmployerShellContext";
+import { PRO_STAGE_CARD_ACCENT } from "@/components/employer/pipeline-stage-styles";
 
 type Application = {
   id: string;
@@ -51,7 +53,9 @@ export default function CandidateCard({
   onToggleSelect,
   onClick,
 }: Props) {
+  const { isPro } = useEmployerShell();
   const skills = application.seeker.skills ?? [];
+  const stageAccent = isPro ? (PRO_STAGE_CARD_ACCENT[application.status] ?? "") : "";
 
   function handleClick() {
     if (selectionMode && onToggleSelect) {
@@ -63,14 +67,22 @@ export default function CandidateCard({
 
   return (
     <div
-      className={`group w-full rounded-lg border bg-white p-3.5 text-left transition-all duration-200 focus-within:ring-2 focus-within:ring-teal/30 ${
+      className={`group w-full rounded-lg border bg-white p-3.5 text-left transition-all duration-200 ${
+        isPro ? "focus-within:ring-2 focus-within:ring-marigold/35" : "focus-within:ring-2 focus-within:ring-teal/30"
+      } ${stageAccent} ${
         selected
-          ? "border-teal/40 bg-teal/3 ring-2 ring-teal/20 shadow-md"
+          ? isPro
+            ? "border-marigold/50 bg-marigold/[0.06] ring-2 ring-marigold/25 shadow-md"
+            : "border-teal/40 bg-teal/3 ring-2 ring-teal/20 shadow-md"
           : focused
-            ? "border-teal/50 ring-2 ring-teal/30 shadow-md"
+            ? isPro
+              ? "border-marigold/50 ring-2 ring-marigold/30 shadow-md"
+              : "border-teal/50 ring-2 ring-teal/30 shadow-md"
             : dimmed
               ? "border-ink/5 opacity-55 hover:opacity-80"
-              : "border-ink/6 hover:border-teal/20 hover:shadow-md"
+              : isPro
+                ? "border-ink/6 hover:border-ink/15 hover:shadow-md"
+                : "border-ink/6 hover:border-teal/20 hover:shadow-md"
       }`}
     >
       <div className="flex items-start gap-2">
@@ -96,10 +108,10 @@ export default function CandidateCard({
               size="md"
               shape="rounded"
               className="!rounded-xl transition-transform group-hover:scale-105"
-              fallbackClassName="bg-teal/10 text-teal ring-1 ring-teal/10"
+              fallbackClassName={isPro ? "bg-ink/8 text-ink ring-1 ring-ink/10" : "bg-teal/10 text-teal ring-1 ring-teal/10"}
             />
             <div className="min-w-0 flex-1">
-              <h4 className="truncate font-display text-sm font-bold text-ink group-hover:text-teal">
+              <h4 className={`truncate font-display text-sm font-bold text-ink ${isPro ? "group-hover:text-ink" : "group-hover:text-teal"}`}>
                 {application.seeker.fullName}
               </h4>
               <p className="mt-0.5 truncate text-xs text-ink/50">
@@ -132,7 +144,9 @@ export default function CandidateCard({
             </span>
             {application.seeker.resumeUrl && (
               <span
-                className="inline-flex items-center gap-1 rounded-md bg-teal/8 px-1.5 py-0.5 text-[9px] font-semibold text-teal"
+                className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[9px] font-semibold ${
+                  isPro ? "bg-ink/6 text-ink/60" : "bg-teal/8 text-teal"
+                }`}
                 title="Resume attached"
               >
                 <Paperclip className="h-3 w-3" aria-hidden="true" />

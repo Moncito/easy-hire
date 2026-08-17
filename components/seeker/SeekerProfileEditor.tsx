@@ -957,7 +957,7 @@ export default function SeekerProfileEditor({
               </select>
             </div>
             <div>
-              <p className="mb-3 text-sm font-medium text-ink">Desired salary (PHP/month)</p>
+              <p className="mb-3 text-sm font-medium text-ink">Desired salary (USD/month)</p>
               <div className="grid gap-5 sm:grid-cols-2">
                 <div>
                   <label htmlFor="salaryMin" className="mb-2 block text-xs font-semibold uppercase tracking-wider text-ink/45">

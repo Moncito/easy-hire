@@ -26,14 +26,14 @@ export function fromMonthlyEquivalent(monthlyAmount: number, targetPeriod: Salar
   return monthlyAmount;
 }
 
-export function formatPesoRange(
+export function formatSalaryRange(
   min: number | null | undefined,
   max: number | null | undefined,
   period: SalaryPeriod = "MONTHLY"
 ): string {
   if (min == null && max == null) return "Not specified";
 
-  const fmt = (n: number) => `₱${n.toLocaleString("en-PH")}`;
+  const fmt = (n: number) => `$${n.toLocaleString("en-US")}`;
   const suffix = periodSuffix(period);
 
   if (min != null && max != null) {
@@ -44,6 +44,9 @@ export function formatPesoRange(
   if (min != null) return `From ${fmt(min)}${suffix}`;
   return `Up to ${fmt(max!)}${suffix}`;
 }
+
+/** @deprecated Use formatSalaryRange — job pay is USD. */
+export const formatPesoRange = formatSalaryRange;
 
 export function formatEnumLabel(value: string) {
   return value.replace(/_/g, " ");

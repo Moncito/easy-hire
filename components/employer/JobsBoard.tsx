@@ -9,11 +9,12 @@ import { EmployerPrimaryButton } from "@/components/employer/ui/EmployerPageHead
 import EmployerJobCard from "@/components/employer/EmployerJobCard";
 import JobsBoardToolbar, { type SortOption } from "@/components/employer/JobsBoardToolbar";
 import type { EmployerJobCardData } from "@/lib/employer-jobs";
-import { createEmployerJob, patchJobStatus } from "@/lib/client/jobs";
+import { createEmployerJob, patchJobStatus, deleteEmployerJob } from "@/lib/client/jobs";
 import { useEmployerShell } from "@/components/employer/EmployerShellContext";
 import ProPostAnotherJobCard from "@/components/employer/pro-dashboard/ProPostAnotherJobCard";
 import ProButton from "@/components/employer/pro/ProButton";
 import ProEmptyState from "@/components/employer/pro/ProEmptyState";
+import EmployerConfirmModal from "@/components/employer/EmployerConfirmModal";
 
 type Props = {
   jobs: EmployerJobCardData[];
@@ -65,6 +66,10 @@ export default function JobsBoard({ jobs: initialJobs, companyVerified }: Props)
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<SortOption>("updated");
   const [loadingId, setLoadingId] = useState<string | null>(null);
+  const [pending, setPending] = useState<
+    | { kind: "close" | "duplicate" | "delete"; job: EmployerJobCardData }
+    | null
+  >(null);
 
   useEffect(() => {
     setJobs(initialJobs);
@@ -112,17 +117,16 @@ export default function JobsBoard({ jobs: initialJobs, companyVerified }: Props)
     });
   }, [filteredJobs, query, sort]);
 
-  async function handleCloseJob(id: string) {
-    if (!confirm("Close this job listing? It will no longer accept applications.")) return;
-
-    setLoadingId(id);
-    const result = await patchJobStatus(id, "CLOSED");
+  async function handleCloseJob(job: EmployerJobCardData) {
+    setLoadingId(job.id);
+    const result = await patchJobStatus(job.id, "CLOSED");
 
     if (result.ok) {
       setJobs((prev) =>
-        prev.map((j) => (j.id === id ? { ...j, status: "CLOSED", needsAttention: false } : j))
+        prev.map((j) => (j.id === job.id ? { ...j, status: "CLOSED", needsAttention: false } : j))
       );
       toast.success("Job closed");
+      setPending(null);
     } else {
       toast.error(result.error ?? "Could not close job");
     }
@@ -130,8 +134,6 @@ export default function JobsBoard({ jobs: initialJobs, companyVerified }: Props)
   }
 
   async function handleDuplicateJob(job: EmployerJobCardData) {
-    if (!confirm(`Duplicate "${job.title}"?`)) return;
-
     setLoadingId(job.id);
     const result = await createEmployerJob({
       title: `${job.title} (Copy)`,
@@ -156,11 +158,33 @@ export default function JobsBoard({ jobs: initialJobs, companyVerified }: Props)
 
     if (result.ok) {
       toast.success("Job duplicated");
+      setPending(null);
       router.refresh();
     } else {
       toast.error(result.error ?? "Could not duplicate job");
     }
     setLoadingId(null);
+  }
+
+  async function handleDeleteDraft(job: EmployerJobCardData) {
+    setLoadingId(job.id);
+    const result = await deleteEmployerJob(job.id);
+
+    if (result.ok) {
+      setJobs((prev) => prev.filter((j) => j.id !== job.id));
+      toast.success("Draft deleted");
+      setPending(null);
+    } else {
+      toast.error(result.error ?? "Could not delete draft");
+    }
+    setLoadingId(null);
+  }
+
+  function confirmPending() {
+    if (!pending) return;
+    if (pending.kind === "close") return handleCloseJob(pending.job);
+    if (pending.kind === "duplicate") return handleDuplicateJob(pending.job);
+    return handleDeleteDraft(pending.job);
   }
 
   const filterOptions = [
@@ -257,13 +281,45 @@ export default function JobsBoard({ jobs: initialJobs, companyVerified }: Props)
               job={job}
               companyVerified={companyVerified}
               loading={loadingId === job.id}
-              onDuplicate={() => handleDuplicateJob(job)}
-              onClose={() => handleCloseJob(job.id)}
+              onDuplicate={() => setPending({ kind: "duplicate", job })}
+              onClose={() => setPending({ kind: "close", job })}
+              onDelete={() => setPending({ kind: "delete", job })}
             />
           ))}
           {isPro && filter === FILTER_ALL && !query.trim() && <ProPostAnotherJobCard />}
         </div>
       )}
+
+      <EmployerConfirmModal
+        open={pending !== null}
+        title={
+          pending?.kind === "delete"
+            ? "Delete this draft?"
+            : pending?.kind === "close"
+              ? "Close this job?"
+              : pending
+                ? "Duplicate this job?"
+                : ""
+        }
+        subject={pending?.job.title}
+        description={
+          pending?.kind === "delete"
+            ? "This draft will be removed permanently. You can’t undo this."
+            : pending?.kind === "close"
+              ? "It will stop accepting applications and move to Closed. Applicants already in the pipeline stay on file."
+              : "A new draft copy will be created. The original listing is unchanged."
+        }
+        confirmLabel={
+          pending?.kind === "delete" ? "Delete draft" : pending?.kind === "close" ? "Close job" : "Duplicate"
+        }
+        danger={pending?.kind === "delete" || pending?.kind === "close"}
+        loading={pending !== null && loadingId === pending.job.id}
+        onCancel={() => {
+          if (loadingId) return;
+          setPending(null);
+        }}
+        onConfirm={() => void confirmPending()}
+      />
     </>
   );
 }

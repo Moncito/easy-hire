@@ -18,7 +18,7 @@ export default function InstantPublishNote() {
         <Sparkles className="mr-1 inline h-3 w-3 -translate-y-px text-[color:var(--neo-gold,#c9a227)]" strokeWidth={2.25} />
         <span className="font-semibold text-ink/60">Employer Pro:</span> verified companies publish
         instantly on submit — no admin queue. Not verified yet?{" "}
-        <a href="/employer/company-profile" className="font-semibold text-teal hover:underline">
+        <a href="/employer/company-profile" className="cursor-pointer font-semibold text-[#9A5B12] hover:underline">
           Finish verification
         </a>
         .

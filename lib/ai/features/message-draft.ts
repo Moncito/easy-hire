@@ -8,6 +8,7 @@ export const messageDraftToneSchema = z.enum([
   "follow_up",
   "interview_invite",
   "rejection",
+  "welcome",
 ]);
 
 export const messageDraftInputSchema = z.object({
@@ -28,6 +29,8 @@ const TONE_INSTRUCTIONS: Record<z.infer<typeof messageDraftToneSchema>, string> 
   interview_invite: "An invitation to schedule an interview, with an easy way to reply with availability.",
   rejection:
     "A kind, respectful decline. Be honest but supportive, thank them for applying, and avoid vague or false promises.",
+  welcome:
+    "A warm welcome now that they have been hired. Confirm next steps (start date, onboarding, what to expect). Do not sound like a recruiting first-outreach or an interview invite.",
 };
 
 /**

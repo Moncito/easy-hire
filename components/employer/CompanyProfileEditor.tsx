@@ -551,20 +551,6 @@ export default function CompanyProfileEditor({
 
       {isPro ? (
         <ProCompanyWorkspace
-          logoInitials={logoInitials}
-          logoUrl={logoUrl}
-          bannerUrl={bannerUrl}
-          companyName={form.companyName}
-          industry={form.industry}
-          description={form.description}
-          highlights={form.highlights}
-          headquarters={form.headquarters}
-          teamSize={form.teamSize}
-          website={form.website}
-          activeJobsCount={stats.activeJobsCount}
-          totalApplicantsCount={stats.totalApplicantsCount}
-          verified={verificationStatus === "verified"}
-          companyId={companyId}
           profileStrength={profileStrength}
           strengthLabel={strengthLabel}
           checklist={checklist}
@@ -597,9 +583,55 @@ export default function CompanyProfileEditor({
         </div>
       )}
 
-      <div className={isPro ? "space-y-4" : "space-y-5"}>
-          <div className={isPro ? "pro-card p-5 sm:p-6" : undefined}>
-          <EmployerFormSection title="Company information" last={isPro}>
+      <div className={isPro ? "space-y-8" : "space-y-5"}>
+          {isPro ? (
+            <div className="pro-card p-5 sm:p-6">
+              <EmployerFormSection
+                title="About company"
+                description="Tell candidates about your culture, mission, values, and what makes your company unique."
+                last
+              >
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-full border border-marigold/25 bg-marigold/10 px-3.5 py-2">
+                  <div className="flex items-center gap-2 text-xs text-ink/65">
+                    <Sparkles className="h-3.5 w-3.5 shrink-0 text-[#9A5B12]" aria-hidden="true" />
+                    <span>Let Easy AI draft or rewrite your About copy from what&apos;s here.</span>
+                    <ProBadge size="sm" />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleRewriteAbout}
+                    disabled={isLoading("company-brand")}
+                    className="shrink-0 rounded-full bg-marigold px-3 py-1.5 text-xs font-semibold text-ink transition hover:bg-marigold/90 disabled:opacity-60"
+                  >
+                    {isLoading("company-brand")
+                      ? "Writing…"
+                      : form.description
+                        ? "Rewrite About"
+                        : "Draft with Easy AI"}
+                  </button>
+                </div>
+                <textarea
+                  id="description"
+                  value={form.description}
+                  onChange={(e) => updateField("description", e.target.value.slice(0, MAX_DESCRIPTION_LENGTH))}
+                  rows={6}
+                  maxLength={MAX_DESCRIPTION_LENGTH}
+                  placeholder="Share your story, team culture, and what makes working with you special..."
+                  aria-describedby="description-counter"
+                  className="w-full rounded-2xl border border-ink/10 bg-white p-5 text-sm leading-relaxed text-ink outline-none transition-colors focus-visible:border-ink/25 focus-visible:ring-2 focus-visible:ring-ink/10"
+                />
+                <div id="description-counter" className="mt-2 flex items-center justify-between font-data text-[11px] text-ink/40">
+                  <span>Recommended: 150–300 characters</span>
+                  <span aria-live="polite">
+                    {form.description.length} / {MAX_DESCRIPTION_LENGTH}
+                  </span>
+                </div>
+              </EmployerFormSection>
+            </div>
+          ) : null}
+
+          <div>
+          <EmployerFormSection title="Company information" last={false}>
             <div className="space-y-4">
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
@@ -689,35 +721,12 @@ export default function CompanyProfileEditor({
                 </div>
             </div>
           </EmployerFormSection>
-          </div>
 
-          <div className={isPro ? "pro-card p-5 sm:p-6" : undefined}>
+          {!isPro && (
           <EmployerFormSection
             title="About company"
             description="Tell candidates about your culture, mission, values, and what makes your company unique."
-            last={isPro}
           >
-            {isPro && (
-              <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-full border border-marigold/25 bg-marigold/10 px-3.5 py-2">
-                <div className="flex items-center gap-2 text-xs text-ink/65">
-                  <Sparkles className="h-3.5 w-3.5 shrink-0 text-[#9A5B12]" aria-hidden="true" />
-                  <span>Let Easy AI draft or rewrite your About copy from what&apos;s here.</span>
-                  <ProBadge size="sm" />
-                </div>
-                <button
-                  type="button"
-                  onClick={handleRewriteAbout}
-                  disabled={isLoading("company-brand")}
-                  className="shrink-0 rounded-full bg-marigold px-3 py-1.5 text-xs font-semibold text-ink transition hover:bg-marigold/90 disabled:opacity-60"
-                >
-                  {isLoading("company-brand")
-                    ? "Writing…"
-                    : form.description
-                      ? "Rewrite About"
-                      : "Draft with Easy AI"}
-                </button>
-              </div>
-            )}
             <textarea
               id="description"
               value={form.description}
@@ -726,11 +735,7 @@ export default function CompanyProfileEditor({
               maxLength={MAX_DESCRIPTION_LENGTH}
               placeholder="Share your story, team culture, and what makes working with you special..."
               aria-describedby="description-counter"
-              className={`w-full rounded-2xl border border-ink/10 bg-white p-5 text-sm leading-relaxed text-ink outline-none transition-colors ${
-                isPro
-                  ? "focus-visible:border-ink/25 focus-visible:ring-2 focus-visible:ring-ink/10"
-                  : "focus-visible:border-teal focus-visible:ring-2 focus-visible:ring-teal/20"
-              }`}
+              className="w-full rounded-2xl border border-ink/10 bg-white p-5 text-sm leading-relaxed text-ink outline-none transition-colors focus-visible:border-teal focus-visible:ring-2 focus-visible:ring-teal/20"
             />
             <div id="description-counter" className="mt-2 flex items-center justify-between font-data text-[11px] text-ink/40">
               <span>Recommended: 150–300 characters</span>
@@ -739,13 +744,11 @@ export default function CompanyProfileEditor({
               </span>
             </div>
           </EmployerFormSection>
-          </div>
+          )}
 
-          <div className={isPro ? "pro-card p-5 sm:p-6" : undefined}>
           <EmployerFormSection
             title="Company highlights"
             description="Select benefits and perks that will appear on your public job postings."
-            last={isPro}
           >
             <div className="flex flex-wrap gap-2">
               {highlightOptions.map((highlight) => {
@@ -777,10 +780,8 @@ export default function CompanyProfileEditor({
                 ))}
             </div>
           </EmployerFormSection>
-          </div>
 
-          <div className={isPro ? "pro-card p-5 sm:p-6" : undefined}>
-          <EmployerFormSection title="Social presence" last={isPro}>
+          <EmployerFormSection title="Social presence" last>
             <div className="mb-3 flex items-center gap-2 text-ink/40">
               <Share2 className="h-4 w-4" aria-hidden="true" />
               <span className="text-xs">Links shown on your public company page.</span>

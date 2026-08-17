@@ -66,7 +66,7 @@ export default function EmployerMobileNav({ plan = "FREE" }: Props) {
 
       {menuOpen && (
         <div
-          className={`employer-sheet-enter fixed bottom-16 left-0 right-0 z-50 rounded-t-2xl border border-ink/8 bg-white p-4 shadow-2xl lg:hidden`}
+          className="employer-sheet-enter employer-mobile-sheet fixed bottom-16 left-0 right-0 z-50 rounded-t-2xl border border-ink/8 bg-white p-4 shadow-2xl lg:hidden"
         >
           <div className="mb-3 flex items-center justify-between">
             <p className="text-sm font-bold text-ink">More</p>
@@ -115,7 +115,7 @@ export default function EmployerMobileNav({ plan = "FREE" }: Props) {
       )}
 
       <nav
-        className="fixed bottom-0 left-0 right-0 z-40 flex h-16 items-stretch border-t border-ink/8 bg-mist/95 backdrop-blur-md lg:hidden"
+        className="employer-mobile-nav fixed bottom-0 left-0 right-0 z-40 flex h-16 items-stretch border-t border-ink/8 bg-mist/95 backdrop-blur-md lg:hidden"
         aria-label="Employer mobile navigation"
       >
         {primaryTabs.map((tab) => {

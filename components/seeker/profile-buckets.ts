@@ -58,7 +58,7 @@ export const PROFILE_BUCKETS: ProfileBucket[] = [
   {
     id: "next-role",
     label: "About your next role",
-    description: "Availability, timezone, and salary expectations in PHP.",
+    description: "Availability, timezone, and salary expectations in USD.",
   },
   {
     id: "languages",

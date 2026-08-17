@@ -107,6 +107,15 @@ export async function updateJobStatus(
   return updated;
 }
 
+export async function deleteDraftJob(jobId: string, currentStatus: JobStatus, companyId: string) {
+  if (currentStatus !== "DRAFT") {
+    throw new ApiError("Only draft jobs can be deleted. Close live listings instead.", 400);
+  }
+
+  await prisma.job.delete({ where: { id: jobId } });
+  invalidateEmployerWorkspace(companyId);
+}
+
 export async function submitJobForReview(
   job: {
     id: string;

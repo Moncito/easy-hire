@@ -17,17 +17,17 @@ export type ProWeeklyPoint = {
   interviews: number;
 };
 
-const INK = "#20242B";
-const MARIGOLD = "#F2A93B";
-const GRID = "rgba(32, 36, 43, 0.08)";
-const TICK = "rgba(32, 36, 43, 0.45)";
+const INK = "var(--pro-chart-ink, #20242B)";
+const MARIGOLD = "var(--pro-accent, #F2A93B)";
+const GRID = "var(--pro-chart-grid, rgba(32, 36, 43, 0.08))";
+const TICK = "var(--pro-chart-tick, rgba(32, 36, 43, 0.45))";
 const TICK_FONT = 'var(--font-ibm-plex-mono), ui-monospace, monospace';
 
 function MonoTooltip({ active, payload, label }: TooltipContentProps) {
   if (!active || !payload?.length) return null;
 
   return (
-    <div className="rounded-xl border border-ink/10 bg-white px-3 py-2 shadow-sm">
+    <div className="rounded-xl border border-ink/10 bg-[var(--pro-surface,#fff)] px-3 py-2 shadow-sm">
       <p className="font-data text-xs text-ink/45">{label}</p>
       <ul className="mt-1.5 space-y-1">
         {payload.map((item) => (
@@ -81,7 +81,7 @@ export default function ProMonoWeeklyChart({ data }: Props) {
 
       <div className="flex items-center gap-4 text-xs" aria-hidden="true">
         <span className="flex items-center gap-1.5 text-ink/55">
-          <span className="h-2.5 w-2.5 rounded-sm bg-ink" />
+          <span className="h-2.5 w-2.5 rounded-sm bg-[var(--pro-chart-ink,#20242B)]" />
           Applications
         </span>
         <span className="flex items-center gap-1.5 text-ink/55">
@@ -109,7 +109,7 @@ export default function ProMonoWeeklyChart({ data }: Props) {
               domain={[0, (max: number) => Math.max(max, 4)]}
             />
             <Tooltip
-              cursor={{ fill: "rgba(32, 36, 43, 0.04)" }}
+              cursor={{ fill: "var(--pro-chart-cursor, rgba(32, 36, 43, 0.04))" }}
               content={MonoTooltip}
             />
             <Bar dataKey="applications" name="Applications" fill={INK} radius={[4, 4, 0, 0]} maxBarSize={18} />

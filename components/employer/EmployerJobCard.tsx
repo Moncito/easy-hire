@@ -8,6 +8,7 @@ import {
   AlertTriangle,
   Copy,
   XCircle,
+  Trash2,
   ExternalLink,
   Clock,
   Star,
@@ -31,6 +32,7 @@ type Props = {
   companyVerified: boolean;
   onDuplicate?: () => void;
   onClose?: () => void;
+  onDelete?: () => void;
   loading?: boolean;
 };
 
@@ -49,7 +51,7 @@ function SecondaryAction({
   danger?: boolean;
   isPro?: boolean;
 }) {
-  const className = `inline-flex items-center gap-1 text-[11px] font-semibold transition ${
+  const className = `inline-flex cursor-pointer items-center gap-1 text-[11px] font-semibold transition ${
     danger
       ? "text-ink/50 hover:text-ember"
       : isPro
@@ -84,6 +86,7 @@ export default function EmployerJobCard({
   companyVerified,
   onDuplicate,
   onClose,
+  onDelete,
   loading,
 }: Props) {
   const { isPro } = useEmployerShell();
@@ -110,7 +113,8 @@ export default function EmployerJobCard({
   );
   const showPublicLink = canViewPublicListing(job, companyVerified);
   const canClose =
-    onClose && job.status !== "CLOSED" && job.status !== "PENDING_REVIEW";
+    onClose && job.status === "ACTIVE";
+  const canDelete = onDelete && job.status === "DRAFT";
   const canFeature = isPro && job.status === "ACTIVE";
 
   async function handleToggleFeatured() {
@@ -200,6 +204,15 @@ export default function EmployerJobCard({
       danger: true,
     });
   }
+  if (canDelete) {
+    secondaryActions.push({
+      key: "delete",
+      onClick: onDelete,
+      icon: Trash2,
+      label: "Delete draft",
+      danger: true,
+    });
+  }
 
   return (
     <div
@@ -223,7 +236,11 @@ export default function EmployerJobCard({
         </div>
         <div className="flex shrink-0 flex-col items-end gap-1">
           <span
-            className={`rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider ${status.className}`}
+            className={`rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
+              isPro && job.status === "ACTIVE" && !job.needsAttention
+                ? "border-ink/10 bg-ink/5 text-ink"
+                : status.className
+            }`}
           >
             {status.label}
           </span>
@@ -261,6 +278,7 @@ export default function EmployerJobCard({
             shortlisted={job.pipeline.shortlisted}
             interview={job.pipeline.interview}
             hired={job.pipeline.hired}
+            variant={isPro ? "pro" : "free"}
           />
         </div>
       )}
@@ -335,7 +353,7 @@ export default function EmployerJobCard({
         )}
 
         {secondaryActions.length > 0 && (
-          <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1.5 px-0.5">
+          <div className="mt-3.5 flex flex-wrap items-center gap-x-3.5 gap-y-2 px-0.5">
             {secondaryActions.map((action) => (
               <SecondaryAction
                 key={action.key}

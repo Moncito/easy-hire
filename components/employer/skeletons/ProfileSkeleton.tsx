@@ -1,9 +1,41 @@
+"use client";
+
 import Bone from "@/components/employer/skeletons/Bone";
-import EmployerShellSkeleton from "@/components/employer/skeletons/EmployerShellSkeleton";
+import ProPageHeaderSkeleton from "@/components/employer/skeletons/ProPageHeaderSkeleton";
+import { useEmployerShell } from "@/components/employer/EmployerShellContext";
 
 export default function ProfileSkeleton() {
+  const { isPro } = useEmployerShell();
+
+  if (isPro) {
+    return (
+      <div className="pb-8">
+        <ProPageHeaderSkeleton actions={2} />
+        <section className="pro-card mb-5 overflow-hidden">
+          <Bone className="h-44 w-full rounded-none sm:h-56" />
+          <div className="flex items-center gap-4 px-5 py-4 sm:px-6">
+            <Bone className="-mt-10 h-16 w-16 shrink-0 rounded-xl sm:h-[4.5rem] sm:w-[4.5rem]" />
+            <div className="min-w-0 flex-1 space-y-2">
+              <Bone className="h-6 w-48" />
+              <Bone className="h-4 w-32" />
+            </div>
+          </div>
+        </section>
+        <div className="pro-card space-y-6 p-5 sm:p-6">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="space-y-2 border-b border-ink/5 pb-5 last:border-0 last:pb-0">
+              <Bone className="h-4 w-28" />
+              <Bone className="h-3 w-48" />
+              <Bone className="h-10 w-full rounded-xl" />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <EmployerShellSkeleton>
+    <div>
       <div className="mb-8 flex items-center gap-4 rounded-2xl bg-ink/[0.02] p-6">
         <Bone className="h-16 w-16 rounded-2xl" />
         <div className="flex-1 space-y-2">
@@ -23,25 +55,23 @@ export default function ProfileSkeleton() {
         </div>
         <Bone className="hidden h-64 rounded-2xl lg:block" />
       </div>
-    </EmployerShellSkeleton>
+    </div>
   );
 }
 
 export function ListPageSkeleton({ rows = 6 }: { rows?: number }) {
   return (
-    <EmployerShellSkeleton>
-      <div className="divide-y divide-ink/5 rounded-2xl border border-ink/5 bg-white/40">
-        {Array.from({ length: rows }).map((_, i) => (
-          <div key={i} className="flex items-center gap-4 px-5 py-4">
-            <div className="min-w-0 flex-1 space-y-2">
-              <Bone className="h-4 w-52" />
-              <Bone className="h-3 w-28" />
-            </div>
-            <Bone className="h-2 w-20 rounded-full" />
-            <Bone className="h-8 w-8 rounded-lg" />
+    <div className="divide-y divide-ink/5 rounded-2xl border border-ink/5 bg-white/40">
+      {Array.from({ length: rows }).map((_, i) => (
+        <div key={i} className="flex items-center gap-4 px-5 py-4">
+          <div className="min-w-0 flex-1 space-y-2">
+            <Bone className="h-4 w-52" />
+            <Bone className="h-3 w-28" />
           </div>
-        ))}
-      </div>
-    </EmployerShellSkeleton>
+          <Bone className="h-2 w-20 rounded-full" />
+          <Bone className="h-8 w-8 rounded-lg" />
+        </div>
+      ))}
+    </div>
   );
 }

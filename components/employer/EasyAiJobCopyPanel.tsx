@@ -4,9 +4,7 @@ import { useState } from "react";
 import { Sparkles } from "lucide-react";
 import { useEmployerShell } from "@/components/employer/EmployerShellContext";
 import { useEasyAi } from "@/components/employer/pro/useEasyAi";
-import NeoSurface from "@/components/employer/pro/NeoSurface";
-import NeoButton from "@/components/employer/pro/NeoButton";
-import ProBadge from "@/components/employer/pro/ProBadge";
+import ProButton from "@/components/employer/pro/ProButton";
 
 type JobCopyResult = {
   title: string;
@@ -73,32 +71,28 @@ export default function EasyAiJobCopyPanel({
   }
 
   return (
-    <NeoSurface variant="raised" className="mb-5">
+    <div className="pro-card mb-5 p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex items-start gap-2.5">
-          <span className="neo-inset-sm flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[color:var(--neo-gold)]">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-marigold/15 text-[#9A5B12]">
             <Sparkles className="h-4 w-4" strokeWidth={2.25} />
           </span>
           <div>
-            <div className="flex items-center gap-2">
-              <p className="text-sm font-bold text-[color:var(--neo-ink)]">Improve with Easy AI</p>
-              <ProBadge size="sm" />
-            </div>
-            <p className="mt-0.5 text-xs leading-relaxed text-[color:var(--neo-muted)]">
+            <p className="text-sm font-bold text-ink">Improve with Easy AI</p>
+            <p className="mt-0.5 text-xs leading-relaxed text-ink/50">
               {hasDraft
                 ? "Rewrite the title, description, requirements and benefits from what's filled in below."
                 : "Draft the title, description, requirements and benefits from the role details below."}
             </p>
           </div>
         </div>
-        <NeoButton
+        <ProButton
           variant="secondary"
-          size="sm"
           onClick={handleGenerate}
           disabled={!canGenerate || isLoading("job-copy")}
         >
           {isLoading("job-copy") ? "Writing…" : hasDraft ? "Rewrite with Easy AI" : "Draft with Easy AI"}
-        </NeoButton>
+        </ProButton>
       </div>
       <div className="mt-3">
         <label htmlFor="easy-ai-job-notes" className="sr-only">
@@ -110,12 +104,12 @@ export default function EasyAiJobCopyPanel({
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           placeholder="Optional notes for Easy AI — tools used, tone, must-haves…"
-          className="neo-inset-sm w-full rounded-xl border-0 px-3.5 py-2.5 text-sm text-[color:var(--neo-ink)] outline-none placeholder:text-[color:var(--neo-muted)] focus:ring-2 focus:ring-[color:var(--neo-teal)]/30"
+          className="w-full rounded-xl border border-ink/10 bg-white px-3.5 py-2.5 text-sm text-ink outline-none placeholder:text-ink/40 focus:border-ink/25"
         />
       </div>
       {!canGenerate && (
-        <p className="mt-2 text-[11px] text-[color:var(--neo-muted)]">Add a job title first.</p>
+        <p className="mt-2 text-[11px] text-ink/45">Add a job title first.</p>
       )}
-    </NeoSurface>
+    </div>
   );
 }

@@ -63,13 +63,18 @@ function EmployerShellInner({
           />
           <main
             className={`relative z-[1] flex min-h-0 flex-1 flex-col ${
-              isFixedWorkspace ? "overflow-hidden pb-16 lg:pb-0" : "overflow-y-auto pb-16 lg:pb-0"
-            } ${isJobForm || isCompanyProfile ? "scroll-pb-20" : ""}`}
+              isFixedWorkspace
+                ? "overflow-hidden pb-16 lg:pb-0"
+                : isJobForm
+                  ? "overflow-y-auto pb-0"
+                  : "overflow-y-auto pb-16 lg:pb-0"
+            } ${isCompanyProfile ? "scroll-pb-20" : ""}`}
           >
             <EmployerPageContainer pro>
               <EmployerPageEnter fill={isFixedWorkspace}>{children}</EmployerPageEnter>
             </EmployerPageContainer>
           </main>
+          <div id="employer-action-bar-slot" className="shrink-0" />
         </div>
       </div>
     );
