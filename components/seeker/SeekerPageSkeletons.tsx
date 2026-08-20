@@ -7,7 +7,7 @@ function Bone({ className }: { className?: string }) {
 export function SeekerNavBandSkeleton() {
   return (
     <div className="-mx-4 sm:-mx-6 lg:-mx-8">
-      <div className="seeker-nav-band relative flex h-14 shrink-0 items-center justify-between px-6 sm:h-16 sm:px-8">
+      <div className="seeker-nav-band relative flex h-12 shrink-0 items-center justify-between px-4 sm:h-14 sm:px-6 lg:h-16 lg:px-8">
         <Bone className="h-6 w-32" />
         <Bone className="h-6 w-24 rounded-full" />
       </div>

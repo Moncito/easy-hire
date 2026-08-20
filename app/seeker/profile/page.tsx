@@ -1,6 +1,6 @@
-import { redirect } from "next/navigation";
-import { auth } from "@/Auth";
+import { requireSeekerPageContext } from "@/lib/auth/seeker-session";
 import { ensureSeekerProfile } from "@/lib/seekers";
+import SeekerProfileAccountLinks from "@/components/seeker/SeekerProfileAccountLinks";
 import SeekerProfileEditor from "@/components/seeker/SeekerProfileEditor";
 import { PROFILE_BUCKETS, profileBucketCompletion, type ProfileBucketId } from "@/components/seeker/profile-buckets";
 import { SeekerNavBandBleed } from "@/components/seeker/SeekerNavBand";
@@ -16,11 +16,9 @@ export default async function SeekerProfilePage({
 }: {
   searchParams: Promise<{ bucket?: string }>;
 }) {
-  const session = await auth();
-  if (!session?.user) redirect("/login");
-
+  const { session, userId } = await requireSeekerPageContext();
   const { bucket } = await searchParams;
-  const profile = await ensureSeekerProfile(session.user.id, {
+  const profile = await ensureSeekerProfile(userId, {
     fullName: session.user.name ?? "",
   });
 
@@ -65,6 +63,7 @@ export default async function SeekerProfilePage({
         <h1 className="font-display text-3xl font-bold text-ink sm:text-4xl">My profile</h1>
         <p className="mt-1.5 text-sm text-ink/50">Manage your professional presence</p>
       </div>
+      <SeekerProfileAccountLinks />
       <SeekerProfileEditor
         profileId={profile.id}
         profileUpdatedAt={profile.updatedAt.toISOString()}

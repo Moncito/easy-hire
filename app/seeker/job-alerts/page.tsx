@@ -1,12 +1,12 @@
-import { auth } from "@/Auth";
+import { requireSeekerPageContext } from "@/lib/auth/seeker-session";
 import { listJobAlerts } from "@/lib/job-alerts";
 import JobAlertsList from "@/components/seeker/JobAlertsList";
 import { SeekerNavBandBleed } from "@/components/seeker/SeekerNavBand";
 import { Bell } from "lucide-react";
 
 export default async function JobAlertsPage() {
-  const session = await auth();
-  const alerts = session?.user ? await listJobAlerts(session.user.id) : [];
+  const { userId } = await requireSeekerPageContext();
+  const alerts = await listJobAlerts(userId);
 
   const countLabel =
     alerts.length === 1 ? "1 active alert" : `${alerts.length} active alerts`;

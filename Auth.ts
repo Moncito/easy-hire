@@ -6,6 +6,25 @@ import { prisma } from "@/lib/prisma";
 import { ensureSeekerProfile } from "@/lib/seekers";
 import { authConfig } from "./auth.config";
 
+async function resolveDbUser(email?: string | null, userId?: string | null) {
+  if (email) {
+    const byEmail = await prisma.user.findUnique({
+      where: { email },
+      select: { id: true, role: true },
+    });
+    if (byEmail) return byEmail;
+  }
+
+  if (userId) {
+    return prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, role: true },
+    });
+  }
+
+  return null;
+}
+
 // This file runs in the Node.js runtime only (API routes, Server Components,
 // Server Actions) — never imported directly by middleware.ts / proxy.ts.
 export const { handlers, signIn, signOut, auth } = NextAuth({
@@ -17,35 +36,51 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       const ROLE_REFRESH_MS = 15 * 60 * 1000;
 
       if (user) {
-        token.id = user.id;
-        token.role = (user as { role?: string }).role;
+        // Auth.js replaces OAuth user.id with a random UUID — resolve from DB by email.
+        try {
+          const dbUser = await resolveDbUser(
+            (user.email ?? token.email) as string | undefined,
+            user.id
+          );
+
+          if (dbUser) {
+            token.id = dbUser.id;
+            token.role = dbUser.role;
+            token.idVerified = true;
+          } else {
+            token.id = user.id;
+            token.role = (user as { role?: string }).role;
+            token.idVerified = false;
+          }
+        } catch (err) {
+          console.error("[auth] jwt initial user resolve failed:", err);
+          token.id = user.id;
+          token.role = (user as { role?: string }).role;
+          token.idVerified = false;
+        }
+
         token.roleRefreshedAt = Date.now();
         return token;
       }
 
       const lastRefresh = (token.roleRefreshedAt as number | undefined) ?? 0;
-      const needsRefresh = Date.now() - lastRefresh > ROLE_REFRESH_MS;
+      const needsRefresh =
+        Date.now() - lastRefresh > ROLE_REFRESH_MS || token.idVerified !== true;
 
       if (!needsRefresh && token.id && token.role) {
         return token;
       }
 
-      // Auth.js replaces OAuth user.id with a random UUID (see getUserAndAccount
-      // in @auth/core). Refresh from DB periodically or when id/role is missing.
       try {
-        const email = token.email as string | undefined;
-        const dbUser = email
-          ? await prisma.user.findUnique({ where: { email }, select: { id: true, role: true } })
-          : token.id
-            ? await prisma.user.findUnique({
-                where: { id: token.id as string },
-                select: { id: true, role: true },
-              })
-            : null;
+        const dbUser = await resolveDbUser(
+          token.email as string | undefined,
+          token.id as string | undefined
+        );
 
         if (dbUser) {
           token.id = dbUser.id;
           token.role = dbUser.role;
+          token.idVerified = true;
         }
       } catch (err) {
         console.error("[auth] jwt role refresh failed:", err);

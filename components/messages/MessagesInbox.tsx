@@ -653,10 +653,10 @@ export default function MessagesInbox({
           className={`shrink-0 border-b border-ink/8 ${isSeeker ? "px-6 py-5 sm:px-8" : "px-4 py-3 sm:px-5"}`}
         >
           {isSeeker ? (
-            <>
+            <div className={fillNavClearance ? "hidden lg:block" : undefined}>
               <h1 className="font-display text-2xl font-bold text-ink">Messages</h1>
               <p className="mt-0.5 text-sm text-ink/45">In-platform conversations</p>
-            </>
+            </div>
           ) : (
             <div className="flex items-center justify-between gap-2">
               <h2 className="font-display text-lg font-black tracking-tighter text-ink">Inbox</h2>
@@ -672,7 +672,11 @@ export default function MessagesInbox({
             </div>
           )}
 
-          <div className={`flex flex-col gap-3 ${isSeeker ? "mt-4" : "mt-3"}`}>
+          <div
+            className={`flex flex-col gap-3 ${
+              isSeeker ? (fillNavClearance ? "mt-3 lg:mt-4" : "mt-4") : "mt-3"
+            }`}
+          >
             <div className="flex flex-wrap gap-1.5">
               {filters.map((f) => (
                 <button

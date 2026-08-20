@@ -38,14 +38,14 @@ export default async function SeekerDashboardPage({
 }: {
   searchParams: Promise<{ status?: string }>;
 }) {
-  const { session } = await requireSeekerPageContext();
+  const { session, userId } = await requireSeekerPageContext();
   const { status: statusParam } = await searchParams;
   const normalized = statusParam?.toUpperCase() as StatusFilter | undefined;
   const statusFilter: StatusFilter =
     normalized && STATUS_FILTERS.includes(normalized) ? normalized : "ALL";
 
   const { profile, jobAlerts } = await getSeekerDashboardProfile(
-    session.user.id,
+    userId,
     session.user.name ?? ""
   );
 
@@ -102,7 +102,7 @@ export default async function SeekerDashboardPage({
         }
       />
 
-      <div className="space-y-8 pb-16 pt-6 sm:pt-8">
+      <div className="space-y-8 pt-6 sm:pt-8">
 
         {/* ── Header ── */}
         <div>

@@ -316,6 +316,7 @@ backdrop-filter:blur(6px);
 :root {
   --header-clearance: 6rem;
   --header-clearance-compact: 0px;
+  --seeker-mobile-bottom-nav: 5.5rem;
 }
 
 .header-offset {
@@ -391,6 +392,44 @@ backdrop-filter:blur(6px);
 @media (prefers-reduced-motion: reduce) {
   .seeker-island-outer,
   .seeker-island-layer {
+    transition: none;
+  }
+}
+
+/* Seeker mobile bottom nav — wrapper height === content clearance. */
+.seeker-shell-main,
+.seeker-jobs-shell-mobile,
+.seeker-messages-shell {
+  padding-bottom: calc(var(--seeker-mobile-bottom-nav) + env(safe-area-inset-bottom, 0px));
+}
+
+@media (min-width: 1024px) {
+  .seeker-shell-main {
+    padding-bottom: 4rem;
+  }
+
+  .seeker-jobs-shell-mobile,
+  .seeker-messages-shell {
+    padding-bottom: 0;
+  }
+}
+
+.seeker-mobile-bottom-nav {
+  height: calc(var(--seeker-mobile-bottom-nav) + env(safe-area-inset-bottom, 0px));
+  overflow: hidden;
+}
+
+.seeker-mobile-bottom-nav a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.seeker-bottom-fab {
+  transition: left 0.42s cubic-bezier(0.32, 1.15, 0.42, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .seeker-mobile-bottom-nav a,
+  .seeker-bottom-fab {
     transition: none;
   }
 }
