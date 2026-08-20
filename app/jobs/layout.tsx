@@ -7,7 +7,7 @@ export default async function JobsLayout({ children }: { children: React.ReactNo
   const isSeeker = session?.user?.role === "SEEKER";
 
   return (
-    <div className="relative flex min-h-screen flex-col overflow-x-hidden bg-mist lg:h-dvh lg:max-h-dvh">
+    <div className="relative flex min-h-screen flex-col overflow-x-clip bg-mist lg:h-dvh lg:max-h-dvh lg:overflow-hidden">
       {isSeeker && <SeekerAreaBackground />}
       <PublicJobsHeader />
       <div

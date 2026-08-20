@@ -367,10 +367,44 @@ backdrop-filter:blur(6px);
 .jobs-detail-scroll {
   flex: 1;
   min-height: 0;
-  overflow-x: hidden;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  -webkit-overflow-scrolling: touch;
+}
+
+/* Mobile: document/window scrolls. A nested overflow-y:auto + min-h-0
+   flex child eats touch and traps the last section under the nav. */
+@media (max-width: 1023px) {
+  .jobs-workspace-shell:has(.jobs-detail-scroll) {
+    flex: none;
+    min-height: auto;
+    overflow: visible;
+  }
+
+  .jobs-detail-scroll {
+    flex: none;
+    height: auto;
+    min-height: auto;
+    overflow: visible;
+  }
+}
+
+@media (min-width: 1024px) {
+  .jobs-detail-scroll {
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+}
+
+/* In-flow spacer so company + apply CTA can scroll above the mobile nav. */
+.jobs-mobile-nav-clearance {
+  display: none;
+  height: 0;
+}
+
+@media (max-width: 1023px) {
+  .seeker-jobs-shell-mobile .jobs-mobile-nav-clearance {
+    display: block;
+    height: calc(var(--seeker-mobile-bottom-nav) + 1.5rem + env(safe-area-inset-bottom, 0px));
+  }
 }
 
 @media (min-width: 1024px) {
@@ -398,7 +432,6 @@ backdrop-filter:blur(6px);
 
 /* Seeker mobile bottom nav — wrapper height === content clearance. */
 .seeker-shell-main,
-.seeker-jobs-shell-mobile,
 .seeker-messages-shell {
   padding-bottom: calc(var(--seeker-mobile-bottom-nav) + env(safe-area-inset-bottom, 0px));
 }
@@ -408,15 +441,21 @@ backdrop-filter:blur(6px);
     padding-bottom: 4rem;
   }
 
-  .seeker-jobs-shell-mobile,
   .seeker-messages-shell {
     padding-bottom: 0;
   }
 }
 
+/* Jobs list inner scrollers still need clearance on mobile. Job detail
+   uses `.jobs-mobile-nav-clearance` instead so the document can scroll. */
+@media (max-width: 1023px) {
+  .seeker-jobs-shell-mobile .jobs-workspace-scroll {
+    padding-bottom: calc(var(--seeker-mobile-bottom-nav) + env(safe-area-inset-bottom, 0px));
+  }
+}
+
 .seeker-mobile-bottom-nav {
-  height: calc(var(--seeker-mobile-bottom-nav) + env(safe-area-inset-bottom, 0px));
-  overflow: hidden;
+  overflow: visible;
 }
 
 .seeker-mobile-bottom-nav a {
