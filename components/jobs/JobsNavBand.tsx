@@ -1,5 +1,6 @@
 import SeekerNavBand from "@/components/seeker/SeekerNavBand";
 import { Briefcase } from "lucide-react";
+import Link from "next/link";
 
 type Props = {
   isSeeker?: boolean;
@@ -21,6 +22,23 @@ export default function JobsNavBand({
       </span>
     ) : undefined;
 
+  const guestActions = !isSeeker ? (
+    <div className="flex items-center gap-2 sm:gap-3">
+      <Link
+        href="/login"
+        className="cursor-pointer text-xs font-semibold text-ink/55 transition hover:text-ink sm:text-sm"
+      >
+        Log in
+      </Link>
+      <Link
+        href="/signup"
+        className="cursor-pointer rounded-full bg-ink px-3.5 py-1.5 text-xs font-semibold text-white transition hover:bg-ink/90 sm:px-4 sm:text-sm"
+      >
+        Get started
+      </Link>
+    </div>
+  ) : undefined;
+
   return (
     <SeekerNavBand
       className="jobs-nav-band shrink-0"
@@ -30,6 +48,8 @@ export default function JobsNavBand({
       homeHref={isSeeker ? "/seeker/dashboard" : "/"}
       metaLabel={isSeeker ? metaLabel : null}
       badge={profileBadge}
+      actions={guestActions}
+      reserveCenter={isSeeker}
     />
   );
 }

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Globe } from "lucide-react";
+import { Globe } from "lucide-react";
 import { getPublicCompany } from "@/lib/public-companies";
 import { auth } from "@/Auth";
 import { ensureSeekerProfile } from "@/lib/seekers";
@@ -45,7 +45,14 @@ export default async function CompanyPage({ params }: { params: Promise<{ id: st
     .toUpperCase();
 
   return (
-    <div className="animate-fade-in pb-20">
+    <div
+      className="animate-fade-in"
+      style={{
+        background: "#F5F4F0",
+        minHeight: "100vh",
+        fontFamily: "Inter, system-ui, sans-serif",
+      }}
+    >
       <CompanyNavBand
         isSeeker={isSeeker}
         metaLabel={metaLabel}
@@ -53,74 +60,204 @@ export default async function CompanyPage({ params }: { params: Promise<{ id: st
         profileTotal={profileTotal}
       />
 
-      <div className="mx-auto w-full max-w-5xl px-4 sm:px-6 lg:px-8">
+      <div
+        style={{
+          maxWidth: 1240,
+          margin: "0 auto",
+          padding: "0 1.5rem 4rem",
+        }}
+      >
         <Link
           href="/jobs"
-          className="mt-4 inline-flex cursor-pointer items-center gap-1.5 text-sm font-semibold text-ink/50 transition hover:text-ink"
+          className="cursor-pointer"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "0.375rem",
+            background: "transparent",
+            border: "none",
+            cursor: "pointer",
+            padding: "1.5rem 0",
+            fontSize: "0.85rem",
+            fontWeight: 500,
+            color: "#6F6E69",
+            letterSpacing: "0.01em",
+            textDecoration: "none",
+          }}
         >
-          <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-          Back to jobs
+          ← Back to jobs
         </Link>
 
-        {/* Profile header — open layout, subtle banner strip */}
-        <header className="mt-8 border-b border-ink/[0.06] pb-8">
+        <div
+          style={{
+            width: "100%",
+            height: 192,
+            borderRadius: "14px 14px 0 0",
+            background: "#E4E2DC",
+            position: "relative",
+            overflow: "hidden",
+          }}
+        >
           {company.bannerUrl && (
-            <div className="mb-6 h-20 overflow-hidden rounded-xl sm:h-24">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={company.bannerUrl}
-                alt=""
-                className="h-full w-full object-cover opacity-90"
-              />
-            </div>
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={company.bannerUrl}
+              alt=""
+              style={{
+                position: "absolute",
+                inset: 0,
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+              }}
+            />
           )}
-
-          <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
-            <div className="flex items-end gap-4">
-              {company.logoUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={company.logoUrl}
-                  alt=""
-                  className="h-16 w-16 shrink-0 rounded-xl object-cover ring-1 ring-ink/8 sm:h-20 sm:w-20"
-                />
-              ) : (
-                <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-teal/15 font-display text-xl font-bold text-teal ring-1 ring-teal/20 sm:h-20 sm:w-20">
-                  {initials}
-                </div>
-              )}
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h1 className="font-display text-2xl font-bold text-ink sm:text-3xl">
-                    {company.companyName}
-                  </h1>
-                  {company.verifiedStatus === "APPROVED" && (
-                    <span className="inline-flex items-center rounded-full bg-teal/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-teal">
-                      Verified employer
-                    </span>
-                  )}
-                </div>
-                <p className="mt-1 text-sm font-medium text-ink/55">
-                  {company.industry || "Employer on EasyHire"}
-                </p>
-              </div>
-            </div>
-
-            {company.website && (
-              <a
-                href={company.website}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex shrink-0 cursor-pointer items-center gap-1.5 text-sm font-semibold text-teal transition hover:text-teal/80"
-              >
-                <Globe className="h-4 w-4" aria-hidden="true" />
-                Website
-              </a>
-            )}
+          <div
+            style={{
+              position: "absolute",
+              top: 16,
+              left: 16,
+              background: "rgba(255,255,255,0.16)",
+              backdropFilter: "blur(10px)",
+              WebkitBackdropFilter: "blur(10px)",
+              border: "1px solid rgba(255,255,255,0.32)",
+              borderRadius: 9999,
+              padding: "5px 12px",
+              fontSize: 10,
+              fontWeight: 700,
+              color: "rgba(255,255,255,0.92)",
+              letterSpacing: "1.4px",
+              textTransform: "uppercase",
+            }}
+          >
+            {company.verifiedStatus === "APPROVED" ? "Verified employer" : "Company profile"}
           </div>
-        </header>
+        </div>
 
-        <div className="py-8">
+        <div
+          style={{
+            display: "flex",
+            alignItems: "flex-start",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: "1rem 1.25rem",
+            paddingBottom: "1.5rem",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "flex-start",
+              gap: "1.125rem",
+              minWidth: 0,
+              flex: "1 1 280px",
+            }}
+          >
+            {company.logoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={company.logoUrl}
+                alt=""
+                style={{
+                  width: 96,
+                  height: 96,
+                  boxSizing: "border-box",
+                  borderRadius: "50%",
+                  border: "4px solid #FFFFFF",
+                  objectFit: "cover",
+                  flexShrink: 0,
+                  marginTop: -48,
+                  position: "relative",
+                  zIndex: 1,
+                  boxShadow: "0 2px 10px rgba(0,0,0,0.18)",
+                }}
+              />
+            ) : (
+              <div
+                style={{
+                  width: 96,
+                  height: 96,
+                  boxSizing: "border-box",
+                  borderRadius: "50%",
+                  border: "4px solid #FFFFFF",
+                  background: "#E8F4F2",
+                  color: "#1F8073",
+                  fontWeight: 700,
+                  fontSize: "1.35rem",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                  marginTop: -48,
+                  position: "relative",
+                  zIndex: 1,
+                  boxShadow: "0 2px 10px rgba(0,0,0,0.18)",
+                  letterSpacing: "-0.02em",
+                }}
+              >
+                {initials}
+              </div>
+            )}
+            <div style={{ paddingTop: 16, minWidth: 0 }}>
+              <h1
+                style={{
+                  fontSize: "1.45rem",
+                  fontWeight: 700,
+                  color: "#111110",
+                  margin: "0 0 3px",
+                  lineHeight: 1.25,
+                  letterSpacing: "-0.02em",
+                  overflowWrap: "anywhere",
+                }}
+              >
+                {company.companyName}
+              </h1>
+              <p
+                style={{
+                  fontSize: "0.875rem",
+                  fontWeight: 500,
+                  color: "#6F6E69",
+                  margin: 0,
+                  letterSpacing: "0.01em",
+                }}
+              >
+                {company.industry || "Employer on EasyHire"}
+              </p>
+            </div>
+          </div>
+
+          {company.website && (
+            <a
+              href={company.website}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="cursor-pointer"
+              style={{
+                background: "#D4930A",
+                color: "#FFFFFF",
+                border: "none",
+                borderRadius: 8,
+                padding: "0.575rem 1.25rem",
+                fontWeight: 600,
+                fontSize: "0.875rem",
+                cursor: "pointer",
+                letterSpacing: "0.01em",
+                boxShadow: "0 1px 4px rgba(212,147,10,0.3)",
+                textDecoration: "none",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.5rem",
+                whiteSpace: "nowrap",
+                marginTop: 16,
+              }}
+            >
+              <Globe style={{ width: 16, height: 16 }} aria-hidden="true" />
+              Website
+            </a>
+          )}
+        </div>
+
+        <div style={{ paddingTop: "0.25rem" }}>
           <CompanyAboutSection
             companyName={company.companyName}
             description={company.description}
@@ -139,7 +276,7 @@ export default async function CompanyPage({ params }: { params: Promise<{ id: st
           />
         </div>
 
-        <section className="border-t border-ink/[0.06] pt-10">
+        <section className="border-t border-[#E4E2DC] pt-10">
           <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
             <div>
               <h2 className="font-display text-xl font-bold text-ink">
@@ -165,7 +302,7 @@ export default async function CompanyPage({ params }: { params: Promise<{ id: st
               No active listings right now. Save this employer or check back soon.
             </p>
           ) : (
-            <div className="divide-y divide-ink/[0.06] border-y border-ink/[0.06]">
+            <div className="flex flex-col gap-3">
               {company.jobs.map((job) => (
                 <CompanyJobRow key={job.id} job={job} />
               ))}

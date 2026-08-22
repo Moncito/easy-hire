@@ -25,6 +25,10 @@ export type SeekerNavBandProps = {
   /** Defaults to seeker dashboard; use `/` on public job board for guests. */
   homeHref?: string;
   className?: string;
+  /** Extra right-side controls (e.g. Log in / Get started for guests). */
+  actions?: React.ReactNode;
+  /** Reserve empty center space for the floating pill. Default true. */
+  reserveCenter?: boolean;
 };
 
 export default function SeekerNavBand({
@@ -35,6 +39,8 @@ export default function SeekerNavBand({
   metaLabel,
   homeHref = "/seeker/dashboard",
   className,
+  actions,
+  reserveCenter = true,
 }: SeekerNavBandProps) {
   const fallbackHint = hint ?? "VA marketplace";
 
@@ -62,25 +68,29 @@ export default function SeekerNavBand({
         </span>
       </div>
 
-      {/* Desktop — reserve center space for the floating pill */}
-      <div
-        className="pointer-events-none absolute inset-x-0 top-0 hidden h-full items-center justify-center lg:flex"
-        aria-hidden="true"
-      >
-        <div className="h-full w-[min(100%,20rem)] sm:w-[min(100%,24rem)] lg:w-[min(100%,30rem)]" />
-      </div>
+      {reserveCenter && (
+        <div
+          className="pointer-events-none absolute inset-x-0 top-0 hidden h-full items-center justify-center lg:flex"
+          aria-hidden="true"
+        >
+          <div className="h-full w-[min(100%,20rem)] sm:w-[min(100%,24rem)] lg:w-[min(100%,30rem)]" />
+        </div>
+      )}
 
-      {/* Meta + badge */}
       <div className="flex shrink-0 items-center justify-end gap-2">
-        {metaLabel && (
-          <span className="hidden max-w-[6.5rem] truncate text-xs font-medium text-ink/50 sm:inline lg:max-w-[11rem]">
-            {metaLabel}
-          </span>
-        )}
-        {badge ?? (
-          <span className="hidden text-[10px] font-semibold uppercase tracking-widest text-ink/30 sm:inline">
-            {fallbackHint}
-          </span>
+        {actions ?? (
+          <>
+            {metaLabel && (
+              <span className="hidden max-w-[6.5rem] truncate text-xs font-medium text-ink/50 sm:inline lg:max-w-[11rem]">
+                {metaLabel}
+              </span>
+            )}
+            {badge ?? (
+              <span className="hidden text-[10px] font-semibold uppercase tracking-widest text-ink/30 sm:inline">
+                {fallbackHint}
+              </span>
+            )}
+          </>
         )}
       </div>
     </div>

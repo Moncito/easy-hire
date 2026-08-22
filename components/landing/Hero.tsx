@@ -1,150 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useCallback } from "react";
-import { ArrowRight, BadgeCheck, Star, TrendingUp, Clock } from "lucide-react";
-import { gsap } from "@/lib/gsap";
+import { useEffect, useRef } from "react";
+import { ArrowRight, BadgeCheck } from "lucide-react";
 import Link from "next/link";
 import { useLoginModalOptional } from "@/components/auth/LoginModalProvider";
+import * as THREE from "three";
+import type { LandingCompany, LandingStats } from "@/lib/landing";
 
-// ─── Floating card data ───────────────────────────────────────────────────────
-// depth: parallax depth factor (0.02–0.06), higher = moves more with pointer
-const CARDS = [
-  {
-    id: "job-card",
-    className: "top-[22%] left-[4%] w-52 animate-float-card",
-    depth: 0.04,
-    scrollSpeed: 0.06,
-    content: (
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center justify-between">
-          <span className="font-display text-[13px] font-bold text-ink">Executive VA</span>
-          <span className="inline-flex items-center gap-1 rounded-full bg-teal/10 px-2 py-0.5 text-[10px] font-semibold text-teal">
-            <BadgeCheck className="h-3 w-3" />
-            Verified
-          </span>
-        </div>
-        <p className="font-data text-[12px] text-ink/70">$800 / mo</p>
-        <p className="text-[11px] text-ink/50">Remote · Full-time</p>
-      </div>
-    ),
-  },
-  {
-    id: "status-chip",
-    className: "top-[38%] left-[7%] w-40 animate-float-card-reverse",
-    depth: 0.025,
-    scrollSpeed: -0.04,
-    content: (
-      <div className="flex items-center gap-2">
-        <div className="h-2 w-2 rounded-full bg-teal" />
-        <span className="text-[12px] font-semibold text-ink">Shortlisted</span>
-      </div>
-    ),
-  },
-  {
-    id: "salary-chip",
-    className: "top-[18%] right-[5%] w-44 animate-float-card",
-    depth: 0.05,
-    scrollSpeed: 0.05,
-    content: (
-      <div className="flex flex-col gap-1">
-        <p className="text-[10px] font-medium text-ink/50 uppercase tracking-wider">Avg. monthly</p>
-        <p className="font-data text-lg font-bold text-marigold">$680</p>
-        <div className="flex items-center gap-1 text-teal">
-          <TrendingUp className="h-3 w-3" />
-          <span className="text-[10px] font-semibold">+12% this quarter</span>
-        </div>
-      </div>
-    ),
-  },
-  {
-    id: "rating-chip",
-    className: "top-[42%] right-[4%] w-36 animate-float-card-reverse",
-    depth: 0.03,
-    scrollSpeed: -0.03,
-    content: (
-      <div className="flex flex-col gap-1.5">
-        <div className="flex gap-0.5">
-          {[1, 2, 3, 4, 5].map((n) => (
-            <Star key={n} className="h-3 w-3 fill-marigold text-marigold" />
-          ))}
-        </div>
-        <p className="text-[11px] font-semibold text-ink">4.9 · 128 reviews</p>
-      </div>
-    ),
-  },
-  {
-    id: "applied-chip",
-    className: "bottom-[26%] left-[6%] w-48 animate-float-card",
-    depth: 0.035,
-    scrollSpeed: 0.045,
-    content: (
-      <div className="flex items-center gap-2.5">
-        <Clock className="h-4 w-4 shrink-0 text-marigold" />
-        <div>
-          <p className="text-[11px] font-semibold text-ink">Applied 2h ago</p>
-          <p className="text-[10px] text-ink/50">Admin Assistant · Makati</p>
-        </div>
-      </div>
-    ),
-  },
-  {
-    id: "match-chip",
-    className: "bottom-[30%] right-[5%] w-40 animate-float-card-reverse",
-    depth: 0.045,
-    scrollSpeed: -0.05,
-    content: (
-      <div className="flex flex-col gap-1">
-        <p className="text-[10px] font-medium text-ink/50">Profile match</p>
-        <div className="flex items-center gap-2">
-          <div className="h-1.5 flex-1 rounded-full bg-ink/10">
-            <div className="h-1.5 w-[88%] rounded-full bg-teal" />
-          </div>
-          <span className="font-data text-[12px] font-bold text-teal">88%</span>
-        </div>
-      </div>
-    ),
-  },
-] as const;
-
-// ─── Magnetic hover hook (primary CTA only) ──────────────────────────────────
-function useMagneticButton() {
-  const ref = useRef<HTMLAnchorElement>(null);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-
-    const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (prefersReduced) return;
-
-    const qx = gsap.quickTo(el, "x", { duration: 0.4, ease: "power2.out" });
-    const qy = gsap.quickTo(el, "y", { duration: 0.4, ease: "power2.out" });
-
-    const onMove = (e: PointerEvent) => {
-      const rect = el.getBoundingClientRect();
-      const cx = rect.left + rect.width / 2;
-      const cy = rect.top + rect.height / 2;
-      qx((e.clientX - cx) * 0.25);
-      qy((e.clientY - cy) * 0.25);
-    };
-
-    const onLeave = () => {
-      qx(0);
-      qy(0);
-    };
-
-    el.addEventListener("pointermove", onMove);
-    el.addEventListener("pointerleave", onLeave);
-    return () => {
-      el.removeEventListener("pointermove", onMove);
-      el.removeEventListener("pointerleave", onLeave);
-    };
-  }, []);
-
-  return ref;
-}
-
-// ─── Login prompt (preserved from original) ──────────────────────────────────
 function LoginPrompt({ className }: { className: string }) {
   const loginModal = useLoginModalOptional();
   if (loginModal) {
@@ -154,7 +16,7 @@ function LoginPrompt({ className }: { className: string }) {
         <button
           type="button"
           onClick={() => loginModal.openLogin()}
-          className="cursor-pointer font-semibold underline-offset-2 hover:underline"
+          className="cursor-pointer font-bold underline-offset-2 hover:underline"
         >
           Log in
         </button>
@@ -171,362 +33,404 @@ function LoginPrompt({ className }: { className: string }) {
   );
 }
 
-// ─── Hero ────────────────────────────────────────────────────────────────────
-export default function Hero() {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const headlineRef = useRef<HTMLHeadingElement>(null);
-  const wordWrapperRef = useRef<HTMLSpanElement>(null);
-  const wordARef = useRef<HTMLSpanElement>(null); // "opportunity" (marigold)
-  const wordBRef = useRef<HTMLSpanElement>(null); // "hire" (teal)
-  const subtextRef = useRef<HTMLParagraphElement>(null);
-  const ctaGroupRef = useRef<HTMLDivElement>(null);
-  const trustRef = useRef<HTMLDivElement>(null);
-  const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
+const cardShadow = "shadow-[0_14px_40px_rgba(32,36,43,0.08)]";
 
-  const seekerRef = useMagneticButton();
+function HeroCards({
+  stats,
+  featuredCompany,
+}: {
+  stats?: LandingStats;
+  featuredCompany?: LandingCompany | null;
+}) {
+  const verifiedCount = stats?.verifiedCompanies ?? 0;
 
-  // Pointer parallax quickTo fns — created after mount
-  const qxRefs = useRef<((v: number) => void)[]>([]);
-  const qyRefs = useRef<((v: number) => void)[]>([]);
+  return (
+    <div className="mt-16 flex w-full flex-col items-center gap-4 md:mt-20 md:flex-row md:items-end md:justify-center md:gap-5">
+      <article
+        className={`w-full max-w-sm rounded-3xl bg-[#F3EBE0] p-5 text-left ${cardShadow} md:max-w-[13.75rem] md:translate-y-8`}
+      >
+        <p className="font-body text-sm font-medium leading-relaxed text-ink/80">
+          Every employer is checked before a role goes live. One profile. No spam listings.
+        </p>
+        <p className="mt-5 text-[11px] font-semibold tracking-wide text-ink/45">
+          Verified hiring
+        </p>
+      </article>
 
-  const handlePointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-    const container = containerRef.current;
-    if (!container) return;
-    const rect = container.getBoundingClientRect();
-    const cx = rect.width / 2;
-    const cy = rect.height / 2;
-    const dx = e.clientX - rect.left - cx;
-    const dy = e.clientY - rect.top - cy;
+      <article
+        className={`w-full max-w-sm rounded-3xl bg-white p-6 text-left ${cardShadow} md:max-w-[20rem] md:-translate-y-2`}
+      >
+        <p className="font-data text-3xl font-semibold tracking-tight text-ink md:text-4xl">
+          $680
+        </p>
+        <p className="mt-1 text-xs text-ink/50">avg. monthly salary</p>
+        <svg
+          viewBox="0 0 240 64"
+          className="mt-5 w-full"
+          aria-hidden="true"
+        >
+          <path
+            d="M4 44 C38 18, 72 52, 112 30 S176 8, 236 34"
+            fill="none"
+            stroke="#20242B"
+            strokeWidth="2.25"
+            strokeLinecap="round"
+          />
+          <circle cx="176" cy="16" r="6" fill="#F2A93B" />
+        </svg>
+        <p className="mt-3 font-data text-xs text-ink/55">4.9 / 5.0 rating</p>
+      </article>
 
-    CARDS.forEach((card, i) => {
-      qxRefs.current[i]?.(dx * card.depth);
-      qyRefs.current[i]?.(dy * card.depth);
-    });
-  }, []);
+      {featuredCompany ? (
+        <Link
+          href={`/companies/${featuredCompany.id}`}
+          className={`block w-full max-w-sm rounded-3xl bg-marigold p-5 text-left ${cardShadow} transition-opacity hover:opacity-95 md:max-w-[14.5rem] md:translate-y-12`}
+        >
+          <EmployerCardBody company={featuredCompany} />
+        </Link>
+      ) : (
+        <article
+          className={`w-full max-w-sm rounded-3xl bg-marigold p-5 text-left ${cardShadow} md:max-w-[14.5rem] md:translate-y-12`}
+        >
+          <p className="font-data text-3xl font-semibold text-ink">
+            {verifiedCount > 0 ? `${verifiedCount}` : "—"}
+          </p>
+          <p className="mt-2 text-sm font-medium text-ink/75">Verified employers</p>
+          <p className="mt-6 inline-flex items-center gap-1.5 text-[11px] font-semibold text-ink/60">
+            <BadgeCheck className="h-3.5 w-3.5" />
+            Admin-reviewed
+          </p>
+        </article>
+      )}
+    </div>
+  );
+}
 
-  const handlePointerLeave = useCallback(() => {
-    CARDS.forEach((_, i) => {
-      qxRefs.current[i]?.(0);
-      qyRefs.current[i]?.(0);
-    });
-  }, []);
+function EmployerCardBody({ company }: { company: LandingCompany }) {
+  return (
+    <>
+      {company.logoUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={company.logoUrl}
+          alt=""
+          width={48}
+          height={48}
+          className="h-12 w-12 rounded-full object-cover ring-2 ring-white/70"
+        />
+      ) : (
+        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/80">
+          <span className="font-display text-lg font-bold text-ink">
+            {company.companyName.charAt(0).toUpperCase()}
+          </span>
+        </div>
+      )}
+      <p className="mt-4 font-display text-lg font-bold leading-snug text-ink">
+        {company.companyName}
+      </p>
+      {company.industry ? (
+        <p className="mt-1 text-xs font-medium text-ink/60">{company.industry}</p>
+      ) : null}
+      <p className="mt-5 inline-flex items-center gap-1.5 text-[11px] font-semibold text-ink/70">
+        <BadgeCheck className="h-3.5 w-3.5" />
+        Verified employer
+      </p>
+    </>
+  );
+}
+
+type HeroProps = {
+  stats?: LandingStats;
+  featuredCompany?: LandingCompany | null;
+};
+
+export default function Hero({ stats, featuredCompany = null }: HeroProps) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
     const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (prefersReduced) return;
 
-    const ctx = gsap.context(() => {
-      // Content is VISIBLE by default in the DOM. Entrance only enhances —
-      // never gsap.set(opacity:0), so a failed/interrupted tween cannot blank the hero.
-      const wordWraps = headlineRef.current?.querySelectorAll(".word-wrap") ?? [];
-      const cards = cardRefs.current.filter(Boolean);
+    const parent = canvas.parentElement;
+    if (!parent) return;
 
-      const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
+    let width = parent.clientWidth || window.innerWidth;
+    let height = parent.clientHeight || window.innerHeight;
 
-      if (wordWraps.length) {
-        tl.from(
-          wordWraps,
-          { y: 18, opacity: 0, duration: 0.65, stagger: 0.06, immediateRender: false },
-          0.1
-        );
-      }
-      tl.from(
-        [subtextRef.current, ctaGroupRef.current, trustRef.current].filter(Boolean),
-        { y: 18, opacity: 0, duration: 0.55, stagger: 0.08, immediateRender: false },
-        0.35
-      );
-      if (cards.length) {
-        tl.from(
-          cards,
-          { opacity: 0, scale: 0.92, duration: 0.55, stagger: 0.06, ease: "back.out(1.3)", immediateRender: false },
-          0.45
-        );
-      }
+    const renderer = new THREE.WebGLRenderer({
+      canvas,
+      antialias: true,
+      alpha: true,
+      powerPreference: "high-performance",
+    });
+    renderer.setSize(width, height);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
-      // Rotating accent word (y-slide)
-      gsap.set(wordBRef.current, { yPercent: 105 });
+    const scene = new THREE.Scene();
+    const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
 
-      let showingA = true;
-      const flipInterval = window.setInterval(() => {
-        if (showingA) {
-          gsap.to(wordARef.current, { yPercent: -105, duration: 0.42, ease: "power2.in" });
-          gsap.to(wordBRef.current, { yPercent: 0, duration: 0.42, ease: "power2.out", delay: 0.08 });
-        } else {
-          gsap.to(wordBRef.current, { yPercent: -105, duration: 0.42, ease: "power2.in" });
-          gsap.to(wordARef.current, { yPercent: 0, duration: 0.42, ease: "power2.out", delay: 0.08 });
+    const uniforms = {
+      uResolution: { value: new THREE.Vector2(width, height) },
+      uMouse: { value: new THREE.Vector2(0.5, 0.5) },
+      uStrength: { value: 0 },
+    };
+
+    const geometry = new THREE.PlaneGeometry(2, 2);
+    const material = new THREE.ShaderMaterial({
+      uniforms,
+      vertexShader: `
+        varying vec2 vUv;
+        void main() {
+          vUv = uv;
+          gl_Position = vec4(position, 1.0);
         }
-        showingA = !showingA;
-      }, 2500);
+      `,
+      fragmentShader: `
+        varying vec2 vUv;
+        uniform vec2 uResolution;
+        uniform vec2 uMouse;
+        uniform float uStrength;
 
-      // Pointer parallax — quickTo on the INNER card
-      cardRefs.current.forEach((el, i) => {
-        if (!el) return;
-        qxRefs.current[i] = gsap.quickTo(el, "x", { duration: 0.55, ease: "power2.out" });
-        qyRefs.current[i] = gsap.quickTo(el, "y", { duration: 0.55, ease: "power2.out" });
-      });
+        float hash(vec2 p) {
+          return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
+        }
 
-      // Scroll parallax — OUTER wrapper so it never fights pointer y
-      const scrollCards = containerRef.current?.querySelectorAll<HTMLElement>("[data-scroll-card]") ?? [];
-      scrollCards.forEach((el, i) => {
-        const distance = (CARDS[i]?.scrollSpeed ?? 0.04) * 400;
-        gsap.to(el, {
-          y: distance,
-          ease: "none",
-          scrollTrigger: {
-            trigger: containerRef.current,
-            start: "top top",
-            end: "bottom top",
-            scrub: true,
-          },
-        });
-      });
+        float noise(vec2 p) {
+          vec2 i = floor(p);
+          vec2 f = fract(p);
+          vec2 u = f * f * (3.0 - 2.0 * f);
+          return mix(
+            mix(hash(i + vec2(0.0, 0.0)), hash(i + vec2(1.0, 0.0)), u.x),
+            mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x),
+            u.y
+          );
+        }
 
-      return () => clearInterval(flipInterval);
-    }, containerRef);
+        float fbm(vec2 p) {
+          float v = 0.0;
+          float a = 0.5;
+          mat2 rot = mat2(0.80, 0.60, -0.60, 0.80);
+          for (int i = 0; i < 5; ++i) {
+            v += a * noise(p);
+            p = rot * p * 2.02 + 17.13;
+            a *= 0.5;
+          }
+          return v;
+        }
 
-    return () => ctx.revert();
+        // Subtle waves at the edges, cream/white field in the center.
+        vec3 samplePattern(vec2 uv, float aspect) {
+          vec2 p = vec2((uv.x - 0.5) * aspect, uv.y - 0.5);
+
+          vec2 w = vec2(
+            fbm(p * 0.72 + vec2(0.22, 1.13)),
+            fbm(p * 0.72 + vec2(3.71, 1.94))
+          );
+          vec2 q = p + (w - 0.5) * 0.68;
+          vec2 w2 = vec2(
+            fbm(q * 0.95 + w * 1.15),
+            fbm(q * 0.95 + vec2(6.12, 2.41))
+          );
+          float n = fbm(q * 0.78 + w2 * 1.3);
+
+          vec3 cMist = vec3(0.996, 0.992, 0.969);
+          vec3 cGold = mix(cMist, vec3(0.949, 0.663, 0.231), 0.52);
+          vec3 cTeal = mix(cMist, vec3(0.122, 0.502, 0.451), 0.48);
+
+          float goldBand = smoothstep(0.55, 0.92, sin(n * 8.2));
+          float tealBand = smoothstep(0.50, 0.90, sin(n * 6.6 + 1.9));
+
+          float nx = fbm(p * 1.35 + vec2(2.1, 0.4));
+          float ny = fbm(p * 1.35 + vec2(0.7, 3.2));
+          vec2 pe = p + (vec2(nx, ny) - 0.5) * 0.28;
+          float radial = length(vec2(pe.x * 0.52, pe.y * 1.08));
+          float center = 1.0 - smoothstep(0.04, 0.68, radial);
+          center = pow(center, 1.08);
+
+          goldBand *= mix(1.0, 0.05, center);
+          tealBand *= mix(1.0, 0.05, center);
+
+          vec3 color = mix(cMist, cGold, goldBand);
+          color = mix(color, cTeal, tealBand * (1.0 - goldBand * 0.65));
+          color = mix(color, cMist, center * 0.88);
+          return color;
+        }
+
+        void main() {
+          vec2 uv = vUv;
+          float aspect = uResolution.x / max(uResolution.y, 1.0);
+          vec2 p = vec2((uv.x - 0.5) * aspect, uv.y - 0.5);
+          vec2 mouse = vec2((uMouse.x - 0.5) * aspect, uMouse.y - 0.5);
+
+          vec2 toMouse = p - mouse;
+          float dist = length(toMouse);
+          float falloff = 1.0 - smoothstep(0.0, 0.58, dist);
+          falloff *= falloff;
+
+          vec2 dir = toMouse / (dist + 0.00015);
+          vec2 tangent = vec2(-dir.y, dir.x);
+          vec2 displace = (-dir * 0.82 + tangent * 0.18) * falloff * uStrength * 0.034;
+
+          vec2 sampleUv = uv + vec2(displace.x / aspect, displace.y);
+          gl_FragColor = vec4(samplePattern(sampleUv, aspect), 1.0);
+        }
+      `,
+    });
+
+    const mesh = new THREE.Mesh(geometry, material);
+    scene.add(mesh);
+
+    const mouse = new THREE.Vector2(0.5, 0.5);
+    const targetMouse = new THREE.Vector2(0.5, 0.5);
+    let pointerInside = false;
+    let strength = 0;
+
+    const handlePointerMove = (e: PointerEvent) => {
+      const rect = canvas.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) return;
+      pointerInside = true;
+      targetMouse.x = (e.clientX - rect.left) / rect.width;
+      targetMouse.y = 1.0 - (e.clientY - rect.top) / rect.height;
+    };
+
+    const handlePointerLeave = () => {
+      pointerInside = false;
+    };
+
+    parent.addEventListener("pointermove", handlePointerMove);
+    parent.addEventListener("pointerleave", handlePointerLeave);
+
+    const handleResize = () => {
+      const w = parent.clientWidth;
+      const h = parent.clientHeight;
+      renderer.setSize(w, h);
+      uniforms.uResolution.value.set(w, h);
+    };
+    window.addEventListener("resize", handleResize);
+
+    let animationFrameId: number;
+
+    const animate = () => {
+      animationFrameId = requestAnimationFrame(animate);
+
+      const dx = targetMouse.x - mouse.x;
+      const dy = targetMouse.y - mouse.y;
+      mouse.x += dx * 0.08;
+      mouse.y += dy * 0.08;
+
+      const speed = Math.hypot(dx, dy);
+      const moving = pointerInside && speed > 0.0007;
+      const targetStrength = moving ? 1 : 0;
+      const ease = moving ? 0.11 : 0.032;
+      strength += (targetStrength - strength) * ease;
+
+      uniforms.uMouse.value.copy(mouse);
+      uniforms.uStrength.value = strength;
+
+      renderer.render(scene, camera);
+    };
+
+    animate();
+
+    return () => {
+      cancelAnimationFrame(animationFrameId);
+      window.removeEventListener("resize", handleResize);
+      parent.removeEventListener("pointermove", handlePointerMove);
+      parent.removeEventListener("pointerleave", handlePointerLeave);
+      geometry.dispose();
+      material.dispose();
+      renderer.dispose();
+    };
   }, []);
 
   return (
-    <>
-      {/* ── DESKTOP ─────────────────────────────────────────────────────────── */}
-      <section
-        ref={containerRef}
-        onPointerMove={handlePointerMove}
-        onPointerLeave={handlePointerLeave}
-        className="relative hidden min-h-screen w-full overflow-hidden bg-mist md:flex md:flex-col md:items-center md:justify-center"
-        aria-label="Hero"
-      >
-        {/* Atmosphere: radial gradient washes */}
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0"
-          style={{
-            background: [
-              "radial-gradient(ellipse 65% 55% at 5% 10%, rgba(242,169,59,0.13) 0%, transparent 58%)",
-              "radial-gradient(ellipse 55% 50% at 95% 15%, rgba(31,128,115,0.10) 0%, transparent 55%)",
-              "radial-gradient(ellipse 45% 38% at 50% 105%, rgba(30,58,95,0.06) 0%, transparent 60%)",
-            ].join(", "),
-          }}
-        />
+    <section
+      className="relative z-10 flex min-h-screen w-full flex-col overflow-hidden bg-mist"
+      aria-label="Hero"
+    >
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 z-0 bg-mist"
+      />
 
-        {/* Faint dot grid */}
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0 seeker-area-dots opacity-60"
-        />
+      <canvas
+        ref={canvasRef}
+        className="pointer-events-none absolute inset-0 z-0 h-full w-full"
+      />
 
-        {/* Film grain overlay */}
-        <div
-          aria-hidden="true"
-          className="landing-grain pointer-events-none absolute inset-0 opacity-[0.04] mix-blend-multiply"
-        />
-
-        {/* Floating cards (desktop) — outer = scroll parallax, inner = pointer parallax */}
-        {CARDS.map((card, i) => (
-          <div
-            key={card.id}
-            className={`absolute z-10 hidden md:block will-change-transform ${card.className}`}
-            data-scroll-card={i}
-          >
-            <div
-              ref={(el) => { cardRefs.current[i] = el; }}
-              className="rounded-2xl border border-white/60 bg-white/80 p-3.5 shadow-[0_8px_30px_rgba(0,0,0,0.06)] backdrop-blur-md will-change-transform"
-            >
-              {card.content}
-            </div>
-          </div>
-        ))}
-
-        {/* Main content */}
-        <div className="relative z-20 mx-auto flex max-w-3xl flex-col items-center px-6 pt-28 pb-16 text-center">
-          {/* Headline */}
-          <h1
-            ref={headlineRef}
-            className="mb-6 font-display text-[clamp(3rem,7vw,5.25rem)] font-extrabold leading-[1.07] tracking-tight text-ink"
-          >
-            {/* Line 1: word-by-word reveal */}
-            {["Find", "your", "next"].map((word) => (
-              <span key={word} className="word-wrap inline-block overflow-hidden align-bottom">
-                <span className="inline-block">{word}&nbsp;</span>
+      <div className="relative z-10 mx-auto flex w-full max-w-5xl flex-1 flex-col items-center justify-center px-6 py-24 text-center md:py-28">
+        <div className="relative flex w-full max-w-3xl flex-col items-center">
+          <h1 className="mb-6 font-display text-[clamp(2.4rem,6vw,4.75rem)] font-extrabold leading-[1.12] tracking-tight text-ink">
+            Find your next{" "}
+            <span className="hero-flip inline-grid overflow-hidden align-bottom">
+              <span className="invisible col-start-1 row-start-1 whitespace-nowrap" aria-hidden>
+                opportunity.
               </span>
-            ))}
-            {/* Rotating accent word in overflow-hidden wrapper */}
-            <span
-              ref={wordWrapperRef}
-              className="relative inline-block overflow-hidden align-bottom"
-              style={{ minWidth: "10ch" }}
-            >
-              <span ref={wordARef} className="inline-block text-marigold">
-                opportunity
+              <span className="hero-flip-a col-start-1 row-start-1 whitespace-nowrap text-left">
+                opportunity.
               </span>
-              <span
-                ref={wordBRef}
-                className="absolute left-0 top-0 inline-block text-teal"
-              >
-                hire
+              <span className="hero-flip-b col-start-1 row-start-1 whitespace-nowrap text-left">
+                hire.
               </span>
             </span>
-            {/* Line 2 */}
             <br />
-            {["without", "the", "noise."].map((word) => (
-              <span key={word} className="word-wrap inline-block overflow-hidden align-bottom">
-                <span className="inline-block text-ink/55">{word}&nbsp;</span>
-              </span>
-            ))}
+            Without the noise.
           </h1>
 
-          {/* Subtext */}
-          <p
-            ref={subtextRef}
-            className="mb-10 max-w-xl font-body text-[1.05rem] leading-relaxed text-ink/65"
-          >
+          <p className="mb-10 max-w-xl font-body text-base font-medium leading-[1.7] text-ink/80 md:text-lg">
             Build one profile and apply to roles from employers we verify before
             they go live — or post a job and meet your next VA.
           </p>
 
-          {/* CTAs */}
-          <div ref={ctaGroupRef} className="flex flex-col items-center gap-4 sm:flex-row sm:gap-3">
-            <Link
-              ref={seekerRef}
-              href="/signup?role=SEEKER"
-              className="group inline-flex items-center justify-center gap-2 rounded-2xl bg-ink px-7 py-3.5 font-display text-[0.9375rem] font-bold text-mist shadow-lg shadow-black/10 transition-[box-shadow] duration-300 hover:shadow-xl hover:shadow-black/15 active:scale-95 will-change-transform"
-            >
-              I&apos;m looking for work
-              <ArrowRight className="h-[18px] w-[18px] transition-transform duration-300 group-hover:translate-x-1" />
-            </Link>
-
-            <Link
-              href="/signup?role=EMPLOYER"
-              className="group inline-flex items-center justify-center gap-2 rounded-2xl border border-teal/30 bg-teal/5 px-7 py-3.5 font-display text-[0.9375rem] font-bold text-teal transition-colors duration-200 hover:bg-teal/10 active:scale-95"
-            >
-              I&apos;m hiring
-              <ArrowRight className="h-[18px] w-[18px] transition-transform duration-300 group-hover:translate-x-1" />
-            </Link>
-          </div>
-
-          {/* Login prompt */}
-          <LoginPrompt className="mt-5 text-sm text-ink/50" />
-
-          {/* Trust strip */}
-          <div
-            ref={trustRef}
-            className="mt-12 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs font-medium text-ink/50"
+        <div className="flex w-full flex-col items-center gap-3 sm:w-auto sm:flex-row sm:gap-4">
+          <Link
+            href="/signup?role=SEEKER"
+            className="group inline-flex w-full items-center justify-center gap-2 rounded-xl bg-ink px-7 py-3.5 text-[0.9375rem] font-semibold text-mist transition-colors hover:bg-navy sm:w-auto"
           >
-            {["500+ VAs ready to work", "Verified employers only", "Free for seekers"].map(
-              (item, i, arr) => (
-                <span key={item} className="flex items-center gap-2">
-                  {item}
-                  {i < arr.length - 1 && (
-                    <span className="h-3.5 w-px bg-ink/15" aria-hidden="true" />
-                  )}
-                </span>
-              )
-            )}
-          </div>
+            I&apos;m looking for work
+            <ArrowRight className="h-[18px] w-[18px] transition-transform duration-300 group-hover:translate-x-1" />
+          </Link>
+
+          <Link
+            href="/signup?role=EMPLOYER"
+            className="group inline-flex w-full items-center justify-center gap-2 rounded-xl border border-ink/12 bg-white px-7 py-3.5 text-[0.9375rem] font-semibold text-ink transition-colors hover:bg-mist sm:w-auto"
+          >
+            I&apos;m hiring
+            <ArrowRight className="h-[18px] w-[18px] transition-transform duration-300 group-hover:translate-x-1" />
+          </Link>
         </div>
 
-        {/* Scroll cue */}
-        <div
-          aria-hidden="true"
-          className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1.5"
-        >
-          <span className="text-[10px] font-medium uppercase tracking-widest text-ink/30">
-            Scroll
-          </span>
-          <span className="block h-6 w-px animate-[grow-line_1.6s_ease-in-out_infinite] bg-ink/20 origin-top" />
-        </div>
-      </section>
-
-      {/* ── MOBILE ──────────────────────────────────────────────────────────── */}
-      <section
-        className="relative block min-h-screen w-full overflow-hidden bg-mist md:hidden"
-        aria-label="Hero"
-      >
-        {/* Atmosphere */}
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0"
-          style={{
-            background: [
-              "radial-gradient(ellipse 80% 45% at 10% 5%, rgba(242,169,59,0.14) 0%, transparent 60%)",
-              "radial-gradient(ellipse 70% 40% at 90% 20%, rgba(31,128,115,0.10) 0%, transparent 58%)",
-            ].join(", "),
-          }}
-        />
-        <div
-          aria-hidden="true"
-          className="landing-grain pointer-events-none absolute inset-0 opacity-[0.04] mix-blend-multiply"
-        />
-
-        <div className="relative z-10 flex min-h-screen flex-col items-center justify-center px-6 pt-28 pb-16 text-center">
-          {/* Single floating card on mobile */}
-          <div className="mb-8 w-fit rounded-2xl border border-white/60 bg-white/80 p-3 shadow-md backdrop-blur-md">
-            <div className="flex items-center gap-2">
-              <BadgeCheck className="h-4 w-4 text-teal" />
-              <span className="text-[12px] font-semibold text-ink">Verified employers only</span>
-            </div>
-          </div>
-
-          <h1 className="mb-5 font-display text-5xl font-extrabold leading-tight tracking-tight text-ink">
-            Find your next{" "}
-            <span className="text-marigold">opportunity</span>
-            <br />
-            <span className="text-ink/50">without the noise.</span>
-          </h1>
-
-          <p className="mb-8 max-w-sm font-body text-base leading-relaxed text-ink/60">
-            Build one profile and apply to roles from employers we verify before
-            they go live — or post a job and meet your next VA.
-          </p>
-
-          <div className="flex w-full max-w-xs flex-col gap-3">
-            <Link
-              href="/signup?role=SEEKER"
-              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-ink py-3.5 font-display text-sm font-bold text-mist shadow-lg active:scale-95"
-            >
-              I&apos;m looking for work
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-
-            <Link
-              href="/signup?role=EMPLOYER"
-              className="flex w-full items-center justify-center gap-2 rounded-2xl border border-teal/30 bg-teal/5 py-3.5 font-display text-sm font-bold text-teal active:scale-95"
-            >
-              I&apos;m hiring
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-          </div>
-
-          <LoginPrompt className="mt-5 text-sm text-ink/50" />
-
-          {/* Trust strip */}
-          <div className="mt-10 flex flex-col items-center gap-1.5 text-xs font-medium text-ink/45">
-            <span>500+ VAs ready to work</span>
-            <span>Verified employers only · Free for seekers</span>
-          </div>
+        <LoginPrompt className="mt-6 text-sm font-medium text-ink/75" />
         </div>
 
-        {/* Scroll cue */}
-        <div
-          aria-hidden="true"
-          className="absolute bottom-7 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1.5"
-        >
-          <span className="block h-5 w-px animate-[grow-line_1.6s_ease-in-out_infinite] bg-ink/20 origin-top" />
-        </div>
-      </section>
-
-      {/* Scroll-cue keyframe (CSS only, no JS) */}
+        <HeroCards stats={stats} featuredCompany={featuredCompany} />
+      </div>
       <style>{`
-        @keyframes grow-line {
-          0%   { transform: scaleY(0); opacity: 0; }
-          40%  { transform: scaleY(1); opacity: 1; }
-          100% { transform: scaleY(1); opacity: 0; }
+        .hero-flip-a {
+          animation: hero-flip-a 5.6s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+        }
+        .hero-flip-b {
+          animation: hero-flip-b 5.6s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+        }
+        @keyframes hero-flip-a {
+          0%, 42% { transform: translateY(0%); }
+          50%, 92% { transform: translateY(-110%); }
+          100% { transform: translateY(0%); }
+        }
+        @keyframes hero-flip-b {
+          0%, 42% { transform: translateY(110%); }
+          50%, 92% { transform: translateY(0%); }
+          100% { transform: translateY(110%); }
         }
         @media (prefers-reduced-motion: reduce) {
-          [class*="animate-float"] { animation: none !important; }
+          .hero-flip-a,
+          .hero-flip-b { animation: none; }
+          .hero-flip-b { transform: translateY(110%); }
         }
       `}</style>
-    </>
+    </section>
   );
 }

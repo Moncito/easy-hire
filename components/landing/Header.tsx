@@ -2,9 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef } from "react";
-import { Search, Briefcase, HelpCircle, Zap, LogIn } from "lucide-react";
-import { gsap, ScrollTrigger } from "@/lib/gsap";
+import { useEffect, useState } from "react";
+import { Search, Briefcase, HelpCircle } from "lucide-react";
 import { useLoginModalOptional } from "@/components/auth/LoginModalProvider";
 
 const navItems = [
@@ -22,164 +21,82 @@ export default function Header({ variant: _variant }: Props = {}) {
   const pathname = usePathname();
   const isHome = pathname === "/";
   const loginModal = useLoginModalOptional();
+  const [scrolled, setScrolled] = useState(!isHome);
 
-  const headerRef = useRef<HTMLElement>(null);
-  const fullNavRef = useRef<HTMLDivElement>(null);
-  const compactNavRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!isHome) {
+      setScrolled(true);
+      return;
+    }
+
+    const onScroll = () => setScrolled(window.scrollY > 72);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [isHome]);
 
   function navHref(hash: string) {
     return isHome ? hash : `/${hash}`;
   }
 
-  useEffect(() => {
-    const ctx = gsap.context(() => {
-      const tl = gsap.timeline({
-        scrollTrigger: {
-          trigger: document.body,
-          start: "top top",
-          end: "160 top",
-          scrub: 0.4,
-        },
-      });
-
-      tl.to(headerRef.current, { paddingTop: 10, ease: "power2.out" }, 0);
-      tl.to(fullNavRef.current, { opacity: 0, y: -10, scale: 0.97, ease: "power2.out" }, 0);
-      tl.to(compactNavRef.current, { opacity: 1, y: 0, scale: 1, ease: "power2.out" }, 0);
-    });
-
-    const st = ScrollTrigger.create({
-      trigger: document.body,
-      start: "top top",
-      end: "160 top",
-      onUpdate: (self) => {
-        const compact = self.progress > 0.5;
-        if (fullNavRef.current) {
-          fullNavRef.current.style.pointerEvents = compact ? "none" : "auto";
-        }
-        if (compactNavRef.current) {
-          compactNavRef.current.style.pointerEvents = compact ? "auto" : "none";
-        }
-      },
-    });
-
-    return () => {
-      ctx.revert();
-      st.kill();
-    };
-  }, [pathname]);
-
   function handleLoginClick() {
     loginModal?.openLogin();
   }
 
-  const loginClassName =
-    "cursor-pointer whitespace-nowrap rounded-full border border-white/25 px-4 py-1.5 text-[14px] font-semibold text-mist transition hover:bg-white/10 sm:border-transparent sm:px-0 sm:py-0 sm:font-medium sm:text-mist/85 sm:hover:text-white";
-
   return (
-    <header ref={headerRef} className="fixed inset-x-0 top-0 z-50" style={{ paddingTop: 20 }}>
-      <div className="relative mx-auto flex h-14 max-w-7xl items-center justify-center px-4 md:px-32">
-        {/* Full pill — visible at top, fades on scroll */}
-        <div
-          ref={fullNavRef}
-          className="absolute inset-x-4 flex items-center justify-between rounded-full border border-white/30 bg-ink/70 px-4 py-2 shadow-2xl backdrop-blur-xl md:inset-x-32"
-        >
+    <header className="fixed inset-x-0 top-0 z-50">
+      <div
+        className={`w-full border-b py-5 transition-[background-color,border-color] duration-300 ease-out ${
+          scrolled
+            ? "border-ink/8 bg-[#FFFDF7]"
+            : "border-transparent bg-transparent"
+        }`}
+      >
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 md:px-12">
           <Link href="/" className="flex shrink-0 items-center gap-3 transition-opacity hover:opacity-90">
             <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-full">
               <div className="absolute inset-0 bg-marigold" style={{ clipPath: "polygon(0 0,100% 0,0 100%)" }} />
               <div className="absolute inset-0 bg-teal" style={{ clipPath: "polygon(100% 0,100% 100%,0 100%)" }} />
             </div>
-            <span className="whitespace-nowrap font-display text-lg font-bold text-mist">EasyHire</span>
+            <span className="whitespace-nowrap font-display text-lg font-bold text-ink">EasyHire</span>
           </Link>
 
-          <nav className="hidden items-center gap-2 md:flex">
+          <nav className="hidden items-center gap-1 md:flex">
             {navItems.map((item) => (
               <Link
                 key={item.label}
                 href={navHref(item.hash)}
-                className="whitespace-nowrap rounded-full px-5 py-2 text-[15px] font-medium text-mist/75 transition-all duration-300 hover:bg-white/10 hover:text-white"
+                className="whitespace-nowrap rounded-lg px-4 py-2 text-[15px] font-medium text-ink/80 transition-colors duration-200 hover:text-ink"
               >
                 {item.label}
               </Link>
             ))}
           </nav>
 
-          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+          <div className="flex shrink-0 items-center gap-4 sm:gap-6">
             {isHome && loginModal ? (
-              <button type="button" onClick={handleLoginClick} className={loginClassName}>
+              <button
+                type="button"
+                onClick={handleLoginClick}
+                className="cursor-pointer whitespace-nowrap text-[14px] font-semibold text-ink/85 transition-colors hover:text-ink"
+              >
                 Log in
               </button>
             ) : (
-              <Link href="/login" className={loginClassName}>
+              <Link
+                href="/login"
+                className="whitespace-nowrap text-[14px] font-semibold text-ink/85 transition-colors hover:text-ink"
+              >
                 Log in
               </Link>
             )}
             <Link
               href="/signup"
-              className="whitespace-nowrap rounded-full bg-white px-5 py-1.5 text-[14px] font-semibold text-ink shadow-lg transition-all duration-300 hover:scale-105 active:scale-95 sm:px-7"
+              className="whitespace-nowrap rounded-xl bg-ink px-5 py-2 text-[14px] font-semibold text-mist transition-colors hover:bg-navy"
             >
               Get started
             </Link>
           </div>
-        </div>
-
-        {/* Compact pill — appears on scroll (all public pages) */}
-        <div
-          ref={compactNavRef}
-          className="absolute inline-flex items-center gap-1 rounded-full border border-white/30 bg-ink/85 px-2 py-2 opacity-0 shadow-2xl backdrop-blur-xl"
-          style={{ pointerEvents: "none" }}
-        >
-          <Link
-            href="/"
-            className="relative h-8 w-8 shrink-0 overflow-hidden rounded-full transition-opacity hover:opacity-90"
-          >
-            <div className="absolute inset-0 bg-marigold" style={{ clipPath: "polygon(0 0,100% 0,0 100%)" }} />
-            <div className="absolute inset-0 bg-teal" style={{ clipPath: "polygon(100% 0,100% 100%,0 100%)" }} />
-          </Link>
-
-          <div className="mx-1 h-5 w-px bg-white/15" />
-
-          <div className="hidden items-center gap-1 md:flex">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              return (
-                <Link
-                  key={item.label}
-                  href={navHref(item.hash)}
-                  title={item.label}
-                  className="flex h-9 w-9 items-center justify-center rounded-full text-mist/75 transition-colors duration-300 hover:bg-white/10 hover:text-white"
-                >
-                  <Icon className="h-4 w-4" />
-                </Link>
-              );
-            })}
-          </div>
-
-          {isHome && loginModal ? (
-            <button
-              type="button"
-              title="Log in"
-              onClick={handleLoginClick}
-              className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full text-mist/75 transition-colors duration-300 hover:bg-white/10 hover:text-white"
-            >
-              <LogIn className="h-4 w-4" />
-            </button>
-          ) : (
-            <Link
-              href="/login"
-              title="Log in"
-              className="flex h-9 w-9 items-center justify-center rounded-full text-mist/75 transition-colors duration-300 hover:bg-white/10 hover:text-white"
-            >
-              <LogIn className="h-4 w-4" />
-            </Link>
-          )}
-
-          <Link
-            href="/signup"
-            title="Get started"
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-ink shadow-lg transition-transform duration-300 hover:scale-105 active:scale-95"
-          >
-            <Zap className="h-4 w-4" />
-          </Link>
         </div>
       </div>
     </header>
