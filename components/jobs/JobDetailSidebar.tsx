@@ -22,9 +22,12 @@ type ApplyProps = {
   }[];
 };
 
-type Props = ApplyProps & {
+type Props = {
+  jobId: string;
+  jobTitle: string;
   company: Company;
   isSaved: boolean;
+  screeningQuestions?: ApplyProps["screeningQuestions"];
 };
 
 export function JobApplyCta({
