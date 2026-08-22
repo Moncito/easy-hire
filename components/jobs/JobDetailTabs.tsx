@@ -181,6 +181,10 @@ export default function JobDetailTabs({
         </div>
       </header>
 
+      {variant === "page" && applyAction ? (
+        <div className="mb-6">{applyAction}</div>
+      ) : null}
+
       {/* Editorial tab row — text + marigold rule, no pill chrome */}
       <nav className="mb-6 border-b border-ink/[0.08]" aria-label="Job details">
         <div className="flex gap-8 overflow-x-auto sm:gap-10" role="tablist">

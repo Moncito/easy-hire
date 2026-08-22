@@ -1,6 +1,5 @@
 import { auth } from "@/Auth";
 import PublicJobsHeader from "@/components/jobs/PublicJobsHeader";
-import Footer from "@/components/landing/Footer";
 import SeekerAreaBackground from "@/components/seeker/SeekerAreaBackground";
 
 export default async function JobsLayout({ children }: { children: React.ReactNode }) {
@@ -8,12 +7,13 @@ export default async function JobsLayout({ children }: { children: React.ReactNo
   const isSeeker = session?.user?.role === "SEEKER";
 
   return (
-    <div className="relative flex min-h-screen flex-col overflow-x-hidden bg-mist lg:h-dvh lg:max-h-dvh">
+    <div className="relative flex min-h-screen flex-col overflow-x-clip bg-mist lg:h-dvh lg:max-h-dvh lg:overflow-hidden">
       {isSeeker && <SeekerAreaBackground />}
       <PublicJobsHeader />
-      <div className="jobs-workspace-shell relative z-10">{children}</div>
-      <div className="lg:hidden">
-        <Footer />
+      <div
+        className={`jobs-workspace-shell relative z-10${isSeeker ? " seeker-jobs-shell-mobile" : ""}`}
+      >
+        {children}
       </div>
     </div>
   );

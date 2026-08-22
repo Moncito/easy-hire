@@ -4,7 +4,7 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { getPublicJob } from "@/lib/public-jobs";
 import JobDetailTabs from "@/components/jobs/JobDetailTabs";
-import JobDetailSidebar from "@/components/jobs/JobDetailSidebar";
+import JobDetailSidebar, { JobApplyCta } from "@/components/jobs/JobDetailSidebar";
 import JobViewTracker from "@/components/jobs/JobViewTracker";
 import JobsNavBand from "@/components/jobs/JobsNavBand";
 import { listSavedJobIds } from "@/lib/saved-jobs";
@@ -84,7 +84,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
   };
 
   return (
-    <div className="jobs-detail-scroll flex min-h-0 flex-1 flex-col">
+    <div className="jobs-detail-scroll min-h-0 flex-1">
       <JobViewTracker jobId={job.id} />
       <JobsNavBand
         isSeeker={isSeeker}
@@ -104,7 +104,25 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
 
         <div className="mt-8 grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1fr)_280px] lg:gap-14 xl:grid-cols-[minmax(0,1fr)_300px]">
           <div className="min-w-0">
-            <JobDetailTabs job={jobData} hideApplySection variant="page" />
+            <JobDetailTabs
+              job={jobData}
+              hideApplySection
+              variant="page"
+              applyAction={
+                <div className="lg:hidden">
+                  <JobApplyCta
+                    jobId={job.id}
+                    jobTitle={job.title}
+                    companyName={job.company.companyName}
+                    screeningQuestions={job.screeningQuestions.map((q) => ({
+                      id: q.id,
+                      prompt: q.prompt,
+                      required: q.required,
+                    }))}
+                  />
+                </div>
+              }
+            />
           </div>
 
           <JobDetailSidebar
@@ -120,6 +138,10 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
           />
         </div>
       </div>
+
+      {/* Keeps company + apply CTA above the fixed mobile nav. Must be in-flow
+          (not padding on a flex scroller) or it never extends scrollHeight. */}
+      <div className="jobs-mobile-nav-clearance" aria-hidden="true" />
     </div>
   );
 }

@@ -23,12 +23,20 @@ const navItems = [
   { label: "Alerts", href: "/seeker/job-alerts", icon: Bell },
 ];
 
+import SeekerMobileBottomNav from "@/components/seeker/SeekerMobileBottomNav";
+
 type Props = {
   userName?: string | null;
   userEmail?: string | null;
 };
 
 type IslandWidths = { compact: number; expanded: number };
+
+function isActive(pathname: string, href: string) {
+  if (href === "/jobs") return pathname === "/jobs" || pathname.startsWith("/jobs/");
+  if (href === "/seeker/dashboard") return pathname === href;
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
 
 function initialsFrom(name?: string | null, email?: string | null) {
   if (name?.trim()) {
@@ -72,12 +80,6 @@ export default function SeekerPillNav({ userName, userEmail }: Props) {
   const [isTouchDevice, setIsTouchDevice] = useState(false);
   const [widths, setWidths] = useState<IslandWidths | null>(null);
   const initials = initialsFrom(userName, userEmail);
-
-  function isActive(href: string) {
-    if (href === "/jobs") return pathname === "/jobs" || pathname.startsWith("/jobs/");
-    if (href === "/seeker/dashboard") return pathname === href;
-    return pathname === href || pathname.startsWith(`${href}/`);
-  }
 
   const collapse = useCallback(() => setExpanded(false), []);
 
@@ -153,17 +155,18 @@ export default function SeekerPillNav({ userName, userEmail }: Props) {
     }
   }
 
-  const shellWidth = widths ? (expanded ? widths.expanded : widths.compact) : undefined;
-
   const linkTone = (href: string) => {
-    const active = isActive(href);
+    const active = isActive(pathname, href);
     return active
       ? "bg-marigold/25 text-marigold"
       : "text-mist/75 hover:bg-white/10 hover:text-white";
   };
 
+  const shellWidth = widths ? (expanded ? widths.expanded : widths.compact) : undefined;
+
   return (
-    <header className="pointer-events-none fixed inset-x-0 top-0 z-50 flex justify-center pt-3">
+    <>
+      <header className="pointer-events-none fixed inset-x-0 top-0 z-50 hidden justify-center pt-3 lg:flex">
       <div
         ref={shellRef}
         role="navigation"
@@ -176,11 +179,11 @@ export default function SeekerPillNav({ userName, userEmail }: Props) {
         onBlurCapture={handleFocusOut}
         style={{ width: shellWidth, visibility: widths ? "visible" : "hidden" }}
         className={[
-          "seeker-island-outer pointer-events-auto relative min-h-[44px] max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-full border border-white/20 bg-ink/90 py-1.5 shadow-[0_8px_32px_rgba(0,0,0,0.28)] backdrop-blur-xl",
+          "seeker-island-outer pointer-events-auto relative min-h-[44px] max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-full border border-white/20 bg-ink/90 py-1.5 shadow-[0_8px_32px_rgba(0,0,0,0.28)] backdrop-blur-xl sm:max-w-[min(calc(100vw-2rem),64rem)]",
           expanded ? "shadow-[0_14px_44px_rgba(0,0,0,0.34)]" : "",
         ].join(" ")}
       >
-        {/* Compact layer — icons only, fixed layout */}
+        {/* Compact layer — icons only */}
         <div
           ref={compactRef}
           aria-hidden={expanded}
@@ -251,7 +254,7 @@ export default function SeekerPillNav({ userName, userEmail }: Props) {
           )}
         </div>
 
-        {/* Expanded layer — full labels in normal document flow */}
+        {/* Expanded layer — full labels */}
         <div
           ref={expandedRef}
           aria-hidden={!expanded}
@@ -267,7 +270,9 @@ export default function SeekerPillNav({ userName, userEmail }: Props) {
             tabIndex={expanded ? 0 : -1}
           >
             <LogoMark />
-            <span className="whitespace-nowrap font-display text-sm font-bold text-mist">EasyHire</span>
+            <span className="whitespace-nowrap font-display text-sm font-bold text-mist">
+              EasyHire
+            </span>
           </Link>
 
           <nav className="flex items-center gap-0.5">
@@ -283,7 +288,9 @@ export default function SeekerPillNav({ userName, userEmail }: Props) {
                   className={`flex h-8 shrink-0 items-center rounded-full px-2.5 transition-colors duration-150 ${linkTone(item.href)}`}
                 >
                   <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                  <span className="ml-1.5 whitespace-nowrap text-[13px] font-medium">{item.label}</span>
+                  <span className="ml-1.5 whitespace-nowrap text-[13px] font-medium">
+                    {item.label}
+                  </span>
                 </Link>
               );
             })}
@@ -309,5 +316,7 @@ export default function SeekerPillNav({ userName, userEmail }: Props) {
         </div>
       </div>
     </header>
+    <SeekerMobileBottomNav />
+    </>
   );
 }

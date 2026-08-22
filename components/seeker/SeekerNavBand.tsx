@@ -1,9 +1,9 @@
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 
-function LogoMark() {
+export function SeekerLogoMark({ className = "h-6 w-6 sm:h-7 sm:w-7" }: { className?: string }) {
   return (
-    <div className="relative h-6 w-6 shrink-0 overflow-hidden rounded-full sm:h-7 sm:w-7">
+    <div className={`relative shrink-0 overflow-hidden rounded-full ${className}`}>
       <div
         className="absolute inset-0 bg-marigold"
         style={{ clipPath: "polygon(0 0,100% 0,0 100%)" }}
@@ -36,43 +36,50 @@ export default function SeekerNavBand({
   homeHref = "/seeker/dashboard",
   className,
 }: SeekerNavBandProps) {
+  const fallbackHint = hint ?? "VA marketplace";
+
   return (
     <div
-      className={`seeker-nav-band relative flex h-14 shrink-0 items-center justify-between px-6 sm:h-16 sm:px-8${className ? ` ${className}` : ""}`}
+      className={`seeker-nav-band relative flex h-12 shrink-0 items-center justify-between gap-3 px-4 sm:h-14 sm:px-6 lg:h-16 lg:px-8${className ? ` ${className}` : ""}`}
     >
-      <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+      {/* Brand + section */}
+      <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3 lg:flex-none">
         <Link
           href={homeHref}
           className="flex shrink-0 items-center gap-2 transition-opacity hover:opacity-85"
         >
-          <LogoMark />
+          <SeekerLogoMark />
           <span className="font-display text-sm font-bold text-ink">EasyHire</span>
         </Link>
-        <span className="hidden h-4 w-px shrink-0 bg-ink/10 md:block" aria-hidden="true" />
-        <span className="hidden items-center gap-1.5 md:flex">
-          <Icon className="h-3.5 w-3.5 text-marigold/70" aria-hidden="true" />
-          <span className="text-[11px] font-semibold uppercase tracking-widest text-ink/45">
+
+        <span className="h-4 w-px shrink-0 bg-ink/10" aria-hidden="true" />
+
+        <span className="flex min-w-0 items-center gap-1.5">
+          <Icon className="h-3.5 w-3.5 shrink-0 text-marigold/70" aria-hidden="true" />
+          <span className="truncate text-[10px] font-semibold uppercase tracking-widest text-ink/45 sm:text-[11px]">
             {section}
           </span>
         </span>
       </div>
 
+      {/* Desktop — reserve center space for the floating pill */}
       <div
-        className="pointer-events-none absolute inset-x-0 top-0 flex h-full items-center justify-center"
+        className="pointer-events-none absolute inset-x-0 top-0 hidden h-full items-center justify-center lg:flex"
         aria-hidden="true"
       >
-        <div className="h-full w-[min(100%,19rem)]" />
+        <div className="h-full w-[min(100%,20rem)] sm:w-[min(100%,24rem)] lg:w-[min(100%,30rem)]" />
       </div>
 
-      <div className="flex min-w-0 items-center justify-end gap-2">
+      {/* Meta + badge */}
+      <div className="flex shrink-0 items-center justify-end gap-2">
         {metaLabel && (
-          <span className="hidden max-w-[11rem] truncate text-xs font-medium text-ink/50 lg:inline">
+          <span className="hidden max-w-[6.5rem] truncate text-xs font-medium text-ink/50 sm:inline lg:max-w-[11rem]">
             {metaLabel}
           </span>
         )}
         {badge ?? (
           <span className="hidden text-[10px] font-semibold uppercase tracking-widest text-ink/30 sm:inline">
-            {hint ?? "VA marketplace"}
+            {fallbackHint}
           </span>
         )}
       </div>

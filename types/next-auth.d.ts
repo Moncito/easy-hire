@@ -17,5 +17,7 @@ declare module "next-auth/jwt" {
   interface JWT {
     id: string;
     role: "SEEKER" | "EMPLOYER" | "ADMIN";
+    idVerified?: boolean;
+    roleRefreshedAt?: number;
   }
 }

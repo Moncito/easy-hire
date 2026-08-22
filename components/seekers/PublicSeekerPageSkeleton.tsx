@@ -1,57 +1,151 @@
-function Bone({ className }: { className?: string }) {
-  return <div className={`animate-pulse rounded-md bg-ink/8 ${className ?? ""}`} aria-hidden="true" />;
+import type { CSSProperties } from "react";
+
+function Bone({ style }: { style?: CSSProperties }) {
+  return (
+    <div
+      style={{
+        background: "#E4E2DC",
+        animation: "pulse 1.5s ease-in-out infinite",
+        ...style,
+      }}
+      aria-hidden="true"
+    />
+  );
 }
 
 export default function PublicSeekerPageSkeleton() {
   return (
-    <div className="animate-fade-in pb-20">
-      <div className="seekers-nav-band relative flex h-14 shrink-0 items-center justify-between px-6 sm:h-16 sm:px-8">
-        <Bone className="h-6 w-36" />
-        <Bone className="h-6 w-24 rounded-full" />
+    <div
+      className="animate-fade-in"
+      style={{
+        background: "#F5F4F0",
+        minHeight: "100vh",
+        fontFamily: "Inter, system-ui, sans-serif",
+      }}
+    >
+      <div
+        className="seekers-nav-band"
+        style={{
+          position: "relative",
+          display: "flex",
+          height: 56,
+          flexShrink: 0,
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "0 1.5rem",
+        }}
+      >
+        <Bone style={{ height: 16, width: 144, borderRadius: 4 }} />
+        <Bone style={{ height: 24, width: 96, borderRadius: 9999 }} />
       </div>
 
-      <div className="mx-auto max-w-4xl px-4 pt-6 sm:px-6 lg:px-8">
-        <div className="flex flex-col gap-5 border-b border-ink/[0.06] pb-8 sm:flex-row sm:items-end sm:justify-between">
-          <div className="flex items-end gap-4">
-            <Bone className="h-20 w-20 shrink-0 rounded-xl" />
-            <div className="space-y-2">
-              <Bone className="h-4 w-24 rounded-full" />
-              <Bone className="h-8 w-64" />
-              <Bone className="h-4 w-40" />
+      <div
+        style={{
+          maxWidth: 1240,
+          margin: "0 auto",
+          padding: "0 1.5rem 4rem",
+        }}
+      >
+        <Bone style={{ height: 14, width: 112, borderRadius: 4, margin: "1.5rem 0" }} />
+
+        <Bone
+          style={{
+            width: "100%",
+            height: 192,
+            borderRadius: "14px 14px 0 0",
+            background: "linear-gradient(118deg, #20242B 0%, #1E3A5F 32%, #1F8073 68%, #F2A93B 100%)",
+          }}
+        />
+
+        <div
+          style={{
+            display: "flex",
+            alignItems: "flex-start",
+            gap: "1.125rem",
+            paddingBottom: "1.5rem",
+          }}
+        >
+          <Bone
+            style={{
+              width: 96,
+              height: 96,
+              borderRadius: "50%",
+              border: "4px solid #FFFFFF",
+              flexShrink: 0,
+              marginTop: -48,
+              boxSizing: "border-box",
+            }}
+          />
+          <div style={{ paddingTop: 16, flex: 1 }}>
+            <Bone style={{ height: 22, width: 220, borderRadius: 4, marginBottom: 8 }} />
+            <Bone style={{ height: 14, width: 140, borderRadius: 4 }} />
+          </div>
+        </div>
+
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            background: "#FFFFFF",
+            border: "1px solid #E4E2DC",
+            borderRadius: 12,
+            overflow: "hidden",
+          }}
+        >
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div
+              key={i}
+              style={{
+                flex: "1 1 130px",
+                padding: "1.25rem 1rem",
+                borderRight: i < 4 ? "1px solid #E4E2DC" : "none",
+              }}
+            >
+              <Bone style={{ height: 10, width: 64, borderRadius: 4, marginBottom: 8 }} />
+              <Bone style={{ height: 16, width: 96, borderRadius: 4, marginBottom: 6 }} />
+              <Bone style={{ height: 10, width: 72, borderRadius: 4 }} />
+            </div>
+          ))}
+        </div>
+
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "minmax(0, 2fr) minmax(0, 1fr)",
+            gap: "2rem",
+            paddingTop: "2rem",
+          }}
+        >
+          <div>
+            <Bone style={{ height: 12, width: 72, borderRadius: 4, marginBottom: 16 }} />
+            <Bone style={{ height: 14, width: "100%", borderRadius: 4, marginBottom: 8 }} />
+            <Bone style={{ height: 14, width: "88%", borderRadius: 4, marginBottom: 8 }} />
+            <Bone style={{ height: 14, width: "72%", borderRadius: 4 }} />
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+            <div
+              style={{
+                background: "#FFFFFF",
+                border: "1px solid #E4E2DC",
+                borderRadius: 10,
+                padding: "1.25rem",
+              }}
+            >
+              <Bone style={{ height: 12, width: 120, borderRadius: 4, marginBottom: 12 }} />
+              <Bone style={{ height: 28, width: 96, borderRadius: 7 }} />
+            </div>
+            <div
+              style={{
+                background: "#FFFFFF",
+                border: "1px solid #E4E2DC",
+                borderRadius: 10,
+                padding: "1.25rem",
+              }}
+            >
+              <Bone style={{ height: 12, width: 80, borderRadius: 4, marginBottom: 12 }} />
+              <Bone style={{ height: 28, width: 140, borderRadius: 7 }} />
             </div>
           </div>
-          <Bone className="h-10 w-28 rounded-xl" />
-        </div>
-
-        <div className="mt-8 grid grid-cols-2 gap-4 border-y border-ink/[0.06] py-6 sm:grid-cols-3">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="space-y-2">
-              <Bone className="h-3 w-16" />
-              <Bone className="h-5 w-28" />
-            </div>
-          ))}
-        </div>
-
-        <div className="mt-8 flex flex-wrap gap-2">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Bone key={i} className="h-7 w-24 rounded-full" />
-          ))}
-        </div>
-
-        <div className="mt-10 space-y-3">
-          <Bone className="h-5 w-24" />
-          <Bone className="h-4 w-full" />
-          <Bone className="h-4 w-3/4" />
-        </div>
-
-        <div className="mt-10 divide-y divide-ink/[0.06] border-y border-ink/[0.06]">
-          {Array.from({ length: 2 }).map((_, i) => (
-            <div key={i} className="space-y-2 py-5">
-              <Bone className="h-5 w-48" />
-              <Bone className="h-4 w-32" />
-              <Bone className="h-3 w-full" />
-            </div>
-          ))}
         </div>
       </div>
     </div>

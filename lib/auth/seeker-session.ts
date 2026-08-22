@@ -1,6 +1,7 @@
 import { cache } from "react";
 import { redirect } from "next/navigation";
 import { auth } from "@/Auth";
+import { resolveSessionUserId } from "@/lib/auth/resolve-session-user";
 
 export const getSession = cache(async () => auth());
 
@@ -15,7 +16,10 @@ export async function requireSeekerLayoutContext() {
     return null;
   }
 
-  return { session, userId: session.user.id };
+  const userId = await resolveSessionUserId(session.user);
+  if (!userId) redirect("/login");
+
+  return { session, userId };
 }
 
 /** Layout + pages: ensures seeker is signed in. */

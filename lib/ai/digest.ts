@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { sendEmail } from "@/lib/email";
+import { renderEmailLayout } from "@/lib/shared/email-layout";
+import { escapeHtml } from "@/lib/escape-html";
 import { isEmployerPro } from "@/lib/billing/subscriptions";
 import { generateHiringInsights } from "@/lib/ai/features/insights";
 import { getEmployerAnalytics } from "@/lib/employer-analytics";
@@ -39,9 +41,18 @@ export async function sendWeeklyDigestForCompany(companyId: string): Promise<boo
   await sendEmail(
     company.user.email,
     `Your weekly hiring digest — ${company.companyName}`,
-    `<p>Hi ${company.companyName} team,</p>
-     ${narrativeHtml}
-     <p><a href="${appUrl}/employer/dashboard">Open your dashboard</a></p>`
+    renderEmailLayout({
+      preview: `Your weekly hiring digest for ${company.companyName}.`,
+      heading: "This week in hiring",
+      bodyHtml: `
+        <p style="margin:0 0 16px;">Hi ${escapeHtml(company.companyName)} team,</p>
+        ${narrativeHtml}
+      `,
+      cta: {
+        label: "Open your dashboard",
+        href: `${appUrl}/employer/dashboard`,
+      },
+    })
   );
 
   return true;

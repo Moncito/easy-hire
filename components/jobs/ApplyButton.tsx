@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -43,6 +44,11 @@ export default function ApplyButton({
   const [hasResume, setHasResume] = useState<boolean | null>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (session?.user?.role !== "SEEKER") return;
@@ -85,7 +91,12 @@ export default function ApplyButton({
     }
 
     document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.body.style.overflow = previousOverflow;
+    };
   }, [open]);
 
   function closeModal() {
@@ -230,178 +241,192 @@ export default function ApplyButton({
         Apply now
       </button>
 
-      {open && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/50 p-0 backdrop-blur-sm sm:items-center sm:p-6">
-          <div
-            ref={dialogRef}
-            tabIndex={-1}
-            className="relative flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-t-2xl border border-ink/5 bg-white shadow-2xl animate-scale-in outline-none sm:rounded-2xl"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="apply-modal-title"
-          >
-            <div className="h-1.5 w-full shrink-0 bg-marigold" />
-            <div className="overflow-y-auto p-6 sm:p-8">
-              <div className="mb-6 flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wider text-marigold">Apply for this role</p>
-                  <h2 id="apply-modal-title" className="mt-1 font-display text-xl font-bold text-ink sm:text-2xl">
-                    {jobTitle}
-                  </h2>
-                  <p className="mt-1 text-sm text-ink/55">{companyName}</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={closeModal}
-                  className="cursor-pointer rounded-lg p-1 text-ink/40 hover:bg-ink/5 hover:text-ink"
-                  aria-label="Close"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-
-              {checking ? (
-                <div className="flex items-center justify-center py-10 text-ink/50">
-                  <Loader2 className="h-6 w-6 animate-spin" aria-hidden="true" />
-                </div>
-              ) : applied ? (
-                <div className="rounded-xl bg-marigold/8 px-4 py-6 text-center">
-                  <CheckCircle2 className="mx-auto h-9 w-9 text-marigold" aria-hidden="true" />
-                  <p className="mt-3 font-display text-lg font-bold text-ink">
-                    {justSubmitted ? "Application submitted" : "Already applied"}
-                  </p>
-                  <p className="mt-1 text-sm text-ink/55">
-                    The employer will review your profile soon.
-                  </p>
-                  <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-center">
-                    <Link
-                      href="/seeker/dashboard"
-                      className="cursor-pointer rounded-xl bg-marigold px-4 py-2.5 text-sm font-semibold text-ink"
-                    >
-                      View applications
-                    </Link>
+      {open && mounted
+        ? createPortal(
+            <div className="fixed inset-0 z-[80] flex items-end justify-center bg-ink/50 p-0 backdrop-blur-sm sm:items-center sm:p-6">
+              <div
+                ref={dialogRef}
+                tabIndex={-1}
+                className="relative flex max-h-[min(92dvh,100%)] w-full max-w-2xl flex-col overflow-hidden rounded-t-2xl border border-ink/5 bg-white shadow-2xl animate-scale-in outline-none sm:max-h-[92vh] sm:rounded-2xl"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="apply-modal-title"
+              >
+                <div className="h-1.5 w-full shrink-0 bg-marigold" />
+                <div className="min-h-0 flex-1 overflow-y-auto p-6 sm:p-8">
+                  <div className="mb-6 flex items-start justify-between gap-4">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wider text-marigold">
+                        Apply for this role
+                      </p>
+                      <h2
+                        id="apply-modal-title"
+                        className="mt-1 font-display text-xl font-bold text-ink sm:text-2xl"
+                      >
+                        {jobTitle}
+                      </h2>
+                      <p className="mt-1 text-sm text-ink/55">{companyName}</p>
+                    </div>
                     <button
                       type="button"
                       onClick={closeModal}
-                      className="cursor-pointer rounded-xl border border-ink/10 px-4 py-2.5 text-sm font-semibold text-ink/70 hover:bg-ink/4"
+                      className="cursor-pointer rounded-lg p-1 text-ink/40 hover:bg-ink/5 hover:text-ink"
+                      aria-label="Close"
                     >
-                      Done
+                      <X className="h-5 w-5" />
                     </button>
                   </div>
-                </div>
-              ) : hasResume === false ? (
-                <div className="rounded-xl bg-marigold/10 px-4 py-5">
-                  <p className="font-semibold text-ink">Upload your resume first</p>
-                  <p className="mt-1 text-sm text-ink/60">
-                    You need a resume on your profile before applying.
-                  </p>
-                  <Link
-                    href="/seeker/profile"
-                    className="mt-4 inline-block cursor-pointer rounded-xl bg-marigold px-4 py-2 text-sm font-semibold text-ink"
-                  >
-                    Go to profile
-                  </Link>
-                </div>
-              ) : (
-                <>
-                  <div className="rounded-xl border border-navy/10 bg-mist/50 p-4 text-sm text-ink/65">
-                    <p className="font-semibold text-ink">Your application includes</p>
-                    <ul className="mt-2 space-y-1 text-xs">
-                      <li>• Profile photo, headline, and skills</li>
-                      <li>• Resume on file</li>
-                      <li>• Cover letter below (recommended)</li>
-                    </ul>
-                  </div>
 
-                  <label htmlFor="coverNote" className="mb-2 mt-6 block text-sm font-semibold text-ink">
-                    Cover letter
-                  </label>
-                  <p className="mb-3 text-xs text-ink/50">
-                    Tell the employer why you&apos;re a strong fit — experience, tools, timezone, and availability.
-                  </p>
-                  <textarea
-                    id="coverNote"
-                    rows={8}
-                    maxLength={COVER_NOTE_MAX}
-                    value={coverNote}
-                    onChange={(e) => setCoverNote(e.target.value)}
-                    placeholder="Dear hiring team,
+                  {checking ? (
+                    <div className="flex items-center justify-center py-10 text-ink/50">
+                      <Loader2 className="h-6 w-6 animate-spin" aria-hidden="true" />
+                    </div>
+                  ) : applied ? (
+                    <div className="rounded-xl bg-marigold/8 px-4 py-6 text-center">
+                      <CheckCircle2 className="mx-auto h-9 w-9 text-marigold" aria-hidden="true" />
+                      <p className="mt-3 font-display text-lg font-bold text-ink">
+                        {justSubmitted ? "Application submitted" : "Already applied"}
+                      </p>
+                      <p className="mt-1 text-sm text-ink/55">
+                        The employer will review your profile soon.
+                      </p>
+                      <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-center">
+                        <Link
+                          href="/seeker/dashboard"
+                          className="cursor-pointer rounded-xl bg-marigold px-4 py-2.5 text-sm font-semibold text-ink"
+                        >
+                          View applications
+                        </Link>
+                        <button
+                          type="button"
+                          onClick={closeModal}
+                          className="cursor-pointer rounded-xl border border-ink/10 px-4 py-2.5 text-sm font-semibold text-ink/70 hover:bg-ink/4"
+                        >
+                          Done
+                        </button>
+                      </div>
+                    </div>
+                  ) : hasResume === false ? (
+                    <div className="rounded-xl bg-marigold/10 px-4 py-5">
+                      <p className="font-semibold text-ink">Upload your resume first</p>
+                      <p className="mt-1 text-sm text-ink/60">
+                        You need a resume on your profile before applying.
+                      </p>
+                      <Link
+                        href="/seeker/profile"
+                        className="mt-4 inline-block cursor-pointer rounded-xl bg-marigold px-4 py-2 text-sm font-semibold text-ink"
+                      >
+                        Go to profile
+                      </Link>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="rounded-xl border border-navy/10 bg-mist/50 p-4 text-sm text-ink/65">
+                        <p className="font-semibold text-ink">Your application includes</p>
+                        <ul className="mt-2 space-y-1 text-xs">
+                          <li>• Profile photo, headline, and skills</li>
+                          <li>• Resume on file</li>
+                          <li>• Cover letter below (recommended)</li>
+                        </ul>
+                      </div>
+
+                      <label htmlFor="coverNote" className="mb-2 mt-6 block text-sm font-semibold text-ink">
+                        Cover letter
+                      </label>
+                      <p className="mb-3 text-xs text-ink/50">
+                        Tell the employer why you&apos;re a strong fit — experience, tools, timezone, and
+                        availability.
+                      </p>
+                      <textarea
+                        id="coverNote"
+                        rows={8}
+                        maxLength={COVER_NOTE_MAX}
+                        value={coverNote}
+                        onChange={(e) => setCoverNote(e.target.value)}
+                        placeholder="Dear hiring team,
 
 I'm excited to apply because...
 
 • Relevant experience:
 • Tools I use daily:
 • Why this role fits me:"
-                    className="w-full resize-y rounded-xl border border-ink/10 px-4 py-3.5 text-sm leading-relaxed text-ink outline-none focus:border-marigold focus:ring-2 focus:ring-marigold/20"
-                  />
-                  <p className="mt-2 text-right font-data text-xs text-ink/40">
-                    {coverNote.length}/{COVER_NOTE_MAX}
-                  </p>
+                        className="w-full resize-y rounded-xl border border-ink/10 px-4 py-3.5 text-sm leading-relaxed text-ink outline-none focus:border-marigold focus:ring-2 focus:ring-marigold/20"
+                      />
+                      <p className="mt-2 text-right font-data text-xs text-ink/40">
+                        {coverNote.length}/{COVER_NOTE_MAX}
+                      </p>
 
-                  {screeningQuestions.length > 0 && (
-                    <div className="mt-6 space-y-4">
-                      <div>
-                        <p className="text-sm font-semibold text-ink">Employer questions</p>
-                        <p className="mt-1 text-xs text-ink/50">
-                          Short answers only — nothing here auto-rejects your application.
-                        </p>
-                      </div>
-                      {screeningQuestions.map((question) => (
-                        <div key={question.id}>
-                          <label
-                            htmlFor={`screening-${question.id}`}
-                            className="mb-2 block text-sm font-medium text-ink"
-                          >
-                            {question.prompt}
-                            {question.required && (
-                              <span className="ml-1 text-ember" aria-hidden="true">
-                                *
-                              </span>
-                            )}
-                          </label>
-                          <textarea
-                            id={`screening-${question.id}`}
-                            rows={3}
-                            maxLength={ANSWER_MAX}
-                            required={question.required}
-                            value={answers[question.id] || ""}
-                            onChange={(e) =>
-                              setAnswers((prev) => ({
-                                ...prev,
-                                [question.id]: e.target.value,
-                              }))
-                            }
-                            className="w-full resize-y rounded-xl border border-ink/10 px-4 py-3 text-sm leading-relaxed text-ink outline-none focus:border-marigold focus:ring-2 focus:ring-marigold/20"
-                          />
+                      {screeningQuestions.length > 0 && (
+                        <div className="mt-6 space-y-4">
+                          <div>
+                            <p className="text-sm font-semibold text-ink">Employer questions</p>
+                            <p className="mt-1 text-xs text-ink/50">
+                              Short answers only — nothing here auto-rejects your application.
+                            </p>
+                          </div>
+                          {screeningQuestions.map((question) => (
+                            <div key={question.id}>
+                              <label
+                                htmlFor={`screening-${question.id}`}
+                                className="mb-2 block text-sm font-medium text-ink"
+                              >
+                                {question.prompt}
+                                {question.required && (
+                                  <span className="ml-1 text-ember" aria-hidden="true">
+                                    *
+                                  </span>
+                                )}
+                              </label>
+                              <textarea
+                                id={`screening-${question.id}`}
+                                rows={3}
+                                maxLength={ANSWER_MAX}
+                                required={question.required}
+                                value={answers[question.id] || ""}
+                                onChange={(e) =>
+                                  setAnswers((prev) => ({
+                                    ...prev,
+                                    [question.id]: e.target.value,
+                                  }))
+                                }
+                                className="w-full resize-y rounded-xl border border-ink/10 px-4 py-3 text-sm leading-relaxed text-ink outline-none focus:border-marigold focus:ring-2 focus:ring-marigold/20"
+                              />
+                            </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
-                  )}
+                      )}
 
-                  {error && <p className="mt-3 text-sm text-ember">{error}</p>}
-                  <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-                    <button
-                      type="button"
-                      onClick={closeModal}
-                      className="flex-1 cursor-pointer rounded-xl border border-ink/10 py-3 text-sm font-semibold text-ink/70 hover:bg-ink/4"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="button"
-                      disabled={loading}
-                      onClick={() => void handleSubmitApplication()}
-                      className="flex-1 cursor-pointer rounded-xl bg-marigold py-3 text-sm font-semibold text-ink shadow-sm hover:bg-marigold/90 disabled:opacity-60"
-                    >
-                      {loading ? "Submitting..." : "Submit application"}
-                    </button>
+                      {error && <p className="mt-3 text-sm text-ember">{error}</p>}
+                    </>
+                  )}
+                </div>
+
+                {!checking && !applied && hasResume !== false ? (
+                  <div className="shrink-0 border-t border-ink/8 bg-white px-6 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] sm:px-8">
+                    <div className="flex flex-col gap-3 sm:flex-row">
+                      <button
+                        type="button"
+                        onClick={closeModal}
+                        className="flex-1 cursor-pointer rounded-xl border border-ink/10 py-3 text-sm font-semibold text-ink/70 hover:bg-ink/4"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        disabled={loading}
+                        onClick={() => void handleSubmitApplication()}
+                        className="flex-1 cursor-pointer rounded-xl bg-marigold py-3 text-sm font-semibold text-ink shadow-sm hover:bg-marigold/90 disabled:opacity-60"
+                      >
+                        {loading ? "Submitting..." : "Submit application"}
+                      </button>
+                    </div>
                   </div>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+                ) : null}
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
     </>
   );
 }

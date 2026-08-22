@@ -11,17 +11,48 @@ type Company = {
   verifiedStatus: string;
 };
 
-type Props = {
+type ApplyProps = {
   jobId: string;
   jobTitle: string;
-  company: Company;
-  isSaved: boolean;
+  companyName: string;
   screeningQuestions?: {
     id: string;
     prompt: string;
     required: boolean;
   }[];
 };
+
+type Props = {
+  jobId: string;
+  jobTitle: string;
+  company: Company;
+  isSaved: boolean;
+  screeningQuestions?: ApplyProps["screeningQuestions"];
+};
+
+export function JobApplyCta({
+  jobId,
+  jobTitle,
+  companyName,
+  screeningQuestions = [],
+}: ApplyProps) {
+  return (
+    <div className="border-l-[3px] border-marigold/50 py-1 pl-4">
+      <p className="font-display text-base font-bold text-ink">Ready to apply?</p>
+      <p className="mt-1.5 text-xs leading-relaxed text-ink/55">
+        Your profile and resume go straight to the employer&apos;s board — no agency middlemen.
+      </p>
+      <div className="mt-4">
+        <ApplyButton
+          jobId={jobId}
+          jobTitle={jobTitle}
+          companyName={companyName}
+          screeningQuestions={screeningQuestions}
+        />
+      </div>
+    </div>
+  );
+}
 
 export default function JobDetailSidebar({
   jobId,
@@ -71,19 +102,13 @@ export default function JobDetailSidebar({
         </Link>
       </div>
 
-      <div className="border-l-[3px] border-marigold/50 py-1 pl-4">
-        <p className="font-display text-base font-bold text-ink">Ready to apply?</p>
-        <p className="mt-1.5 text-xs leading-relaxed text-ink/55">
-          Your profile and resume go straight to the employer&apos;s board — no agency middlemen.
-        </p>
-        <div className="mt-4">
-          <ApplyButton
-            jobId={jobId}
-            jobTitle={jobTitle}
-            companyName={company.companyName}
-            screeningQuestions={screeningQuestions}
-          />
-        </div>
+      <div className="hidden lg:block">
+        <JobApplyCta
+          jobId={jobId}
+          jobTitle={jobTitle}
+          companyName={company.companyName}
+          screeningQuestions={screeningQuestions}
+        />
       </div>
     </aside>
   );
