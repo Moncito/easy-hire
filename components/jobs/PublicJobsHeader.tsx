@@ -177,8 +177,11 @@ function RoleDashboardPill({
 
 export default function PublicJobsHeader() {
   const { data: session, status } = useSession();
+  const pathname = usePathname();
+  const onJobs = pathname.startsWith("/jobs");
 
   if (status === "loading") {
+    if (onJobs) return null;
     return (
       <header className="fixed inset-x-0 top-0 z-50 h-[88px]" aria-hidden="true" />
     );
@@ -200,6 +203,8 @@ export default function PublicJobsHeader() {
   if (session?.user?.role === "ADMIN") {
     return <RoleDashboardPill href="/admin/dashboard" label="Admin console" />;
   }
+
+  if (onJobs) return null;
 
   return <GuestJobsPillNav />;
 }

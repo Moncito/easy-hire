@@ -31,7 +31,10 @@ export default async function HomePage() {
       <LoginModalProvider>
         <main className="relative overflow-hidden">
           <Header />
-          <Hero />
+          <Hero
+            stats={stats}
+            featuredCompany={companies.find((c) => c.logoUrl) ?? companies[0] ?? null}
+          />
           <TrustMarquee companies={companies} />
           <JobsTicker jobs={jobs} />
           <ValueProps />
