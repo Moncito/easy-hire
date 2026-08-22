@@ -1,27 +1,27 @@
+"use client";
+
+import type { CSSProperties, ReactNode } from "react";
+import type { LucideIcon } from "lucide-react";
 import {
-  MapPin,
-  Globe,
-  Wallet,
-  Clock,
+  Award,
   Briefcase,
   GraduationCap,
-  Languages,
-  Award,
+  Languages as LanguagesIcon,
   Link2,
-  ExternalLink,
-  FileText,
+  Sparkles,
+  User,
 } from "lucide-react";
 import { formatPesoRange } from "@/lib/format";
 import {
-  displayCertification,
-  displayEducation,
-  displayLanguage,
-  displaySkill,
   formatRelativeUpdated,
+  parseCertification,
   parseEducation,
+  parseLanguage,
+  parseSkill,
   parseWorkExperience,
   timezoneLabel,
 } from "@/lib/seeker-profile-format";
+import CopyProfileLinkButton from "@/components/seekers/CopyProfileLinkButton";
 
 export type PublicSeekerData = {
   fullName: string;
@@ -45,24 +45,44 @@ export type PublicSeekerData = {
 };
 
 type Fact = {
-  icon: React.ComponentType<{ className?: string }>;
   label: string;
   value: string;
-  hint?: string;
+  sub: string;
   mono?: boolean;
 };
 
-function FactCell({ icon: Icon, label, value, hint, mono }: Fact) {
-  return (
-    <div className="min-w-0 px-4 py-4 first:pl-0 last:pr-0">
-      <div className="mb-1.5 flex items-center gap-1.5 text-ink/40">
-        <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-        <p className="text-[10px] font-bold uppercase tracking-[0.12em]">{label}</p>
-      </div>
-      <p className={`text-sm font-semibold text-ink ${mono ? "font-data" : ""}`}>{value}</p>
-      {hint && <p className="mt-1 text-[11px] leading-snug text-ink/45">{hint}</p>}
-    </div>
-  );
+function isHttpUrl(value: string): boolean {
+  return /^https?:\/\//i.test(value.trim());
+}
+
+function hostnameFromUrl(url: string): string {
+  try {
+    return new URL(url.trim()).hostname.replace(/^www\./, "");
+  } catch {
+    return "Certificate";
+  }
+}
+
+function certificationCard(raw: string): {
+  name: string;
+  issuer: string;
+  year: string;
+  href: string | null;
+} {
+  const parsed = parseCertification(raw);
+  const href = [parsed.name, parsed.issuer].find(isHttpUrl)?.trim() ?? null;
+  const nameIsUrl = isHttpUrl(parsed.name);
+  const issuerIsUrl = isHttpUrl(parsed.issuer);
+
+  const name = nameIsUrl
+    ? parsed.issuer && !issuerIsUrl
+      ? parsed.issuer
+      : hostnameFromUrl(parsed.name)
+    : parsed.name || parsed.issuer || "Certificate";
+
+  const issuer = issuerIsUrl || parsed.issuer === name ? "" : parsed.issuer;
+
+  return { name, issuer, year: parsed.year, href };
 }
 
 function buildFacts(seeker: PublicSeekerData): Fact[] {
@@ -70,275 +90,730 @@ function buildFacts(seeker: PublicSeekerData): Fact[] {
 
   if (seeker.location) {
     facts.push({
-      icon: MapPin,
       label: "Location",
       value: seeker.location,
-      hint: "Based in the Philippines or remote-ready",
+      sub: "Remote-ready",
     });
   }
 
   if (seeker.timezone) {
     facts.push({
-      icon: Globe,
       label: "Timezone",
       value: timezoneLabel(seeker.timezone),
-      hint: "Overlap with employer hours",
+      sub: "Overlap with employer hours",
     });
   }
 
   if (seeker.desiredSalaryMin || seeker.desiredSalaryMax) {
     facts.push({
-      icon: Wallet,
-      label: "Expected pay",
+      label: "Expected Pay",
       value: formatPesoRange(seeker.desiredSalaryMin, seeker.desiredSalaryMax),
-      hint: "Monthly USD range on profile",
+      sub: "Monthly USD",
       mono: true,
     });
   }
 
   if (seeker.yearsExperience) {
     facts.push({
-      icon: Briefcase,
       label: "Experience",
       value: seeker.yearsExperience,
-      hint: "Professional VA experience",
+      sub: "Professional VA experience",
     });
   }
 
   if (seeker.availability) {
     facts.push({
-      icon: Clock,
       label: "Availability",
       value: seeker.availability,
-      hint: "Ready to start",
-    });
-  }
-
-  if (seeker.skills.length > 0) {
-    facts.push({
-      icon: Award,
-      label: "Core skills",
-      value: `${seeker.skills.length} listed`,
-      hint: "See specializations below",
+      sub: "Ready to start",
     });
   }
 
   return facts;
 }
 
-function buildAboutParagraph(seeker: PublicSeekerData): string {
-  const trimmed = seeker.bio?.trim();
-  if (trimmed && trimmed.length >= 50) return trimmed;
-
-  const parts: string[] = [];
-  parts.push(
-    `${seeker.fullName} is a ${seeker.headline || "virtual assistant"} on EasyHire`
+function ProfileSection({
+  label,
+  subtitle,
+  children,
+  bare,
+  icon: Icon,
+}: {
+  label: string;
+  subtitle?: string;
+  children: ReactNode;
+  bare?: boolean;
+  icon: LucideIcon;
+}) {
+  return (
+    <section
+      style={{
+        padding: bare ? "0 0 1.5rem" : "1.5rem 0",
+        borderTop: bare ? "none" : "1px solid #E4E2DC",
+      }}
+    >
+      <div style={{ marginBottom: "1.125rem" }}>
+        <h2
+          style={{
+            fontSize: "0.8rem",
+            fontWeight: 700,
+            color: "#A8A49D",
+            textTransform: "uppercase",
+            letterSpacing: "1px",
+            margin: "0 0 0.2rem",
+            display: "flex",
+            alignItems: "center",
+            gap: "0.5rem",
+          }}
+        >
+          <Icon style={{ width: 14, height: 14, flexShrink: 0 }} aria-hidden />
+          {label}
+        </h2>
+        {subtitle && (
+          <p
+            style={{
+              fontSize: "0.82rem",
+              color: "#A8A49D",
+              margin: 0,
+              fontWeight: 400,
+            }}
+          >
+            {subtitle}
+          </p>
+        )}
+      </div>
+      {children}
+    </section>
   );
-  if (seeker.location) parts.push(`, based in ${seeker.location}`);
-  parts.push(".");
-
-  if (seeker.yearsExperience) {
-    parts.push(` They bring ${seeker.yearsExperience} of professional experience`);
-  }
-  if (seeker.skills.length > 0) {
-    parts.push(
-      seeker.yearsExperience ? ", with strengths in " : " Their strengths include "
-    );
-    parts.push(
-      seeker.skills
-        .slice(0, 3)
-        .map((s) => displaySkill(s).replace(/\s*\([^)]*\)/, ""))
-        .join(", ")
-    );
-    if (seeker.skills.length > 3) parts.push(", and more");
-    parts.push(".");
-  } else {
-    parts.push(" View their experience and credentials below.");
-  }
-
-  if (trimmed) parts.push(`\n\n${trimmed}`);
-
-  return parts.join("");
 }
 
-function ExperienceRow({ raw }: { raw: string }) {
+function ExperienceCard({ raw }: { raw: string }) {
   const { title, company, startDate, endDate, description } = parseWorkExperience(raw);
-  const dates = [startDate, endDate].filter(Boolean).join(" – ");
+  const dateLabel = [startDate, endDate || (startDate ? "Present" : "")]
+    .filter(Boolean)
+    .join(" — ");
 
   return (
-    <li className="border-b border-ink/[0.06] py-5 last:border-b-0">
-      <p className="font-display text-base font-bold text-ink">{title || "Role"}</p>
-      {company && <p className="mt-0.5 text-sm font-medium text-ink/55">{company}</p>}
-      {dates && <p className="mt-1 font-data text-xs text-ink/45">{dates}</p>}
+    <div
+      className="talent-lift-card"
+      style={{
+        background: "#FFFFFF",
+        border: "1px solid #E4E2DC",
+        borderRadius: 10,
+        padding: "1.125rem 1.25rem",
+        boxShadow: "0 1px 2px rgba(17, 17, 16, 0.04)",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+          flexWrap: "wrap",
+          gap: "0.5rem",
+          marginBottom: description ? "0.625rem" : 0,
+        }}
+      >
+        <div>
+          <p
+            style={{
+              fontWeight: 700,
+              fontSize: "0.9375rem",
+              color: "#111110",
+              margin: "0 0 3px",
+              letterSpacing: "-0.01em",
+            }}
+          >
+            {title || "Role"}
+          </p>
+          {company && (
+            <p
+              style={{
+                fontSize: "0.85rem",
+                fontWeight: 500,
+                color: "#6F6E69",
+                margin: 0,
+              }}
+            >
+              {company}
+            </p>
+          )}
+        </div>
+        {dateLabel && (
+          <span
+            style={{
+              background: "#F5F4F0",
+              border: "1px solid #E4E2DC",
+              borderRadius: 6,
+              padding: "0.2rem 0.625rem",
+              fontSize: "0.75rem",
+              fontWeight: 600,
+              color: "#A8A49D",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {dateLabel}
+          </span>
+        )}
+      </div>
       {description && (
-        <p className="mt-2 text-sm leading-relaxed text-ink/70">{description}</p>
+        <p
+          style={{
+            fontSize: "0.875rem",
+            color: "#6F6E69",
+            lineHeight: 1.65,
+            margin: 0,
+          }}
+        >
+          {description}
+        </p>
       )}
-    </li>
+    </div>
   );
 }
 
-function EducationRow({ raw }: { raw: string }) {
+function EducationCard({ raw }: { raw: string }) {
   const { school, degree, field, year } = parseEducation(raw);
   const degreeLine = [degree, field].filter(Boolean).join(", ");
+  const title = degreeLine || school || raw;
+  const organization = degreeLine ? school : "";
 
   return (
-    <li className="border-b border-ink/[0.06] py-4 last:border-b-0">
-      {degreeLine && <p className="font-display text-sm font-bold text-ink">{degreeLine}</p>}
-      {school && <p className="mt-0.5 text-sm text-ink/55">{school}</p>}
-      {year && <p className="mt-1 font-data text-xs text-ink/45">{year}</p>}
-      {!degreeLine && !school && (
-        <p className="text-sm text-ink/70">{displayEducation(raw)}</p>
-      )}
-    </li>
+    <div
+      className="talent-lift-card"
+      style={{
+        background: "#FFFFFF",
+        border: "1px solid #E4E2DC",
+        borderRadius: 10,
+        padding: "1.125rem 1.25rem",
+        boxShadow: "0 1px 2px rgba(17, 17, 16, 0.04)",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+          flexWrap: "wrap",
+          gap: "0.5rem",
+        }}
+      >
+        <div>
+          <p
+            style={{
+              fontWeight: 700,
+              fontSize: "0.9375rem",
+              color: "#111110",
+              margin: "0 0 3px",
+              letterSpacing: "-0.01em",
+            }}
+          >
+            {title}
+          </p>
+          {organization && (
+            <p
+              style={{
+                fontSize: "0.85rem",
+                fontWeight: 500,
+                color: "#6F6E69",
+                margin: 0,
+              }}
+            >
+              {organization}
+            </p>
+          )}
+        </div>
+        {year && (
+          <span
+            style={{
+              background: "#F5F4F0",
+              border: "1px solid #E4E2DC",
+              borderRadius: 6,
+              padding: "0.2rem 0.625rem",
+              fontSize: "0.75rem",
+              fontWeight: 600,
+              color: "#A8A49D",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {year}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+const certLinkStyle: CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  background: "#FFFFFF",
+  border: "1px solid #E4E2DC",
+  borderRadius: 10,
+  padding: "0.875rem 1.125rem",
+  textDecoration: "none",
+  transition: "border-color 0.15s",
+  cursor: "pointer",
+};
+
+const docLinkStyle: CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: "0.375rem",
+  background: "#FFFFFF",
+  border: "1px solid #E4E2DC",
+  borderRadius: 7,
+  padding: "0.45rem 0.875rem",
+  fontSize: "0.85rem",
+  fontWeight: 500,
+  color: "#374140",
+  textDecoration: "none",
+  transition: "border-color 0.15s, color 0.15s",
+};
+
+function SidebarCard({
+  label,
+  children,
+  icon: Icon,
+}: {
+  label: string;
+  children: ReactNode;
+  icon: LucideIcon;
+}) {
+  return (
+    <section
+      style={{
+        background: "#FFFFFF",
+        border: "1px solid #E4E2DC",
+        borderRadius: 12,
+        boxShadow: "0 1px 2px rgba(17, 17, 16, 0.04), 0 6px 18px rgba(17, 17, 16, 0.06)",
+        padding: "1.25rem 1.375rem",
+      }}
+    >
+      <h2
+        style={{
+          fontSize: "0.8rem",
+          fontWeight: 700,
+          color: "#A8A49D",
+          textTransform: "uppercase",
+          letterSpacing: "1px",
+          margin: "0 0 1rem",
+          display: "flex",
+          alignItems: "center",
+          gap: "0.5rem",
+        }}
+      >
+        <Icon style={{ width: 14, height: 14, flexShrink: 0 }} aria-hidden />
+        {label}
+      </h2>
+      {children}
+    </section>
   );
 }
 
 export default function PublicSeekerProfileSections({ seeker }: { seeker: PublicSeekerData }) {
   const facts = buildFacts(seeker);
-  const aboutText = buildAboutParagraph(seeker);
+  const about = seeker.bio?.trim() ?? "";
+  const skills = seeker.skills.filter((s) => s.trim());
+  const workExperience = seeker.workExperience.filter((e) => e.trim());
+  const education = seeker.education.filter((e) => e.trim());
+  const languages = seeker.languages.filter((e) => e.trim());
+  const certifications = seeker.certifications.filter((e) => e.trim());
+  const links = [
+    seeker.resumeUrl ? { label: "View resume", url: seeker.resumeUrl } : null,
+    seeker.linkedinUrl ? { label: "LinkedIn", url: seeker.linkedinUrl } : null,
+    seeker.portfolioUrl ? { label: "Portfolio", url: seeker.portfolioUrl } : null,
+  ].filter((link): link is { label: string; url: string } => Boolean(link));
+
+  const hasSidebar =
+    skills.length > 0 || languages.length > 0 || certifications.length > 0 || links.length > 0;
+
+  const skillsBlock =
+    skills.length > 0 ? (
+      <SidebarCard label="Skills & Specializations" icon={Sparkles}>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+          {skills.map((raw) => {
+            const { skill, proficiency } = parseSkill(raw);
+            return (
+              <div
+                key={raw}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "0.625rem",
+                  background: "#FBF3E0",
+                  border: "1px solid #E8C97A",
+                  borderRadius: 7,
+                  padding: "0.375rem 0.875rem",
+                  fontSize: "0.85rem",
+                  fontWeight: 600,
+                  color: "#7A4F0D",
+                  letterSpacing: "0.01em",
+                }}
+              >
+                {skill}
+                {proficiency && (
+                  <span
+                    style={{
+                      fontSize: "0.72rem",
+                      fontWeight: 500,
+                      color: "#B07D30",
+                      paddingLeft: "0.375rem",
+                      borderLeft: "1px solid #E8C97A",
+                    }}
+                  >
+                    {proficiency}
+                  </span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </SidebarCard>
+    ) : null;
+
+  const languagesBlock =
+    languages.length > 0 ? (
+      <SidebarCard label="Languages" icon={LanguagesIcon}>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+          {languages.map((raw) => {
+            const { language, proficiency } = parseLanguage(raw);
+            return (
+              <div
+                key={raw}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "0.5rem",
+                  background: "#F5F4F0",
+                  border: "1px solid #E4E2DC",
+                  borderRadius: 7,
+                  padding: "0.4rem 0.875rem",
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: "0.875rem",
+                    fontWeight: 600,
+                    color: "#111110",
+                  }}
+                >
+                  {language || raw}
+                </span>
+                {proficiency && (
+                  <span
+                    style={{
+                      fontSize: "0.75rem",
+                      fontWeight: 500,
+                      color: "#A8A49D",
+                      paddingLeft: "0.5rem",
+                      borderLeft: "1px solid #E4E2DC",
+                    }}
+                  >
+                    {proficiency}
+                  </span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </SidebarCard>
+    ) : null;
+
+  const certificationsBlock =
+    certifications.length > 0 ? (
+      <SidebarCard label="Certifications" icon={Award}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.625rem" }}>
+          {certifications.map((raw) => {
+            const { name, issuer, year, href } = certificationCard(raw);
+            const meta = [issuer, year].filter(Boolean).join(" · ");
+            const inner = (
+              <>
+                <div>
+                  <p
+                    style={{
+                      fontWeight: 700,
+                      fontSize: "0.9rem",
+                      color: "#111110",
+                      margin: "0 0 2px",
+                    }}
+                  >
+                    {name}
+                  </p>
+                  {meta && (
+                    <p
+                      style={{
+                        fontSize: "0.78rem",
+                        color: "#A8A49D",
+                        margin: 0,
+                      }}
+                    >
+                      {meta}
+                    </p>
+                  )}
+                </div>
+                {href && (
+                  <span
+                    style={{
+                      fontSize: "0.8rem",
+                      color: "#A8A49D",
+                      flexShrink: 0,
+                      marginLeft: "1rem",
+                    }}
+                  >
+                    ↗
+                  </span>
+                )}
+              </>
+            );
+
+            if (href) {
+              return (
+                <a
+                  key={raw}
+                  href={href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="cursor-pointer"
+                  style={certLinkStyle}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = "#D4930A";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = "#E4E2DC";
+                  }}
+                >
+                  {inner}
+                </a>
+              );
+            }
+
+            return (
+              <div key={raw} style={{ ...certLinkStyle, cursor: "default" }}>
+                {inner}
+              </div>
+            );
+          })}
+        </div>
+      </SidebarCard>
+    ) : null;
+
+  const linksBlock =
+    links.length > 0 ? (
+      <SidebarCard label="Links & Documents" icon={Link2}>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+          {links.map((link) => (
+            <a
+              key={link.label}
+              href={link.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="cursor-pointer"
+              style={docLinkStyle}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = "#D4930A";
+                e.currentTarget.style.color = "#D4930A";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = "#E4E2DC";
+                e.currentTarget.style.color = "#374140";
+              }}
+            >
+              {link.label}
+            </a>
+          ))}
+        </div>
+      </SidebarCard>
+    ) : null;
 
   return (
-    <div className="space-y-10">
+    <div>
+      <style>{`
+        .talent-profile-grid {
+          display: grid;
+          grid-template-columns: 1fr;
+          gap: 1.5rem;
+          padding-top: 1.5rem;
+          align-items: start;
+        }
+        @media (min-width: 768px) {
+          .talent-profile-grid {
+            grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+            gap: 2rem;
+          }
+        }
+        @media (min-width: 1024px) {
+          .talent-profile-grid {
+            grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+          }
+        }
+        .talent-profile-sidebar {
+          display: flex;
+          flex-direction: column;
+          gap: 1.25rem;
+        }
+        .talent-lift-card {
+          transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+        }
+        .talent-lift-card:hover {
+          border-color: #E8C97A;
+          box-shadow: 0 4px 14px rgba(17, 17, 16, 0.08);
+          transform: translateY(-1px);
+        }
+      `}</style>
+
+      <CopyProfileLinkButton />
+
       {facts.length > 0 && (
-        <section aria-label="Profile at a glance">
-          <p className="mb-2.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-ink/35">
-            At a glance
-          </p>
-          <div className="grid grid-cols-1 divide-y divide-ink/[0.06] border-y border-ink/[0.06] sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-3">
-            {facts.map((fact) => (
-              <FactCell key={fact.label} {...fact} />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {seeker.skills.length > 0 && (
-        <section>
-          <h2 className="font-display text-base font-bold text-ink">Skills & specializations</h2>
-          <p className="mt-1 text-xs text-ink/45">What this candidate brings to client work.</p>
-          <ul className="mt-4 flex flex-wrap gap-2">
-            {seeker.skills.map((skill) => (
-              <li
-                key={skill}
-                className="rounded-full border border-marigold/25 bg-marigold/10 px-3 py-1 text-xs font-semibold text-[#8a5a10]"
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            background: "#FFFFFF",
+            border: "1px solid #E4E2DC",
+            borderRadius: 12,
+            boxShadow: "0 1px 2px rgba(17, 17, 16, 0.04), 0 6px 18px rgba(17, 17, 16, 0.06)",
+            overflow: "hidden",
+          }}
+        >
+          {facts.map((stat, i) => (
+            <div
+              key={stat.label}
+              style={{
+                flex: "1 1 130px",
+                padding: "1.25rem 1rem",
+                borderRight: i < facts.length - 1 ? "1px solid #E4E2DC" : "none",
+              }}
+            >
+              <p
+                style={{
+                  fontSize: "0.68rem",
+                  fontWeight: 700,
+                  color: "#A8A49D",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.9px",
+                  margin: "0 0 0.375rem",
+                }}
               >
-                {displaySkill(skill)}
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      <section>
-        <h2 className="font-display text-base font-bold text-ink">About</h2>
-        <p className="mt-1 text-xs text-ink/45">Background, working style, and what they&apos;re looking for.</p>
-        <div className="mt-4 whitespace-pre-wrap text-sm leading-[1.75] text-ink/75">{aboutText}</div>
-      </section>
-
-      {seeker.workExperience.length > 0 && (
-        <section>
-          <div className="mb-4 flex items-center gap-2">
-            <Briefcase className="h-4 w-4 text-marigold/70" aria-hidden="true" />
-            <h2 className="font-display text-base font-bold text-ink">Experience</h2>
-          </div>
-          <ul className="border-y border-ink/[0.06]">
-            {seeker.workExperience.map((entry) => (
-              <ExperienceRow key={entry} raw={entry} />
-            ))}
-          </ul>
-        </section>
-      )}
-
-      {seeker.education.length > 0 && (
-        <section>
-          <div className="mb-4 flex items-center gap-2">
-            <GraduationCap className="h-4 w-4 text-navy/60" aria-hidden="true" />
-            <h2 className="font-display text-base font-bold text-ink">Education</h2>
-          </div>
-          <ul className="border-y border-ink/[0.06]">
-            {seeker.education.map((entry) => (
-              <EducationRow key={entry} raw={entry} />
-            ))}
-          </ul>
-        </section>
-      )}
-
-      {seeker.languages.length > 0 && (
-        <section>
-          <div className="mb-4 flex items-center gap-2">
-            <Languages className="h-4 w-4 text-teal/70" aria-hidden="true" />
-            <h2 className="font-display text-base font-bold text-ink">Languages</h2>
-          </div>
-          <ul className="grid gap-2 sm:grid-cols-2">
-            {seeker.languages.map((lang) => (
-              <li
-                key={lang}
-                className="border-b border-ink/[0.06] py-2 text-sm text-ink/75 sm:border-b-0 sm:py-1"
+                {stat.label}
+              </p>
+              <p
+                className={stat.mono ? "font-data" : undefined}
+                style={{
+                  fontSize: "0.9rem",
+                  fontWeight: 700,
+                  color: "#111110",
+                  margin: "0 0 0.2rem",
+                  lineHeight: 1.3,
+                  overflowWrap: "anywhere",
+                }}
               >
-                {displayLanguage(lang)}
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      {seeker.certifications.length > 0 && (
-        <section>
-          <h2 className="font-display text-base font-bold text-ink">Certifications</h2>
-          <ul className="mt-3 space-y-2">
-            {seeker.certifications.map((cert) => (
-              <li key={cert} className="text-sm text-ink/75">
-                {displayCertification(cert)}
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      {(seeker.resumeUrl || seeker.linkedinUrl || seeker.portfolioUrl) && (
-        <section className="border-t border-ink/[0.06] pt-8">
-          <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-ink/35">
-            Links & documents
-          </p>
-          <div className="flex flex-wrap gap-4">
-            {seeker.resumeUrl && (
-              <a
-                href={seeker.resumeUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex cursor-pointer items-center gap-1.5 text-sm font-semibold text-marigold hover:text-marigold/80"
+                {stat.value}
+              </p>
+              <p
+                style={{
+                  fontSize: "0.74rem",
+                  color: "#A8A49D",
+                  fontWeight: 400,
+                  margin: 0,
+                }}
               >
-                <FileText className="h-4 w-4" aria-hidden="true" />
-                View resume
-              </a>
+                {stat.sub}
+              </p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className={hasSidebar ? "talent-profile-grid" : undefined} style={hasSidebar ? undefined : { paddingTop: "1.5rem" }}>
+        <div style={{ minWidth: 0 }}>
+          <ProfileSection label="About" icon={User} bare>
+            {about ? (
+              <p
+                style={{
+                  fontSize: "0.9375rem",
+                  lineHeight: 1.8,
+                  color: "#374140",
+                  margin: 0,
+                  whiteSpace: "pre-line",
+                }}
+              >
+                {about}
+              </p>
+            ) : (
+              <div
+                style={{
+                  border: "1px dashed #E4E2DC",
+                  borderRadius: 10,
+                  padding: "1.5rem",
+                  textAlign: "center",
+                }}
+              >
+                <p
+                  style={{
+                    fontSize: "0.875rem",
+                    fontWeight: 600,
+                    color: "#A8A49D",
+                    margin: "0 0 0.25rem",
+                  }}
+                >
+                  No bio added yet.
+                </p>
+                <p
+                  style={{
+                    fontSize: "0.8rem",
+                    color: "#C4BFB8",
+                    margin: 0,
+                  }}
+                >
+                  Profiles with a bio receive significantly more employer views.
+                </p>
+              </div>
             )}
-            {seeker.linkedinUrl && (
-              <a
-                href={seeker.linkedinUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex cursor-pointer items-center gap-1.5 text-sm font-semibold text-ink/55 hover:text-teal"
-              >
-                <Link2 className="h-4 w-4" aria-hidden="true" />
-                LinkedIn
-              </a>
-            )}
-            {seeker.portfolioUrl && (
-              <a
-                href={seeker.portfolioUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex cursor-pointer items-center gap-1.5 text-sm font-semibold text-ink/55 hover:text-teal"
-              >
-                <ExternalLink className="h-4 w-4" aria-hidden="true" />
-                Portfolio
-              </a>
-            )}
-          </div>
-        </section>
-      )}
+          </ProfileSection>
 
-      <p className="border-t border-ink/[0.06] pt-6 text-xs text-ink/40">
+          {workExperience.length > 0 && (
+            <ProfileSection label="Experience" icon={Briefcase}>
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.875rem" }}>
+                {workExperience.map((entry) => (
+                  <ExperienceCard key={entry} raw={entry} />
+                ))}
+              </div>
+            </ProfileSection>
+          )}
+
+          {education.length > 0 && (
+            <ProfileSection label="Education" icon={GraduationCap}>
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.875rem" }}>
+                {education.map((entry) => (
+                  <EducationCard key={entry} raw={entry} />
+                ))}
+              </div>
+            </ProfileSection>
+          )}
+        </div>
+
+        {hasSidebar && (
+          <aside className="talent-profile-sidebar" aria-label="Profile details">
+            {skillsBlock}
+            {languagesBlock}
+            {certificationsBlock}
+            {linksBlock}
+          </aside>
+        )}
+      </div>
+
+      <p
+        style={{
+          fontSize: "0.78rem",
+          color: "#C4BFB8",
+          fontWeight: 400,
+          padding: "1.5rem 0 0",
+          borderTop: "1px solid #E4E2DC",
+          margin: 0,
+        }}
+      >
         Profile updated {formatRelativeUpdated(seeker.updatedAt)}
       </p>
     </div>

@@ -11,7 +11,7 @@ export default function SeekerProfileAccountLinks() {
     pathname === "/seeker/job-alerts" || pathname.startsWith("/seeker/job-alerts/");
 
   return (
-    <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:gap-3">
+    <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:gap-3 md:hidden">
       <Link
         href="/seeker/job-alerts"
         className={`group flex flex-1 items-center justify-between gap-3 rounded-2xl px-4 py-3.5 ring-1 transition ${

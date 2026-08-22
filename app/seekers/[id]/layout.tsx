@@ -8,7 +8,10 @@ export default async function PublicSeekerLayout({ children }: { children: React
   const isSeeker = session?.user?.role === "SEEKER";
 
   return (
-    <div className="relative flex min-h-screen flex-col overflow-x-hidden bg-mist">
+    <div
+      className="relative flex min-h-screen flex-col overflow-x-hidden"
+      style={{ background: "#F5F4F0" }}
+    >
       {isSeeker && <SeekerAreaBackground />}
       <PublicJobsHeader />
       <div className="relative z-10 flex-1">{children}</div>
