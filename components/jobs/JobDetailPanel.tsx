@@ -23,7 +23,12 @@ function PremiumApplyBlock({ job }: { job: JobDetailData }) {
         Your profile and resume go directly to the employer — no agency middlemen.
       </p>
       <div className="mt-4">
-        <ApplyButton jobId={job.id} jobTitle={job.title} companyName={job.company.companyName} />
+        <ApplyButton
+          jobId={job.id}
+          jobTitle={job.title}
+          companyName={job.company.companyName}
+          screeningQuestions={job.screeningQuestions ?? []}
+        />
       </div>
     </div>
   );

@@ -31,6 +31,12 @@ export async function submitApplication(body: {
   return { ok: res.ok, status: res.status, data: data as { error?: string } };
 }
 
+export async function withdrawApplication(id: string) {
+  const res = await fetch(`/api/applications/${id}`, { method: "DELETE" });
+  const data = await parseJsonBody(res);
+  return { ok: res.ok, status: res.status, data: data as { error?: string; jobId?: string } };
+}
+
 export async function patchApplication(id: string, body: Record<string, unknown>) {
   return fetchJson<Record<string, unknown>>(`/api/applications/${id}`, {
     method: "PATCH",

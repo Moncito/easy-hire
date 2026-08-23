@@ -26,6 +26,25 @@ type Props = {
 const COVER_NOTE_MAX = 2000;
 const ANSWER_MAX = 1000;
 
+type ScreeningQuestion = NonNullable<Props["screeningQuestions"]>[number];
+
+function normalizeQuestions(raw: unknown): ScreeningQuestion[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter(
+      (q): q is ScreeningQuestion =>
+        !!q &&
+        typeof q === "object" &&
+        typeof (q as ScreeningQuestion).id === "string" &&
+        typeof (q as ScreeningQuestion).prompt === "string"
+    )
+    .map((q) => ({
+      id: q.id,
+      prompt: q.prompt,
+      required: Boolean(q.required),
+    }));
+}
+
 export default function ApplyButton({
   jobId,
   jobTitle,
@@ -36,6 +55,7 @@ export default function ApplyButton({
   const [open, setOpen] = useState(false);
   const [coverNote, setCoverNote] = useState("");
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [questions, setQuestions] = useState<ScreeningQuestion[]>(screeningQuestions);
   const [loading, setLoading] = useState(false);
   const [checking, setChecking] = useState(false);
   const [error, setError] = useState("");
@@ -49,6 +69,10 @@ export default function ApplyButton({
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    setQuestions(screeningQuestions);
+  }, [jobId]); // eslint-disable-line react-hooks/exhaustive-deps -- reset when the job changes
 
   useEffect(() => {
     if (session?.user?.role !== "SEEKER") return;
@@ -120,6 +144,15 @@ export default function ApplyButton({
         throw new Error("Could not load your application details. Please try again.");
       }
 
+      if (screeningQuestions.length === 0) {
+        const jobRes = await fetch(`/api/public/jobs/${jobId}`);
+        if (jobRes.ok) {
+          const job = (await jobRes.json()) as { screeningQuestions?: unknown };
+          const loaded = normalizeQuestions(job.screeningQuestions);
+          if (loaded.length > 0) setQuestions(loaded);
+        }
+      }
+
       if (apps.application) {
         setApplied(true);
         if (!justSubmitted) {
@@ -141,7 +174,7 @@ export default function ApplyButton({
   async function handleSubmitApplication() {
     setError("");
 
-    const missingRequired = screeningQuestions.filter(
+    const missingRequired = questions.filter(
       (q) => q.required && !(answers[q.id]?.trim())
     );
     if (missingRequired.length > 0) {
@@ -156,7 +189,7 @@ export default function ApplyButton({
       const result = await submitApplicationApi({
         jobId,
         coverNote: coverNote.trim() || null,
-        answers: screeningQuestions
+        answers: questions
           .map((q) => ({
             questionId: q.id,
             answerText: (answers[q.id] || "").trim(),
@@ -356,7 +389,7 @@ I'm excited to apply because...
                         {coverNote.length}/{COVER_NOTE_MAX}
                       </p>
 
-                      {screeningQuestions.length > 0 && (
+                      {questions.length > 0 && (
                         <div className="mt-6 space-y-4">
                           <div>
                             <p className="text-sm font-semibold text-ink">Employer questions</p>
@@ -364,7 +397,7 @@ I'm excited to apply because...
                               Short answers only — nothing here auto-rejects your application.
                             </p>
                           </div>
-                          {screeningQuestions.map((question) => (
+                          {questions.map((question) => (
                             <div key={question.id}>
                               <label
                                 htmlFor={`screening-${question.id}`}

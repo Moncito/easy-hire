@@ -4,6 +4,7 @@ import { auth } from "@/Auth";
 import { getEmployerNavCountsCached } from "@/lib/employer-cache";
 import { getCompanyPlan, type SubscriptionPlan } from "@/lib/subscriptions";
 import { getEmployerCompanyByUserId } from "@/lib/auth/employer-company";
+import { ensureEmployerCompany } from "@/lib/employer/companies";
 
 export const getSession = cache(async () => auth());
 
@@ -26,11 +27,12 @@ export async function requireEmployerLayoutContext() {
     return null;
   }
 
-  const company = await getEmployerCompanyByUserId(session.user.id);
-  const navCounts = company
-    ? await getEmployerNavCountsCached(company.id)
-    : { activeJobs: 0, needsReview: 0, unreadMessages: 0 };
-  const plan = company ? await getEmployerPlanCached(company.id) : ("FREE" as SubscriptionPlan);
+  let company = await getEmployerCompanyByUserId(session.user.id);
+  if (!company) {
+    company = await ensureEmployerCompany(session.user.id);
+  }
+  const navCounts = await getEmployerNavCountsCached(company.id);
+  const plan = await getEmployerPlanCached(company.id);
 
   return { session, company, navCounts, plan };
 }
@@ -39,6 +41,5 @@ export async function requireEmployerLayoutContext() {
 export async function requireEmployerPageContext(): Promise<EmployerLayoutContext> {
   const ctx = await requireEmployerLayoutContext();
   if (!ctx) redirect("/login");
-  if (!ctx.company) redirect("/employer/company-profile");
-  return ctx as EmployerLayoutContext;
+  return ctx;
 }

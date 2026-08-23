@@ -14,10 +14,19 @@ export async function sendEmail(to: string, subject: string, html: string) {
     return;
   }
 
+  // onboarding@resend.dev can only deliver to the Resend account email.
+  // Set EMAIL_TEST_RECIPIENT to that address until a domain is verified.
+  const testRecipient = process.env.EMAIL_TEST_RECIPIENT?.trim();
+  const recipient = testRecipient || to;
+  const testSubject =
+    testRecipient && testRecipient.toLowerCase() !== to.toLowerCase()
+      ? `[to: ${to}] ${subject}`
+      : subject;
+
   const { error } = await resend.emails.send({
     from: fromAddress,
-    to,
-    subject,
+    to: recipient,
+    subject: testSubject,
     html,
   });
 

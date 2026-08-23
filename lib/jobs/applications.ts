@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { ApiError } from "@/lib/api-error";
-import { notifyApplicationSubmitted, notifyApplicationRejected } from "@/lib/email";
+import { notifyApplicationSubmitted, notifyApplicationRejected, createNotification } from "@/lib/email";
 import { applicationCreateSchema, applicationUpdateSchema } from "@/lib/validations/application";
 import { invalidateEmployerWorkspace } from "@/lib/employer-cache";
 
@@ -145,6 +145,53 @@ export async function createApplication(seekerUserId: string, raw: unknown) {
     }
     throw error;
   }
+}
+
+const WITHDRAWABLE = new Set(["APPLIED"]);
+
+export async function withdrawApplication(seekerUserId: string, applicationId: string) {
+  const seeker = await prisma.seekerProfile.findUnique({
+    where: { userId: seekerUserId },
+    select: { id: true, fullName: true },
+  });
+  if (!seeker) {
+    throw new ApiError("Seeker profile not found", 404);
+  }
+
+  const application = await prisma.application.findFirst({
+    where: { id: applicationId, seekerId: seeker.id },
+    include: {
+      job: {
+        select: {
+          id: true,
+          title: true,
+          company: { select: { id: true, userId: true } },
+        },
+      },
+    },
+  });
+
+  if (!application) {
+    throw new ApiError("Application not found", 404);
+  }
+
+  if (!WITHDRAWABLE.has(application.status)) {
+    throw new ApiError(
+      "You can only withdraw an application before the employer moves it forward",
+      400
+    );
+  }
+
+  await prisma.application.delete({ where: { id: application.id } });
+
+  await createNotification(
+    application.job.company.userId,
+    "APPLICATION_WITHDRAWN",
+    `${seeker.fullName} withdrew their application to "${application.job.title}".`
+  );
+  invalidateEmployerWorkspace(application.job.company.id);
+
+  return { ok: true as const, jobId: application.job.id };
 }
 
 export async function updateApplication(applicationId: string, raw: unknown) {

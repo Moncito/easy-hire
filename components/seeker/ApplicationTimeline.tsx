@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Check } from "lucide-react";
 import { relativeTime } from "@/lib/time-ago";
+import WithdrawApplicationButton from "@/components/seeker/WithdrawApplicationButton";
 
 const STAGES = ["APPLIED", "SHORTLISTED", "INTERVIEW", "HIRED"] as const;
 type Stage = (typeof STAGES)[number];
@@ -144,6 +145,14 @@ export default function ApplicationTimeline({ app }: { app: AppForTimeline }) {
           );
         })}
       </div>
+
+      {app.status === "APPLIED" ? (
+        <WithdrawApplicationButton
+          applicationId={app.id}
+          jobId={app.job.id}
+          jobTitle={app.job.title}
+        />
+      ) : null}
     </div>
   );
 }

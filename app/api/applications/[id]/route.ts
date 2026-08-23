@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/Auth";
 import { errorResponse } from "@/lib/api-error";
 import { requireEmployerApplication } from "@/lib/employer-auth";
-import { updateApplication } from "@/lib/applications";
+import { updateApplication, withdrawApplication } from "@/lib/applications";
 import { ZodError } from "zod";
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -21,6 +21,21 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     if (error instanceof ZodError) {
       return NextResponse.json({ error: error.issues[0]?.message ?? "Invalid input" }, { status: 400 });
     }
+    return errorResponse(error);
+  }
+}
+
+export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const session = await auth();
+    if (!session?.user || session.user.role !== "SEEKER") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { id } = await params;
+    const result = await withdrawApplication(session.user.id, id);
+    return NextResponse.json(result);
+  } catch (error) {
     return errorResponse(error);
   }
 }

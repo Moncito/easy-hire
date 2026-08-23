@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { ExternalLink, Plus } from "lucide-react";
 import CompanyProfileEditor from "@/components/employer/CompanyProfileEditor";
@@ -6,8 +7,35 @@ import { getEmployerCompanyProfile } from "@/lib/companies";
 import ProPageHeader from "@/components/employer/pro-dashboard/ProPageHeader";
 import ProButton from "@/components/employer/pro/ProButton";
 import EmployerPageHeader from "@/components/employer/ui/EmployerPageHeader";
+import Bone from "@/components/employer/skeletons/Bone";
 
-export default async function CompanyProfilePage() {
+/**
+ * Sync page so `app/employer/loading.tsx` can resolve immediately.
+ * Next 16.2 + a route `loading.tsx` around a >200ms RSC render can
+ * refetch `/employer/company-profile` forever.
+ */
+export default function CompanyProfilePage() {
+  return (
+    <Suspense fallback={<CompanyProfileFallback />}>
+      <CompanyProfileContent />
+    </Suspense>
+  );
+}
+
+function CompanyProfileFallback() {
+  return (
+    <div className="space-y-5">
+      <div className="space-y-2">
+        <Bone className="h-8 w-56" />
+        <Bone className="h-4 w-80 max-w-full" />
+      </div>
+      <Bone className="h-36 w-full rounded-2xl sm:h-44" />
+      <Bone className="h-48 w-full rounded-2xl" />
+    </div>
+  );
+}
+
+async function CompanyProfileContent() {
   const { company: baseCompany, plan } = await requireEmployerPageContext();
 
   const result = await getEmployerCompanyProfile(baseCompany.id);

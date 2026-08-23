@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import SeekerDashboardStats from "@/components/seeker/SeekerDashboardStats";
 import ApplicationTimeline from "@/components/seeker/ApplicationTimeline";
+import WithdrawApplicationButton from "@/components/seeker/WithdrawApplicationButton";
 import { SeekerNavBandBleed } from "@/components/seeker/SeekerNavBand";
 
 const STATUS_PIPELINE = ["APPLIED", "SHORTLISTED", "INTERVIEW", "HIRED", "REJECTED"] as const;
@@ -221,17 +222,27 @@ export default async function SeekerDashboardPage({
                           {relativeTime(app.appliedAt.toISOString())}
                         </p>
                       </div>
-                      <span
-                        className={`shrink-0 rounded-lg px-2.5 py-1 text-xs font-semibold ${statusBadge(app.status)}`}
-                      >
-                        {app.status === "REJECTED" && (
-                          <XCircle
-                            className="mr-1 inline h-3 w-3 text-ember"
-                            aria-hidden="true"
+                      <div className="flex shrink-0 items-center gap-3">
+                        {app.status === "APPLIED" ? (
+                          <WithdrawApplicationButton
+                            applicationId={app.id}
+                            jobId={app.job.id}
+                            jobTitle={app.job.title}
+                            compact
                           />
-                        )}
-                        {app.status.charAt(0) + app.status.slice(1).toLowerCase()}
-                      </span>
+                        ) : null}
+                        <span
+                          className={`rounded-lg px-2.5 py-1 text-xs font-semibold ${statusBadge(app.status)}`}
+                        >
+                          {app.status === "REJECTED" && (
+                            <XCircle
+                              className="mr-1 inline h-3 w-3 text-ember"
+                              aria-hidden="true"
+                            />
+                          )}
+                          {app.status.charAt(0) + app.status.slice(1).toLowerCase()}
+                        </span>
+                      </div>
                     </li>
                   ))}
                 </ul>

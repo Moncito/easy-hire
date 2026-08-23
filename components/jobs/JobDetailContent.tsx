@@ -32,6 +32,11 @@ export type JobDetailData = {
     verifiedStatus: string;
     headquarters?: string | null;
   };
+  screeningQuestions?: {
+    id: string;
+    prompt: string;
+    required: boolean;
+  }[];
 };
 
 /** Card-free description section — a heading + divider instead of a bordered box. */
