@@ -16,6 +16,7 @@ type Props = {
   companyLogoUrl?: string | null;
   verifiedStatus: string;
   plan?: "FREE" | "PRO";
+  collaborativeHiringEnabled?: boolean;
   navCounts: { activeJobs: number; needsReview: number; unreadMessages: number };
   children: React.ReactNode;
 };
@@ -25,6 +26,7 @@ function EmployerShellInner({
   companyLogoUrl,
   verifiedStatus,
   plan = "FREE",
+  collaborativeHiringEnabled = false,
   navCounts,
   children,
 }: Props) {
@@ -47,8 +49,8 @@ function EmployerShellInner({
         data-employer-plan="pro"
         suppressHydrationWarning
       >
-        <Sidebar navCounts={navCounts} plan={plan} />
-        <EmployerMobileNav plan={plan} />
+        <Sidebar navCounts={navCounts} plan={plan} collaborativeHiringEnabled={collaborativeHiringEnabled} />
+        <EmployerMobileNav plan={plan} collaborativeHiringEnabled={collaborativeHiringEnabled} />
         <div
           className={`relative flex min-w-0 flex-1 flex-col transition-[padding] duration-200 ease-out ${
             expanded ? "lg:pl-52" : "lg:pl-[60px]"
@@ -87,8 +89,8 @@ function EmployerShellInner({
       data-employer-plan="free"
       suppressHydrationWarning
     >
-      <Sidebar navCounts={navCounts} plan={plan} />
-      <EmployerMobileNav plan={plan} />
+      <Sidebar navCounts={navCounts} plan={plan} collaborativeHiringEnabled={collaborativeHiringEnabled} />
+      <EmployerMobileNav plan={plan} collaborativeHiringEnabled={collaborativeHiringEnabled} />
       <div
         className={`relative flex min-w-0 flex-1 flex-col transition-[padding] duration-200 ease-out ${
           expanded ? "lg:pl-52" : "lg:pl-[60px]"

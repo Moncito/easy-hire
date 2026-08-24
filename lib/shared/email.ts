@@ -35,6 +35,28 @@ export async function sendEmail(to: string, subject: string, html: string) {
   }
 }
 
+export async function sendCollaborativeHiringInvitation(ctx: {
+  to: string;
+  companyName: string;
+  role: string;
+  token: string;
+}) {
+  const acceptUrl = `${appUrl}/invitations/${encodeURIComponent(ctx.token)}`;
+  await sendEmail(
+    ctx.to,
+    `You’re invited to join ${ctx.companyName} on EasyHire`,
+    renderEmailLayout({
+      preview: `Join ${ctx.companyName}'s hiring workspace on EasyHire.`,
+      heading: "You’re invited to the hiring team",
+      bodyHtml: `
+        <p style="margin:0 0 16px;">You’ve been invited to join <strong>${escapeHtml(ctx.companyName)}</strong> as a ${escapeHtml(ctx.role.replace(/_/g, " ").toLowerCase())}.</p>
+        <p style="margin:0;color:#5c6370;font-size:14px;">This invitation is single-use and expires in 7 days. Sign in with this email address to accept it.</p>
+      `,
+      cta: { label: "Accept invitation", href: acceptUrl },
+    })
+  );
+}
+
 export async function createNotification(userId: string, type: string, message: string) {
   const notification = await prisma.notification.create({
     data: { userId, type, message },

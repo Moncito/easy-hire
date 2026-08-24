@@ -18,6 +18,7 @@ function getContentWidth(pathname: string): ContentWidth {
   if (pathname === "/employer/jobs/new") return "6xl";
   if (pathname.match(/\/employer\/jobs\/[^/]+\/edit$/)) return "6xl";
   if (pathname === "/employer/dashboard") return "dashboard";
+  if (pathname === "/employer/team") return "dashboard";
   if (pathname === "/employer/reports") return "dashboard";
   if (pathname === "/employer/billing") return "dashboard";
   return "7xl";
@@ -26,6 +27,7 @@ function getContentWidth(pathname: string): ContentWidth {
 function isDashboard(pathname: string) {
   return (
     pathname === "/employer/dashboard" ||
+    pathname === "/employer/team" ||
     pathname === "/employer/reports" ||
     pathname === "/employer/billing"
   );

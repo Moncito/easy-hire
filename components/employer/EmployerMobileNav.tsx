@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
   Briefcase,
   Users,
+  UserRoundPlus,
   MessageSquare,
   Menu,
   Search,
@@ -44,13 +45,15 @@ function isActive(pathname: string, href: string) {
 
 type Props = {
   plan?: "FREE" | "PRO";
+  collaborativeHiringEnabled?: boolean;
 };
 
-export default function EmployerMobileNav({ plan = "FREE" }: Props) {
+export default function EmployerMobileNav({ plan = "FREE", collaborativeHiringEnabled = false }: Props) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const isPro = plan === "PRO";
-  const links = isPro ? [...proOverflowLinks, ...overflowLinks] : overflowLinks;
+  const teamLink = collaborativeHiringEnabled ? [{ label: "Hiring team", href: "/employer/team", icon: UserRoundPlus }] : [];
+  const links = isPro ? [...proOverflowLinks, ...teamLink, ...overflowLinks] : [...teamLink, ...overflowLinks];
   const overflowActive = links.some((link) => isActive(pathname, link.href));
 
   return (

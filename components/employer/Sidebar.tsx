@@ -8,6 +8,7 @@ import {
   Briefcase,
   Building2,
   Users,
+  UserRoundPlus,
   BarChart3,
   LogOut,
   MessageSquare,
@@ -102,9 +103,11 @@ function NavLink({
 export default function Sidebar({
   navCounts,
   plan = "FREE",
+  collaborativeHiringEnabled = false,
 }: {
   navCounts: NavCounts;
   plan?: "FREE" | "PRO";
+  collaborativeHiringEnabled?: boolean;
 }) {
   const pathname = usePathname();
   const { expanded, toggleExpanded } = useEmployerShell();
@@ -205,6 +208,14 @@ export default function Sidebar({
             />
           );
         })}
+        {collaborativeHiringEnabled && (
+          <NavLink
+            item={{ label: "Team", href: "/employer/team", icon: UserRoundPlus, badgeKey: null }}
+            isActive={pathname === "/employer/team"}
+            expanded={expanded}
+            isPro={isPro}
+          />
+        )}
       </nav>
 
       {isPro && (

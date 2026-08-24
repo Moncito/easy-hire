@@ -1,7 +1,8 @@
 import { auth } from "@/Auth";
 import { redirect } from "next/navigation";
-import { listPendingCompanies } from "@/lib/admin/companies";
+import { listCompaniesForCollaborativeHiring, listPendingCompanies } from "@/lib/admin/companies";
 import CompanyReviewQueue from "@/components/admin/CompanyReviewQueue";
+import CollaborativeHiringAccess from "@/components/admin/CollaborativeHiringAccess";
 
 export default async function AdminCompaniesPage() {
   const session = await auth();
@@ -9,7 +10,7 @@ export default async function AdminCompaniesPage() {
     redirect("/login");
   }
 
-  const companies = await listPendingCompanies();
+  const [companies, collaborativeCompanies] = await Promise.all([listPendingCompanies(), listCompaniesForCollaborativeHiring()]);
 
   return (
     <div className="mx-auto max-w-5xl">
@@ -20,6 +21,7 @@ export default async function AdminCompaniesPage() {
         </p>
       </div>
       <CompanyReviewQueue initialCompanies={JSON.parse(JSON.stringify(companies))} />
+      <CollaborativeHiringAccess initialCompanies={JSON.parse(JSON.stringify(collaborativeCompanies))} />
     </div>
   );
 }

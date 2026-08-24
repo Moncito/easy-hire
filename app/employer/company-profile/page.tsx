@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { ExternalLink, Plus } from "lucide-react";
 import CompanyProfileEditor from "@/components/employer/CompanyProfileEditor";
 import { requireEmployerPageContext } from "@/lib/employer-session";
@@ -8,6 +9,7 @@ import ProPageHeader from "@/components/employer/pro-dashboard/ProPageHeader";
 import ProButton from "@/components/employer/pro/ProButton";
 import EmployerPageHeader from "@/components/employer/ui/EmployerPageHeader";
 import Bone from "@/components/employer/skeletons/Bone";
+import { isCollaborativeHiringEnabled } from "@/lib/collaborative-hiring";
 
 /**
  * Sync page so `app/employer/loading.tsx` can resolve immediately.
@@ -38,7 +40,10 @@ function CompanyProfileFallback() {
 async function CompanyProfileContent() {
   const { company: baseCompany, plan } = await requireEmployerPageContext();
 
-  const result = await getEmployerCompanyProfile(baseCompany.id);
+  const [result, collaborativeHiringEnabled] = await Promise.all([
+    getEmployerCompanyProfile(baseCompany.id),
+    isCollaborativeHiringEnabled(baseCompany.id),
+  ]);
 
   if (!result) {
     redirect("/employer/dashboard");
@@ -93,6 +98,9 @@ async function CompanyProfileContent() {
             stats={profileStats}
             actions={
               <>
+                {collaborativeHiringEnabled && (
+                  <ProButton href="/employer/team" variant="secondary">Manage team</ProButton>
+                )}
                 <ProButton
                   href={`/companies/${company.id}`}
                   variant="secondary"
@@ -149,6 +157,13 @@ async function CompanyProfileContent() {
           uploadedAt: doc.uploadedAt.toISOString(),
         }))}
       />
+      {collaborativeHiringEnabled && plan !== "PRO" && (
+        <div className="mt-6 rounded-2xl border border-teal/15 bg-teal/5 p-5">
+          <h2 className="font-display text-lg font-bold text-ink">Collaborative Hiring</h2>
+          <p className="mt-1 text-sm text-ink/60">Your company is enabled for the pilot workspace.</p>
+          <Link href="/employer/team" className="mt-3 inline-block text-sm font-semibold text-teal hover:underline">Manage hiring team</Link>
+        </div>
+      )}
     </>
   );
 }

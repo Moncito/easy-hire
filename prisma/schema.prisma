@@ -5,7 +5,10 @@ generator client {
 
 datasource db {
   provider  = "postgresql"
-  url       = env("DATABASE_URL")
+  // The Supabase transaction pooler (DATABASE_URL, port 6543) is not
+  // reachable from this runtime. Use the verified direct connection for both
+  // application queries and migrations until a reachable pooler is configured.
+  url       = env("DIRECT_URL")
   directUrl = env("DIRECT_URL")
 }
 
@@ -27,6 +30,7 @@ model User {
   notifications   Notification[]
   messagesSent    Message[]
   exportAuditLogs ExportAuditLog[]
+  companyMemberships CompanyMember[]
 
   @@map("users")
 }
@@ -125,9 +129,63 @@ model Company {
   savedTalentLists      SavedTalentList[]
   analyticsDailyRollups AnalyticsDailyRollup[]
   exportAuditLogs       ExportAuditLog[]
+  collaborativeHiringEnabled Boolean @default(false) @map("collaborative_hiring_enabled")
+  members               CompanyMember[]
+  invitations           CompanyInvitation[]
 
   @@index([verifiedStatus])
   @@map("companies")
+}
+
+enum CompanyMemberRole {
+  OWNER
+  RECRUITER
+  HIRING_MANAGER
+  VIEWER
+}
+
+enum CompanyMemberStatus {
+  ACTIVE
+  REMOVED
+}
+
+model CompanyMember {
+  id        String              @id @default(cuid())
+  companyId String              @map("company_id")
+  userId    String              @map("user_id")
+  role      CompanyMemberRole
+  status    CompanyMemberStatus @default(ACTIVE)
+  invitedBy String?             @map("invited_by")
+  joinedAt  DateTime            @default(now()) @map("joined_at")
+  createdAt DateTime            @default(now()) @map("created_at")
+  updatedAt DateTime            @updatedAt @map("updated_at")
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, userId])
+  @@index([companyId, status])
+  @@index([userId, status])
+  @@map("company_members")
+}
+
+model CompanyInvitation {
+  id        String            @id @default(cuid())
+  companyId String            @map("company_id")
+  email     String
+  role      CompanyMemberRole
+  tokenHash String            @unique @map("token_hash")
+  expiresAt DateTime          @map("expires_at")
+  invitedBy String            @map("invited_by")
+  acceptedAt DateTime?        @map("accepted_at")
+  revokedAt DateTime?         @map("revoked_at")
+  createdAt DateTime          @default(now()) @map("created_at")
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, email])
+  @@index([companyId, expiresAt])
+  @@map("company_invitations")
 }
 
 // ============================================================================
