@@ -3,6 +3,7 @@ import { ApiError } from "@/lib/api-error";
 import {
   createInvitationToken,
   hashInvitationToken,
+  isCollaborativeHiringEnabled,
   requireCollaborativeHiringEnabled,
   requireCompanyMembership,
   type CompanyMemberRole,
@@ -10,6 +11,19 @@ import {
 import { sendCollaborativeHiringInvitation } from "@/lib/email";
 
 const INVITATION_TTL_DAYS = 7;
+
+/** Minimal, recipient-facing invitation data. The secret token never leaves the URL. */
+export async function getCompanyInvitationPreview(token: string) {
+  const invitation = await prisma.companyInvitation.findUnique({
+    where: { tokenHash: hashInvitationToken(token) },
+    include: { company: { select: { companyName: true, logoUrl: true } } },
+  });
+  if (!invitation || invitation.acceptedAt || invitation.revokedAt || invitation.expiresAt <= new Date()) {
+    return null;
+  }
+  if (!(await isCollaborativeHiringEnabled(invitation.companyId))) return null;
+  return invitation;
+}
 
 export async function listCollaborativeTeam(companyId: string, actorUserId: string) {
   await requireCompanyMembership(companyId, actorUserId, "team:read");
