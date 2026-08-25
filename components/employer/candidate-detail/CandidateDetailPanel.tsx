@@ -182,20 +182,20 @@ export default function CandidateDetailPanel({
   return (
     <div className="flex h-full min-h-0 flex-col bg-mist">
       {/* Header */}
-      <div className="shrink-0 border-b border-ink/6 bg-white px-4 pb-3 pt-3">
-        <div className="flex items-start gap-3">
+      <div className="shrink-0 border-b border-ink/6 bg-white px-5 pb-4 pt-4">
+        <div className="flex items-start gap-3.5">
           <EmployerAvatar
             name={seeker.fullName}
             imageUrl={seeker.photoUrl}
             size="md"
             shape="rounded"
-            className={`!h-10 !w-10 !rounded-xl ring-1 ${isPro ? "ring-ink/10" : "ring-teal/10"}`}
+            className={`!h-11 !w-11 !rounded-xl ring-1 ${isPro ? "ring-ink/10" : "ring-teal/10"}`}
             fallbackClassName={isPro ? "bg-ink/8 text-ink" : "bg-teal/10 text-teal"}
           />
           <div className="min-w-0 flex-1">
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
-                <h2 className="truncate font-display text-base font-bold text-ink">{seeker.fullName}</h2>
+                <h2 className="truncate font-display text-[17px] font-bold tracking-tight text-ink">{seeker.fullName}</h2>
                 <p className="truncate text-xs text-ink/55">{seeker.headline || "Virtual Assistant"}</p>
               </div>
               <button
@@ -220,8 +220,8 @@ export default function CandidateDetailPanel({
 
         {/* Stage stepper */}
         {!isRejected ? (
-          <div className="mt-3">
-            <div className="flex h-1 overflow-hidden rounded-full bg-ink/8">
+          <div className="mt-4 border-t border-ink/6 pt-3">
+            <div className="flex h-1.5 overflow-hidden rounded-full bg-ink/8">
               {PIPELINE.map((stage, i) => (
                 <button
                   key={stage.value}
@@ -240,13 +240,13 @@ export default function CandidateDetailPanel({
                 />
               ))}
             </div>
-          <div className="mt-1 flex justify-between">
+          <div className="mt-1.5 flex justify-between">
             {PIPELINE.map((stage, i) => (
               <button
                 key={stage.value}
                 type="button"
                 onClick={() => onStatusChange(stage.value)}
-                className={`max-w-[4rem] truncate text-xs font-medium transition ${
+                className={`max-w-[4.5rem] truncate text-[11px] font-semibold transition ${
                   isPro ? "hover:text-ink" : "hover:text-teal"
                 } ${
                   i === progress
@@ -272,7 +272,7 @@ export default function CandidateDetailPanel({
         )}
 
         {/* Actions — Pro: Message lives here so it stays on screen with the person */}
-        <div className="mt-3 flex items-center gap-2">
+        <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-ink/6 pt-3">
           {navTotal > 1 ? (
             <div className="flex shrink-0 items-center gap-1">
               <button
@@ -304,7 +304,7 @@ export default function CandidateDetailPanel({
               type="button"
               onClick={onMessage}
               disabled={messageLoading}
-              className="inline-flex min-w-0 flex-1 items-center justify-center gap-2 rounded-full bg-marigold px-4 py-2 text-sm font-semibold text-ink shadow-sm shadow-marigold/20 transition hover:bg-marigold/90 disabled:opacity-50"
+              className="inline-flex h-10 min-w-[118px] shrink-0 items-center justify-center gap-2 rounded-xl bg-marigold px-4 text-sm font-bold text-ink shadow-sm shadow-marigold/20 transition hover:bg-marigold/90 disabled:opacity-50"
             >
               <MessageSquare className="h-4 w-4 shrink-0" />
               {messageLoading ? "Opening…" : "Message"}
@@ -316,7 +316,7 @@ export default function CandidateDetailPanel({
           <div className="flex shrink-0 items-center gap-1">
             <Link
               href={`/employer/talent/${seeker.id}`}
-              className="rounded-lg p-1.5 text-ink/40 transition hover:bg-ink/5 hover:text-ink"
+              className="hidden rounded-lg p-1.5 text-ink/40 transition hover:bg-ink/5 hover:text-ink sm:inline-flex"
               title="View profile"
             >
               <ExternalLink className="h-4 w-4" />
@@ -324,7 +324,7 @@ export default function CandidateDetailPanel({
             {seeker.resumeUrl && (
               <a
                 href={`/api/employer/talent/${seeker.id}/resume`}
-                className="rounded-lg p-1.5 text-ink/40 transition hover:bg-ink/5 hover:text-ink"
+                className="hidden rounded-lg p-1.5 text-ink/40 transition hover:bg-ink/5 hover:text-ink sm:inline-flex"
                 title="Download resume"
               >
                 <Download className="h-4 w-4" />

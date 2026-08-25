@@ -1,0 +1,4 @@
+import { Bell, CalendarDays, ClipboardCheck, LayoutDashboard } from "lucide-react";
+import WorkspaceSidebar from "@/components/workspaces/WorkspaceSidebar";
+import type { WorkspaceSection } from "@/components/workspaces/WorkspaceForRole";
+export default function RecruiterSidebar({companyId,active}:{companyId:string;active:WorkspaceSection}){return <WorkspaceSidebar title="Recruiter workspace" items={[{href:`/hiring/${companyId}/team`,label:"Overview",icon:LayoutDashboard,active:active === "overview"},{href:`/hiring/${companyId}/queue`,label:"Review queue",icon:ClipboardCheck,active:active === "queue"},{href:`/hiring/${companyId}/interviews`,label:"Interviews",icon:CalendarDays,active:active === "interviews"},{href:`/hiring/${companyId}/notifications`,label:"Notifications",icon:Bell,active:active === "notifications"}]}/>}

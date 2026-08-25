@@ -4,7 +4,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { Check, ChevronDown, Search } from "lucide-react";
 import { useEmployerShell } from "@/components/employer/EmployerShellContext";
 
-export type EmployerFormSelectOption = { value: string; label: string };
+export type EmployerFormSelectOption = { value: string; label: string; description?: string };
 
 type Props = {
   value: string;
@@ -15,6 +15,7 @@ type Props = {
   searchable?: boolean;
   /** When true, omits the empty placeholder row (for required picks like sort). */
   hidePlaceholder?: boolean;
+  menuPlacement?: "bottom" | "top";
   className?: string;
 };
 
@@ -26,6 +27,7 @@ export default function EmployerFormSelect({
   ariaLabel,
   searchable,
   hidePlaceholder = false,
+  menuPlacement = "bottom",
   className = "",
 }: Props) {
   const { isPro } = useEmployerShell();
@@ -96,7 +98,7 @@ export default function EmployerFormSelect({
       </button>
 
       {open && (
-        <div className="employer-ws-surface absolute inset-x-0 z-50 mt-1.5 overflow-hidden rounded-xl border border-ink/10 shadow-[0_12px_40px_rgba(30,58,95,0.14)] ring-1 ring-navy/5">
+        <div className={`employer-ws-surface absolute inset-x-0 z-50 overflow-hidden rounded-xl border border-ink/10 shadow-[0_12px_40px_rgba(30,58,95,0.14)] ring-1 ring-navy/5 ${menuPlacement === "top" ? "bottom-full mb-1.5" : "mt-1.5"}`}>
           {showSearch && (
             <div className="border-b border-ink/6 p-2">
               <div className="relative">
@@ -151,7 +153,7 @@ export default function EmployerFormSelect({
                         className={`h-3.5 w-3.5 shrink-0 ${isPro ? "text-ink" : "text-teal"} ${isSelected ? "opacity-100" : "opacity-0"}`}
                         aria-hidden="true"
                       />
-                      <span className="truncate">{opt.label}</span>
+                      <span className="min-w-0 flex-1"><span className="block truncate">{opt.label}</span>{opt.description && <span className="mt-0.5 block truncate text-xs font-normal text-ink/45">{opt.description}</span>}</span>
                     </button>
                   </li>
                 );

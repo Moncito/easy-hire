@@ -1,0 +1,5 @@
+import { redirect } from "next/navigation";
+import { auth } from "@/Auth";
+import { getCollaboratorWorkspaceOverview } from "@/lib/collaborative-hiring-team";
+import RecruiterShell from "@/components/hiring/RecruiterShell";
+export default async function Page({params}:{params:Promise<{companyId:string}>}){const s=await auth();const {companyId}=await params;if(!s?.user)redirect("/login");const data=await getCollaboratorWorkspaceOverview(companyId,s.user.id);return <RecruiterShell companyId={companyId} role={data.membership.role} active="interviews"><main className="mx-auto max-w-6xl px-5 py-8"><p className="text-xs font-bold uppercase tracking-[.15em] text-[#9A5B12]">Hiring calendar</p><h1 className="mt-1 font-display text-3xl font-black">Interviews</h1><p className="mt-2 text-sm text-ink/55">Upcoming interviews across the roles you can access.</p><div className="mt-8 border-y py-10 text-center text-sm text-ink/50">Schedule interviews from a candidate review. They will appear here across all roles.</div></main></RecruiterShell>}

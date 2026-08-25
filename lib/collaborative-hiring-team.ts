@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { ApplicationStatus, JobStatus } from "@prisma/client";
 import { ApiError } from "@/lib/api-error";
 import {
   createInvitationToken,
@@ -38,10 +39,82 @@ export async function listCollaborativeTeam(companyId: string, actorUserId: stri
       where: { companyId, acceptedAt: null, revokedAt: null, expiresAt: { gt: now } },
       orderBy: { createdAt: "desc" },
     }),
-    prisma.company.findUnique({ where: { id: companyId }, select: { companyName: true, logoUrl: true } }),
+    prisma.company.findUnique({ where: { id: companyId }, select: { id: true, companyName: true, logoUrl: true } }),
   ]);
   if (!company) throw new ApiError("Company not found", 404);
   return { members, invitations, company };
+}
+
+/**
+ * The collaborator landing screen deliberately returns only work the current
+ * person may see. Hiring managers see assigned jobs; owners and recruiters
+ * see the company-wide queue; viewers receive a read-only summary.
+ */
+export async function getCollaboratorWorkspaceOverview(companyId: string, actorUserId: string) {
+  const membership = await requireCompanyMembership(companyId, actorUserId, "team:read");
+  const jobScope = membership.role === "HIRING_MANAGER"
+    ? { teamMembers: { some: { memberId: membership.id } } }
+    : {};
+  const jobWhere = {
+    companyId,
+    status: { in: [JobStatus.ACTIVE, JobStatus.PENDING_REVIEW] },
+    ...jobScope,
+  };
+
+  const since = new Date();
+  since.setDate(since.getDate() - 6);
+  since.setHours(0, 0, 0, 0);
+  const [jobs, submittedScorecards, activeJobs, totalApplications, upcomingInterviews, weeklyApplications] = await Promise.all([
+    prisma.job.findMany({
+      where: jobWhere,
+      orderBy: [{ status: "asc" }, { updatedAt: "desc" }],
+      take: 8,
+      select: {
+        id: true,
+        title: true,
+        status: true,
+        _count: {
+          select: {
+            applications: {
+              where: {
+                status: { in: [ApplicationStatus.APPLIED, ApplicationStatus.SHORTLISTED] },
+                evaluations: { none: { memberId: membership.id, submittedAt: { not: null } } },
+              },
+            },
+          },
+        },
+      },
+    }),
+    prisma.candidateEvaluation.count({ where: { memberId: membership.id, submittedAt: { not: null } } }),
+    prisma.job.count({ where: jobWhere }),
+    prisma.application.count({ where: { job: jobWhere } }),
+    prisma.interview.count({ where: { application: { job: jobWhere }, scheduledAt: { gte: new Date() }, status: "SCHEDULED" } }),
+    Promise.all(Array.from({ length: 7 }, (_, index) => {
+      const start = new Date(since);
+      start.setDate(since.getDate() + index);
+      const end = new Date(start);
+      end.setDate(start.getDate() + 1);
+      return prisma.application.count({ where: { job: jobWhere, appliedAt: { gte: start, lt: end } } });
+    })),
+  ]);
+  const candidatesAwaitingReview = jobs.reduce((total, job) => total + job._count.applications, 0);
+
+  return {
+    membership,
+    jobs: jobs.map((job) => ({
+      id: job.id,
+      title: job.title,
+      status: job.status,
+      candidatesAwaitingReview: job._count.applications,
+    })),
+    assignedJobs: jobs.length,
+    candidatesAwaitingReview,
+    submittedScorecards,
+    activeJobs,
+    totalApplications,
+    upcomingInterviews,
+    weeklyApplications,
+  };
 }
 
 export async function inviteCompanyMember(
@@ -98,10 +171,8 @@ export async function updateCompanyMemberRole(
   const member = await prisma.companyMember.findFirst({ where: { id: memberId, companyId, status: "ACTIVE" } });
   if (!member) throw new ApiError("Active team member not found", 404);
 
-  if (member.role === "OWNER" && role !== "OWNER") {
-    const owners = await prisma.companyMember.count({ where: { companyId, status: "ACTIVE", role: "OWNER" } });
-    if (owners <= 1) throw new ApiError("A company must retain at least one owner.", 400);
-  }
+  if (member.role === "OWNER") throw new ApiError("The company owner role cannot be changed.", 400);
+  if (role === "OWNER") throw new ApiError("Only the company owner can hold the owner role.", 400);
   return prisma.companyMember.update({ where: { id: member.id }, data: { role } });
 }
 
