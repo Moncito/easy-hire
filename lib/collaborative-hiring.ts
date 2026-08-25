@@ -7,8 +7,8 @@ import { isEmployerPro } from "@/lib/billing/subscriptions";
 export { CompanyMemberRole, CompanyMemberStatus };
 
 export const COMPANY_ROLE_PERMISSIONS = {
-  OWNER: ["company:manage", "jobs:manage", "applicants:manage", "scorecards:manage", "interviews:manage", "team:read", "team:manage"],
-  RECRUITER: ["company:read", "jobs:manage", "applicants:manage", "scorecards:manage", "interviews:manage", "team:read"],
+  OWNER: ["company:manage", "jobs:manage", "applicants:manage", "scorecards:manage", "interviews:manage", "messages:manage", "team:read", "team:manage"],
+  RECRUITER: ["company:read", "jobs:manage", "applicants:manage", "scorecards:manage", "interviews:manage", "messages:manage", "team:read"],
   HIRING_MANAGER: ["company:read", "jobs:assigned", "applicants:assigned", "scorecards:own", "interviews:participate", "team:read"],
   VIEWER: ["company:read", "jobs:read", "applicants:read", "scorecards:read", "interviews:read", "team:read"],
 } as const satisfies Record<CompanyMemberRole, readonly string[]>;
