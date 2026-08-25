@@ -10,7 +10,7 @@ export type WorkspaceSection = "overview" | "queue" | "jobs" | "interviews" | "r
 export default function WorkspaceForRole({ companyId, role, active, children }: { companyId: string; role: CompanyMemberRole; active: WorkspaceSection; children: React.ReactNode }) {
   const sidebar = role === "HIRING_MANAGER" ? <HiringManagerSidebar companyId={companyId} active={active} /> : role === "VIEWER" ? <ViewerSidebar companyId={companyId} active={active} /> : <RecruiterSidebar companyId={companyId} active={active} />;
   return (
-    <WorkspaceFrame sidebar={sidebar} companyId={companyId} role={role} active={active} queueHref={`/hiring/${companyId}/queue`}>
+    <WorkspaceFrame sidebar={sidebar} companyId={companyId} role={role} active={active}>
       {children}
     </WorkspaceFrame>
   );

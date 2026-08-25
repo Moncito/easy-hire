@@ -11,7 +11,7 @@ function roleLabel(role: string) {
   return role.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
-export default function HiringSetupForm({ jobId, members, initial }: { jobId: string; members: Member[]; initial: { memberIds: string[]; title: string; instructions: string; criteria: string[] } }) {
+export default function HiringSetupForm({ jobId, members, initial, apiBase = `/api/employer/jobs/${jobId}` }: { jobId: string; members: Member[]; initial: { memberIds: string[]; title: string; instructions: string; criteria: string[] }; apiBase?: string }) {
   const [memberIds, setMemberIds] = useState(initial.memberIds);
   const [title, setTitle] = useState(initial.title);
   const [instructions, setInstructions] = useState(initial.instructions);
@@ -35,7 +35,7 @@ export default function HiringSetupForm({ jobId, members, initial }: { jobId: st
     if (!validate()) { toast.error("Review the highlighted fields before saving."); return; }
     setSaving(true);
     try {
-      const response = await fetch(`/api/employer/jobs/${jobId}/hiring-setup`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ memberIds, title: title.trim(), instructions: instructions.trim() || null, criteria: nonEmptyCriteria.map((label) => ({ label: label.trim() })) }) });
+      const response = await fetch(`${apiBase}/hiring-setup`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ memberIds, title: title.trim(), instructions: instructions.trim() || null, criteria: nonEmptyCriteria.map((label) => ({ label: label.trim() })) }) });
       const body = await response.json().catch(() => null);
       if (!response.ok) throw new Error(body?.error || "Could not save the hiring setup.");
       toast.success("Hiring setup saved", { description: "Your review team and scorecard are ready to use." });
