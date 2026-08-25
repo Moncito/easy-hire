@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, ExternalLink, Pencil } from "lucide-react";
+import { ArrowLeft, ExternalLink, Pencil, Settings2 } from "lucide-react";
 import EmployerPipelineBar from "@/components/employer/ui/EmployerPipelineBar";
 import ExportCsvLink from "@/components/employer/ui/ExportCsvLink";
 import EasyAiBulkShortlistButton from "@/components/employer/EasyAiBulkShortlistButton";
@@ -88,6 +88,13 @@ export default function ApplicantsJobHeader({
         <div className="flex flex-wrap items-center gap-2">
           <ExportCsvLink jobId={job.id} label="Export applicants" />
           <EasyAiBulkShortlistButton jobId={job.id} />
+          <Link
+            href={`/employer/jobs/${job.id}/hiring-setup`}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-ink/10 bg-white px-3 py-2 text-xs font-semibold text-ink/70 transition-colors hover:border-teal/30 hover:text-teal"
+          >
+            <Settings2 className="h-3.5 w-3.5" aria-hidden="true" />
+            Hiring setup
+          </Link>
           {showPublicLink && (
             <Link
               href={`/jobs/${job.id}`}

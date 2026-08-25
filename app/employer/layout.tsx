@@ -9,7 +9,7 @@ export default async function EmployerLayout({ children }: { children: React.Rea
     redirect("/login");
   }
 
-  const { company, navCounts, plan } = ctx;
+  const { company, navCounts, plan, collaborativeHiringEnabled } = ctx;
 
   return (
     <EmployerShell
@@ -17,6 +17,7 @@ export default async function EmployerLayout({ children }: { children: React.Rea
       companyLogoUrl={company?.logoUrl ?? null}
       verifiedStatus={company?.verifiedStatus || "PENDING"}
       plan={plan}
+      collaborativeHiringEnabled={collaborativeHiringEnabled}
       navCounts={{
         activeJobs: navCounts.activeJobs,
         needsReview: navCounts.needsReview,

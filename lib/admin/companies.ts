@@ -21,6 +21,24 @@ export async function listPendingCompanies() {
   });
 }
 
+export async function listCompaniesForCollaborativeHiring() {
+  return prisma.company.findMany({
+    select: { id: true, companyName: true, collaborativeHiringEnabled: true, user: { select: { email: true } } },
+    orderBy: { updatedAt: "desc" },
+    take: 100,
+  });
+}
+
+export async function setCollaborativeHiringEnabled(companyId: string, enabled: boolean) {
+  const company = await prisma.company.update({
+    where: { id: companyId },
+    data: { collaborativeHiringEnabled: enabled },
+    select: { id: true, collaborativeHiringEnabled: true },
+  }).catch(() => null);
+  if (!company) throw new ApiError("Company not found", 404);
+  return company;
+}
+
 export async function reviewCompany(companyId: string, raw: unknown) {
   const input = adminCompanyReviewSchema.parse(raw);
 

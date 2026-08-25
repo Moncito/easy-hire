@@ -40,6 +40,24 @@ function shortcutsForRole(role: string | undefined): NavShortcut[] {
   ];
 }
 
+/** Collaborative Hiring workspace (/hiring/[companyId]/*) — a distinct persona from the account's own role/seeker/employer shortcuts. */
+function shortcutsForWorkspace(companyId: string): NavShortcut[] {
+  return [
+    { key: "hiring-overview", label: "Hiring overview", href: `/hiring/${companyId}/team`, icon: LayoutDashboard },
+    { key: "hiring-queue", label: "Review queue", href: `/hiring/${companyId}/queue`, icon: Briefcase },
+    { key: "hiring-interviews", label: "Interviews", href: `/hiring/${companyId}/interviews`, icon: LayoutDashboard },
+    { key: "hiring-reports", label: "Hiring reports", href: `/hiring/${companyId}/reports`, icon: LayoutDashboard },
+  ];
+}
+
+/** Extracts companyId from /hiring/[companyId]/... — excludes the workspace picker (/hiring) and the account-wide /hiring/notifications page, which aren't company-scoped. */
+function hiringCompanyId(pathname: string): string | null {
+  const match = pathname.match(/^\/hiring\/([^/]+)/);
+  if (!match) return null;
+  if (match[1] === "notifications") return null;
+  return match[1];
+}
+
 export default function CommandPalette() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -55,10 +73,12 @@ export default function CommandPalette() {
 
   const role = session?.user?.role as string | undefined;
   const isEmployer = role === "EMPLOYER";
+  const workspaceCompanyId = hiringCompanyId(pathname);
+  const isWorkspace = workspaceCompanyId !== null;
 
-  const hideFloatingTrigger = pathname.includes("/messages") || pathname.startsWith("/employer");
+  const hideFloatingTrigger = pathname.includes("/messages") || pathname.startsWith("/employer") || isWorkspace;
 
-  const shortcuts = shortcutsForRole(role);
+  const shortcuts = isWorkspace ? shortcutsForWorkspace(workspaceCompanyId) : shortcutsForRole(role);
 
   const close = useCallback(() => {
     setOpen(false);
@@ -94,7 +114,15 @@ export default function CommandPalette() {
     setLoading(true);
     const timer = setTimeout(async () => {
       try {
-        if (isEmployer) {
+        if (isWorkspace) {
+          const res = await fetch(`/api/hiring/${workspaceCompanyId}/search?q=${encodeURIComponent(query.trim())}`);
+          if (!res.ok || cancelled) return;
+          const data = await res.json();
+          if (cancelled) return;
+          setWorkspaceResults(data.results ?? []);
+          setJobs([]);
+          setCompanies([]);
+        } else if (isEmployer) {
           const res = await fetch(`/api/employer/search?q=${encodeURIComponent(query.trim())}`);
           if (!res.ok || cancelled) return;
           const data = await res.json();
@@ -120,12 +148,12 @@ export default function CommandPalette() {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [query, open, isEmployer]);
+  }, [query, open, isEmployer, isWorkspace, workspaceCompanyId]);
 
   const showingResults = query.trim().length >= 2;
   const results: { type: string; id: string; href: string; label: string; sub?: string }[] =
     showingResults
-      ? isEmployer
+      ? isEmployer || isWorkspace
         ? workspaceResults.map((r) => ({
             type: r.type,
             id: r.id,
@@ -203,7 +231,7 @@ export default function CommandPalette() {
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={onKeyDownInput}
             placeholder={
-              isEmployer
+              isEmployer || isWorkspace
                 ? "Search jobs, applicants, or jump to a page…"
                 : "Search jobs, companies, or jump to a page..."
             }
@@ -226,13 +254,13 @@ export default function CommandPalette() {
             </p>
           )}
 
-          {showingResults && isEmployer && workspaceResults.length > 0 && (
+          {showingResults && (isEmployer || isWorkspace) && workspaceResults.length > 0 && (
             <p className="px-4 pb-1.5 pt-2 text-[10px] font-bold uppercase tracking-wider text-ink/35">
               Your workspace
             </p>
           )}
 
-          {showingResults && !isEmployer && jobs.length > 0 && (
+          {showingResults && !isEmployer && !isWorkspace && jobs.length > 0 && (
             <p className="px-4 pb-1.5 pt-2 text-[10px] font-bold uppercase tracking-wider text-ink/35">Jobs</p>
           )}
 
@@ -241,7 +269,7 @@ export default function CommandPalette() {
             const Icon =
               shortcut?.icon ??
               (r.type === "company" ? Building2 : r.type === "applicant" ? User : Briefcase);
-            const isCompanyStart = !isEmployer && r.type === "company" && results[idx - 1]?.type !== "company";
+            const isCompanyStart = !isEmployer && !isWorkspace && r.type === "company" && results[idx - 1]?.type !== "company";
             return (
               <div key={`${r.type}-${r.id}`}>
                 {isCompanyStart && (

@@ -61,9 +61,15 @@ type Props = {
   initialData?: Partial<JobFormData>;
   loading: boolean;
   onSubmit: (data: JobFormData, intent: JobSubmitIntent) => void;
+  /** Hides the owner-only Easy AI panels (job copy + screening question generation).
+   * Both call an owner-scoped AI endpoint that isn't membership-aware yet, so
+   * collaborator sessions (e.g. the collaborative hiring workspace) must suppress
+   * them even when rendering the Pro visual branch. Defaults to false/undefined
+   * so app/employer/jobs/new and the owner's edit flow are unaffected. */
+  hideAiTools?: boolean;
 };
 
-export default function JobForm({ initialData, loading, onSubmit }: Props) {
+export default function JobForm({ initialData, loading, onSubmit, hideAiTools = false }: Props) {
   const { isPro } = useEmployerShell();
   const [title, setTitle] = useState(initialData?.title || "");
   const [description, setDescription] = useState(initialData?.description || "");
@@ -187,23 +193,25 @@ export default function JobForm({ initialData, loading, onSubmit }: Props) {
 
       <JobSoftCapBanner />
 
-      <EasyAiJobCopyPanel
-        title={title}
-        category={category}
-        industry={industry}
-        employmentType={employmentType}
-        remoteType={remoteType}
-        location={location}
-        description={description}
-        requirements={requirements}
-        benefits={benefits}
-        onApply={(result) => {
-          setTitle(result.title);
-          setDescription(result.description);
-          setRequirements(result.requirements);
-          setBenefits(result.benefits);
-        }}
-      />
+      {!hideAiTools && (
+        <EasyAiJobCopyPanel
+          title={title}
+          category={category}
+          industry={industry}
+          employmentType={employmentType}
+          remoteType={remoteType}
+          location={location}
+          description={description}
+          requirements={requirements}
+          benefits={benefits}
+          onApply={(result) => {
+            setTitle(result.title);
+            setDescription(result.description);
+            setRequirements(result.requirements);
+            setBenefits(result.benefits);
+          }}
+        />
+      )}
 
       <JobFormTopBar
         title={title}
@@ -387,16 +395,18 @@ export default function JobForm({ initialData, loading, onSubmit }: Props) {
             last
           >
             <div className="space-y-3">
-              <EasyAiScreeningPanel
-                title={title}
-                description={description}
-                requirements={requirements}
-                onApply={(questions) =>
-                  setScreeningQuestions((prev) =>
-                    [...prev, ...questions].slice(0, MAX_SCREENING_QUESTIONS)
-                  )
-                }
-              />
+              {!hideAiTools && (
+                <EasyAiScreeningPanel
+                  title={title}
+                  description={description}
+                  requirements={requirements}
+                  onApply={(questions) =>
+                    setScreeningQuestions((prev) =>
+                      [...prev, ...questions].slice(0, MAX_SCREENING_QUESTIONS)
+                    )
+                  }
+                />
+              )}
               {screeningQuestions.map((question, index) => (
                 <div
                   key={index}

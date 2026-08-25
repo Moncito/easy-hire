@@ -5,7 +5,10 @@ generator client {
 
 datasource db {
   provider  = "postgresql"
-  url       = env("DATABASE_URL")
+  // The Supabase transaction pooler (DATABASE_URL, port 6543) is not
+  // reachable from this runtime. Use the verified direct connection for both
+  // application queries and migrations until a reachable pooler is configured.
+  url       = env("DIRECT_URL")
   directUrl = env("DIRECT_URL")
 }
 
@@ -27,6 +30,7 @@ model User {
   notifications   Notification[]
   messagesSent    Message[]
   exportAuditLogs ExportAuditLog[]
+  companyMemberships CompanyMember[]
 
   @@map("users")
 }
@@ -125,9 +129,66 @@ model Company {
   savedTalentLists      SavedTalentList[]
   analyticsDailyRollups AnalyticsDailyRollup[]
   exportAuditLogs       ExportAuditLog[]
+  collaborativeHiringEnabled Boolean @default(false) @map("collaborative_hiring_enabled")
+  members               CompanyMember[]
+  invitations           CompanyInvitation[]
 
   @@index([verifiedStatus])
   @@map("companies")
+}
+
+enum CompanyMemberRole {
+  OWNER
+  RECRUITER
+  HIRING_MANAGER
+  VIEWER
+}
+
+enum CompanyMemberStatus {
+  ACTIVE
+  REMOVED
+}
+
+model CompanyMember {
+  id        String              @id @default(cuid())
+  companyId String              @map("company_id")
+  userId    String              @map("user_id")
+  role      CompanyMemberRole
+  status    CompanyMemberStatus @default(ACTIVE)
+  invitedBy String?             @map("invited_by")
+  joinedAt  DateTime            @default(now()) @map("joined_at")
+  createdAt DateTime            @default(now()) @map("created_at")
+  updatedAt DateTime            @updatedAt @map("updated_at")
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobAssignments JobTeamMember[]
+  evaluations    CandidateEvaluation[]
+  interviewAssignments InterviewParticipant[]
+
+  @@unique([companyId, userId])
+  @@index([companyId, status])
+  @@index([userId, status])
+  @@map("company_members")
+}
+
+model CompanyInvitation {
+  id        String            @id @default(cuid())
+  companyId String            @map("company_id")
+  email     String
+  role      CompanyMemberRole
+  tokenHash String            @unique @map("token_hash")
+  expiresAt DateTime          @map("expires_at")
+  invitedBy String            @map("invited_by")
+  acceptedAt DateTime?        @map("accepted_at")
+  revokedAt DateTime?         @map("revoked_at")
+  createdAt DateTime          @default(now()) @map("created_at")
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, email])
+  @@index([companyId, expiresAt])
+  @@map("company_invitations")
 }
 
 // ============================================================================
@@ -190,6 +251,8 @@ model Job {
   conversations      Conversation[]
   screeningQuestions ScreeningQuestion[]
   views              JobView[]
+  teamMembers        JobTeamMember[]
+  scorecardTemplates ScorecardTemplate[]
 
   @@index([companyId])
   @@index([industry])
@@ -256,6 +319,8 @@ model Application {
   job     Job                 @relation(fields: [jobId], references: [id], onDelete: Cascade)
   seeker  SeekerProfile       @relation(fields: [seekerId], references: [id], onDelete: Cascade)
   answers ApplicationAnswer[]
+  evaluations CandidateEvaluation[]
+  interviews   Interview[]
 
   @@unique([jobId, seekerId])
   @@index([jobId])
@@ -263,6 +328,141 @@ model Application {
   @@index([status])
   @@index([jobId, status])
   @@map("applications")
+}
+
+// ============================================================================
+// COLLABORATIVE HIRING — JOB TEAMS AND SCORECARDS
+// ============================================================================
+
+model JobTeamMember {
+  id        String   @id @default(cuid())
+  jobId     String   @map("job_id")
+  memberId  String   @map("member_id")
+  assignedAt DateTime @default(now()) @map("assigned_at")
+
+  job    Job           @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  member CompanyMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([jobId, memberId])
+  @@index([memberId, jobId])
+  @@map("job_team_members")
+}
+
+model ScorecardTemplate {
+  id           String   @id @default(cuid())
+  jobId        String   @map("job_id")
+  title        String   @default("Hiring scorecard")
+  instructions String?
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  job        Job                  @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  criteria   ScorecardCriterion[]
+  evaluations CandidateEvaluation[]
+
+  @@index([jobId, isActive])
+  @@map("scorecard_templates")
+}
+
+model ScorecardCriterion {
+  id         String   @id @default(cuid())
+  templateId String   @map("template_id")
+  label      String
+  description String?
+  sortOrder  Int      @default(0) @map("sort_order")
+
+  template ScorecardTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  ratings  EvaluationRating[]
+
+  @@index([templateId, sortOrder])
+  @@map("scorecard_criteria")
+}
+
+enum EvaluationRecommendation {
+  STRONG_NO
+  NO
+  YES
+  STRONG_YES
+}
+
+model CandidateEvaluation {
+  id             String                   @id @default(cuid())
+  applicationId  String                   @map("application_id")
+  memberId       String                   @map("member_id")
+  templateId     String                   @map("template_id")
+  recommendation EvaluationRecommendation?
+  summary        String?
+  submittedAt    DateTime?                @map("submitted_at")
+  createdAt      DateTime                 @default(now()) @map("created_at")
+  updatedAt      DateTime                 @updatedAt @map("updated_at")
+
+  application Application       @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  member      CompanyMember     @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  template    ScorecardTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  ratings     EvaluationRating[]
+
+  @@unique([applicationId, memberId])
+  @@index([applicationId, submittedAt])
+  @@index([memberId, submittedAt])
+  @@map("candidate_evaluations")
+}
+
+model EvaluationRating {
+  id           String   @id @default(cuid())
+  evaluationId String   @map("evaluation_id")
+  criterionId  String   @map("criterion_id")
+  score        Int
+
+  evaluation CandidateEvaluation @relation(fields: [evaluationId], references: [id], onDelete: Cascade)
+  criterion  ScorecardCriterion  @relation(fields: [criterionId], references: [id], onDelete: Cascade)
+
+  @@unique([evaluationId, criterionId])
+  @@index([criterionId])
+  @@map("evaluation_ratings")
+}
+
+enum InterviewStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+}
+
+model Interview {
+  id            String          @id @default(cuid())
+  applicationId String          @map("application_id")
+  scheduledAt   DateTime        @map("scheduled_at")
+  durationMins  Int             @default(30) @map("duration_mins")
+  format        String          @default("VIDEO")
+  location      String?
+  status        InterviewStatus @default(SCHEDULED)
+  outcome       String?
+  createdBy     String          @map("created_by")
+  createdAt     DateTime        @default(now()) @map("created_at")
+  updatedAt     DateTime        @updatedAt @map("updated_at")
+
+  application  Application          @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  participants InterviewParticipant[]
+
+  @@index([applicationId, scheduledAt])
+  @@index([scheduledAt, status])
+  @@map("interviews")
+}
+
+model InterviewParticipant {
+  id          String          @id @default(cuid())
+  interviewId String          @map("interview_id")
+  memberId    String          @map("member_id")
+  notes       String?
+  outcome     String?
+  completedAt DateTime?       @map("completed_at")
+
+  interview Interview     @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+  member    CompanyMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([interviewId, memberId])
+  @@index([memberId, interviewId])
+  @@map("interview_participants")
 }
 
 enum ApplicationStatus {
