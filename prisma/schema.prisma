@@ -5,10 +5,13 @@ generator client {
 
 datasource db {
   provider  = "postgresql"
-  // The Supabase transaction pooler (DATABASE_URL, port 6543) is not
-  // reachable from this runtime. Use the verified direct connection for both
-  // application queries and migrations until a reachable pooler is configured.
-  url       = env("DIRECT_URL")
+  // Transaction pooler (port 6543, pgbouncer=true) for app runtime — required
+  // on serverless (Vercel), where each concurrent invocation opens its own
+  // connection; the direct/session connection caps at 15 clients and gets
+  // exhausted immediately under concurrency. Migrations use the direct
+  // connection instead, since pgbouncer transaction mode doesn't support the
+  // advisory locks Prisma Migrate needs.
+  url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }
 
