@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { CalendarPlus, CircleX, Clock3, LoaderCircle, X } from "lucide-react";
+import { CalendarDays, CalendarPlus, CircleX, Clock3, LoaderCircle, X } from "lucide-react";
 import { toast } from "sonner";
 
 type Interview = { id: string; scheduledAt: string; format: string; status: string };
@@ -109,17 +109,20 @@ export default function InterviewPanel({
   const today = new Date().toISOString().slice(0, 10);
 
   return (
-    <section className="mt-7 border-t border-ink/7 pt-5">
+    <section className="rounded-2xl border border-ink/10 bg-white p-5 shadow-[0_10px_30px_rgba(32,36,43,0.04)]">
       <div className="flex items-center gap-2">
-        <Clock3 className="h-5 w-5 text-teal" />
+        <span className="grid h-8 w-8 place-items-center rounded-lg bg-teal/10 text-teal">
+          <Clock3 className="h-4 w-4" />
+        </span>
         <h2 className="font-display text-xl font-bold text-ink">Interviews</h2>
       </div>
 
       {canSchedule && (
-        <div className="mt-3">
+        <div className="mt-4">
           <p className="mb-2 text-xs text-ink/45">Choose a date and time in your local timezone.</p>
-          <div className="flex flex-wrap gap-2">
-            <label className="relative">
+          <div className="flex flex-col gap-2 rounded-2xl border border-ink/10 bg-mist/50 p-2 sm:flex-row sm:items-center">
+            <label className="flex flex-1 cursor-pointer items-center gap-2 rounded-xl border border-ink/10 bg-white px-3.5 py-2.5 transition focus-within:border-teal focus-within:ring-3 focus-within:ring-teal/10 hover:border-teal/40">
+              <CalendarDays className="h-4 w-4 shrink-0 text-teal" />
               <span className="sr-only">Interview date</span>
               <input
                 type="date"
@@ -127,27 +130,28 @@ export default function InterviewPanel({
                 min={today}
                 onChange={(event) => setDate(event.target.value)}
                 disabled={scheduling}
-                className="cursor-pointer rounded-xl border border-ink/12 bg-white px-3 py-2 text-sm text-ink outline-none transition focus:border-teal focus:ring-3 focus:ring-teal/10 disabled:cursor-not-allowed disabled:opacity-60"
+                className="w-full cursor-pointer border-0 bg-transparent p-0 text-sm font-semibold text-ink outline-none [color-scheme:light] disabled:cursor-not-allowed"
               />
             </label>
-            <label className="relative">
+            <label className="flex flex-1 cursor-pointer items-center gap-2 rounded-xl border border-ink/10 bg-white px-3.5 py-2.5 transition focus-within:border-teal focus-within:ring-3 focus-within:ring-teal/10 hover:border-teal/40">
+              <Clock3 className="h-4 w-4 shrink-0 text-teal" />
               <span className="sr-only">Interview time</span>
               <input
                 type="time"
                 value={time}
                 onChange={(event) => setTime(event.target.value)}
                 disabled={scheduling}
-                className="cursor-pointer rounded-xl border border-ink/12 bg-white px-3 py-2 text-sm text-ink outline-none transition focus:border-teal focus:ring-3 focus:ring-teal/10 disabled:cursor-not-allowed disabled:opacity-60"
+                className="w-full cursor-pointer border-0 bg-transparent p-0 text-sm font-semibold text-ink outline-none [color-scheme:light] disabled:cursor-not-allowed"
               />
             </label>
             <button
               type="button"
               onClick={() => void schedule()}
               disabled={!date || !time || scheduling}
-              className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-marigold px-3.5 py-2 text-sm font-bold text-ink transition hover:bg-[#f7b94e] disabled:cursor-not-allowed disabled:opacity-55"
+              className="inline-flex shrink-0 cursor-pointer items-center justify-center gap-2 rounded-xl bg-marigold px-4 py-2.5 text-sm font-bold text-ink transition hover:bg-[#f7b94e] disabled:cursor-not-allowed disabled:opacity-55"
             >
               {scheduling ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <CalendarPlus className="h-4 w-4" />}
-              {scheduling ? "Scheduling…" : "Schedule interview"}
+              {scheduling ? "Scheduling…" : "Schedule"}
             </button>
           </div>
         </div>
@@ -164,7 +168,7 @@ export default function InterviewPanel({
             return (
               <div
                 key={item.id}
-                className={`flex flex-wrap items-center justify-between gap-3 rounded-lg px-3 py-2 text-sm ${cancelled ? "bg-ink/[0.03]" : "bg-white/60"}`}
+                className={`flex flex-wrap items-center justify-between gap-3 rounded-lg px-3 py-2 text-sm ${cancelled ? "bg-ink/[0.03]" : "bg-mist/70"}`}
               >
                 <span className={cancelled ? "text-ink/40 line-through decoration-ink/25" : "text-ink"}>
                   {new Date(item.scheduledAt).toLocaleString()} · {item.format.toLowerCase()}

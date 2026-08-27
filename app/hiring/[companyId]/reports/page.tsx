@@ -11,7 +11,6 @@ export default async function CollaborativeReportsPage({ params }: { params: Pro
   return (
     <CollaboratorReportsBoard
       companyId={companyId}
-      role={data.membership.role}
       analytics={data.analytics}
       chartData={data.chartData}
       exclusive={data.exclusive}

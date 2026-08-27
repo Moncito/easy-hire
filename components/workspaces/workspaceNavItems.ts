@@ -15,6 +15,30 @@ import type { WorkspaceSection } from "@/components/workspaces/WorkspaceForRole"
  */
 export type WorkspaceNavEntry = WorkspaceNavItem & { primary?: boolean };
 
+/**
+ * Derives the active nav section from the URL, so the shell can live in
+ * app/hiring/[companyId]/layout.tsx and persist across navigation instead of
+ * every page re-rendering its own copy and passing `active` down by hand.
+ * Order matters: the more specific /jobs rules are checked before the general
+ * one. Job sub-pages (a job's candidate queue, a candidate review, hiring
+ * setup) highlight "queue" — only the create/edit forms count as "jobs",
+ * matching what each page passed explicitly before.
+ */
+export function resolveWorkspaceSection(pathname: string): WorkspaceSection {
+  const rest = pathname.replace(/^\/hiring\/[^/]+/, "");
+  if (rest.startsWith("/team")) return "overview";
+  if (rest.startsWith("/jobs/new")) return "jobs";
+  if (/^\/jobs\/[^/]+\/edit/.test(rest)) return "jobs";
+  if (rest.startsWith("/jobs")) return "queue";
+  if (rest.startsWith("/queue")) return "queue";
+  if (rest.startsWith("/messages")) return "messages";
+  if (rest.startsWith("/interviews")) return "interviews";
+  if (rest.startsWith("/reports")) return "reports";
+  if (rest.startsWith("/company-profile")) return "company-profile";
+  if (rest.startsWith("/notifications")) return "notifications";
+  return "overview";
+}
+
 export function getWorkspaceNavItems(
   role: CompanyMemberRole,
   companyId: string,

@@ -8,5 +8,5 @@ export default async function CollaborativeMessagesPage({ params }: { params: Pr
   const { companyId } = await params;
   if (!session?.user) redirect(`/login?callbackUrl=${encodeURIComponent(`/hiring/${companyId}/messages`)}`);
   const membership = await requireCompanyMembership(companyId, session.user.id, "messages:manage");
-  return <CollaboratorMessagesInbox companyId={companyId} role={membership.role} />;
+  return <CollaboratorMessagesInbox companyId={companyId} />;
 }

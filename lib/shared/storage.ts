@@ -118,6 +118,16 @@ export async function uploadSeekerPhoto(userId: string, file: File) {
   return `${url}?v=${Date.now()}`;
 }
 
+export async function uploadUserAvatar(userId: string, file: File) {
+  assertFile(file, PHOTO_MIME_TYPES, MAX_PHOTO_BYTES, "Photo");
+
+  const ext =
+    file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
+  const path = `${userId}/avatar.${ext}`;
+  const url = await uploadObject(PHOTO_BUCKET, path, file);
+  return `${url}?v=${Date.now()}`;
+}
+
 export async function uploadVerificationDocument(userId: string, file: File) {
   assertFile(file, VERIFICATION_DOC_MIME_TYPES, MAX_VERIFICATION_DOC_BYTES, "Verification document");
 

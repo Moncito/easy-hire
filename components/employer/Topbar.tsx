@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { getEmployerPageTitle } from "@/lib/employer-nav";
-import { Search } from "lucide-react";
+import { Camera, Search } from "lucide-react";
 import EmployerSearchTrigger from "@/components/employer/EmployerSearchTrigger";
 import EmployerNotificationBell from "@/components/employer/EmployerNotificationBell";
 import EmployerAvatar from "@/components/employer/ui/EmployerAvatar";
@@ -84,9 +84,15 @@ export default function Topbar({ companyName, companyLogoUrl, verifiedStatus, pl
         </div>
 
         <Link
-          href="/employer/company-profile"
-          className="flex items-center gap-2 rounded-lg py-1 pl-1 pr-2 transition hover:bg-ink/[0.04]"
+          href="/account/profile"
+          aria-label="Edit your profile photo"
+          title="Edit your profile photo"
+          className="grid h-8 w-8 shrink-0 cursor-pointer place-items-center rounded-full text-ink/45 transition hover:bg-ink/[0.04] hover:text-ink"
         >
+          <Camera className="h-4 w-4" strokeWidth={2} />
+        </Link>
+
+        <Link href="/employer/company-profile" className="flex items-center gap-2 rounded-lg py-1 pl-1 pr-2 transition hover:bg-ink/[0.04]">
           <EmployerAvatar
             name={companyName}
             imageUrl={companyLogoUrl}
@@ -94,7 +100,7 @@ export default function Topbar({ companyName, companyLogoUrl, verifiedStatus, pl
             shape="rounded"
             fallbackClassName="bg-teal text-white shadow-sm shadow-teal/25"
           />
-          <div className="hidden max-w-[140px] md:block">
+          <span className="hidden max-w-[140px] md:block">
             <span className="employer-topbar-company-name flex items-center gap-1.5 truncate text-sm font-medium text-ink">
               {companyName}
               {isPro && <ProBadge size="sm" />}
@@ -102,7 +108,7 @@ export default function Topbar({ companyName, companyLogoUrl, verifiedStatus, pl
             <span className="employer-topbar-company-role block truncate text-[10px] text-ink/45">
               Employer
             </span>
-          </div>
+          </span>
         </Link>
       </div>
     </header>

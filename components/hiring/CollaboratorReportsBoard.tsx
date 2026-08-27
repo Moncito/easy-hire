@@ -3,8 +3,6 @@ import type { EmployerAnalytics } from "@/lib/employer-analytics";
 import type { ReportsExclusiveMetrics } from "@/lib/employer/reports-helpers";
 import { formatDaysToHire, formatReviewRate, formatHireRate } from "@/lib/employer/reports-helpers";
 import type { JobPerformanceRow } from "@/lib/employer/dashboard-panels";
-import type { CompanyMemberRole } from "@/lib/collaborative-hiring";
-import RecruiterShell from "@/components/hiring/RecruiterShell";
 import ProMonoWeeklyChart from "@/components/employer/charts/pro/ProMonoWeeklyChart";
 import ProMonoFunnel from "@/components/employer/charts/pro/ProMonoFunnel";
 import ProMonoMeter from "@/components/employer/charts/pro/ProMonoMeter";
@@ -12,20 +10,19 @@ import ProMonoStageStrip from "@/components/employer/charts/pro/ProMonoStageStri
 
 type Props = {
   companyId: string;
-  role: CompanyMemberRole;
   analytics: EmployerAnalytics;
   chartData: Array<{ label: string; applications: number; interviews: number }>;
   exclusive: ReportsExclusiveMetrics;
   performanceRows: JobPerformanceRow[];
 };
 
-export default function CollaboratorReportsBoard({ companyId, role, analytics, chartData, exclusive, performanceRows }: Props) {
+export default function CollaboratorReportsBoard({ companyId, analytics, chartData, exclusive, performanceRows }: Props) {
   const reviewRate = formatReviewRate(analytics.funnel, analytics.metrics.totalApplicants);
   const hireRate = formatHireRate(analytics.funnel, analytics.metrics.totalApplicants);
   const daysToHire = formatDaysToHire(exclusive.daysToHire);
 
   return (
-    <RecruiterShell companyId={companyId} role={role} active="reports">
+    <>
         <header className="border-b border-ink/10 pb-6">
           <p className="text-[10px] font-bold uppercase tracking-[.15em] text-[#9A5B12]">Collaborative hiring</p>
           <h1 className="mt-1 font-display text-3xl font-black tracking-tight">Reports</h1>
@@ -80,7 +77,7 @@ export default function CollaboratorReportsBoard({ companyId, role, analytics, c
             <p className="mt-4 text-sm text-ink/50">Conversion by listing appears once a role is live.</p>
           )}
         </section>
-    </RecruiterShell>
+    </>
   );
 }
 

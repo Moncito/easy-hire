@@ -26,6 +26,7 @@ import {
 import { fetchJsonSafe, noStore } from "@/lib/client/fetch-json";
 import { useEmployerShell } from "@/components/employer/EmployerShellContext";
 import { callEasyAi } from "@/components/employer/pro/useEasyAi";
+import EmployerAvatar from "@/components/employer/ui/EmployerAvatar";
 
 type Conversation = ConversationListItem;
 
@@ -35,6 +36,10 @@ type ThreadMessage = {
   createdAt: string;
   senderUserId: string;
   isMine: boolean;
+  senderKind?: "SEEKER" | "EMPLOYER";
+  senderLabel?: string | null;
+  senderPhotoUrl?: string | null;
+  senderRoleLabel?: string | null;
   readAt?: string | null;
   pending?: boolean;
 };
@@ -55,7 +60,10 @@ type Props = {
 
 type ListFilter = "ALL" | "UNREAD" | "INTERVIEWS" | "HIRED";
 
-const THREAD_POLL_MS = 2000;
+// Live delivery comes from the SSE stream below, which wakes pollNewMessages
+// up the instant a row lands instead of waiting for this interval — this is
+// just the reconciliation safety net for whenever the stream drops.
+const THREAD_POLL_MS = 20000;
 const LIST_POLL_MS = 3000;
 
 const fetchOpts: RequestInit = noStore;
@@ -191,6 +199,7 @@ export default function MessagesInbox({
   const [listFilter, setListFilter] = useState<ListFilter>("ALL");
   const [searchQuery, setSearchQuery] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
+  const composerRef = useRef<HTMLTextAreaElement>(null);
   const aiToneButtonRef = useRef<HTMLButtonElement>(null);
   const aiToneMenuRef = useRef<HTMLDivElement>(null);
   const lastMessageIdRef = useRef<string | null>(null);
@@ -381,6 +390,17 @@ export default function MessagesInbox({
     };
   }, [activeId, loadingThread, pollNewMessages]);
 
+  // Live delivery: the server pushes the instant a new row lands in this
+  // conversation (Supabase Realtime under the hood) — used here purely as a
+  // "fetch now" trigger so the existing pollNewMessages merge/cursor logic
+  // above stays the single source of truth for how messages get applied.
+  useEffect(() => {
+    if (!activeId || loadingThread) return;
+    const source = new EventSource(`/api/conversations/${activeId}/stream`);
+    source.onmessage = () => void pollNewMessages();
+    return () => source.close();
+  }, [activeId, loadingThread, pollNewMessages]);
+
   useEffect(() => {
     const onVisible = () => {
       if (document.visibilityState !== "visible") return;
@@ -396,8 +416,8 @@ export default function MessagesInbox({
     bottomRef.current?.scrollIntoView({ behavior: reduced ? "auto" : "smooth" });
   }, [thread?.messages]);
 
-  async function handleSend(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleSend(e?: React.FormEvent) {
+    e?.preventDefault();
     if (!activeId || !draft.trim()) return;
 
     const text = draft.trim();
@@ -406,6 +426,7 @@ export default function MessagesInbox({
 
     setSendError("");
     setDraft("");
+    if (composerRef.current) composerRef.current.style.height = "auto";
 
     const optimistic: ThreadMessage = {
       id: optimisticId,
@@ -454,6 +475,19 @@ export default function MessagesInbox({
       );
       setDraft(text);
     }
+  }
+
+  function handleComposerKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
+      event.preventDefault();
+      void handleSend();
+    }
+  }
+
+  function handleComposerInput(event: React.FormEvent<HTMLTextAreaElement>) {
+    const el = event.currentTarget;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, 128)}px`;
   }
 
   /**
@@ -1016,10 +1050,19 @@ export default function MessagesInbox({
                 const prev = thread.messages[idx - 1];
                 const next = thread.messages[idx + 1];
                 const showDate = !prev || !sameDay(prev.createdAt, msg.createdAt);
-                const isGroupStart = !prev || prev.isMine !== msg.isMine || showDate;
+                // A message is a "teammate" message only from the employer viewer's
+                // perspective: someone on the employer side other than the viewer
+                // themself sent it. From the seeker's perspective every incoming
+                // message is simply "the company" — unchanged from before.
+                const isTeammate = (msg: ThreadMessage) =>
+                  !isSeeker && !msg.isMine && msg.senderKind === "EMPLOYER";
+                const groupKey = (msg: ThreadMessage) =>
+                  msg.isMine ? "mine" : isTeammate(msg) ? `teammate:${msg.senderLabel ?? ""}` : "peer";
+                const isGroupStart = !prev || groupKey(prev) !== groupKey(msg) || showDate;
                 const showMeta =
-                  !next || next.isMine !== msg.isMine || !sameDay(msg.createdAt, next.createdAt);
+                  !next || groupKey(next) !== groupKey(msg) || !sameDay(msg.createdAt, next.createdAt);
                 const showIncomingAvatar = !msg.isMine && isGroupStart;
+                const msgIsTeammate = isTeammate(msg);
 
                 return (
                   <div key={msg.id} className={showDate ? "mt-3 first:mt-0" : isGroupStart ? "mt-2.5" : "mt-0.5"}>
@@ -1038,17 +1081,32 @@ export default function MessagesInbox({
                     >
                       {!msg.isMine &&
                         (showIncomingAvatar ? (
-                          <PeerAvatar
-                            label={threadPeerLabel()}
-                            logoUrl={threadPeerLogo()}
-                            avatarClass={avatarBg}
-                            size="sm"
-                          />
+                          msgIsTeammate ? (
+                            <EmployerAvatar
+                              name={msg.senderLabel ?? "Teammate"}
+                              imageUrl={msg.senderPhotoUrl ?? null}
+                              size="sm"
+                              shape="circle"
+                              fallbackClassName="bg-navy/10 text-navy"
+                            />
+                          ) : (
+                            <PeerAvatar
+                              label={threadPeerLabel()}
+                              logoUrl={threadPeerLogo()}
+                              avatarClass={avatarBg}
+                              size="sm"
+                            />
+                          )
                         ) : (
                           <span className="inline-block h-8 w-8 shrink-0" aria-hidden="true" />
                         ))}
 
                       <div className={`${isSeeker ? "max-w-[min(78%,40rem)]" : "max-w-[min(86%,56rem)]"} ${msg.isMine ? "order-first" : ""}`}>
+                        {msgIsTeammate && isGroupStart && (
+                          <p className="mb-0.5 truncate px-1 text-[10px] font-semibold uppercase tracking-wide text-navy/50">
+                            {msg.senderRoleLabel ?? msg.senderLabel ?? "Teammate"}
+                          </p>
+                        )}
                         <div
                           className={`px-3.5 py-2 text-sm leading-snug ${
                             isSeeker ? "rounded-2xl py-2.5 leading-relaxed" : "rounded-2xl"
@@ -1057,10 +1115,12 @@ export default function MessagesInbox({
                               ? msg.pending
                                 ? `${minePending} rounded-br-sm`
                                 : `${mineBubble} rounded-br-sm`
-                              : `${theirsBubble} rounded-bl-sm`
+                              : msgIsTeammate
+                                ? "rounded-bl-sm border border-navy/25 bg-navy/[0.06] text-ink"
+                                : `${theirsBubble} rounded-bl-sm`
                           }`}
                         >
-                          <p>{msg.body}</p>
+                          <p className="whitespace-pre-wrap">{msg.body}</p>
                         </div>
                         {showMeta && (
                           <div
@@ -1154,14 +1214,17 @@ export default function MessagesInbox({
                 <label htmlFor="message-draft" className="sr-only">
                   Message
                 </label>
-                <input
+                <textarea
                   id="message-draft"
-                  type="text"
+                  ref={composerRef}
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}
-                  placeholder="Type a message..."
+                  onInput={handleComposerInput}
+                  onKeyDown={handleComposerKeyDown}
+                  placeholder="Type a message... (Shift+Enter for a new line)"
                   aria-label="Type a message"
-                  className="min-w-0 flex-1 bg-transparent px-1 py-2 text-sm text-ink outline-none placeholder:text-ink/35"
+                  rows={1}
+                  className="min-h-[40px] max-h-32 min-w-0 flex-1 resize-none bg-transparent px-1 py-2 text-sm leading-6 text-ink outline-none placeholder:text-ink/35"
                 />
                 <button
                   type="submit"

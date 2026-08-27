@@ -35,8 +35,8 @@ export default async function RootLayout({
   const session = await getSession();
 
   return (
-    <html lang="en" className={`scroll-smooth ${spaceGrotesk.variable} ${inter.variable} ${ibmPlexMono.variable}`}>
-      <body className="font-body antialiased">
+    <html lang="en" className={`scroll-smooth overflow-x-hidden ${spaceGrotesk.variable} ${inter.variable} ${ibmPlexMono.variable}`}>
+      <body className="overflow-x-hidden font-body antialiased">
         <AuthProvider session={session}>
           {children}
           <CommandPalette />

@@ -19,6 +19,17 @@ export function hasCollaborativePermission(role: CompanyMemberRole, permission: 
   return (COMPANY_ROLE_PERMISSIONS[role] as readonly string[]).includes(permission);
 }
 
+const COMPANY_ROLE_LABELS: Record<CompanyMemberRole, string> = {
+  OWNER: "Owner",
+  RECRUITER: "Recruiter",
+  HIRING_MANAGER: "Hiring Manager",
+  VIEWER: "Viewer",
+};
+
+export function companyMemberRoleLabel(role: CompanyMemberRole) {
+  return COMPANY_ROLE_LABELS[role];
+}
+
 /**
  * Employer Pro includes Collaborative Hiring. The explicit company flag remains
  * available for a Free-company pilot without granting unrelated Pro features.
@@ -53,6 +64,11 @@ export async function ensureCompanyOwnerMembership(companyId: string) {
 }
 
 export async function getActiveCompanyMembership(companyId: string, userId: string) {
+  // Common case is a single query — the backfill upsert below only runs on the
+  // rare miss (a pre-existing owner whose membership row hasn't been created
+  // yet), instead of unconditionally on every request in this workspace.
+  const existing = await prisma.companyMember.findFirst({ where: { companyId, userId, status: "ACTIVE" } });
+  if (existing) return existing;
   await ensureCompanyOwnerMembership(companyId);
   return prisma.companyMember.findFirst({ where: { companyId, userId, status: "ACTIVE" } });
 }
