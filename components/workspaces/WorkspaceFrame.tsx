@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import type { CompanyMemberRole } from "@/lib/collaborative-hiring";
-import WorkspaceTopbar from "@/components/workspaces/WorkspaceTopbar";
+import WorkspaceTopbar, { type WorkspaceBranding } from "@/components/workspaces/WorkspaceTopbar";
 import WorkspaceMobileNav from "@/components/workspaces/WorkspaceMobileNav";
 import WorkspacePageContainer from "@/components/workspaces/WorkspacePageContainer";
 import { WorkspaceShellProvider, useWorkspaceShell } from "@/components/workspaces/WorkspaceShellContext";
@@ -12,10 +12,11 @@ type Props = {
   sidebar: React.ReactNode;
   companyId: string;
   role: CompanyMemberRole;
+  branding?: WorkspaceBranding | null;
   children: React.ReactNode;
 };
 
-function WorkspaceFrameInner({ sidebar, companyId, role, children }: Props) {
+function WorkspaceFrameInner({ sidebar, companyId, role, branding, children }: Props) {
   const { expanded } = useWorkspaceShell();
   const pathname = usePathname() ?? "";
   const isMessages = /^\/hiring\/[^/]+\/messages/.test(pathname);
@@ -35,7 +36,7 @@ function WorkspaceFrameInner({ sidebar, companyId, role, children }: Props) {
           expanded ? "lg:pl-52" : "lg:pl-[60px]"
         }`}
       >
-        <WorkspaceTopbar companyId={companyId} role={role} />
+        <WorkspaceTopbar companyId={companyId} role={role} initialBranding={branding} />
 
         <main
           className={`relative z-[1] flex min-h-0 flex-1 flex-col ${

@@ -65,7 +65,7 @@ const sectionTitles: Record<CompanyMemberRole, Partial<Record<WorkspaceSection, 
   },
 };
 
-type CompanyBranding = {
+export type WorkspaceBranding = {
   companyName: string;
   logoUrl: string | null;
   verifiedStatus: "PENDING" | "APPROVED" | "REJECTED";
@@ -86,15 +86,19 @@ const statusLabel: Record<string, string> = {
 export default function WorkspaceTopbar({
   companyId,
   role,
+  initialBranding = null,
 }: {
   companyId: string;
   role: CompanyMemberRole;
+  initialBranding?: WorkspaceBranding | null;
 }) {
   const pathname = usePathname() ?? "";
   const active = resolveWorkspaceSection(pathname);
   const title = sectionTitles[role]?.[active] ?? "Hiring workspace";
   const isMessages = /^\/hiring\/[^/]+\/messages/.test(pathname);
-  const [branding, setBranding] = useState<CompanyBranding | null>(null);
+  // Seeded from the server so the company name is on the first paint; the fetch
+  // below just refreshes it (logo swap, verification flip) without a flash.
+  const [branding, setBranding] = useState<WorkspaceBranding | null>(initialBranding);
 
   useEffect(() => {
     let cancelled = false;
@@ -102,7 +106,7 @@ export default function WorkspaceTopbar({
       try {
         const res = await fetch(`/api/hiring/${companyId}/branding`);
         if (!res.ok) return;
-        const data = (await parseJsonBody(res)) as CompanyBranding;
+        const data = (await parseJsonBody(res)) as WorkspaceBranding;
         if (!cancelled) setBranding(data);
       } catch {
         /* ignore */
