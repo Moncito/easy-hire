@@ -104,7 +104,7 @@ export async function getHiringWorkspacesForUser(userId: string) {
     include: { company: { select: { id: true, companyName: true, logoUrl: true } } },
     orderBy: { joinedAt: "desc" },
   });
-  const enabled = await Promise.all(memberships.map((member) => isCollaborativeHiringEnabled(member.companyId)));
+  const enabled = await Promise.all(memberships.map((member) => isCollaborativeHiringEnabledCached(member.companyId)));
   return memberships.filter((_member, index) => enabled[index]);
 }
 

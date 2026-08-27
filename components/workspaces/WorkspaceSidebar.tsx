@@ -1,11 +1,14 @@
 "use client";
 
+import { useTransition } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { LayoutGrid, LogOut, PanelLeft } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useWorkspaceShell } from "@/components/workspaces/WorkspaceShellContext";
 import { useRailTooltip } from "@/components/workspaces/useRailTooltip";
+import FullScreenLoader from "@/components/ui/FullScreenLoader";
 import ProBadge from "@/components/employer/pro/ProBadge";
 
 export type WorkspaceNavItem = { href: string; label: string; icon: LucideIcon; active?: boolean };
@@ -45,13 +48,20 @@ function RailFooterItem({
   icon: Icon,
   href,
   onClick,
+  loadingLabel,
 }: {
   label: string;
   expanded: boolean;
   icon: LucideIcon;
   href?: string;
   onClick?: () => void;
+  /** When set on an `href` item, clicking shows a full-screen loader until the
+   *  destination finishes resolving (the target route's layout runs its own
+   *  auth + access checks, which can take a beat). */
+  loadingLabel?: string;
 }) {
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
   const { anchorProps, tooltip } = useRailTooltip(label, !expanded);
   const className = `group relative flex w-full items-center rounded-xl text-ink/45 transition hover:bg-ink/[0.04] hover:text-ink ${
     expanded ? "gap-3 px-3 py-2.5" : "h-10 w-10 justify-center"
@@ -62,14 +72,28 @@ function RailFooterItem({
       {expanded && <span className="min-w-0 flex-1 truncate text-sm font-medium">{label}</span>}
     </>
   );
+
+  const useLoader = Boolean(href && loadingLabel);
+
   return (
     <>
-      {href ? (
+      {pending && loadingLabel && <FullScreenLoader label={loadingLabel} />}
+      {href && !useLoader ? (
         <Link href={href} title={expanded ? undefined : label} {...anchorProps} className={className}>
           {inner}
         </Link>
       ) : (
-        <button type="button" onClick={onClick} title={expanded ? undefined : label} {...anchorProps} className={className}>
+        <button
+          type="button"
+          onClick={() => {
+            if (pending) return;
+            if (href) startTransition(() => router.push(href));
+            else onClick?.();
+          }}
+          title={expanded ? undefined : label}
+          {...anchorProps}
+          className={className}
+        >
           {inner}
         </button>
       )}
@@ -140,7 +164,7 @@ export default function WorkspaceSidebar({ title, items }: { title: string; item
       </nav>
 
       <div className={`shrink-0 border-t border-ink/[0.06] py-3 ${expanded ? "space-y-1 px-3" : "flex flex-col items-center gap-1 px-2"}`}>
-        <RailFooterItem label="Switch workspace" expanded={expanded} icon={LayoutGrid} href="/hiring" />
+        <RailFooterItem label="Switch workspace" expanded={expanded} icon={LayoutGrid} href="/hiring" loadingLabel="Switching workspace…" />
         <RailFooterItem label="Log out" expanded={expanded} icon={LogOut} onClick={() => signOut({ callbackUrl: "/" })} />
       </div>
     </aside>
