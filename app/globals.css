@@ -1213,7 +1213,10 @@ backdrop-filter:blur(6px);
   background-color: rgb(255 255 255 / 0.04) !important;
 }
 
-.employer-workspace[data-employer-theme="dark"] .text-ink {
+.employer-workspace[data-employer-theme="dark"] .text-ink,
+.employer-workspace[data-employer-theme="dark"] .text-ink\/90,
+.employer-workspace[data-employer-theme="dark"] .text-ink\/85,
+.employer-workspace[data-employer-theme="dark"] .text-ink\/80 {
   color: var(--ew-text) !important;
 }
 
