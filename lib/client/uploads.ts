@@ -5,7 +5,7 @@ async function uploadFile(url: string, file: File, fieldName = "file") {
   body.append(fieldName, file);
   const res = await fetch(url, { method: "POST", body });
   const data = await parseJsonBody(res);
-  return { ok: res.ok, data: data as { error?: string; url?: string; bannerUrl?: string; logoUrl?: string; fileName?: string; resumeUrl?: string; photoUrl?: string; resumeUpdatedAt?: string; resumes?: string[] } };
+  return { ok: res.ok, data: data as { error?: string; url?: string; bannerUrl?: string; logoUrl?: string; fileName?: string; resumeUrl?: string; photoUrl?: string; avatarUrl?: string; resumeUpdatedAt?: string; resumes?: string[] } };
 }
 
 export async function uploadResume(file: File) {
@@ -14,6 +14,10 @@ export async function uploadResume(file: File) {
 
 export async function uploadPhoto(file: File) {
   return uploadFile("/api/upload/photo", file);
+}
+
+export async function uploadAvatar(file: File) {
+  return uploadFile("/api/upload/avatar", file);
 }
 
 export async function uploadBanner(file: File) {

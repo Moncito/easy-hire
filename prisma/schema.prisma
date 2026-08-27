@@ -1,6 +1,10 @@
 generator client {
-  provider      = "prisma-client-js"
-  binaryTargets = ["native", "rhel-openssl-3.0.x"]
+  provider        = "prisma-client-js"
+  binaryTargets   = ["native", "rhel-openssl-3.0.x"]
+  // Lets hot read paths opt into a single SQL JOIN (relationLoadStrategy: "join")
+  // instead of Prisma's default one-query-per-relation, which is costly when the
+  // DB sits ~150ms away. Opt-in per query — default strategy is unchanged.
+  previewFeatures = ["relationJoins"]
 }
 
 datasource db {
@@ -24,6 +28,7 @@ model User {
   email        String   @unique
   passwordHash String?  @map("password_hash")
   role         Role     @default(SEEKER)
+  avatarUrl    String?  @map("avatar_url")
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
@@ -168,6 +173,7 @@ model CompanyMember {
   jobAssignments JobTeamMember[]
   evaluations    CandidateEvaluation[]
   interviewAssignments InterviewParticipant[]
+  applicationActivities ApplicationActivity[]
 
   @@unique([companyId, userId])
   @@index([companyId, status])
@@ -324,6 +330,7 @@ model Application {
   answers ApplicationAnswer[]
   evaluations CandidateEvaluation[]
   interviews   Interview[]
+  activities   ApplicationActivity[]
 
   @@unique([jobId, seekerId])
   @@index([jobId])
@@ -331,6 +338,26 @@ model Application {
   @@index([status])
   @@index([jobId, status])
   @@map("applications")
+}
+
+model ApplicationActivity {
+  id            String                   @id @default(cuid())
+  applicationId String                   @map("application_id")
+  type          ApplicationActivityType
+  body          String?
+  actorMemberId String?                  @map("actor_member_id")
+  createdAt     DateTime                 @default(now()) @map("created_at")
+
+  application Application    @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  actorMember CompanyMember? @relation(fields: [actorMemberId], references: [id], onDelete: SetNull)
+
+  @@index([applicationId, createdAt])
+  @@map("application_activities")
+}
+
+enum ApplicationActivityType {
+  NOTE
+  STAGE_CHANGE
 }
 
 // ============================================================================

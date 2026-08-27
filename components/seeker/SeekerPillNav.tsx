@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { signOut } from "next-auth/react";
 import {
   LayoutDashboard,
   User,
@@ -13,6 +12,7 @@ import {
   Bell,
   LogOut,
 } from "lucide-react";
+import { useSignOut } from "@/components/ui/useSignOut";
 
 const navItems = [
   { label: "Dashboard", href: "/seeker/dashboard", icon: LayoutDashboard },
@@ -72,6 +72,7 @@ function LogoMark() {
 
 export default function SeekerPillNav({ userName, userEmail }: Props) {
   const pathname = usePathname();
+  const { signOut, overlay } = useSignOut();
   const shellRef = useRef<HTMLDivElement>(null);
   const compactRef = useRef<HTMLDivElement>(null);
   const expandedRef = useRef<HTMLDivElement>(null);
@@ -226,7 +227,7 @@ export default function SeekerPillNav({ userName, userEmail }: Props) {
             title="Sign out"
             aria-label="Sign out"
             tabIndex={expanded ? -1 : 0}
-            onClick={() => signOut({ callbackUrl: "/" })}
+            onClick={signOut}
             className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-mist/75 hover:bg-white/10 hover:text-white"
           >
             <LogOut className="h-3.5 w-3.5" aria-hidden="true" />
@@ -308,7 +309,7 @@ export default function SeekerPillNav({ userName, userEmail }: Props) {
           <button
             type="button"
             tabIndex={expanded ? 0 : -1}
-            onClick={() => signOut({ callbackUrl: "/" })}
+            onClick={signOut}
             className="shrink-0 cursor-pointer whitespace-nowrap rounded-full px-2.5 py-1 text-[12px] font-medium text-mist/70 transition-colors hover:bg-white/10 hover:text-white"
           >
             Sign out
@@ -317,6 +318,7 @@ export default function SeekerPillNav({ userName, userEmail }: Props) {
       </div>
     </header>
     <SeekerMobileBottomNav />
+    {overlay}
     </>
   );
 }

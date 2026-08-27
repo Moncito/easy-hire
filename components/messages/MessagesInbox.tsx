@@ -26,6 +26,7 @@ import {
 import { fetchJsonSafe, noStore } from "@/lib/client/fetch-json";
 import { useEmployerShell } from "@/components/employer/EmployerShellContext";
 import { callEasyAi } from "@/components/employer/pro/useEasyAi";
+import EmployerAvatar from "@/components/employer/ui/EmployerAvatar";
 
 type Conversation = ConversationListItem;
 
@@ -35,6 +36,10 @@ type ThreadMessage = {
   createdAt: string;
   senderUserId: string;
   isMine: boolean;
+  senderKind?: "SEEKER" | "EMPLOYER";
+  senderLabel?: string | null;
+  senderPhotoUrl?: string | null;
+  senderRoleLabel?: string | null;
   readAt?: string | null;
   pending?: boolean;
 };
@@ -55,7 +60,12 @@ type Props = {
 
 type ListFilter = "ALL" | "UNREAD" | "INTERVIEWS" | "HIRED";
 
-const THREAD_POLL_MS = 2000;
+// Open-thread live delivery: a short poll with an `after` cursor (one cheap
+// indexed read per tick). A server-relayed SSE stream was tried but each viewer
+// held a long-lived request + upstream WebSocket for little gain over a 3s
+// poll; for sub-second delivery, subscribe to Supabase Realtime from the
+// browser directly (anon key + RLS) instead.
+const THREAD_POLL_MS = 3000;
 const LIST_POLL_MS = 3000;
 
 const fetchOpts: RequestInit = noStore;
@@ -133,6 +143,13 @@ function peerInitials(label: string) {
   return label.slice(0, 2).toUpperCase();
 }
 
+// "Recruiter | jane@acme.com" — role plus identity, so the seeker (and other
+// collaborators) can tell exactly which person on the company side is writing.
+function senderCaption(msg: ThreadMessage) {
+  if (msg.senderRoleLabel && msg.senderLabel) return `${msg.senderRoleLabel} | ${msg.senderLabel}`;
+  return msg.senderRoleLabel ?? msg.senderLabel ?? "Teammate";
+}
+
 function PeerAvatar({
   label,
   logoUrl,
@@ -191,6 +208,7 @@ export default function MessagesInbox({
   const [listFilter, setListFilter] = useState<ListFilter>("ALL");
   const [searchQuery, setSearchQuery] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
+  const composerRef = useRef<HTMLTextAreaElement>(null);
   const aiToneButtonRef = useRef<HTMLButtonElement>(null);
   const aiToneMenuRef = useRef<HTMLDivElement>(null);
   const lastMessageIdRef = useRef<string | null>(null);
@@ -307,6 +325,34 @@ export default function MessagesInbox({
     }
   }, [syncCursor]);
 
+  // Single place that applies new messages to the open thread — dedupes by id,
+  // drops optimistic rows, re-sorts, advances the cursor, and bumps the inbox
+  // list. Both the SSE push and the fallback poll funnel through here.
+  const applyIncoming = useCallback((conversationId: string, incoming: ThreadMessage[]) => {
+    if (incoming.length === 0 || activeIdRef.current !== conversationId) return;
+
+    let mergedForCursor: ThreadMessage[] = [];
+    let changed = false;
+    setThread((prev) => {
+      if (!prev || activeIdRef.current !== conversationId) return prev;
+      const known = new Set(prev.messages.map((m) => m.id));
+      if (incoming.every((m) => known.has(m.id))) return prev;
+      changed = true;
+      mergedForCursor = mergeMessages(
+        prev.messages.filter((m) => !m.pending),
+        incoming
+      );
+      return { ...prev, messages: mergedForCursor };
+    });
+    if (!changed) return;
+
+    lastMessageIdRef.current =
+      lastConfirmedMessage(mergedForCursor)?.id ?? lastMessageIdRef.current;
+
+    const last = incoming[incoming.length - 1];
+    setConversations((prev) => bumpConversationInList(prev, conversationId, last.body, last.createdAt));
+  }, []);
+
   const pollNewMessages = useCallback(async (signal?: AbortSignal) => {
     const conversationId = activeIdRef.current;
     if (!conversationId || pollingRef.current || document.visibilityState === "hidden") return;
@@ -318,29 +364,13 @@ export default function MessagesInbox({
       if (!data || activeIdRef.current !== conversationId) return;
 
       const incoming = ((data as { messages?: ThreadMessage[] }).messages ?? []) as ThreadMessage[];
-      if (incoming.length === 0 || activeIdRef.current !== conversationId) return;
-
-      let mergedForCursor: ThreadMessage[] = [];
-      setThread((prev) => {
-        if (!prev || activeIdRef.current !== conversationId) return prev;
-        mergedForCursor = mergeMessages(
-          prev.messages.filter((m) => !m.pending),
-          incoming
-        );
-        return { ...prev, messages: mergedForCursor };
-      });
-
-      lastMessageIdRef.current =
-        lastConfirmedMessage(mergedForCursor)?.id ?? lastMessageIdRef.current;
-
-      const last = incoming[incoming.length - 1];
-      setConversations((prev) => bumpConversationInList(prev, conversationId, last.body, last.createdAt));
+      applyIncoming(conversationId, incoming);
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") return;
     } finally {
       pollingRef.current = false;
     }
-  }, []);
+  }, [applyIncoming]);
 
   useEffect(() => {
     const id = window.setTimeout(() => {
@@ -396,8 +426,8 @@ export default function MessagesInbox({
     bottomRef.current?.scrollIntoView({ behavior: reduced ? "auto" : "smooth" });
   }, [thread?.messages]);
 
-  async function handleSend(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleSend(e?: React.FormEvent) {
+    e?.preventDefault();
     if (!activeId || !draft.trim()) return;
 
     const text = draft.trim();
@@ -406,6 +436,7 @@ export default function MessagesInbox({
 
     setSendError("");
     setDraft("");
+    if (composerRef.current) composerRef.current.style.height = "auto";
 
     const optimistic: ThreadMessage = {
       id: optimisticId,
@@ -454,6 +485,19 @@ export default function MessagesInbox({
       );
       setDraft(text);
     }
+  }
+
+  function handleComposerKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
+      event.preventDefault();
+      void handleSend();
+    }
+  }
+
+  function handleComposerInput(event: React.FormEvent<HTMLTextAreaElement>) {
+    const el = event.currentTarget;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, 128)}px`;
   }
 
   /**
@@ -719,7 +763,7 @@ export default function MessagesInbox({
           </div>
         </div>
 
-        <div className={`flex-1 overflow-y-auto ${isSeeker ? "px-4 py-2 sm:px-5" : "divide-y divide-ink/5 px-0 py-0"}`}>
+        <div className={`flex-1 overflow-y-auto overflow-x-hidden ${isSeeker ? "px-4 py-2 sm:px-5" : "divide-y divide-ink/5 px-0 py-0"}`}>
           {listError && <p className="p-4 text-sm text-ember">{listError}</p>}
 
           {!loadingList && filteredConversations.length === 0 && (
@@ -807,13 +851,13 @@ export default function MessagesInbox({
                 <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                   {conv.applicationStatus && (
                     <span
-                      className={`rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide ${statusBadgeClass(conv.applicationStatus, isSeeker)}`}
+                      className={`shrink-0 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide ${statusBadgeClass(conv.applicationStatus, isSeeker)}`}
                     >
                       {conv.applicationStatus.replace(/_/g, " ")}
                     </span>
                   )}
                   {conv.job && (
-                    <span className="truncate rounded-full bg-ink/6 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-ink/45">
+                    <span className="min-w-0 max-w-full truncate rounded-full bg-ink/6 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-ink/45">
                       {conv.job.title}
                     </span>
                   )}
@@ -1016,10 +1060,20 @@ export default function MessagesInbox({
                 const prev = thread.messages[idx - 1];
                 const next = thread.messages[idx + 1];
                 const showDate = !prev || !sameDay(prev.createdAt, msg.createdAt);
-                const isGroupStart = !prev || prev.isMine !== msg.isMine || showDate;
+                // A "teammate" message is any incoming message from the company
+                // side. The seeker sees a "Role | email" caption identifying the
+                // exact sender (grouping splits per person); the teammate avatar
+                // swap and navy bubble stay employer-only (see `!isSeeker` gates
+                // below) so the seeker's thread keeps the company's identity.
+                const isTeammate = (msg: ThreadMessage) =>
+                  !msg.isMine && msg.senderKind === "EMPLOYER";
+                const groupKey = (msg: ThreadMessage) =>
+                  msg.isMine ? "mine" : isTeammate(msg) ? `teammate:${msg.senderLabel ?? ""}` : "peer";
+                const isGroupStart = !prev || groupKey(prev) !== groupKey(msg) || showDate;
                 const showMeta =
-                  !next || next.isMine !== msg.isMine || !sameDay(msg.createdAt, next.createdAt);
+                  !next || groupKey(next) !== groupKey(msg) || !sameDay(msg.createdAt, next.createdAt);
                 const showIncomingAvatar = !msg.isMine && isGroupStart;
+                const msgIsTeammate = isTeammate(msg);
 
                 return (
                   <div key={msg.id} className={showDate ? "mt-3 first:mt-0" : isGroupStart ? "mt-2.5" : "mt-0.5"}>
@@ -1038,17 +1092,32 @@ export default function MessagesInbox({
                     >
                       {!msg.isMine &&
                         (showIncomingAvatar ? (
-                          <PeerAvatar
-                            label={threadPeerLabel()}
-                            logoUrl={threadPeerLogo()}
-                            avatarClass={avatarBg}
-                            size="sm"
-                          />
+                          msgIsTeammate && !isSeeker ? (
+                            <EmployerAvatar
+                              name={msg.senderLabel ?? "Teammate"}
+                              imageUrl={msg.senderPhotoUrl ?? null}
+                              size="sm"
+                              shape="circle"
+                              fallbackClassName="bg-navy/10 text-navy"
+                            />
+                          ) : (
+                            <PeerAvatar
+                              label={threadPeerLabel()}
+                              logoUrl={threadPeerLogo()}
+                              avatarClass={avatarBg}
+                              size="sm"
+                            />
+                          )
                         ) : (
                           <span className="inline-block h-8 w-8 shrink-0" aria-hidden="true" />
                         ))}
 
                       <div className={`${isSeeker ? "max-w-[min(78%,40rem)]" : "max-w-[min(86%,56rem)]"} ${msg.isMine ? "order-first" : ""}`}>
+                        {msgIsTeammate && isGroupStart && (
+                          <p className="mb-0.5 truncate px-1 text-[10px] font-semibold tracking-wide text-navy/50">
+                            {senderCaption(msg)}
+                          </p>
+                        )}
                         <div
                           className={`px-3.5 py-2 text-sm leading-snug ${
                             isSeeker ? "rounded-2xl py-2.5 leading-relaxed" : "rounded-2xl"
@@ -1057,10 +1126,12 @@ export default function MessagesInbox({
                               ? msg.pending
                                 ? `${minePending} rounded-br-sm`
                                 : `${mineBubble} rounded-br-sm`
-                              : `${theirsBubble} rounded-bl-sm`
+                              : msgIsTeammate && !isSeeker
+                                ? "rounded-bl-sm border border-navy/25 bg-navy/[0.06] text-ink"
+                                : `${theirsBubble} rounded-bl-sm`
                           }`}
                         >
-                          <p>{msg.body}</p>
+                          <p className="whitespace-pre-wrap">{msg.body}</p>
                         </div>
                         {showMeta && (
                           <div
@@ -1154,14 +1225,17 @@ export default function MessagesInbox({
                 <label htmlFor="message-draft" className="sr-only">
                   Message
                 </label>
-                <input
+                <textarea
                   id="message-draft"
-                  type="text"
+                  ref={composerRef}
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}
-                  placeholder="Type a message..."
+                  onInput={handleComposerInput}
+                  onKeyDown={handleComposerKeyDown}
+                  placeholder="Type a message... (Shift+Enter for a new line)"
                   aria-label="Type a message"
-                  className="min-w-0 flex-1 bg-transparent px-1 py-2 text-sm text-ink outline-none placeholder:text-ink/35"
+                  rows={1}
+                  className="min-h-[40px] max-h-32 min-w-0 flex-1 resize-none bg-transparent px-1 py-2 text-sm leading-6 text-ink outline-none placeholder:text-ink/35"
                 />
                 <button
                   type="submit"

@@ -12,6 +12,8 @@ export type ConversationListItem = {
   lastMessage: { body: string; createdAt: string; senderUserId: string } | null;
   unreadCount: number;
   applicationStatus: string | null;
+  /** Populated by the Collaborative Hiring conversation list (no talent-search equivalent there to link out to instead); omitted by the owner's own list. */
+  applicationId?: string | null;
 };
 
 export async function listConversationsForUser(userId: string, role: string) {
@@ -35,6 +37,7 @@ export async function listConversationsForUser(userId: string, role: string) {
   const conversations = await prisma.conversation.findMany({
     where,
     orderBy: { lastMessageAt: "desc" },
+    relationLoadStrategy: "join",
     select: {
       id: true,
       lastMessageAt: true,

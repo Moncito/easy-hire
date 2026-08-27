@@ -8,5 +8,5 @@ export default async function NewCollaborativeJobPage({ params }: { params: Prom
   const { companyId } = await params;
   if (!session?.user) redirect(`/login?callbackUrl=${encodeURIComponent(`/hiring/${companyId}/jobs/new`)}`);
   const membership = await requireCompanyMembership(companyId, session.user.id, "jobs:manage");
-  return <CollaboratorJobForm companyId={companyId} role={membership.role} />;
+  return <CollaboratorJobForm companyId={companyId} />;
 }

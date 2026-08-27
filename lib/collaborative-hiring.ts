@@ -19,6 +19,17 @@ export function hasCollaborativePermission(role: CompanyMemberRole, permission: 
   return (COMPANY_ROLE_PERMISSIONS[role] as readonly string[]).includes(permission);
 }
 
+const COMPANY_ROLE_LABELS: Record<CompanyMemberRole, string> = {
+  OWNER: "Owner",
+  RECRUITER: "Recruiter",
+  HIRING_MANAGER: "Hiring Manager",
+  VIEWER: "Viewer",
+};
+
+export function companyMemberRoleLabel(role: CompanyMemberRole) {
+  return COMPANY_ROLE_LABELS[role];
+}
+
 /**
  * Employer Pro includes Collaborative Hiring. The explicit company flag remains
  * available for a Free-company pilot without granting unrelated Pro features.
@@ -34,8 +45,32 @@ export async function isCollaborativeHiringEnabled(companyId: string): Promise<b
   return pro || company?.collaborativeHiringEnabled === true;
 }
 
+/**
+ * Short-lived in-process cache for the enablement gate. Every messaging request
+ * (list, open thread, 2.5s poll, send) runs this check; each uncached call is
+ * two round-trips to a DB that can sit ~150ms+ away. Enable/disable and plan
+ * changes are rare, so a 60s stale window is an acceptable trade for cutting
+ * that fixed cost off every request. Per-instance — no cross-process coherence
+ * needed for a value this forgiving.
+ */
+const COLLAB_ENABLED_TTL_MS = 60_000;
+const collabEnabledCache = new Map<string, { value: boolean; expires: number }>();
+
+export async function isCollaborativeHiringEnabledCached(companyId: string): Promise<boolean> {
+  const hit = collabEnabledCache.get(companyId);
+  if (hit && hit.expires > Date.now()) return hit.value;
+  const value = await isCollaborativeHiringEnabled(companyId);
+  collabEnabledCache.set(companyId, { value, expires: Date.now() + COLLAB_ENABLED_TTL_MS });
+  return value;
+}
+
+/** Drop the cached enablement flag for a company (call after enabling/disabling or a plan change). */
+export function invalidateCollaborativeHiringEnabled(companyId: string) {
+  collabEnabledCache.delete(companyId);
+}
+
 export async function requireCollaborativeHiringEnabled(companyId: string) {
-  if (!(await isCollaborativeHiringEnabled(companyId))) {
+  if (!(await isCollaborativeHiringEnabledCached(companyId))) {
     throw new ApiError("Collaborative Hiring is not enabled for this company.", 403);
   }
 }
@@ -53,6 +88,11 @@ export async function ensureCompanyOwnerMembership(companyId: string) {
 }
 
 export async function getActiveCompanyMembership(companyId: string, userId: string) {
+  // Common case is a single query — the backfill upsert below only runs on the
+  // rare miss (a pre-existing owner whose membership row hasn't been created
+  // yet), instead of unconditionally on every request in this workspace.
+  const existing = await prisma.companyMember.findFirst({ where: { companyId, userId, status: "ACTIVE" } });
+  if (existing) return existing;
   await ensureCompanyOwnerMembership(companyId);
   return prisma.companyMember.findFirst({ where: { companyId, userId, status: "ACTIVE" } });
 }
@@ -64,7 +104,7 @@ export async function getHiringWorkspacesForUser(userId: string) {
     include: { company: { select: { id: true, companyName: true, logoUrl: true } } },
     orderBy: { joinedAt: "desc" },
   });
-  const enabled = await Promise.all(memberships.map((member) => isCollaborativeHiringEnabled(member.companyId)));
+  const enabled = await Promise.all(memberships.map((member) => isCollaborativeHiringEnabledCached(member.companyId)));
   return memberships.filter((_member, index) => enabled[index]);
 }
 

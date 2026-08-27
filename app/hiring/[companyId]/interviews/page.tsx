@@ -5,7 +5,6 @@ import { auth } from "@/Auth";
 import { getCollaboratorWorkspaceOverview } from "@/lib/collaborative-hiring-team";
 import { listCompanyInterviews } from "@/lib/collaborative-interviews";
 import EmployerAvatar from "@/components/employer/ui/EmployerAvatar";
-import RecruiterShell from "@/components/hiring/RecruiterShell";
 
 type Interview = Awaited<ReturnType<typeof listCompanyInterviews>>[number];
 
@@ -50,7 +49,7 @@ export default async function Page({ params }: { params: Promise<{ companyId: st
   const groups = groupByDate(interviews);
 
   return (
-    <RecruiterShell companyId={companyId} role={data.membership.role} active="interviews">
+    <>
       <header className="border-b border-ink/10 pb-6">
         <p className="text-[10px] font-bold uppercase tracking-[.15em] text-[#9A5B12]">Hiring calendar</p>
         <h1 className="mt-1 font-display text-3xl font-black tracking-tight">Interviews</h1>
@@ -124,6 +123,6 @@ export default async function Page({ params }: { params: Promise<{ companyId: st
           <p className="mt-1">Schedule interviews from a candidate review. They will appear here across all roles.</p>
         </div>
       )}
-    </RecruiterShell>
+    </>
   );
 }

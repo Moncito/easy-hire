@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { signOut } from "next-auth/react";
 import { LayoutDashboard, User, Briefcase, LogOut, MessageSquare } from "lucide-react";
+import { useSignOut } from "@/components/ui/useSignOut";
 
 const navItems = [
   { label: "Dashboard", href: "/seeker/dashboard", icon: LayoutDashboard },
@@ -14,6 +14,7 @@ const navItems = [
 
 export default function SeekerSidebar() {
   const pathname = usePathname();
+  const { signOut, overlay } = useSignOut();
 
   return (
     <aside className="fixed left-0 top-0 z-40 flex h-screen w-64 flex-col border-r border-ink/10 bg-white">
@@ -54,13 +55,14 @@ export default function SeekerSidebar() {
       <div className="shrink-0 border-t border-ink/8 p-4">
         <button
           type="button"
-          onClick={() => signOut({ callbackUrl: "/" })}
+          onClick={signOut}
           className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-ink/55 transition-colors hover:bg-ink/4 hover:text-ink"
         >
           <LogOut className="h-4.5 w-4.5" strokeWidth={2} />
           Sign out
         </button>
       </div>
+      {overlay}
     </aside>
   );
 }

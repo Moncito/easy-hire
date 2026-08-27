@@ -24,7 +24,7 @@ export default function MessageCandidateButton({ companyId, jobId, seekerId }: P
   }
 
   return (
-    <button type="button" onClick={() => void start()} disabled={loading} className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-ink/12 bg-white px-3.5 py-2.5 text-xs font-bold text-ink transition hover:border-teal/30 disabled:opacity-60">
+    <button type="button" onClick={() => void start()} disabled={loading} className="inline-flex shrink-0 cursor-pointer items-center gap-2 rounded-full border border-ink/12 bg-white px-4 py-2.5 text-xs font-bold text-ink transition hover:border-teal/30 hover:bg-teal/5 disabled:cursor-not-allowed disabled:opacity-60">
       <MessageSquare className="h-3.5 w-3.5" />
       {loading ? "Opening…" : "Message candidate"}
     </button>

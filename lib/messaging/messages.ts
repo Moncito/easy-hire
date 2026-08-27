@@ -6,6 +6,7 @@ import { createNotification } from "@/lib/email";
 import { invalidateEmployerNav } from "@/lib/employer-cache";
 import { invalidateConversationsForParticipants } from "@/lib/conversations-cache";
 import { requireEmployerCompany } from "@/lib/employer-auth";
+import { companyMemberRoleLabel } from "@/lib/collaborative-hiring";
 import {
   conversationCreateSchema,
   messageCreateSchema,
@@ -20,77 +21,132 @@ function invalidateInboxForConversation(conversation: {
   invalidateConversationsForParticipants(conversation.company.userId, conversation.seeker.userId);
 }
 
-async function requireConversationAccess(userId: string, role: string, conversationId: string) {
+const conversationParties = {
+  company: { select: { id: true, userId: true, companyName: true, logoUrl: true } },
+  seeker: { select: { id: true, userId: true, fullName: true, headline: true, photoUrl: true } },
+  job: { select: { id: true, title: true } },
+} as const;
+
+type ConversationWithParties = {
+  company: { userId: string };
+  seeker: { userId: string };
+};
+
+/** Pure authorization check — no DB access; the conversation is already loaded. */
+function assertConversationAccess<T extends ConversationWithParties>(
+  conversation: T | null,
+  userId: string,
+  role: string
+): asserts conversation is T {
+  if (!conversation) throw new ApiError("Conversation not found", 404);
+  if (role !== "EMPLOYER" && role !== "SEEKER") throw new ApiError("Forbidden", 403);
+  if (role === "EMPLOYER" && conversation.company.userId !== userId) throw new ApiError("Forbidden", 403);
+  // The conversation already carries the seeker's userId — compare directly
+  // instead of a second round-trip to look the profile up by userId.
+  if (role === "SEEKER" && conversation.seeker.userId !== userId) throw new ApiError("Forbidden", 403);
+}
+
+export async function requireConversationAccess(userId: string, role: string, conversationId: string) {
   const conversation = await prisma.conversation.findUnique({
     where: { id: conversationId },
-    include: {
-      company: { select: { id: true, userId: true, companyName: true, logoUrl: true } },
-      seeker: { select: { id: true, userId: true, fullName: true, headline: true, photoUrl: true } },
-      job: { select: { id: true, title: true } },
-    },
+    relationLoadStrategy: "join",
+    include: conversationParties,
   });
-
-  if (!conversation) {
-    throw new ApiError("Conversation not found", 404);
-  }
-
-  if (role !== "EMPLOYER" && role !== "SEEKER") {
-    throw new ApiError("Forbidden", 403);
-  }
-
-  if (role === "EMPLOYER" && conversation.company.userId !== userId) {
-    throw new ApiError("Forbidden", 403);
-  }
-
-  if (role === "SEEKER") {
-    const seeker = await prisma.seekerProfile.findUnique({ where: { userId } });
-    if (!seeker || conversation.seekerId !== seeker.id) {
-      throw new ApiError("Forbidden", 403);
-    }
-  }
-
+  assertConversationAccess(conversation, userId, role);
   return conversation;
 }
 
+/**
+ * Employer-side conversations may now carry messages from more than one real
+ * account (the owner, or — via Collaborative Hiring — a recruiter/teammate),
+ * all sharing the same Conversation row. `isMine` alone can't tell the UI who
+ * actually sent a message it didn't send; `senderKind`/`senderLabel` let the
+ * renderer distinguish "the candidate replied" from "a teammate sent this on
+ * the company's behalf" instead of defaulting every non-mine message to the
+ * seeker's identity.
+ */
+export async function annotateSenders<T extends { senderUserId: string }>(
+  messages: T[],
+  userId: string,
+  seekerUserId: string,
+  companyId: string,
+  companyOwnerUserId?: string
+): Promise<
+  (T & {
+    isMine: boolean;
+    senderKind: "SEEKER" | "EMPLOYER";
+    senderLabel: string | null;
+    senderPhotoUrl: string | null;
+    senderRoleLabel: string | null;
+  })[]
+> {
+  const otherSenderIds = [...new Set(messages.map((m) => m.senderUserId).filter((id) => id !== userId && id !== seekerUserId))];
+  const senders = otherSenderIds.length
+    ? await prisma.user.findMany({
+        where: { id: { in: otherSenderIds } },
+        select: { id: true, email: true, avatarUrl: true, companyMemberships: { where: { companyId, status: "ACTIVE" }, select: { role: true }, take: 1 } },
+      })
+    : [];
+  const byId = new Map(senders.map((s) => [s.id, s]));
+
+  return messages.map((m) => {
+    const isMine = m.senderUserId === userId;
+    const senderKind: "SEEKER" | "EMPLOYER" = m.senderUserId === seekerUserId ? "SEEKER" : "EMPLOYER";
+    const sender = isMine || senderKind === "SEEKER" ? undefined : byId.get(m.senderUserId);
+    return {
+      ...m,
+      isMine,
+      senderKind,
+      senderLabel: sender?.email ?? null,
+      senderPhotoUrl: sender?.avatarUrl ?? null,
+      senderRoleLabel: sender?.companyMemberships[0]
+        ? companyMemberRoleLabel(sender.companyMemberships[0].role)
+        : sender && companyOwnerUserId && m.senderUserId === companyOwnerUserId
+          ? "Owner"
+          : null,
+    };
+  });
+}
+
 export async function getConversationThread(userId: string, role: string, conversationId: string) {
-  const conversation = await requireConversationAccess(userId, role, conversationId);
-
-  const messages = await prisma.message.findMany({
-    where: { conversationId },
-    orderBy: { createdAt: "asc" },
-    select: {
-      id: true,
-      body: true,
-      createdAt: true,
-      senderUserId: true,
-      readAt: true,
+  // One SQL JOIN for conversation + parties + messages; authorize after.
+  const conversation = await prisma.conversation.findUnique({
+    where: { id: conversationId },
+    relationLoadStrategy: "join",
+    include: {
+      ...conversationParties,
+      messages: {
+        orderBy: { createdAt: "asc" },
+        select: { id: true, body: true, createdAt: true, senderUserId: true, readAt: true },
+      },
     },
   });
+  assertConversationAccess(conversation, userId, role);
+  const { messages } = conversation;
 
-  // Access already verified above — skip a second requireConversationAccess round-trip.
-  await prisma.message.updateMany({
-    where: {
-      conversationId,
-      senderUserId: { not: userId },
-      readAt: null,
-    },
-    data: { readAt: new Date() },
-  });
+  // Fire-and-forget read receipt — never block the thread response on it.
+  void prisma.message
+    .updateMany({ where: { conversationId, senderUserId: { not: userId }, readAt: null }, data: { readAt: new Date() } })
+    .then((res) => { if (res.count > 0) invalidateInboxForConversation(conversation); })
+    .catch((err) => console.error("[messages] mark-read failed:", err));
 
-  invalidateInboxForConversation(conversation);
-
+  const annotated = await annotateSenders(messages, userId, conversation.seeker.userId, conversation.company.id, conversation.company.userId);
   return {
     id: conversation.id,
     job: conversation.job,
     company: conversation.company,
     seeker: conversation.seeker,
-    messages: messages.map((m) => ({
+    messages: annotated.map((m) => ({
       id: m.id,
       body: m.body,
       createdAt: m.createdAt.toISOString(),
       readAt: m.readAt?.toISOString() ?? null,
       senderUserId: m.senderUserId,
-      isMine: m.senderUserId === userId,
+      isMine: m.isMine,
+      senderKind: m.senderKind,
+      senderLabel: m.senderLabel,
+      senderPhotoUrl: m.senderPhotoUrl,
+      senderRoleLabel: m.senderRoleLabel,
     })),
   };
 }
@@ -101,15 +157,18 @@ export async function getMessagesAfter(
   conversationId: string,
   afterMessageId?: string
 ) {
-  const conversation = await requireConversationAccess(userId, role, conversationId);
+  // Poll path — hit every few seconds. Access check, parties, and cursor all
+  // resolve together, then one "messages after" read.
+  const [conversation, cursor] = await Promise.all([
+    prisma.conversation.findUnique({ where: { id: conversationId }, relationLoadStrategy: "join", include: conversationParties }),
+    afterMessageId
+      ? prisma.message.findFirst({ where: { id: afterMessageId, conversationId }, select: { createdAt: true, id: true } })
+      : Promise.resolve(null),
+  ]);
+  assertConversationAccess(conversation, userId, role);
 
   let messages;
   if (afterMessageId) {
-    const cursor = await prisma.message.findFirst({
-      where: { id: afterMessageId, conversationId },
-      select: { createdAt: true, id: true },
-    });
-
     messages = cursor
       ? await prisma.message.findMany({
           where: {
@@ -142,23 +201,23 @@ export async function getMessagesAfter(
   }
 
   if (messages.some((m) => m.senderUserId !== userId)) {
-    await prisma.message.updateMany({
-      where: {
-        conversationId,
-        senderUserId: { not: userId },
-        readAt: null,
-      },
-      data: { readAt: new Date() },
-    });
-    invalidateInboxForConversation(conversation);
+    void prisma.message
+      .updateMany({ where: { conversationId, senderUserId: { not: userId }, readAt: null }, data: { readAt: new Date() } })
+      .then((res) => { if (res.count > 0) invalidateInboxForConversation(conversation); })
+      .catch((err) => console.error("[messages] mark-read failed:", err));
   }
 
-  return messages.map((m) => ({
+  const annotated = await annotateSenders(messages, userId, conversation.seeker.userId, conversation.company.id, conversation.company.userId);
+  return annotated.map((m) => ({
     id: m.id,
     body: m.body,
     createdAt: m.createdAt.toISOString(),
     senderUserId: m.senderUserId,
-    isMine: m.senderUserId === userId,
+    isMine: m.isMine,
+    senderKind: m.senderKind,
+    senderLabel: m.senderLabel,
+    senderPhotoUrl: m.senderPhotoUrl,
+    senderRoleLabel: m.senderRoleLabel,
   }));
 }
 
@@ -303,6 +362,10 @@ export async function sendMessage(
     readAt: null,
     senderUserId: message.senderUserId,
     isMine: true,
+    senderKind: (role === "SEEKER" ? "SEEKER" : "EMPLOYER") as "SEEKER" | "EMPLOYER",
+    senderLabel: null,
+    senderPhotoUrl: null,
+    senderRoleLabel: null,
   };
 }
 

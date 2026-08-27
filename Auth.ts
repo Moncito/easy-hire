@@ -34,6 +34,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   callbacks: {
     async jwt({ token, user }) {
       const ROLE_REFRESH_MS = 15 * 60 * 1000;
+      // When a token has never been DB-verified (initial resolve failed, e.g. a
+      // transient connection-pool timeout) we still want to retry — but on a
+      // short interval, not on every single request, or a slow/contended DB
+      // turns into a retry storm that keeps the pool exhausted.
+      const UNVERIFIED_RETRY_MS = 60 * 1000;
 
       if (user) {
         // Auth.js replaces OAuth user.id with a random UUID — resolve from DB by email.
@@ -64,8 +69,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       }
 
       const lastRefresh = (token.roleRefreshedAt as number | undefined) ?? 0;
-      const needsRefresh =
-        Date.now() - lastRefresh > ROLE_REFRESH_MS || token.idVerified !== true;
+      const interval = token.idVerified === true ? ROLE_REFRESH_MS : UNVERIFIED_RETRY_MS;
+      const needsRefresh = Date.now() - lastRefresh > interval;
 
       if (!needsRefresh && token.id && token.role) {
         return token;

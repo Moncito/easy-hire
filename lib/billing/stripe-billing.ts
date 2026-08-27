@@ -1,5 +1,6 @@
 import Stripe from "stripe";
 import { prisma } from "@/lib/prisma";
+import { invalidateCollaborativeHiringEnabled } from "@/lib/collaborative-hiring";
 
 const STRIPE_SECRET = process.env.STRIPE_SECRET_KEY;
 const PRO_PRICE_ID = process.env.STRIPE_PRO_PRICE_ID;
@@ -78,6 +79,8 @@ export async function activateProSubscription(input: {
     where: { companyId: input.companyId, status: "ACTIVE", planType: "PRO" },
   });
 
+  invalidateCollaborativeHiringEnabled(input.companyId);
+
   if (existing) {
     return prisma.subscription.update({
       where: { id: existing.id },
@@ -106,6 +109,7 @@ export async function cancelProSubscription(companyId: string) {
     where: { companyId, planType: "PRO", status: "ACTIVE" },
     data: { status: "CANCELLED" },
   });
+  invalidateCollaborativeHiringEnabled(companyId);
 }
 
 /** Updates billing period / status fields on the subscription matching a Stripe subscription id. */

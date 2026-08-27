@@ -3,7 +3,6 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { signOut } from "next-auth/react";
 import {
   LayoutDashboard,
   Briefcase,
@@ -19,6 +18,7 @@ import {
   LogOut,
   X,
 } from "lucide-react";
+import { useSignOut } from "@/components/ui/useSignOut";
 
 const primaryTabs = [
   { label: "Home", href: "/employer/dashboard", icon: LayoutDashboard },
@@ -51,6 +51,7 @@ type Props = {
 export default function EmployerMobileNav({ plan = "FREE", collaborativeHiringEnabled = false }: Props) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
+  const { signOut, overlay } = useSignOut();
   const isPro = plan === "PRO";
   const teamLink = collaborativeHiringEnabled ? [{ label: "Hiring team", href: "/employer/team", icon: UserRoundPlus }] : [];
   const links = isPro ? [...proOverflowLinks, ...teamLink, ...overflowLinks] : [...teamLink, ...overflowLinks];
@@ -107,7 +108,7 @@ export default function EmployerMobileNav({ plan = "FREE", collaborativeHiringEn
             })}
             <button
               type="button"
-              onClick={() => signOut({ callbackUrl: "/" })}
+              onClick={signOut}
               className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-ink/65 transition-colors hover:bg-ink/[0.04] hover:text-ink"
             >
               <LogOut className="h-4 w-4" strokeWidth={2} />
@@ -151,6 +152,7 @@ export default function EmployerMobileNav({ plan = "FREE", collaborativeHiringEn
           More
         </button>
       </nav>
+      {overlay}
     </>
   );
 }

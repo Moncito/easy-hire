@@ -5,12 +5,9 @@ import { useRouter } from "next/navigation";
 import JobForm, { JobFormData, JobSubmitIntent } from "@/components/employer/JobForm";
 import JobFormPageShell from "@/components/employer/JobFormPageShell";
 import { EmployerShellProvider } from "@/components/employer/EmployerShellContext";
-import RecruiterShell from "@/components/hiring/RecruiterShell";
-import type { CompanyMemberRole } from "@/lib/collaborative-hiring";
 
 type Props = {
   companyId: string;
-  role: CompanyMemberRole;
   jobId?: string;
   initialData?: JobFormData;
 };
@@ -30,7 +27,7 @@ async function submitForReview(companyId: string, jobId: string) {
   if (!res.ok) throw new Error(result.error || "Could not submit for review");
 }
 
-export default function CollaboratorJobForm({ companyId, role, jobId, initialData }: Props) {
+export default function CollaboratorJobForm({ companyId, jobId, initialData }: Props) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -49,16 +46,14 @@ export default function CollaboratorJobForm({ companyId, role, jobId, initialDat
   }
 
   return (
-    <RecruiterShell companyId={companyId} role={role} active="jobs">
-      <EmployerShellProvider plan="PRO">
-        <JobFormPageShell
-          title={jobId ? "Edit job posting" : "Post a new job"}
-          description={jobId ? "Saving changes on a live role sends it back for review before it's visible again." : "Save a draft anytime, or submit for review when you're ready to go live."}
-          footer={error ? <p className="mt-4 text-sm text-ember">{error}</p> : undefined}
-        >
-          <JobForm initialData={initialData} loading={loading} onSubmit={handleSubmit} hideAiTools />
-        </JobFormPageShell>
-      </EmployerShellProvider>
-    </RecruiterShell>
+    <EmployerShellProvider plan="PRO">
+      <JobFormPageShell
+        title={jobId ? "Edit job posting" : "Post a new job"}
+        description={jobId ? "Saving changes on a live role sends it back for review before it's visible again." : "Save a draft anytime, or submit for review when you're ready to go live."}
+        footer={error ? <p className="mt-4 text-sm text-ember">{error}</p> : undefined}
+      >
+        <JobForm initialData={initialData} loading={loading} onSubmit={handleSubmit} hideAiTools />
+      </JobFormPageShell>
+    </EmployerShellProvider>
   );
 }

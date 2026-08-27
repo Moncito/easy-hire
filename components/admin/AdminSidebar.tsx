@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LayoutDashboard, Briefcase, Building2, LogOut } from "lucide-react";
-import { signOut } from "next-auth/react";
+import { useSignOut } from "@/components/ui/useSignOut";
 
 const navItems = [
   { label: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
@@ -13,6 +13,7 @@ const navItems = [
 
 export default function AdminSidebar() {
   const pathname = usePathname();
+  const { signOut, overlay } = useSignOut();
 
   return (
     <aside className="fixed left-0 top-0 z-40 flex h-screen w-64 flex-col border-r border-ink/10 bg-white">
@@ -51,13 +52,14 @@ export default function AdminSidebar() {
       <div className="shrink-0 border-t border-ink/5 px-4 py-4">
         <button
           type="button"
-          onClick={() => signOut({ callbackUrl: "/" })}
+          onClick={signOut}
           className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-ink/60 hover:bg-ember/5 hover:text-ember"
         >
           <LogOut className="h-4.5 w-4.5" strokeWidth={2} />
           Log out
         </button>
       </div>
+      {overlay}
     </aside>
   );
 }

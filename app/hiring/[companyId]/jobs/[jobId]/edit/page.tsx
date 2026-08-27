@@ -13,7 +13,6 @@ export default async function EditCollaborativeJobPage({ params }: { params: Pro
   return (
     <CollaboratorJobForm
       companyId={companyId}
-      role={membership.role}
       jobId={job.id}
       initialData={{
         title: job.title,

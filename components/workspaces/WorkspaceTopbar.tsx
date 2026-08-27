@@ -5,8 +5,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { CompanyMemberRole } from "@/lib/collaborative-hiring";
 import type { WorkspaceSection } from "@/components/workspaces/WorkspaceForRole";
+import { resolveWorkspaceSection } from "@/components/workspaces/workspaceNavItems";
 import WorkspaceNotificationBell from "@/components/workspaces/WorkspaceNotificationBell";
 import EmployerSearchTrigger from "@/components/employer/EmployerSearchTrigger";
+import { Camera } from "lucide-react";
 import EmployerAvatar from "@/components/employer/ui/EmployerAvatar";
 import EmployerThemeToggle from "@/components/employers/EmployerThemeToggle";
 import { parseJsonBody } from "@/lib/client/fetch-json";
@@ -63,7 +65,7 @@ const sectionTitles: Record<CompanyMemberRole, Partial<Record<WorkspaceSection, 
   },
 };
 
-type CompanyBranding = {
+export type WorkspaceBranding = {
   companyName: string;
   logoUrl: string | null;
   verifiedStatus: "PENDING" | "APPROVED" | "REJECTED";
@@ -84,16 +86,19 @@ const statusLabel: Record<string, string> = {
 export default function WorkspaceTopbar({
   companyId,
   role,
-  active,
+  initialBranding = null,
 }: {
   companyId: string;
   role: CompanyMemberRole;
-  active: WorkspaceSection;
+  initialBranding?: WorkspaceBranding | null;
 }) {
-  const title = sectionTitles[role]?.[active] ?? "Hiring workspace";
   const pathname = usePathname() ?? "";
+  const active = resolveWorkspaceSection(pathname);
+  const title = sectionTitles[role]?.[active] ?? "Hiring workspace";
   const isMessages = /^\/hiring\/[^/]+\/messages/.test(pathname);
-  const [branding, setBranding] = useState<CompanyBranding | null>(null);
+  // Seeded from the server so the company name is on the first paint; the fetch
+  // below just refreshes it (logo swap, verification flip) without a flash.
+  const [branding, setBranding] = useState<WorkspaceBranding | null>(initialBranding);
 
   useEffect(() => {
     let cancelled = false;
@@ -101,7 +106,7 @@ export default function WorkspaceTopbar({
       try {
         const res = await fetch(`/api/hiring/${companyId}/branding`);
         if (!res.ok) return;
-        const data = (await parseJsonBody(res)) as CompanyBranding;
+        const data = (await parseJsonBody(res)) as WorkspaceBranding;
         if (!cancelled) setBranding(data);
       } catch {
         /* ignore */
@@ -115,7 +120,7 @@ export default function WorkspaceTopbar({
 
   return (
     <header className="employer-topbar sticky top-0 z-30 flex h-14 shrink-0 items-center gap-4 border-b border-ink/[0.08] bg-white/70 px-4 shadow-[0_1px_0_0_rgba(255,255,255,0.6)_inset] backdrop-blur-md sm:px-6">
-      <h1 className={`min-w-0 truncate font-display text-lg font-bold tracking-tight text-ink ${isMessages ? "" : "lg:hidden"}`}>
+      <h1 className="min-w-0 truncate font-display text-lg font-bold tracking-tight text-ink lg:hidden">
         {title}
       </h1>
 
@@ -149,10 +154,19 @@ export default function WorkspaceTopbar({
           </div>
         )}
 
+        <Link
+          href="/account/profile"
+          aria-label="Edit your profile photo"
+          title="Edit your profile photo"
+          className="grid h-8 w-8 shrink-0 cursor-pointer place-items-center rounded-full text-ink/45 transition hover:bg-ink/[0.04] hover:text-ink"
+        >
+          <Camera className="h-4 w-4" strokeWidth={2} />
+        </Link>
+
         {branding && (
           <Link
             href={`/hiring/${companyId}/company-profile`}
-            className="flex cursor-pointer items-center gap-2 rounded-lg py-1 pl-1 pr-2 transition hover:bg-ink/[0.04]"
+            className="flex items-center gap-2 rounded-lg py-1 pl-1 pr-2 transition hover:bg-ink/[0.04]"
           >
             <EmployerAvatar
               name={branding.companyName}
@@ -161,14 +175,14 @@ export default function WorkspaceTopbar({
               shape="rounded"
               fallbackClassName="bg-teal text-white shadow-sm shadow-teal/25"
             />
-            <div className="hidden max-w-[140px] md:block">
+            <span className="hidden max-w-[140px] md:block">
               <span className="employer-topbar-company-name flex items-center gap-1.5 truncate text-sm font-medium text-ink">
                 {branding.companyName}
               </span>
               <span className="employer-topbar-company-role block truncate text-[10px] text-ink/45">
                 {roleLabel[role]}
               </span>
-            </div>
+            </span>
           </Link>
         )}
       </div>

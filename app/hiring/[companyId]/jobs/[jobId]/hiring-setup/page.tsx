@@ -5,7 +5,6 @@ import { auth } from "@/Auth";
 import { getHiringSetup, DEFAULT_CRITERIA } from "@/lib/hiring-setup";
 import { getActiveCompanyMembership } from "@/lib/collaborative-hiring";
 import HiringSetupForm from "@/components/employer/hiring-setup/HiringSetupForm";
-import RecruiterShell from "@/components/hiring/RecruiterShell";
 
 export default async function CollaboratorHiringSetupPage({
   params,
@@ -23,8 +22,7 @@ export default async function CollaboratorHiringSetupPage({
   const membership = await getActiveCompanyMembership(companyId, session.user.id);
 
   return (
-    <RecruiterShell companyId={companyId} jobId={jobId} role={membership?.role} active="queue">
-      <div className="mx-auto max-w-6xl">
+    <div className="mx-auto max-w-6xl">
         <Link
           href={`/hiring/${companyId}/jobs/${jobId}`}
           className="group inline-flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm font-semibold text-teal transition-colors hover:bg-teal/10 hover:text-teal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal"
@@ -52,7 +50,6 @@ export default async function CollaboratorHiringSetupPage({
             criteria: setup.template?.criteria.map((criterion) => criterion.label) ?? DEFAULT_CRITERIA,
           }}
         />
-      </div>
-    </RecruiterShell>
+    </div>
   );
 }

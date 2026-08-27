@@ -1,13 +1,10 @@
 import Link from "next/link";
 import { ExternalLink, Globe, MapPin, ShieldCheck, Users } from "lucide-react";
 import EmployerAvatar from "@/components/employer/ui/EmployerAvatar";
-import RecruiterShell from "@/components/hiring/RecruiterShell";
-import type { CompanyMemberRole } from "@/lib/collaborative-hiring";
 import type { Company } from "@prisma/client";
 
 type Props = {
   companyId: string;
-  role: CompanyMemberRole;
   company: Company;
   activeJobsCount: number;
   totalApplicantsCount: number;
@@ -19,10 +16,10 @@ const verificationCopy: Record<Company["verifiedStatus"], { label: string; tone:
   REJECTED: { label: "Verification needs an update", tone: "text-ember" },
 };
 
-export default function CollaboratorCompanyProfile({ companyId, role, company, activeJobsCount, totalApplicantsCount }: Props) {
+export default function CollaboratorCompanyProfile({ companyId, company, activeJobsCount, totalApplicantsCount }: Props) {
   const verification = verificationCopy[company.verifiedStatus];
   return (
-    <RecruiterShell companyId={companyId} role={role} active="company-profile">
+    <>
         <header className="flex items-start justify-between gap-4 border-b border-ink/10 pb-6">
           <div className="flex min-w-0 items-center gap-4">
             <EmployerAvatar name={company.companyName} imageUrl={company.logoUrl} size="lg" shape="rounded" />
@@ -68,7 +65,7 @@ export default function CollaboratorCompanyProfile({ companyId, role, company, a
         </section>
 
         <p className="mt-8 text-xs text-ink/40">Editing the company profile is limited to the account owner.</p>
-    </RecruiterShell>
+    </>
   );
 }
 

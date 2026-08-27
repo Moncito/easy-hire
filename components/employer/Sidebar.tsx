@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { signOut } from "next-auth/react";
 import {
   LayoutDashboard,
   Briefcase,
@@ -18,6 +17,8 @@ import {
   Sparkles,
 } from "lucide-react";
 import { useEmployerShell } from "@/components/employer/EmployerShellContext";
+import { useRailTooltip } from "@/components/workspaces/useRailTooltip";
+import { useSignOut } from "@/components/ui/useSignOut";
 import ProBadge from "@/components/employer/pro/ProBadge";
 
 type NavCounts = {
@@ -51,52 +52,54 @@ function NavLink({
   isPro?: boolean;
 }) {
   const Icon = item.icon;
+  const { anchorProps, tooltip } = useRailTooltip(
+    badge ? `${item.label} (${badge})` : item.label,
+    !expanded
+  );
 
   return (
-    <Link
-      href={item.href}
-      title={expanded ? undefined : item.label}
-      className={`group relative flex items-center rounded-xl transition-all duration-200 ${
-        expanded ? "gap-3 px-3 py-2.5" : "h-10 w-10 justify-center"
-      } ${
-        isActive
-          ? isPro
-            ? "bg-marigold text-ink shadow-sm shadow-marigold/25"
-            : "bg-teal text-white shadow-lg shadow-teal/30"
-          : isPro
-            ? "text-ink/50 hover:bg-ink/[0.04] hover:text-ink"
-            : "text-mist/55 hover:bg-white/8 hover:text-mist"
-      }`}
-    >
-      <Icon
-        className={`h-[18px] w-[18px] shrink-0 transition-transform duration-200 ${
-          isActive ? "scale-105" : "group-hover:scale-105"
+    <>
+      <Link
+        href={item.href}
+        title={expanded ? undefined : item.label}
+        {...anchorProps}
+        className={`group relative flex items-center rounded-xl transition-all duration-200 ${
+          expanded ? "gap-3 px-3 py-2.5" : "h-10 w-10 justify-center"
+        } ${
+          isActive
+            ? isPro
+              ? "bg-marigold text-ink shadow-sm shadow-marigold/25"
+              : "bg-teal text-white shadow-lg shadow-teal/30"
+            : isPro
+              ? "text-ink/50 hover:bg-ink/[0.04] hover:text-ink"
+              : "text-mist/55 hover:bg-white/8 hover:text-mist"
         }`}
-        strokeWidth={2}
-      />
-      {expanded && <span className="flex-1 text-sm font-medium">{item.label}</span>}
-      {badge !== undefined && badge > 0 && (
-        <span
-          className={`flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[10px] font-bold ${
-            isActive
-              ? isPro
-                ? "bg-ink/10 text-ink"
-                : "bg-white/20 text-white"
-              : isPro
-                ? "bg-marigold text-ink"
-                : "bg-teal/20 text-teal"
-          } ${expanded ? "" : "absolute -right-0.5 -top-0.5 h-4 min-w-4 text-[9px]"}`}
-        >
-          {badge > 99 ? "99+" : badge}
-        </span>
-      )}
-      {!expanded && (
-        <span className="pointer-events-none absolute left-full z-50 ml-3 whitespace-nowrap rounded-lg bg-ink px-2.5 py-1.5 text-xs font-medium text-mist opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100">
-          {item.label}
-          {badge ? ` (${badge})` : ""}
-        </span>
-      )}
-    </Link>
+      >
+        <Icon
+          className={`h-[18px] w-[18px] shrink-0 transition-transform duration-200 ${
+            isActive ? "scale-105" : "group-hover:scale-105"
+          }`}
+          strokeWidth={2}
+        />
+        {expanded && <span className="min-w-0 flex-1 truncate text-sm font-medium">{item.label}</span>}
+        {badge !== undefined && badge > 0 && (
+          <span
+            className={`flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[10px] font-bold ${
+              isActive
+                ? isPro
+                  ? "bg-ink/10 text-ink"
+                  : "bg-white/20 text-white"
+                : isPro
+                  ? "bg-marigold text-ink"
+                  : "bg-teal/20 text-teal"
+            } ${expanded ? "" : "absolute -right-0.5 -top-0.5 h-4 min-w-4 text-[9px]"}`}
+          >
+            {badge > 99 ? "99+" : badge}
+          </span>
+        )}
+      </Link>
+      {tooltip}
+    </>
   );
 }
 
@@ -111,6 +114,7 @@ export default function Sidebar({
 }) {
   const pathname = usePathname();
   const { expanded, toggleExpanded } = useEmployerShell();
+  const { signOut, overlay } = useSignOut();
   const isPro = plan === "PRO";
 
   return (
@@ -130,7 +134,7 @@ export default function Sidebar({
       >
         <Link
           href="/"
-          className="flex items-center gap-2.5 transition-transform hover:scale-[1.02]"
+          className="flex min-w-0 items-center gap-2.5 overflow-hidden transition-transform hover:scale-[1.02]"
           title="EasyHire home"
         >
           <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-full shadow-sm">
@@ -145,7 +149,7 @@ export default function Sidebar({
           </div>
           {expanded && (
             <span
-              className={`flex items-center gap-1.5 font-display text-base font-black tracking-tighter ${
+              className={`flex items-center gap-1.5 whitespace-nowrap font-display text-base font-black tracking-tighter ${
                 isPro ? "text-ink" : "text-mist"
               }`}
             >
@@ -188,7 +192,7 @@ export default function Sidebar({
       )}
 
       <nav
-        className={`flex flex-1 flex-col gap-1 overflow-y-auto py-3 ${
+        className={`flex flex-1 flex-col gap-1 overflow-y-auto overflow-x-hidden py-3 ${
           expanded ? "px-3" : "items-center px-2"
         }`}
       >
@@ -245,7 +249,7 @@ export default function Sidebar({
       >
         <button
           type="button"
-          onClick={() => signOut({ callbackUrl: "/" })}
+          onClick={signOut}
           title={expanded ? undefined : "Log out"}
           className={`group relative flex w-full items-center rounded-xl transition hover:bg-ink/[0.04] hover:text-ink ${
             isPro ? "text-ink/45" : "text-mist/50"
@@ -260,6 +264,7 @@ export default function Sidebar({
           )}
         </button>
       </div>
+      {overlay}
     </aside>
   );
 }

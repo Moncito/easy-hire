@@ -2,16 +2,15 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { signOut } from "next-auth/react";
+import { usePathname } from "next/navigation";
 import { LayoutGrid, LogOut, Menu, X } from "lucide-react";
 import type { CompanyMemberRole } from "@/lib/collaborative-hiring";
-import type { WorkspaceSection } from "@/components/workspaces/WorkspaceForRole";
-import { getWorkspaceNavItems } from "@/components/workspaces/workspaceNavItems";
+import { getWorkspaceNavItems, resolveWorkspaceSection } from "@/components/workspaces/workspaceNavItems";
+import { useSignOut } from "@/components/ui/useSignOut";
 
 type Props = {
   companyId: string;
   role: CompanyMemberRole;
-  active: WorkspaceSection;
 };
 
 /**
@@ -21,8 +20,10 @@ type Props = {
  * comes from the shared components/workspaces/workspaceNavItems.ts module —
  * the same source the desktop sidebars use — so the two surfaces stay in sync.
  */
-export default function WorkspaceMobileNav({ companyId, role, active }: Props) {
+export default function WorkspaceMobileNav({ companyId, role }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const { signOut, overlay } = useSignOut();
+  const active = resolveWorkspaceSection(usePathname() ?? "");
   const items = getWorkspaceNavItems(role, companyId, active);
   const primaryTabs = items.filter((item) => item.primary);
   const overflowLinks = items.filter((item) => !item.primary);
@@ -79,7 +80,7 @@ export default function WorkspaceMobileNav({ companyId, role, active }: Props) {
             </Link>
             <button
               type="button"
-              onClick={() => signOut({ callbackUrl: "/" })}
+              onClick={signOut}
               className="flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-ink/65 transition-colors hover:bg-ink/[0.04] hover:text-ink"
             >
               <LogOut className="h-4 w-4" strokeWidth={2} />
@@ -99,12 +100,12 @@ export default function WorkspaceMobileNav({ companyId, role, active }: Props) {
             <Link
               key={tab.href}
               href={tab.href}
-              className={`flex flex-1 cursor-pointer flex-col items-center justify-center gap-0.5 text-[10px] font-semibold transition-colors ${
+              className={`flex min-w-0 flex-1 cursor-pointer flex-col items-center justify-center gap-0.5 text-[10px] font-semibold transition-colors ${
                 tab.active ? "text-teal" : "text-ink/45"
               }`}
             >
-              <Icon className={`h-5 w-5 ${tab.active ? "scale-105" : ""}`} strokeWidth={tab.active ? 2.25 : 2} />
-              {tab.label}
+              <Icon className={`h-5 w-5 shrink-0 ${tab.active ? "scale-105" : ""}`} strokeWidth={tab.active ? 2.25 : 2} />
+              <span className="max-w-full truncate px-0.5">{tab.label}</span>
             </Link>
           );
         })}
@@ -112,16 +113,17 @@ export default function WorkspaceMobileNav({ companyId, role, active }: Props) {
         <button
           type="button"
           onClick={() => setMenuOpen((v) => !v)}
-          className={`flex flex-1 cursor-pointer flex-col items-center justify-center gap-0.5 text-[10px] font-semibold transition-colors ${
+          className={`flex min-w-0 flex-1 cursor-pointer flex-col items-center justify-center gap-0.5 text-[10px] font-semibold transition-colors ${
             menuOpen || overflowActive ? "text-teal" : "text-ink/45"
           }`}
           aria-expanded={menuOpen}
           aria-label="More navigation options"
         >
-          <Menu className="h-5 w-5" strokeWidth={menuOpen || overflowActive ? 2.25 : 2} />
-          More
+          <Menu className="h-5 w-5 shrink-0" strokeWidth={menuOpen || overflowActive ? 2.25 : 2} />
+          <span className="max-w-full truncate px-0.5">More</span>
         </button>
       </nav>
+      {overlay}
     </>
   );
 }

@@ -6,7 +6,7 @@ import Link from "next/link";
 
 import { usePathname } from "next/navigation";
 
-import { signOut } from "next-auth/react";
+import { useSignOut } from "@/components/ui/useSignOut";
 
 import { useState, useRef, useEffect } from "react";
 
@@ -185,6 +185,8 @@ export default function EmployerProNavbar({
 }: Props) {
 
   const pathname = usePathname();
+
+  const { signOut, overlay } = useSignOut();
 
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -569,7 +571,7 @@ export default function EmployerProNavbar({
 
                   role="menuitem"
 
-                  onClick={() => signOut({ callbackUrl: "/" })}
+                  onClick={signOut}
 
                   className="flex w-full items-center gap-2.5 px-3 py-2.5 text-sm text-ink/65 transition hover:bg-ink/[0.04] hover:text-ink"
 
@@ -590,6 +592,8 @@ export default function EmployerProNavbar({
         </div>
 
       </div>
+
+      {overlay}
 
     </header>
 

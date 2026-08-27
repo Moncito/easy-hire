@@ -1,6 +1,10 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import WorkspaceSidebar from "@/components/workspaces/WorkspaceSidebar";
-import type { WorkspaceSection } from "@/components/workspaces/WorkspaceForRole";
-import { getWorkspaceNavItems } from "@/components/workspaces/workspaceNavItems";
-export default function RecruiterSidebar({companyId,active}:{companyId:string;active:WorkspaceSection}){return <WorkspaceSidebar title="Recruiter workspace" items={getWorkspaceNavItems("RECRUITER", companyId, active)}/>}
+import { getWorkspaceNavItems, resolveWorkspaceSection } from "@/components/workspaces/workspaceNavItems";
+
+export default function RecruiterSidebar({ companyId }: { companyId: string }) {
+  const active = resolveWorkspaceSection(usePathname() ?? "");
+  return <WorkspaceSidebar title="Recruiter workspace" items={getWorkspaceNavItems("RECRUITER", companyId, active)} />;
+}
