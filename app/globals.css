@@ -971,6 +971,20 @@ backdrop-filter:blur(6px);
   --ew-playbook-navy-start: rgb(30 58 95 / 0.05);
   --ew-getting-started-start: rgb(31 128 115 / 0.06);
   --ew-shadow: 0 1px 0 0 rgb(255 255 255 / 0.8) inset, 0 8px 24px -6px rgb(30 58 95 / 0.08);
+  /* Pro chart tokens — the ProMono* chart primitives read these. Defined here
+     (not only under [data-employer-plan="pro"]) so the collaborative hiring
+     workspace, which sets no plan attribute, still gets readable chart ink in
+     both themes. The Pro-plan blocks below override with equal-or-higher
+     specificity, so the employer Pro workspace is unaffected. */
+  --pro-chart-ink: #20242b;
+  --pro-chart-tick: rgb(32 36 43 / 0.45);
+  --pro-chart-grid: rgb(32 36 43 / 0.08);
+  --pro-chart-cursor: rgb(32 36 43 / 0.04);
+  /* chart tooltip surface / accent — track the workspace theme so the
+     collaborative workspace (no plan attr) gets a themed tooltip too */
+  --pro-surface: var(--ew-surface-solid);
+  --pro-accent: #f2a93b;
+  --pro-border: var(--ew-border-subtle);
   background-color: var(--ew-bg);
   color: var(--ew-text);
   transition: background-color 0.3s ease, color 0.3s ease;
@@ -992,6 +1006,11 @@ backdrop-filter:blur(6px);
   --ew-playbook-navy-start: rgb(30 58 95 / 0.2);
   --ew-getting-started-start: rgb(31 128 115 / 0.14);
   --ew-shadow: 0 1px 0 0 rgb(255 255 255 / 0.04) inset, 0 8px 24px -6px rgb(0 0 0 / 0.35);
+  /* light-on-dark chart ink for the collaborative workspace (see note above) */
+  --pro-chart-ink: #f4f4f5;
+  --pro-chart-tick: rgb(244 244 245 / 0.45);
+  --pro-chart-grid: rgb(244 244 245 / 0.08);
+  --pro-chart-cursor: rgb(244 244 245 / 0.06);
 }
 
 .employer-ws-surface {
