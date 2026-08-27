@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { signOut } from "next-auth/react";
 import { Bell, ChevronRight, LogOut } from "lucide-react";
+import { useSignOut } from "@/components/ui/useSignOut";
 
 export default function SeekerProfileAccountLinks() {
   const pathname = usePathname();
+  const { signOut, overlay } = useSignOut();
   const alertsActive =
     pathname === "/seeker/job-alerts" || pathname.startsWith("/seeker/job-alerts/");
 
@@ -37,7 +38,7 @@ export default function SeekerProfileAccountLinks() {
 
       <button
         type="button"
-        onClick={() => signOut({ callbackUrl: "/" })}
+        onClick={signOut}
         className="flex flex-1 items-center justify-between gap-3 rounded-2xl bg-ink/[0.03] px-4 py-3.5 ring-1 ring-ink/8 transition hover:bg-ink/[0.05] sm:max-w-[12rem]"
       >
         <span className="flex items-center gap-3">
@@ -47,6 +48,7 @@ export default function SeekerProfileAccountLinks() {
           <span className="text-sm font-semibold text-ink/75">Sign out</span>
         </span>
       </button>
+      {overlay}
     </div>
   );
 }

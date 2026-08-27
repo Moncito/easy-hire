@@ -3,10 +3,10 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { signOut } from "next-auth/react";
 import { LayoutGrid, LogOut, Menu, X } from "lucide-react";
 import type { CompanyMemberRole } from "@/lib/collaborative-hiring";
 import { getWorkspaceNavItems, resolveWorkspaceSection } from "@/components/workspaces/workspaceNavItems";
+import { useSignOut } from "@/components/ui/useSignOut";
 
 type Props = {
   companyId: string;
@@ -22,6 +22,7 @@ type Props = {
  */
 export default function WorkspaceMobileNav({ companyId, role }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const { signOut, overlay } = useSignOut();
   const active = resolveWorkspaceSection(usePathname() ?? "");
   const items = getWorkspaceNavItems(role, companyId, active);
   const primaryTabs = items.filter((item) => item.primary);
@@ -79,7 +80,7 @@ export default function WorkspaceMobileNav({ companyId, role }: Props) {
             </Link>
             <button
               type="button"
-              onClick={() => signOut({ callbackUrl: "/" })}
+              onClick={signOut}
               className="flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-ink/65 transition-colors hover:bg-ink/[0.04] hover:text-ink"
             >
               <LogOut className="h-4 w-4" strokeWidth={2} />
@@ -122,6 +123,7 @@ export default function WorkspaceMobileNav({ companyId, role }: Props) {
           <span className="max-w-full truncate px-0.5">More</span>
         </button>
       </nav>
+      {overlay}
     </>
   );
 }

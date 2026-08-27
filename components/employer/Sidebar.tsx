@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { signOut } from "next-auth/react";
 import {
   LayoutDashboard,
   Briefcase,
@@ -19,6 +18,7 @@ import {
 } from "lucide-react";
 import { useEmployerShell } from "@/components/employer/EmployerShellContext";
 import { useRailTooltip } from "@/components/workspaces/useRailTooltip";
+import { useSignOut } from "@/components/ui/useSignOut";
 import ProBadge from "@/components/employer/pro/ProBadge";
 
 type NavCounts = {
@@ -114,6 +114,7 @@ export default function Sidebar({
 }) {
   const pathname = usePathname();
   const { expanded, toggleExpanded } = useEmployerShell();
+  const { signOut, overlay } = useSignOut();
   const isPro = plan === "PRO";
 
   return (
@@ -248,7 +249,7 @@ export default function Sidebar({
       >
         <button
           type="button"
-          onClick={() => signOut({ callbackUrl: "/" })}
+          onClick={signOut}
           title={expanded ? undefined : "Log out"}
           className={`group relative flex w-full items-center rounded-xl transition hover:bg-ink/[0.04] hover:text-ink ${
             isPro ? "text-ink/45" : "text-mist/50"
@@ -263,6 +264,7 @@ export default function Sidebar({
           )}
         </button>
       </div>
+      {overlay}
     </aside>
   );
 }

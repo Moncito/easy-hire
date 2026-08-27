@@ -3,11 +3,11 @@
 import { useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { signOut } from "next-auth/react";
 import { LayoutGrid, LogOut, PanelLeft } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useWorkspaceShell } from "@/components/workspaces/WorkspaceShellContext";
 import { useRailTooltip } from "@/components/workspaces/useRailTooltip";
+import { useSignOut } from "@/components/ui/useSignOut";
 import FullScreenLoader from "@/components/ui/FullScreenLoader";
 import ProBadge from "@/components/employer/pro/ProBadge";
 
@@ -104,6 +104,7 @@ function RailFooterItem({
 
 export default function WorkspaceSidebar({ title, items }: { title: string; items: WorkspaceNavItem[] }) {
   const { expanded, toggleExpanded } = useWorkspaceShell();
+  const { signOut, overlay } = useSignOut();
 
   return (
     <aside
@@ -165,8 +166,9 @@ export default function WorkspaceSidebar({ title, items }: { title: string; item
 
       <div className={`shrink-0 border-t border-ink/[0.06] py-3 ${expanded ? "space-y-1 px-3" : "flex flex-col items-center gap-1 px-2"}`}>
         <RailFooterItem label="Switch workspace" expanded={expanded} icon={LayoutGrid} href="/hiring" loadingLabel="Switching workspace…" />
-        <RailFooterItem label="Log out" expanded={expanded} icon={LogOut} onClick={() => signOut({ callbackUrl: "/" })} />
+        <RailFooterItem label="Log out" expanded={expanded} icon={LogOut} onClick={signOut} />
       </div>
+      {overlay}
     </aside>
   );
 }
