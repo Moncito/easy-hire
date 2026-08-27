@@ -1,6 +1,10 @@
 generator client {
-  provider      = "prisma-client-js"
-  binaryTargets = ["native", "rhel-openssl-3.0.x"]
+  provider        = "prisma-client-js"
+  binaryTargets   = ["native", "rhel-openssl-3.0.x"]
+  // Lets hot read paths opt into a single SQL JOIN (relationLoadStrategy: "join")
+  // instead of Prisma's default one-query-per-relation, which is costly when the
+  // DB sits ~150ms away. Opt-in per query — default strategy is unchanged.
+  previewFeatures = ["relationJoins"]
 }
 
 datasource db {

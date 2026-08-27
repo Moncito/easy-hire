@@ -45,8 +45,32 @@ export async function isCollaborativeHiringEnabled(companyId: string): Promise<b
   return pro || company?.collaborativeHiringEnabled === true;
 }
 
+/**
+ * Short-lived in-process cache for the enablement gate. Every messaging request
+ * (list, open thread, 2.5s poll, send) runs this check; each uncached call is
+ * two round-trips to a DB that can sit ~150ms+ away. Enable/disable and plan
+ * changes are rare, so a 60s stale window is an acceptable trade for cutting
+ * that fixed cost off every request. Per-instance — no cross-process coherence
+ * needed for a value this forgiving.
+ */
+const COLLAB_ENABLED_TTL_MS = 60_000;
+const collabEnabledCache = new Map<string, { value: boolean; expires: number }>();
+
+export async function isCollaborativeHiringEnabledCached(companyId: string): Promise<boolean> {
+  const hit = collabEnabledCache.get(companyId);
+  if (hit && hit.expires > Date.now()) return hit.value;
+  const value = await isCollaborativeHiringEnabled(companyId);
+  collabEnabledCache.set(companyId, { value, expires: Date.now() + COLLAB_ENABLED_TTL_MS });
+  return value;
+}
+
+/** Drop the cached enablement flag for a company (call after enabling/disabling or a plan change). */
+export function invalidateCollaborativeHiringEnabled(companyId: string) {
+  collabEnabledCache.delete(companyId);
+}
+
 export async function requireCollaborativeHiringEnabled(companyId: string) {
-  if (!(await isCollaborativeHiringEnabled(companyId))) {
+  if (!(await isCollaborativeHiringEnabledCached(companyId))) {
     throw new ApiError("Collaborative Hiring is not enabled for this company.", 403);
   }
 }

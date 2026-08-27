@@ -17,35 +17,55 @@ import type { ConversationListItem } from "@/lib/messages";
  * untouched.
  */
 
+const conversationParties = {
+  company: { select: { id: true, userId: true, companyName: true, logoUrl: true } },
+  seeker: { select: { id: true, userId: true, fullName: true, headline: true, photoUrl: true } },
+  job: { select: { id: true, title: true } },
+} as const;
+
+// The membership check and the conversation lookup don't depend on each other,
+// so run them together — one DB round-trip instead of two. Authorization is
+// still enforced: if the membership check rejects, Promise.all rejects and the
+// conversation row is never returned.
 export async function requireConversationInCompany(companyId: string, actorUserId: string, conversationId: string) {
-  await requireCompanyMembership(companyId, actorUserId, "messages:manage");
-  const conversation = await prisma.conversation.findFirst({
-    where: { id: conversationId, companyId },
-    include: {
-      company: { select: { id: true, userId: true, companyName: true, logoUrl: true } },
-      seeker: { select: { id: true, userId: true, fullName: true, headline: true, photoUrl: true } },
-      job: { select: { id: true, title: true } },
-    },
-  });
+  const [, conversation] = await Promise.all([
+    requireCompanyMembership(companyId, actorUserId, "messages:manage"),
+    prisma.conversation.findFirst({ where: { id: conversationId, companyId }, relationLoadStrategy: "join", include: conversationParties }),
+  ]);
   if (!conversation) throw new ApiError("Conversation not found", 404);
   return conversation;
 }
 
-export async function listCollaborativeConversations(companyId: string, actorUserId: string): Promise<ConversationListItem[]> {
-  await requireCompanyMembership(companyId, actorUserId, "messages:manage");
+/** Fire-and-forget read receipt — never block the thread response on it. */
+function markReadInBackground(companyId: string, conversationId: string, actorUserId: string, companyUserId: string, seekerUserId: string) {
+  void prisma.message
+    .updateMany({ where: { conversationId, senderUserId: { not: actorUserId }, readAt: null }, data: { readAt: new Date() } })
+    .then((res) => {
+      if (res.count > 0) {
+        invalidateConversationsForParticipants(companyUserId, seekerUserId);
+        invalidateEmployerNav(companyId);
+      }
+    })
+    .catch((err) => console.error("[collaborative-messages] mark-read failed:", err));
+}
 
-  const conversations = await prisma.conversation.findMany({
-    where: { companyId },
-    orderBy: { lastMessageAt: "desc" },
-    select: {
-      id: true,
-      lastMessageAt: true,
-      seekerId: true,
-      company: { select: { id: true, companyName: true, logoUrl: true } },
-      seeker: { select: { id: true, fullName: true, headline: true, photoUrl: true } },
-      job: { select: { id: true, title: true } },
-    },
-  });
+export async function listCollaborativeConversations(companyId: string, actorUserId: string): Promise<ConversationListItem[]> {
+  const [, conversations] = await Promise.all([
+    requireCompanyMembership(companyId, actorUserId, "messages:manage"),
+    prisma.conversation.findMany({
+      where: { companyId },
+      orderBy: { lastMessageAt: "desc" },
+      relationLoadStrategy: "join",
+      select: {
+        id: true,
+        lastMessageAt: true,
+        seekerId: true,
+        company: { select: { id: true, companyName: true, logoUrl: true } },
+        seeker: { select: { id: true, fullName: true, headline: true, photoUrl: true } },
+        job: { select: { id: true, title: true } },
+      },
+    }),
+  ]);
   if (conversations.length === 0) return [];
 
   const conversationIds = conversations.map((c) => c.id);
@@ -101,7 +121,8 @@ export async function annotateSenders<T extends { senderUserId: string }>(
   messages: T[],
   actorUserId: string,
   seekerUserId: string,
-  companyId: string
+  companyId: string,
+  companyOwnerUserId?: string
 ): Promise<
   (T & {
     isMine: boolean;
@@ -130,28 +151,38 @@ export async function annotateSenders<T extends { senderUserId: string }>(
       senderKind,
       senderLabel: sender?.email ?? null,
       senderPhotoUrl: sender?.avatarUrl ?? null,
-      senderRoleLabel: sender?.companyMemberships[0] ? companyMemberRoleLabel(sender.companyMemberships[0].role) : null,
+      senderRoleLabel: sender?.companyMemberships[0]
+        ? companyMemberRoleLabel(sender.companyMemberships[0].role)
+        : sender && companyOwnerUserId && m.senderUserId === companyOwnerUserId
+          ? "Owner"
+          : null,
     };
   });
 }
 
 export async function getCollaborativeConversationThread(companyId: string, actorUserId: string, conversationId: string) {
-  const conversation = await requireConversationInCompany(companyId, actorUserId, conversationId);
+  // membership check ∥ conversation-with-messages in one round-trip
+  // One SQL JOIN for conversation + parties + messages, in parallel with the
+  // membership check — a single DB round-trip instead of five.
+  const [, conversation] = await Promise.all([
+    requireCompanyMembership(companyId, actorUserId, "messages:manage"),
+    prisma.conversation.findFirst({
+      where: { id: conversationId, companyId },
+      relationLoadStrategy: "join",
+      include: {
+        ...conversationParties,
+        messages: {
+          orderBy: { createdAt: "asc" },
+          select: { id: true, body: true, createdAt: true, senderUserId: true, readAt: true },
+        },
+      },
+    }),
+  ]);
+  if (!conversation) throw new ApiError("Conversation not found", 404);
 
-  const messages = await prisma.message.findMany({
-    where: { conversationId },
-    orderBy: { createdAt: "asc" },
-    select: { id: true, body: true, createdAt: true, senderUserId: true, readAt: true },
-  });
+  markReadInBackground(companyId, conversationId, actorUserId, conversation.company.userId, conversation.seeker.userId);
 
-  await prisma.message.updateMany({
-    where: { conversationId, senderUserId: { not: actorUserId }, readAt: null },
-    data: { readAt: new Date() },
-  });
-  invalidateConversationsForParticipants(conversation.company.userId, conversation.seeker.userId);
-  invalidateEmployerNav(companyId);
-
-  const annotated = await annotateSenders(messages, actorUserId, conversation.seeker.userId, companyId);
+  const annotated = await annotateSenders(conversation.messages, actorUserId, conversation.seeker.userId, companyId, conversation.company.userId);
   return {
     id: conversation.id,
     job: conversation.job,
@@ -173,11 +204,19 @@ export async function getCollaborativeConversationThread(companyId: string, acto
 }
 
 export async function getCollaborativeMessagesAfter(companyId: string, actorUserId: string, conversationId: string, afterMessageId?: string) {
-  const conversation = await requireConversationInCompany(companyId, actorUserId, conversationId);
+  // Poll path — hit ~every few seconds. Membership check, conversation parties,
+  // and the cursor lookup all run together, then a single "messages after" read.
+  const [, conversation, cursor] = await Promise.all([
+    requireCompanyMembership(companyId, actorUserId, "messages:manage"),
+    prisma.conversation.findFirst({ where: { id: conversationId, companyId }, relationLoadStrategy: "join", include: conversationParties }),
+    afterMessageId
+      ? prisma.message.findFirst({ where: { id: afterMessageId, conversationId }, select: { createdAt: true, id: true } })
+      : Promise.resolve(null),
+  ]);
+  if (!conversation) throw new ApiError("Conversation not found", 404);
 
   let messages;
   if (afterMessageId) {
-    const cursor = await prisma.message.findFirst({ where: { id: afterMessageId, conversationId }, select: { createdAt: true, id: true } });
     messages = cursor
       ? await prisma.message.findMany({
           where: { conversationId, OR: [{ createdAt: { gt: cursor.createdAt } }, { createdAt: cursor.createdAt, id: { gt: cursor.id } }] },
@@ -194,12 +233,10 @@ export async function getCollaborativeMessagesAfter(companyId: string, actorUser
   }
 
   if (messages.some((m) => m.senderUserId !== actorUserId)) {
-    await prisma.message.updateMany({ where: { conversationId, senderUserId: { not: actorUserId }, readAt: null }, data: { readAt: new Date() } });
-    invalidateConversationsForParticipants(conversation.company.userId, conversation.seeker.userId);
-    invalidateEmployerNav(companyId);
+    markReadInBackground(companyId, conversationId, actorUserId, conversation.company.userId, conversation.seeker.userId);
   }
 
-  const annotated = await annotateSenders(messages, actorUserId, conversation.seeker.userId, companyId);
+  const annotated = await annotateSenders(messages, actorUserId, conversation.seeker.userId, companyId, conversation.company.userId);
   return annotated.map((m) => ({
     id: m.id,
     body: m.body,

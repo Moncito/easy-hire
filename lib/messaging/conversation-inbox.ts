@@ -37,6 +37,7 @@ export async function listConversationsForUser(userId: string, role: string) {
   const conversations = await prisma.conversation.findMany({
     where,
     orderBy: { lastMessageAt: "desc" },
+    relationLoadStrategy: "join",
     select: {
       id: true,
       lastMessageAt: true,

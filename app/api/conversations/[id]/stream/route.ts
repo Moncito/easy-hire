@@ -20,6 +20,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       actorUserId: session.user.id,
       seekerUserId: conversation.seeker.userId,
       companyId: conversation.company.id,
+      companyOwnerUserId: conversation.company.userId,
       annotate: annotateSenders,
       signal: request.signal,
     });

@@ -18,6 +18,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ comp
       actorUserId: session.user.id,
       seekerUserId: conversation.seeker.userId,
       companyId,
+      companyOwnerUserId: conversation.company.userId,
       annotate: annotateSenders,
       signal: request.signal,
     });

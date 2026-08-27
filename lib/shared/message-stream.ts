@@ -20,7 +20,8 @@ type AnnotateFn = (
   messages: { id: string; senderUserId: string }[],
   actorUserId: string,
   seekerUserId: string,
-  companyId: string
+  companyId: string,
+  companyOwnerUserId?: string
 ) => Promise<({ id: string; senderUserId: string } & AnnotatedShape)[]>;
 
 /**
@@ -38,10 +39,11 @@ export function createMessageStreamResponse(params: {
   actorUserId: string;
   seekerUserId: string;
   companyId: string;
+  companyOwnerUserId?: string;
   annotate: AnnotateFn;
   signal: AbortSignal;
 }): Response {
-  const { conversationId, actorUserId, seekerUserId, companyId, annotate, signal } = params;
+  const { conversationId, actorUserId, seekerUserId, companyId, companyOwnerUserId, annotate, signal } = params;
   const encoder = new TextEncoder();
 
   const stream = new ReadableStream({
@@ -58,7 +60,7 @@ export function createMessageStreamResponse(params: {
             if (closed) return;
             try {
               const raw = payload.new as RawMessageRow;
-              const [annotated] = await annotate([{ id: raw.id, senderUserId: raw.sender_user_id }], actorUserId, seekerUserId, companyId);
+              const [annotated] = await annotate([{ id: raw.id, senderUserId: raw.sender_user_id }], actorUserId, seekerUserId, companyId, companyOwnerUserId);
               const message = {
                 id: raw.id,
                 body: raw.body,

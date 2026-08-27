@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/lib/api-error";
 import { adminCompanyReviewSchema } from "@/lib/validations/admin";
+import { invalidateCollaborativeHiringEnabled } from "@/lib/collaborative-hiring";
 
 export async function listPendingCompanies() {
   return prisma.company.findMany({
@@ -36,6 +37,7 @@ export async function setCollaborativeHiringEnabled(companyId: string, enabled: 
     select: { id: true, collaborativeHiringEnabled: true },
   }).catch(() => null);
   if (!company) throw new ApiError("Company not found", 404);
+  invalidateCollaborativeHiringEnabled(companyId);
   return company;
 }
 

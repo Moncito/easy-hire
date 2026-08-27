@@ -33,10 +33,13 @@ type ListFilter = "ALL" | "UNREAD" | "INTERVIEWS" | "HIRED";
 type Thread = { id: string; job: { id: string; title: string } | null; seeker: { id: string; fullName: string; headline: string | null; photoUrl: string | null }; messages: ThreadMessage[] };
 
 const LIST_POLL_MS = 4000;
-// Live delivery comes from the SSE stream (see the activeId effect below) —
-// this is just a reconciliation safety net for whenever the stream drops
-// (network blip, serverless function recycle) and picks back up on reconnect.
-const THREAD_FALLBACK_POLL_MS = 20000;
+// Open-thread live delivery is a short poll with an `after` cursor (one cheap
+// indexed read). A server-relayed SSE stream was tried here but each viewer
+// held a long-lived request + its own upstream WebSocket, which starves the
+// dev server's worker pool and adds little over a 3s poll for recruiter↔
+// candidate messaging. If sub-second delivery is ever needed, subscribe to
+// Supabase Realtime directly from the browser (anon key + RLS) instead.
+const THREAD_POLL_MS = 3000;
 
 function formatTime(iso: string) {
   return new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
@@ -59,6 +62,13 @@ function isTeammateMessage(msg: ThreadMessage) {
   return !msg.isMine && msg.senderKind === "EMPLOYER";
 }
 
+// "Recruiter | jane@acme.com" — role and identity together so the reader
+// never has to guess which teammate on the company side sent a message.
+function senderCaption(msg: ThreadMessage) {
+  if (msg.senderRoleLabel && msg.senderLabel) return `${msg.senderRoleLabel} | ${msg.senderLabel}`;
+  return msg.senderRoleLabel ?? msg.senderLabel ?? "Teammate";
+}
+
 function groupKey(msg: ThreadMessage) {
   if (msg.isMine) return "mine";
   if (isTeammateMessage(msg)) return `teammate:${msg.senderLabel ?? ""}`;
@@ -72,13 +82,19 @@ function statusBadgeClass(status: string) {
   return "bg-ink/6 text-ink/55";
 }
 
-export default function CollaboratorMessagesInbox({ companyId }: { companyId: string }) {
+export default function CollaboratorMessagesInbox({
+  companyId,
+  initialConversations,
+}: {
+  companyId: string;
+  initialConversations?: ConversationListItem[];
+}) {
   const searchParams = useSearchParams();
-  const [conversations, setConversations] = useState<ConversationListItem[]>([]);
+  const [conversations, setConversations] = useState<ConversationListItem[]>(initialConversations ?? []);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [thread, setThread] = useState<Thread | null>(null);
   const [draft, setDraft] = useState("");
-  const [loadingList, setLoadingList] = useState(true);
+  const [loadingList, setLoadingList] = useState(initialConversations === undefined);
   const [loadingThread, setLoadingThread] = useState(false);
   const [sending, setSending] = useState(false);
   const [listFilter, setListFilter] = useState<ListFilter>("ALL");
@@ -114,7 +130,10 @@ export default function CollaboratorMessagesInbox({ companyId }: { companyId: st
     }
   }, [companyId]);
 
-  useEffect(() => { void loadConversations(); }, [loadConversations]);
+  useEffect(() => {
+    const id = window.setTimeout(() => void loadConversations(initialConversations !== undefined), 0);
+    return () => window.clearTimeout(id);
+  }, [loadConversations, initialConversations]);
   useEffect(() => {
     const id = setInterval(() => void loadConversations(true), LIST_POLL_MS);
     return () => clearInterval(id);
@@ -143,31 +162,35 @@ export default function CollaboratorMessagesInbox({ companyId }: { companyId: st
     lastMessageIdRef.current = incoming.at(-1)?.id ?? lastMessageIdRef.current;
   }, []);
 
-  // Live delivery: the server relays new rows the moment they're inserted
-  // (Supabase Realtime under the hood) instead of the client polling for them.
+  // Live delivery: short poll with an `after` cursor. Also fires immediately on
+  // tab focus so a backgrounded thread catches up the moment you return.
   useEffect(() => {
     if (!activeId) return;
-    const source = new EventSource(`/api/hiring/${companyId}/conversations/${activeId}/stream`);
-    source.onmessage = (event) => {
+    let inFlight = false;
+    const tick = async () => {
+      if (inFlight || document.visibilityState === "hidden") return;
+      inFlight = true;
       try {
-        mergeIncoming(activeId, [JSON.parse(event.data) as ThreadMessage]);
+        const res = await fetch(
+          `/api/hiring/${companyId}/conversations/${activeId}/messages${lastMessageIdRef.current ? `?after=${lastMessageIdRef.current}` : ""}`,
+          { cache: "no-store" }
+        );
+        if (!res.ok) return;
+        const data = await res.json();
+        mergeIncoming(activeId, data.messages ?? []);
       } catch {
-        /* ignore malformed frame */
+        /* transient — next tick retries */
+      } finally {
+        inFlight = false;
       }
     };
-    return () => source.close();
-  }, [activeId, companyId, mergeIncoming]);
-
-  // Fallback poll — catches anything missed if the stream above drops.
-  useEffect(() => {
-    if (!activeId) return;
-    const id = setInterval(async () => {
-      const res = await fetch(`/api/hiring/${companyId}/conversations/${activeId}/messages${lastMessageIdRef.current ? `?after=${lastMessageIdRef.current}` : ""}`, { cache: "no-store" });
-      if (!res.ok) return;
-      const data = await res.json();
-      mergeIncoming(activeId, data.messages ?? []);
-    }, THREAD_FALLBACK_POLL_MS);
-    return () => clearInterval(id);
+    const id = setInterval(tick, THREAD_POLL_MS);
+    const onVisible = () => { if (document.visibilityState === "visible") void tick(); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, [activeId, companyId, mergeIncoming]);
 
   useEffect(() => {
@@ -303,7 +326,7 @@ export default function CollaboratorMessagesInbox({ companyId }: { companyId: st
                 />
               </label>
             </div>
-            <div className="flex-1 divide-y divide-ink/5 overflow-y-auto">
+            <div className="flex-1 divide-y divide-ink/5 overflow-y-auto overflow-x-hidden">
               {loadingList && !conversations.length && <p className="p-5 text-sm text-ink/45">Loading…</p>}
               {!loadingList && !filteredConversations.length && (
                 <div className="flex flex-col items-center px-6 py-14 text-center">
@@ -325,7 +348,7 @@ export default function CollaboratorMessagesInbox({ companyId }: { companyId: st
                       <span className="shrink-0 font-data text-[10px] text-ink/40">{new Date(c.lastMessageAt).toLocaleDateString()}</span>
                     </div>
                     {c.lastMessage && <p className="mt-0.5 truncate text-xs text-ink/50">{c.lastMessage.body}</p>}
-                    {c.job && <span className="mt-1 inline-block truncate rounded-full bg-ink/[0.05] px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-ink/45">{c.job.title}</span>}
+                    {c.job && <span className="mt-1 inline-block max-w-full truncate align-bottom rounded-full bg-ink/[0.05] px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-ink/45">{c.job.title}</span>}
                   </div>
                   {c.unreadCount > 0 && <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-ink px-1.5 text-[10px] font-bold text-white">{c.unreadCount}</span>}
                 </button>
@@ -441,8 +464,8 @@ export default function CollaboratorMessagesInbox({ companyId }: { companyId: st
 
                           <div className={`max-w-[75%] ${message.isMine ? "order-first" : ""}`}>
                             {teammate && isGroupStart && (
-                              <p className="mb-0.5 truncate px-1 text-[10px] font-semibold uppercase tracking-wide text-teal/70">
-                                {message.senderRoleLabel ?? message.senderLabel ?? "Teammate"}
+                              <p className="mb-0.5 truncate px-1 text-[10px] font-semibold tracking-wide text-teal/70">
+                                {senderCaption(message)}
                               </p>
                             )}
                             <div
