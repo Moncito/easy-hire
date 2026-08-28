@@ -3,6 +3,8 @@ import { Prisma } from "@prisma/client";
 import { ApiError } from "@/lib/api-error";
 import { adminJobReviewSchema } from "@/lib/validations/admin";
 import { invalidateEmployerWorkspace } from "@/lib/employer-cache";
+import { invalidatePublicJob, invalidatePublicJobsList } from "@/lib/jobs/public-cache";
+import { invalidatePublicCompany } from "@/lib/public-companies";
 
 const JOB_LISTING_DAYS = 90;
 
@@ -73,6 +75,9 @@ export async function reviewJob(jobId: string, raw: unknown) {
     ]);
 
     invalidateEmployerWorkspace(job.companyId);
+    invalidatePublicJobsList();
+    invalidatePublicJob(jobId);
+    invalidatePublicCompany(job.companyId);
     return updated;
   }
 

@@ -7,6 +7,7 @@ import { getAuthSecret } from "@/lib/auth-secret";
 // Server Components, Server Actions).
 export const authConfig = {
   secret: getAuthSecret(),
+  trustHost: true, // Allow localhost / no fixed AUTH_URL in development
   pages: {
     signIn: "/login",
   },

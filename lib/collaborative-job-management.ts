@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/lib/api-error";
 import { requireCompanyMembership } from "@/lib/collaborative-hiring";
+import { invalidateCollaboratorQueue } from "@/lib/collaborative-hiring-team";
 import { createJob, updateJob, deleteDraftJob, submitJobForReview } from "@/lib/jobs";
 import type { JobStatus } from "@/lib/jobs/status";
 
@@ -26,15 +27,20 @@ export async function getCollaborativeJobForEdit(companyId: string, actorUserId:
 
 export async function updateCollaborativeJob(companyId: string, actorUserId: string, jobId: string, raw: unknown) {
   const { job } = await requireCollaborativeJob(companyId, actorUserId, jobId);
-  return updateJob(jobId, job.status as JobStatus, raw, companyId);
+  const result = await updateJob(jobId, job.status as JobStatus, raw, companyId);
+  invalidateCollaboratorQueue(companyId);
+  return result;
 }
 
 export async function deleteCollaborativeJob(companyId: string, actorUserId: string, jobId: string) {
   const { job } = await requireCollaborativeJob(companyId, actorUserId, jobId);
   await deleteDraftJob(jobId, job.status as JobStatus, companyId);
+  invalidateCollaboratorQueue(companyId);
 }
 
 export async function submitCollaborativeJobForReview(companyId: string, actorUserId: string, jobId: string) {
   const { job } = await requireCollaborativeJob(companyId, actorUserId, jobId);
-  return submitJobForReview(job, companyId);
+  const result = await submitJobForReview(job, companyId);
+  invalidateCollaboratorQueue(companyId);
+  return result;
 }

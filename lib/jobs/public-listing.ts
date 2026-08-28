@@ -1,9 +1,16 @@
+import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import type { JobSearchInput } from "@/lib/validations/job-search";
 import { ApiError } from "@/lib/api-error";
 import { fromMonthlyEquivalent, toMonthlyEquivalent, type SalaryPeriod } from "@/lib/format";
 import { isJobCurrentlyFeatured } from "@/lib/jobs/featured";
+import { publicJobTag, publicJobsListTag } from "@/lib/public-cache-tags";
+import { reviveDates } from "@/lib/cache-utils";
+
+const PUBLIC_JOBS_LIST_REVALIDATE_SECONDS = 30;
+const PUBLIC_JOB_CATEGORIES_REVALIDATE_SECONDS = 300;
+const PUBLIC_JOB_DETAIL_REVALIDATE_SECONDS = 30;
 
 export type PublicJobListItem = {
   id: string;
@@ -184,7 +191,7 @@ function mapJob(job: {
   };
 }
 
-export async function searchPublicJobs(input: JobSearchInput): Promise<SearchResult> {
+async function searchPublicJobsUncached(input: JobSearchInput): Promise<SearchResult> {
   if (input.q && input.sort !== "salary_high") {
     try {
       return await searchPublicJobsFts(input);
@@ -194,6 +201,26 @@ export async function searchPublicJobs(input: JobSearchInput): Promise<SearchRes
   }
 
   return searchPublicJobsPrisma(input);
+}
+
+export function searchPublicJobs(input: JobSearchInput): Promise<SearchResult> {
+  const queryKey = JSON.stringify(
+    Object.keys(input)
+      .sort()
+      .reduce(
+        (acc, key) => {
+          acc[key] = (input as Record<string, unknown>)[key];
+          return acc;
+        },
+        {} as Record<string, unknown>
+      )
+  );
+
+  return unstable_cache(
+    () => searchPublicJobsUncached(input),
+    ["public-jobs-search", queryKey],
+    { revalidate: PUBLIC_JOBS_LIST_REVALIDATE_SECONDS, tags: [publicJobsListTag()] }
+  )();
 }
 
 async function searchPublicJobsPrisma(input: JobSearchInput): Promise<SearchResult> {
@@ -348,7 +375,7 @@ async function searchPublicJobsFts(input: JobSearchInput): Promise<SearchResult>
   };
 }
 
-export async function getPublicJob(jobId: string) {
+async function getPublicJobUncached(jobId: string) {
   const now = new Date();
 
   const job = await prisma.job.findFirst({
@@ -387,42 +414,63 @@ export async function getPublicJob(jobId: string) {
   return job;
 }
 
-export async function listLandingJobs(limit = 12): Promise<PublicJobListItem[]> {
-  try {
-    const jobs = await prisma.job.findMany({
-      where: { AND: baseActiveJobWhere() },
-      orderBy: [
-        FEATURED_FIRST,
-        { publishedAt: { sort: "desc", nulls: "last" } },
-        { createdAt: "desc" },
-        { id: "desc" },
-      ],
-      take: limit,
-      include: {
-        company: {
-          select: {
-            id: true,
-            companyName: true,
-            logoUrl: true,
-            verifiedStatus: true,
-            industry: true,
-          },
-        },
-      },
-    });
-    return jobs.map(mapJob);
-  } catch {
-    return [];
-  }
+export async function getPublicJob(jobId: string) {
+  const job = await unstable_cache(
+    () => getPublicJobUncached(jobId),
+    ["public-job-detail", jobId],
+    { revalidate: PUBLIC_JOB_DETAIL_REVALIDATE_SECONDS, tags: [publicJobTag(jobId), publicJobsListTag()] }
+  )();
+  return reviveDates(job);
 }
 
-export async function listJobCategories() {
-  const rows = await prisma.job.findMany({
-    where: { status: "ACTIVE", company: { verifiedStatus: "APPROVED" } },
-    select: { category: true },
-    distinct: ["category"],
-    orderBy: { category: "asc" },
-  });
+export function listLandingJobs(limit = 12): Promise<PublicJobListItem[]> {
+  return unstable_cache(
+    async () => {
+      try {
+        const jobs = await prisma.job.findMany({
+          where: { AND: baseActiveJobWhere() },
+          orderBy: [
+            FEATURED_FIRST,
+            { publishedAt: { sort: "desc", nulls: "last" } },
+            { createdAt: "desc" },
+            { id: "desc" },
+          ],
+          take: limit,
+          include: {
+            company: {
+              select: {
+                id: true,
+                companyName: true,
+                logoUrl: true,
+                verifiedStatus: true,
+                industry: true,
+              },
+            },
+          },
+        });
+        return jobs.map(mapJob);
+      } catch {
+        return [];
+      }
+    },
+    ["public-landing-jobs", String(limit)],
+    { revalidate: PUBLIC_JOBS_LIST_REVALIDATE_SECONDS, tags: [publicJobsListTag()] }
+  )();
+}
 
-  return rows.map((r) => r.category);
+export function listJobCategories() {
+  return unstable_cache(
+    async () => {
+      const rows = await prisma.job.findMany({
+        where: { status: "ACTIVE", company: { verifiedStatus: "APPROVED" } },
+        select: { category: true },
+        distinct: ["category"],
+        orderBy: { category: "asc" },
+      });
+
+      return rows.map((r) => r.category);
+    },
+    ["public-job-categories"],
+    { revalidate: PUBLIC_JOB_CATEGORIES_REVALIDATE_SECONDS, tags: [publicJobsListTag()] }
+  )();
 }

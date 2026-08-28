@@ -1,24 +1,39 @@
+import { unstable_cache, revalidateTag } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/lib/api-error";
 import { ensureSeekerProfile } from "@/lib/seekers";
+import { seekerJobAlertsTag } from "@/lib/seeker/cache-tags";
 import { createJobAlertSchema, type CreateJobAlertInput } from "@/lib/validations/job-alert";
 
-export async function listJobAlerts(userId: string) {
-  const profile = await prisma.seekerProfile.findUnique({ where: { userId } });
-  if (!profile) return [];
+const JOB_ALERTS_REVALIDATE_SECONDS = 30;
 
-  const alerts = await prisma.jobAlert.findMany({
-    where: { seekerId: profile.id },
-    orderBy: { createdAt: "desc" },
-  });
+/** Drop the cached job-alerts list for one seeker (call after create/delete). */
+export function invalidateSeekerJobAlerts(userId: string) {
+  revalidateTag(seekerJobAlertsTag(userId), "max");
+}
 
-  return alerts.map((a) => ({
-    id: a.id,
-    keywords: a.keywords,
-    category: a.category,
-    frequency: a.frequency,
-    createdAt: a.createdAt.toISOString(),
-  }));
+export function listJobAlerts(userId: string) {
+  return unstable_cache(
+    async () => {
+      const profile = await prisma.seekerProfile.findUnique({ where: { userId } });
+      if (!profile) return [];
+
+      const alerts = await prisma.jobAlert.findMany({
+        where: { seekerId: profile.id },
+        orderBy: { createdAt: "desc" },
+      });
+
+      return alerts.map((a) => ({
+        id: a.id,
+        keywords: a.keywords,
+        category: a.category,
+        frequency: a.frequency,
+        createdAt: a.createdAt.toISOString(),
+      }));
+    },
+    ["seeker-job-alerts", userId],
+    { revalidate: JOB_ALERTS_REVALIDATE_SECONDS, tags: [seekerJobAlertsTag(userId)] }
+  )();
 }
 
 export async function createJobAlert(userId: string, raw: unknown) {
@@ -45,6 +60,7 @@ export async function createJobAlert(userId: string, raw: unknown) {
       frequency: input.frequency,
     },
   });
+  invalidateSeekerJobAlerts(userId);
 
   return {
     id: alert.id,
@@ -65,5 +81,6 @@ export async function deleteJobAlert(userId: string, alertId: string) {
   }
 
   await prisma.jobAlert.delete({ where: { id: alertId } });
+  invalidateSeekerJobAlerts(userId);
   return { ok: true };
 }

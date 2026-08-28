@@ -1,12 +1,36 @@
+import { unstable_cache, revalidateTag } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { seekerInputToData, seekerUpdateSchema } from "@/lib/validations/seeker";
+import { seekerApplicationsTag, seekerProfileTag } from "@/lib/seeker/cache-tags";
+import { reviveDates } from "@/lib/cache-utils";
+
+const SEEKER_PROFILE_REVALIDATE_SECONDS = 30;
+
+function findSeekerProfileRow(userId: string) {
+  return prisma.seekerProfile.findUnique({ where: { userId } });
+}
+
+/** Existence check hit by ensureSeekerProfile on nearly every seeker page load — cached so it's not a Prisma round-trip every time. */
+async function getSeekerProfileRowCached(userId: string) {
+  const row = await unstable_cache(
+    () => findSeekerProfileRow(userId),
+    ["seeker-profile-row", userId],
+    { revalidate: SEEKER_PROFILE_REVALIDATE_SECONDS, tags: [seekerProfileTag(userId)] }
+  )();
+  return reviveDates(row);
+}
+
+/** Drop the cached profile for one seeker (call after profile create/update). */
+export function invalidateSeekerProfile(userId: string) {
+  revalidateTag(seekerProfileTag(userId), "max");
+}
 
 export async function ensureSeekerProfile(
   userId: string,
   defaults: { fullName?: string } = {}
 ) {
-  const existing = await prisma.seekerProfile.findUnique({ where: { userId } });
+  const existing = await getSeekerProfileRowCached(userId);
   if (existing) return existing;
 
   const user = await prisma.user.findUnique({ where: { id: userId } });
@@ -15,13 +39,15 @@ export async function ensureSeekerProfile(
   }
 
   try {
-    return await prisma.seekerProfile.create({
+    const created = await prisma.seekerProfile.create({
       data: {
         userId,
         fullName: defaults.fullName?.trim() || "",
         skills: [],
       },
     });
+    invalidateSeekerProfile(userId);
+    return created;
   } catch (error) {
     if (
       error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -34,26 +60,32 @@ export async function ensureSeekerProfile(
 }
 
 export async function getSeekerProfile(userId: string) {
-  return prisma.seekerProfile.findUnique({
-    where: { userId },
-    include: {
-      user: { select: { email: true } },
-      applications: {
-        orderBy: { appliedAt: "desc" },
-        take: 5,
+  const result = await unstable_cache(
+    () =>
+      prisma.seekerProfile.findUnique({
+        where: { userId },
         include: {
-          job: {
-            select: {
-              id: true,
-              title: true,
-              status: true,
-              company: { select: { companyName: true } },
+          user: { select: { email: true } },
+          applications: {
+            orderBy: { appliedAt: "desc" },
+            take: 5,
+            include: {
+              job: {
+                select: {
+                  id: true,
+                  title: true,
+                  status: true,
+                  company: { select: { companyName: true } },
+                },
+              },
             },
           },
         },
-      },
-    },
-  });
+      }),
+    ["seeker-profile-full", userId],
+    { revalidate: SEEKER_PROFILE_REVALIDATE_SECONDS, tags: [seekerProfileTag(userId), seekerApplicationsTag(userId)] }
+  )();
+  return reviveDates(result);
 }
 
 export async function updateSeekerProfile(userId: string, raw: unknown) {
@@ -61,10 +93,12 @@ export async function updateSeekerProfile(userId: string, raw: unknown) {
 
   await ensureSeekerProfile(userId);
 
-  return prisma.seekerProfile.update({
+  const updated = await prisma.seekerProfile.update({
     where: { userId },
     data: seekerInputToData(input),
   });
+  invalidateSeekerProfile(userId);
+  return updated;
 }
 
 export async function getSeekerApplicationForJob(userId: string, jobId: string) {

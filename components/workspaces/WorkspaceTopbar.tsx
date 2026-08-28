@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { CompanyMemberRole } from "@/lib/collaborative-hiring";
@@ -11,7 +10,6 @@ import EmployerSearchTrigger from "@/components/employer/EmployerSearchTrigger";
 import { Camera } from "lucide-react";
 import EmployerAvatar from "@/components/employer/ui/EmployerAvatar";
 import EmployerThemeToggle from "@/components/employers/EmployerThemeToggle";
-import { parseJsonBody } from "@/lib/client/fetch-json";
 
 const roleLabel: Record<CompanyMemberRole, string> = {
   OWNER: "Owner",
@@ -96,27 +94,10 @@ export default function WorkspaceTopbar({
   const active = resolveWorkspaceSection(pathname);
   const title = sectionTitles[role]?.[active] ?? "Hiring workspace";
   const isMessages = /^\/hiring\/[^/]+\/messages/.test(pathname);
-  // Seeded from the server so the company name is on the first paint; the fetch
-  // below just refreshes it (logo swap, verification flip) without a flash.
-  const [branding, setBranding] = useState<WorkspaceBranding | null>(initialBranding);
-
-  useEffect(() => {
-    let cancelled = false;
-    async function fetchBranding() {
-      try {
-        const res = await fetch(`/api/hiring/${companyId}/branding`);
-        if (!res.ok) return;
-        const data = (await parseJsonBody(res)) as WorkspaceBranding;
-        if (!cancelled) setBranding(data);
-      } catch {
-        /* ignore */
-      }
-    }
-    fetchBranding();
-    return () => {
-      cancelled = true;
-    };
-  }, [companyId]);
+  // Server-rendered and cache-backed (see lib/collaborative-company-profile.ts,
+  // invalidated immediately on a company-profile edit) — no client refetch
+  // needed, a hard nav/refresh already lands here with fresh data.
+  const branding = initialBranding;
 
   return (
     <header className="employer-topbar sticky top-0 z-30 flex h-14 shrink-0 items-center gap-4 border-b border-ink/[0.08] bg-white/70 px-4 shadow-[0_1px_0_0_rgba(255,255,255,0.6)_inset] backdrop-blur-md sm:px-6">

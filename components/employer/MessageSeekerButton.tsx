@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { MessageSquare } from "lucide-react";
 import { toast } from "sonner";
 import { startConversation as startConversationApi } from "@/lib/client/conversations";
@@ -8,6 +9,7 @@ import { useEmployerShell } from "@/components/employer/EmployerShellContext";
 
 export default function MessageSeekerButton({ seekerId, jobId }: { seekerId: string; jobId?: string }) {
   const { isPro } = useEmployerShell();
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
 
   async function handleStartConversation() {
@@ -20,7 +22,7 @@ export default function MessageSeekerButton({ seekerId, jobId }: { seekerId: str
         return;
       }
 
-      window.location.href = `/employer/messages?c=${(result.data as { id: string }).id}`;
+      router.push(`/employer/messages?c=${(result.data as { id: string }).id}`);
     } catch {
       toast.error("Could not start conversation");
     } finally {
