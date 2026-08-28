@@ -13,6 +13,7 @@ import {
   type CompanyMemberRole,
 } from "@/lib/collaborative-hiring";
 import { companyQueueTag } from "@/lib/collaborative-hiring-cache-tags";
+import { reviveDates } from "@/lib/cache-utils";
 import { sendCollaborativeHiringInvitation } from "@/lib/email";
 
 const QUEUE_OVERVIEW_REVALIDATE_SECONDS = 15;
@@ -61,8 +62,8 @@ export async function listCollaborativeTeam(companyId: string, actorUserId: stri
  * person may see. Hiring managers see assigned jobs; owners and recruiters
  * see the company-wide queue; viewers receive a read-only summary.
  */
-export function getCollaboratorWorkspaceOverview(companyId: string, actorUserId: string) {
-  return unstable_cache(
+export async function getCollaboratorWorkspaceOverview(companyId: string, actorUserId: string) {
+  const result = await unstable_cache(
     async () => {
       const membership = await requireCompanyMembership(companyId, actorUserId, "team:read");
       const jobScope = membership.role === "HIRING_MANAGER"
@@ -132,6 +133,7 @@ export function getCollaboratorWorkspaceOverview(companyId: string, actorUserId:
     ["collaborator-workspace-overview", companyId, actorUserId],
     { revalidate: QUEUE_OVERVIEW_REVALIDATE_SECONDS, tags: [companyQueueTag(companyId)] }
   )();
+  return reviveDates(result);
 }
 
 export async function inviteCompanyMember(

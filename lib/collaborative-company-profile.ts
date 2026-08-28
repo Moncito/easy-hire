@@ -3,6 +3,7 @@ import { ApiError } from "@/lib/api-error";
 import { prisma } from "@/lib/prisma";
 import { requireCompanyMembership } from "@/lib/collaborative-hiring";
 import { companyBrandingTag } from "@/lib/collaborative-hiring-cache-tags";
+import { reviveDates } from "@/lib/cache-utils";
 import { getEmployerCompanyProfile } from "@/lib/companies";
 
 const COMPANY_BRANDING_REVALIDATE_SECONDS = 30;
@@ -13,17 +14,18 @@ export function invalidateCollaborativeCompanyBranding(companyId: string) {
 }
 
 /** Gated on team:read, not company:read — OWNER only holds company:manage in the permission matrix. */
-export function getCollaborativeCompanyProfile(companyId: string, actorUserId: string) {
-  return unstable_cache(
+export async function getCollaborativeCompanyProfile(companyId: string, actorUserId: string) {
+  const result = await unstable_cache(
     async () => {
       const membership = await requireCompanyMembership(companyId, actorUserId, "team:read");
-      const result = await getEmployerCompanyProfile(companyId);
-      if (!result) throw new ApiError("Company not found", 404);
-      return { membership, ...result };
+      const profile = await getEmployerCompanyProfile(companyId);
+      if (!profile) throw new ApiError("Company not found", 404);
+      return { membership, ...profile };
     },
     ["collaborative-company-profile", companyId, actorUserId],
     { revalidate: COMPANY_BRANDING_REVALIDATE_SECONDS, tags: [companyBrandingTag(companyId)] }
   )();
+  return reviveDates(result);
 }
 
 /** Lightweight chip data for the workspace topbar — avoids every page having to select company fields just to render a branding chip. */

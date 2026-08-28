@@ -4,6 +4,7 @@ import { ApiError } from "@/lib/api-error";
 import { notifyApplicationSubmitted, notifyApplicationRejected, createNotification } from "@/lib/email";
 import { applicationCreateSchema, applicationUpdateSchema } from "@/lib/validations/application";
 import { invalidateEmployerWorkspace } from "@/lib/employer-cache";
+import { invalidateSeekerApplications } from "@/lib/seeker/cache";
 
 const candidateSeekerSelect = {
   id: true,
@@ -138,6 +139,7 @@ export async function createApplication(seekerUserId: string, raw: unknown) {
     });
 
     invalidateEmployerWorkspace(job.companyId);
+    invalidateSeekerApplications(seekerUserId);
     return application;
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
@@ -190,6 +192,7 @@ export async function withdrawApplication(seekerUserId: string, applicationId: s
     `${seeker.fullName} withdrew their application to "${application.job.title}".`
   );
   invalidateEmployerWorkspace(application.job.company.id);
+  invalidateSeekerApplications(seekerUserId);
 
   return { ok: true as const, jobId: application.job.id };
 }
@@ -246,6 +249,7 @@ export async function updateApplication(applicationId: string, raw: unknown) {
   }
 
   invalidateEmployerWorkspace(existing.job.company.id);
+  invalidateSeekerApplications(existing.seeker.user.id);
   return {
     ...updated,
     seeker: normalizeCandidateSeeker(updated.seeker),

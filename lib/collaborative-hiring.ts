@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/lib/api-error";
 import { isEmployerPro } from "@/lib/billing/subscriptions";
 import { companyMembershipTag, hiringWorkspacesTag } from "@/lib/collaborative-hiring-cache-tags";
+import { reviveDates } from "@/lib/cache-utils";
 
 export { CompanyMemberRole, CompanyMemberStatus };
 
@@ -101,12 +102,13 @@ function findActiveCompanyMemberRow(companyId: string, userId: string) {
  * in the layout) and by app/seeker/layout.tsx. Cached so switching between pages in a
  * workspace, or revisiting one, doesn't re-query membership on every request.
  */
-function getActiveCompanyMembershipCached(companyId: string, userId: string) {
-  return unstable_cache(
+async function getActiveCompanyMembershipCached(companyId: string, userId: string) {
+  const row = await unstable_cache(
     () => findActiveCompanyMemberRow(companyId, userId),
     ["company-membership", companyId, userId],
     { revalidate: MEMBERSHIP_REVALIDATE_SECONDS, tags: [companyMembershipTag(companyId, userId)] }
   )();
+  return reviveDates(row);
 }
 
 export async function getActiveCompanyMembership(companyId: string, userId: string) {
@@ -131,20 +133,21 @@ export function invalidateHiringWorkspaces(userId: string) {
 }
 
 /** All company workspaces the signed-in person may enter, independent of their seeker/employer account type. */
-export function getHiringWorkspacesForUser(userId: string) {
-  return unstable_cache(
+export async function getHiringWorkspacesForUser(userId: string) {
+  const memberships = await unstable_cache(
     async () => {
-      const memberships = await prisma.companyMember.findMany({
+      const rows = await prisma.companyMember.findMany({
         where: { userId, status: "ACTIVE" },
         include: { company: { select: { id: true, companyName: true, logoUrl: true } } },
         orderBy: { joinedAt: "desc" },
       });
-      const enabled = await Promise.all(memberships.map((member) => isCollaborativeHiringEnabledCached(member.companyId)));
-      return memberships.filter((_member, index) => enabled[index]);
+      const enabled = await Promise.all(rows.map((member) => isCollaborativeHiringEnabledCached(member.companyId)));
+      return rows.filter((_member, index) => enabled[index]);
     },
     ["hiring-workspaces", userId],
     { revalidate: WORKSPACES_REVALIDATE_SECONDS, tags: [hiringWorkspacesTag(userId)] }
   )();
+  return reviveDates(memberships);
 }
 
 export async function requireCompanyMembership(companyId: string, userId: string, permission?: string) {
