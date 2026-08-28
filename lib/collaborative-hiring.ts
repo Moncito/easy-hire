@@ -1,8 +1,10 @@
 import { createHash, randomBytes } from "crypto";
+import { unstable_cache, revalidateTag } from "next/cache";
 import { CompanyMemberRole, CompanyMemberStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/lib/api-error";
 import { isEmployerPro } from "@/lib/billing/subscriptions";
+import { companyMembershipTag, hiringWorkspacesTag } from "@/lib/collaborative-hiring-cache-tags";
 
 export { CompanyMemberRole, CompanyMemberStatus };
 
@@ -87,25 +89,62 @@ export async function ensureCompanyOwnerMembership(companyId: string) {
   });
 }
 
-export async function getActiveCompanyMembership(companyId: string, userId: string) {
-  // Common case is a single query — the backfill upsert below only runs on the
-  // rare miss (a pre-existing owner whose membership row hasn't been created
-  // yet), instead of unconditionally on every request in this workspace.
-  const existing = await prisma.companyMember.findFirst({ where: { companyId, userId, status: "ACTIVE" } });
-  if (existing) return existing;
-  await ensureCompanyOwnerMembership(companyId);
+const MEMBERSHIP_REVALIDATE_SECONDS = 30;
+const WORKSPACES_REVALIDATE_SECONDS = 30;
+
+function findActiveCompanyMemberRow(companyId: string, userId: string) {
   return prisma.companyMember.findFirst({ where: { companyId, userId, status: "ACTIVE" } });
 }
 
+/**
+ * Hit on every navigation into `/hiring/[companyId]/**` (via requireCompanyMembership
+ * in the layout) and by app/seeker/layout.tsx. Cached so switching between pages in a
+ * workspace, or revisiting one, doesn't re-query membership on every request.
+ */
+function getActiveCompanyMembershipCached(companyId: string, userId: string) {
+  return unstable_cache(
+    () => findActiveCompanyMemberRow(companyId, userId),
+    ["company-membership", companyId, userId],
+    { revalidate: MEMBERSHIP_REVALIDATE_SECONDS, tags: [companyMembershipTag(companyId, userId)] }
+  )();
+}
+
+export async function getActiveCompanyMembership(companyId: string, userId: string) {
+  // Common case is a single cached query — the backfill upsert below only runs
+  // on the rare miss (a pre-existing owner whose membership row hasn't been
+  // created yet), instead of unconditionally on every request in this workspace.
+  const existing = await getActiveCompanyMembershipCached(companyId, userId);
+  if (existing) return existing;
+  await ensureCompanyOwnerMembership(companyId);
+  invalidateCompanyMembership(companyId, userId);
+  return findActiveCompanyMemberRow(companyId, userId);
+}
+
+/** Drop the cached membership row for one user in one company (call after a role change, removal, or invite acceptance). */
+export function invalidateCompanyMembership(companyId: string, userId: string) {
+  revalidateTag(companyMembershipTag(companyId, userId), "max");
+}
+
+/** Drop the cached workspace list for one user (call after their membership set changes: joined, removed, role change). */
+export function invalidateHiringWorkspaces(userId: string) {
+  revalidateTag(hiringWorkspacesTag(userId), "max");
+}
+
 /** All company workspaces the signed-in person may enter, independent of their seeker/employer account type. */
-export async function getHiringWorkspacesForUser(userId: string) {
-  const memberships = await prisma.companyMember.findMany({
-    where: { userId, status: "ACTIVE" },
-    include: { company: { select: { id: true, companyName: true, logoUrl: true } } },
-    orderBy: { joinedAt: "desc" },
-  });
-  const enabled = await Promise.all(memberships.map((member) => isCollaborativeHiringEnabledCached(member.companyId)));
-  return memberships.filter((_member, index) => enabled[index]);
+export function getHiringWorkspacesForUser(userId: string) {
+  return unstable_cache(
+    async () => {
+      const memberships = await prisma.companyMember.findMany({
+        where: { userId, status: "ACTIVE" },
+        include: { company: { select: { id: true, companyName: true, logoUrl: true } } },
+        orderBy: { joinedAt: "desc" },
+      });
+      const enabled = await Promise.all(memberships.map((member) => isCollaborativeHiringEnabledCached(member.companyId)));
+      return memberships.filter((_member, index) => enabled[index]);
+    },
+    ["hiring-workspaces", userId],
+    { revalidate: WORKSPACES_REVALIDATE_SECONDS, tags: [hiringWorkspacesTag(userId)] }
+  )();
 }
 
 export async function requireCompanyMembership(companyId: string, userId: string, permission?: string) {

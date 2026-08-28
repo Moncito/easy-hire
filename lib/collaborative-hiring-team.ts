@@ -1,15 +1,26 @@
 import { prisma } from "@/lib/prisma";
+import { unstable_cache, revalidateTag } from "next/cache";
 import { ApplicationStatus, JobStatus } from "@prisma/client";
 import { ApiError } from "@/lib/api-error";
 import {
   createInvitationToken,
   hashInvitationToken,
+  invalidateCompanyMembership,
+  invalidateHiringWorkspaces,
   isCollaborativeHiringEnabled,
   requireCollaborativeHiringEnabled,
   requireCompanyMembership,
   type CompanyMemberRole,
 } from "@/lib/collaborative-hiring";
+import { companyQueueTag } from "@/lib/collaborative-hiring-cache-tags";
 import { sendCollaborativeHiringInvitation } from "@/lib/email";
+
+const QUEUE_OVERVIEW_REVALIDATE_SECONDS = 15;
+
+/** Bust the cached queue overview for one company (call after role changes; job/application mutations invalidate this too — see their own lib files). */
+export function invalidateCollaboratorQueue(companyId: string) {
+  revalidateTag(companyQueueTag(companyId), "max");
+}
 
 const INVITATION_TTL_DAYS = 7;
 
@@ -50,71 +61,77 @@ export async function listCollaborativeTeam(companyId: string, actorUserId: stri
  * person may see. Hiring managers see assigned jobs; owners and recruiters
  * see the company-wide queue; viewers receive a read-only summary.
  */
-export async function getCollaboratorWorkspaceOverview(companyId: string, actorUserId: string) {
-  const membership = await requireCompanyMembership(companyId, actorUserId, "team:read");
-  const jobScope = membership.role === "HIRING_MANAGER"
-    ? { teamMembers: { some: { memberId: membership.id } } }
-    : {};
-  const jobWhere = {
-    companyId,
-    status: { in: [JobStatus.ACTIVE, JobStatus.PENDING_REVIEW] },
-    ...jobScope,
-  };
+export function getCollaboratorWorkspaceOverview(companyId: string, actorUserId: string) {
+  return unstable_cache(
+    async () => {
+      const membership = await requireCompanyMembership(companyId, actorUserId, "team:read");
+      const jobScope = membership.role === "HIRING_MANAGER"
+        ? { teamMembers: { some: { memberId: membership.id } } }
+        : {};
+      const jobWhere = {
+        companyId,
+        status: { in: [JobStatus.ACTIVE, JobStatus.PENDING_REVIEW] },
+        ...jobScope,
+      };
 
-  const since = new Date();
-  since.setDate(since.getDate() - 6);
-  since.setHours(0, 0, 0, 0);
-  const [jobs, submittedScorecards, activeJobs, totalApplications, upcomingInterviews, weeklyApplications] = await Promise.all([
-    prisma.job.findMany({
-      where: jobWhere,
-      orderBy: [{ status: "asc" }, { updatedAt: "desc" }],
-      take: 8,
-      select: {
-        id: true,
-        title: true,
-        status: true,
-        _count: {
+      const since = new Date();
+      since.setDate(since.getDate() - 6);
+      since.setHours(0, 0, 0, 0);
+      const [jobs, submittedScorecards, activeJobs, totalApplications, upcomingInterviews, weeklyApplications] = await Promise.all([
+        prisma.job.findMany({
+          where: jobWhere,
+          orderBy: [{ status: "asc" }, { updatedAt: "desc" }],
+          take: 8,
           select: {
-            applications: {
-              where: {
-                status: { in: [ApplicationStatus.APPLIED, ApplicationStatus.SHORTLISTED] },
-                evaluations: { none: { memberId: membership.id, submittedAt: { not: null } } },
+            id: true,
+            title: true,
+            status: true,
+            _count: {
+              select: {
+                applications: {
+                  where: {
+                    status: { in: [ApplicationStatus.APPLIED, ApplicationStatus.SHORTLISTED] },
+                    evaluations: { none: { memberId: membership.id, submittedAt: { not: null } } },
+                  },
+                },
               },
             },
           },
-        },
-      },
-    }),
-    prisma.candidateEvaluation.count({ where: { memberId: membership.id, submittedAt: { not: null } } }),
-    prisma.job.count({ where: jobWhere }),
-    prisma.application.count({ where: { job: jobWhere } }),
-    prisma.interview.count({ where: { application: { job: jobWhere }, scheduledAt: { gte: new Date() }, status: "SCHEDULED" } }),
-    Promise.all(Array.from({ length: 7 }, (_, index) => {
-      const start = new Date(since);
-      start.setDate(since.getDate() + index);
-      const end = new Date(start);
-      end.setDate(start.getDate() + 1);
-      return prisma.application.count({ where: { job: jobWhere, appliedAt: { gte: start, lt: end } } });
-    })),
-  ]);
-  const candidatesAwaitingReview = jobs.reduce((total, job) => total + job._count.applications, 0);
+        }),
+        prisma.candidateEvaluation.count({ where: { memberId: membership.id, submittedAt: { not: null } } }),
+        prisma.job.count({ where: jobWhere }),
+        prisma.application.count({ where: { job: jobWhere } }),
+        prisma.interview.count({ where: { application: { job: jobWhere }, scheduledAt: { gte: new Date() }, status: "SCHEDULED" } }),
+        Promise.all(Array.from({ length: 7 }, (_, index) => {
+          const start = new Date(since);
+          start.setDate(since.getDate() + index);
+          const end = new Date(start);
+          end.setDate(start.getDate() + 1);
+          return prisma.application.count({ where: { job: jobWhere, appliedAt: { gte: start, lt: end } } });
+        })),
+      ]);
+      const candidatesAwaitingReview = jobs.reduce((total, job) => total + job._count.applications, 0);
 
-  return {
-    membership,
-    jobs: jobs.map((job) => ({
-      id: job.id,
-      title: job.title,
-      status: job.status,
-      candidatesAwaitingReview: job._count.applications,
-    })),
-    assignedJobs: jobs.length,
-    candidatesAwaitingReview,
-    submittedScorecards,
-    activeJobs,
-    totalApplications,
-    upcomingInterviews,
-    weeklyApplications,
-  };
+      return {
+        membership,
+        jobs: jobs.map((job) => ({
+          id: job.id,
+          title: job.title,
+          status: job.status,
+          candidatesAwaitingReview: job._count.applications,
+        })),
+        assignedJobs: jobs.length,
+        candidatesAwaitingReview,
+        submittedScorecards,
+        activeJobs,
+        totalApplications,
+        upcomingInterviews,
+        weeklyApplications,
+      };
+    },
+    ["collaborator-workspace-overview", companyId, actorUserId],
+    { revalidate: QUEUE_OVERVIEW_REVALIDATE_SECONDS, tags: [companyQueueTag(companyId)] }
+  )();
 }
 
 export async function inviteCompanyMember(
@@ -173,7 +190,11 @@ export async function updateCompanyMemberRole(
 
   if (member.role === "OWNER") throw new ApiError("The company owner role cannot be changed.", 400);
   if (role === "OWNER") throw new ApiError("Only the company owner can hold the owner role.", 400);
-  return prisma.companyMember.update({ where: { id: member.id }, data: { role } });
+  const updated = await prisma.companyMember.update({ where: { id: member.id }, data: { role } });
+  invalidateCompanyMembership(companyId, member.userId);
+  invalidateHiringWorkspaces(member.userId);
+  invalidateCollaboratorQueue(companyId);
+  return updated;
 }
 
 export async function removeCompanyMember(companyId: string, actorUserId: string, memberId: string) {
@@ -186,6 +207,9 @@ export async function removeCompanyMember(companyId: string, actorUserId: string
     if (owners <= 1) throw new ApiError("A company must retain at least one owner.", 400);
   }
   await prisma.companyMember.update({ where: { id: member.id }, data: { status: "REMOVED" } });
+  invalidateCompanyMembership(companyId, member.userId);
+  invalidateHiringWorkspaces(member.userId);
+  invalidateCollaboratorQueue(companyId);
 }
 
 export async function acceptCompanyInvitation(token: string, userId: string, userEmail: string | null | undefined) {
@@ -209,5 +233,10 @@ export async function acceptCompanyInvitation(token: string, userId: string, use
       update: { role: fresh.role, status: "ACTIVE", invitedBy: fresh.invitedBy, joinedAt: new Date() },
     });
     return tx.companyInvitation.update({ where: { id: fresh.id }, data: { acceptedAt: new Date() } });
+  }).then((result) => {
+    invalidateCompanyMembership(invitation.companyId, userId);
+    invalidateHiringWorkspaces(userId);
+    invalidateCollaboratorQueue(invitation.companyId);
+    return result;
   });
 }
