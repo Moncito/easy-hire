@@ -35,6 +35,8 @@ export async function featureJob(jobId: string, companyId: string) {
   });
 
   invalidateEmployerWorkspace(companyId);
+  invalidatePublicJobsList();
+  invalidatePublicJob(job.id);
   return updated;
 }
 
@@ -48,6 +50,8 @@ export async function unfeatureJob(jobId: string, companyId: string) {
   });
 
   invalidateEmployerWorkspace(companyId);
+  invalidatePublicJobsList();
+  invalidatePublicJob(job.id);
   return updated;
 }
 
