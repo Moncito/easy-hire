@@ -63,15 +63,21 @@ function JobDetailPanelContent({ jobId, saved, onToggleSaved }: Props) {
   }, [jobId]);
 
   if (loading) {
-    return <JobDetailPanelSkeleton />;
+    return (
+      <div className="job-detail-panel-enter">
+        <JobDetailPanelSkeleton />
+      </div>
+    );
   }
 
   if (error || !job) {
-    return <p className="p-8 text-sm text-ink/50">{error || "Job not found."}</p>;
+    return (
+      <p className="job-detail-panel-enter p-8 text-sm text-ink/50">{error || "Job not found."}</p>
+    );
   }
 
   return (
-    <div className="px-5 pb-8 pt-4 sm:px-6">
+    <div className="job-detail-panel-enter px-5 pb-8 pt-4 sm:px-6">
       <div className="mb-3 flex items-center justify-between">
         <Link
           href={`/jobs/${job.id}`}

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/Auth";
 import { prisma } from "@/lib/prisma";
 import { invalidateCollaborativeCompanyBranding } from "@/lib/collaborative-company-profile";
+import { invalidatePublicCompany } from "@/lib/public-companies";
 
 export async function PATCH(req: Request) {
   const session = await auth();
@@ -22,5 +23,6 @@ export async function PATCH(req: Request) {
   });
 
   invalidateCollaborativeCompanyBranding(updated.id);
+  invalidatePublicCompany(updated.id);
   return NextResponse.json({ id: updated.id });
 }

@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/lib/api-error";
 import { assertCanFeatureJob, FEATURED_JOB_DURATION_DAYS } from "@/lib/billing/entitlements";
 import { invalidateEmployerWorkspace } from "@/lib/employer-cache";
+import { invalidatePublicJob, invalidatePublicJobsList } from "@/lib/jobs/public-cache";
 
 async function requireJobForCompany(jobId: string, companyId: string) {
   const job = await prisma.job.findFirst({

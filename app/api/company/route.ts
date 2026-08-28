@@ -4,6 +4,7 @@ import { errorResponse } from "@/lib/api-error";
 import { requireEmployerCompany, requireEmployerJob } from "@/lib/employer-auth";
 import { updateCompany } from "@/lib/companies";
 import { invalidateCollaborativeCompanyBranding } from "@/lib/collaborative-company-profile";
+import { invalidatePublicCompany } from "@/lib/public-companies";
 import { ZodError } from "zod";
 
 export async function PATCH(req: Request) {
@@ -17,6 +18,7 @@ export async function PATCH(req: Request) {
     const body = await req.json();
     const updated = await updateCompany(session.user.id, body);
     invalidateCollaborativeCompanyBranding(updated.id);
+    invalidatePublicCompany(updated.id);
     return NextResponse.json(updated);
   } catch (error) {
     if (error instanceof ZodError) {

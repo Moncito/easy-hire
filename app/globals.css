@@ -759,6 +759,28 @@ backdrop-filter:blur(6px);
   transition: width 0.28s ease-out;
 }
 
+/* =======================================================
+   JOB SEARCH — detail panel cross-fade
+   Used by components/jobs/JobDetailPanel.tsx when the
+   selected job changes (list click or arrow-key nav), so the
+   swap reads as a quick, deliberate fade rather than a jump-cut.
+======================================================= */
+
+@keyframes job-detail-panel-enter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.job-detail-panel-enter {
+  animation: job-detail-panel-enter 0.18s ease-out forwards;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .employer-page-enter {
     animation: none;
@@ -777,6 +799,10 @@ backdrop-filter:blur(6px);
   .employer-detail-panel-enter,
   .employer-tab-fade,
   .employer-sheet-enter {
+    animation: none;
+  }
+
+  .job-detail-panel-enter {
     animation: none;
   }
 

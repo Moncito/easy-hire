@@ -8,6 +8,8 @@ import {
 import { canAutoPublishJob, publishJobLive } from "@/lib/subscriptions";
 import { invalidateEmployerWorkspace } from "@/lib/employer-cache";
 import { canCreateOrActivateJob } from "@/lib/billing/entitlements";
+import { invalidatePublicJob, invalidatePublicJobsList } from "@/lib/jobs/public-cache";
+import { invalidatePublicCompany } from "@/lib/public-companies";
 
 const SUBMITTABLE_STATUSES: JobStatus[] = ["DRAFT", "PENDING_REVIEW"];
 
@@ -47,6 +49,8 @@ export async function createJob(companyId: string, raw: unknown) {
     },
   });
   invalidateEmployerWorkspace(companyId);
+  invalidatePublicJobsList();
+  invalidatePublicCompany(companyId);
   return job;
 }
 
@@ -83,6 +87,9 @@ export async function updateJob(
   });
 
   if (companyId) invalidateEmployerWorkspace(companyId);
+  invalidatePublicJobsList();
+  invalidatePublicJob(jobId);
+  if (companyId) invalidatePublicCompany(companyId);
   return updated;
 }
 
@@ -104,6 +111,9 @@ export async function updateJobStatus(
     (await prisma.job.findUnique({ where: { id: jobId }, select: { companyId: true } }))?.companyId;
 
   if (resolvedCompanyId) invalidateEmployerWorkspace(resolvedCompanyId);
+  invalidatePublicJobsList();
+  invalidatePublicJob(jobId);
+  if (resolvedCompanyId) invalidatePublicCompany(resolvedCompanyId);
   return updated;
 }
 
@@ -114,6 +124,9 @@ export async function deleteDraftJob(jobId: string, currentStatus: JobStatus, co
 
   await prisma.job.delete({ where: { id: jobId } });
   invalidateEmployerWorkspace(companyId);
+  invalidatePublicJobsList();
+  invalidatePublicJob(jobId);
+  invalidatePublicCompany(companyId);
 }
 
 export async function submitJobForReview(
@@ -155,6 +168,9 @@ export async function submitJobForReview(
       });
 
   invalidateEmployerWorkspace(companyId);
+  invalidatePublicJobsList();
+  invalidatePublicJob(job.id);
+  invalidatePublicCompany(companyId);
   return updated;
 }
 
