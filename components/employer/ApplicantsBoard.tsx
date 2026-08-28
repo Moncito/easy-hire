@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import KanbanBoard from "./KanbanBoard";
 import RejectCandidateModal from "./RejectCandidateModal";
 import BulkApplicantActionsBar from "./BulkApplicantActionsBar";
@@ -49,6 +50,7 @@ export default function ApplicantsBoard({
   initialApplications,
 }: Props) {
   const { isPro } = useEmployerShell();
+  const router = useRouter();
   const [applications, setApplications] = useState<Application[]>(initialApplications);
   const [activeStage, setActiveStage] = useState<string | null>(null);
   const [selectedApp, setSelectedApp] = useState<Application | null>(null);
@@ -257,7 +259,7 @@ export default function ApplicantsBoard({
         return;
       }
 
-      window.location.href = `/employer/messages?c=${(result.data as { id: string }).id}`;
+      router.push(`/employer/messages?c=${(result.data as { id: string }).id}`);
     } catch {
       setMessageError("Could not start conversation");
     } finally {
