@@ -5,7 +5,6 @@ import { requireEmployerCompany, requireEmployerJob } from "@/lib/employer-auth"
 import { updateCompany } from "@/lib/companies";
 import { invalidateCollaborativeCompanyBranding } from "@/lib/collaborative-company-profile";
 import { invalidatePublicCompany } from "@/lib/public-companies";
-import { ZodError } from "zod";
 
 export async function PATCH(req: Request) {
   try {
@@ -21,9 +20,6 @@ export async function PATCH(req: Request) {
     invalidatePublicCompany(updated.id);
     return NextResponse.json(updated);
   } catch (error) {
-    if (error instanceof ZodError) {
-      return NextResponse.json({ error: error.issues[0]?.message ?? "Invalid input" }, { status: 400 });
-    }
     return errorResponse(error);
   }
 }

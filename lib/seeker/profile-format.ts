@@ -169,6 +169,20 @@ export function displayEducation(raw: string): string {
   return year ? `${schoolPart} · ${year}` : schoolPart || raw;
 }
 
+/**
+ * Extracts a plausible file extension from a filename/label — NOT a URL.
+ * Use this for signed URLs (which contain JWT tokens with literal `.`
+ * characters) where naive `url.split(".").pop()` yields garbage. Strips any
+ * query string defensively, then requires a short alphanumeric trailing
+ * segment (<= 5 chars) so labels like "Juan A. Cruz Resume" don't produce a
+ * false extension.
+ */
+export function fileExtensionFromLabel(label: string): string | null {
+  const withoutQuery = label.split("?")[0]?.trim() ?? "";
+  const match = /\.([A-Za-z0-9]{1,5})$/.exec(withoutQuery);
+  return match ? match[1].toUpperCase() : null;
+}
+
 export function resumeFilenameFromUrl(url: string): string {
   try {
     const segment = url.split("/").pop()?.split("?")[0] ?? "Resume";

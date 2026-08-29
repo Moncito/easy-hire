@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/lib/api-error";
+import { requireVerifiedEmail } from "@/lib/auth/credentials-recovery";
 import { jobInputSchema, jobInputToData, type JobInput } from "@/lib/validations/job";
 import {
   assertEmployerStatusTransition,
@@ -138,8 +139,13 @@ export async function submitJobForReview(
     category: string;
     location: string;
   },
-  companyId: string
+  companyId: string,
+  userId: string
 ) {
+  // Posting a job is one of the two gated actions (see requireVerifiedEmail) —
+  // an unverified employer can still draft, just not put a job in front of seekers.
+  await requireVerifiedEmail(userId);
+
   if (!SUBMITTABLE_STATUSES.includes(job.status)) {
     throw new ApiError("Only draft or pending jobs can be submitted for review", 400);
   }

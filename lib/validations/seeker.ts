@@ -7,6 +7,18 @@ const optionalUrl = z
   .optional()
   .nullable();
 
+/**
+ * Resumes live in a private bucket and are now persisted as a bare object
+ * path (`${userId}/${timestamp}-${name}`), not a full URL — only signed at
+ * read time. Accept either shape so legacy full-URL rows and new
+ * object-path rows both validate. (`photoUrl` stays a full URL — photos
+ * remain in a public bucket.)
+ */
+const urlOrObjectPath = z
+  .string()
+  .max(2048)
+  .refine((value) => value.length > 0 && !/\s/.test(value), "Must be a valid URL or file path");
+
 export const profileVisibilitySchema = z.enum(["HIDDEN", "STANDARD", "PUBLIC"]);
 
 export const seekerUpdateSchema = z.object({
@@ -20,14 +32,14 @@ export const seekerUpdateSchema = z.object({
   yearsExperience: z.string().optional().nullable(),
   desiredSalaryMin: z.number().int().positive().optional().nullable(),
   desiredSalaryMax: z.number().int().positive().optional().nullable(),
-  resumeUrl: z.string().url().optional().nullable(),
+  resumeUrl: urlOrObjectPath.optional().nullable(),
   linkedinUrl: optionalUrl,
   portfolioUrl: optionalUrl,
   certifications: z.array(z.string()).optional(),
   languages: z.array(z.string()).optional(),
   workExperience: z.array(z.string()).optional(),
   education: z.array(z.string()).optional(),
-  resumes: z.array(z.string()).max(3).optional(),
+  resumes: z.array(z.string().max(2048)).max(3).optional(),
   resumeLabel: z.string().max(120).optional().nullable(),
   timezone: z.string().max(64).optional().nullable(),
   photoUrl: z.string().url().optional().nullable(),

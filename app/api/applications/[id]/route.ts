@@ -3,7 +3,6 @@ import { auth } from "@/Auth";
 import { errorResponse } from "@/lib/api-error";
 import { requireEmployerApplication } from "@/lib/employer-auth";
 import { updateApplication, withdrawApplication } from "@/lib/applications";
-import { ZodError } from "zod";
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -18,9 +17,6 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const updated = await updateApplication(id, body);
     return NextResponse.json(updated);
   } catch (error) {
-    if (error instanceof ZodError) {
-      return NextResponse.json({ error: error.issues[0]?.message ?? "Invalid input" }, { status: 400 });
-    }
     return errorResponse(error);
   }
 }

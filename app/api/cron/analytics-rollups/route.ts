@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { runDailyRollupsForAllCompanies } from "@/lib/employer/analytics-rollups";
 import { clearExpiredFeaturedJobs } from "@/lib/jobs/featured";
-
-const CRON_SECRET = process.env.CRON_SECRET;
+import { requireCronAuth } from "@/lib/cron-auth";
+import { errorResponse } from "@/lib/api-error";
 
 /**
  * POST /api/cron/analytics-rollups — computes yesterday's AnalyticsDailyRollup
@@ -11,17 +11,16 @@ const CRON_SECRET = process.env.CRON_SECRET;
  * Intended to run once daily (e.g. Vercel Cron) shortly after midnight UTC.
  */
 export async function POST(req: Request) {
-  if (CRON_SECRET) {
-    const authHeader = req.headers.get("authorization");
-    if (authHeader !== `Bearer ${CRON_SECRET}`) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+  try {
+    requireCronAuth(req);
+
+    const [rollups, unfeatured] = await Promise.all([
+      runDailyRollupsForAllCompanies(),
+      clearExpiredFeaturedJobs(),
+    ]);
+
+    return NextResponse.json({ ok: true, rollups, unfeaturedJobs: unfeatured });
+  } catch (error) {
+    return errorResponse(error);
   }
-
-  const [rollups, unfeatured] = await Promise.all([
-    runDailyRollupsForAllCompanies(),
-    clearExpiredFeaturedJobs(),
-  ]);
-
-  return NextResponse.json({ ok: true, rollups, unfeaturedJobs: unfeatured });
 }

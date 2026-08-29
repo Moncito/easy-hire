@@ -15,6 +15,7 @@ import {
 import { companyQueueTag } from "@/lib/collaborative-hiring-cache-tags";
 import { reviveDates } from "@/lib/cache-utils";
 import { sendCollaborativeHiringInvitation } from "@/lib/email";
+import { normalizeEmail } from "@/lib/email-address";
 
 const QUEUE_OVERVIEW_REVALIDATE_SECONDS = 15;
 
@@ -145,7 +146,8 @@ export async function inviteCompanyMember(
   const company = await prisma.company.findUnique({ where: { id: companyId }, select: { companyName: true } });
   if (!company) throw new ApiError("Company not found", 404);
 
-  const existingUser = await prisma.user.findUnique({ where: { email: input.email }, select: { id: true } });
+  const email = normalizeEmail(input.email);
+  const existingUser = await prisma.user.findUnique({ where: { email }, select: { id: true } });
   if (existingUser) {
     const existingMember = await prisma.companyMember.findFirst({
       where: { companyId, userId: existingUser.id, status: "ACTIVE" },
@@ -158,16 +160,16 @@ export async function inviteCompanyMember(
   const expiresAt = new Date(Date.now() + INVITATION_TTL_DAYS * 24 * 60 * 60 * 1000);
   const invitation = await prisma.$transaction(async (tx) => {
     await tx.companyInvitation.updateMany({
-      where: { companyId, email: input.email, acceptedAt: null, revokedAt: null },
+      where: { companyId, email, acceptedAt: null, revokedAt: null },
       data: { revokedAt: new Date() },
     });
     return tx.companyInvitation.create({
-      data: { companyId, email: input.email, role: input.role, tokenHash, expiresAt, invitedBy: actorUserId },
+      data: { companyId, email, role: input.role, tokenHash, expiresAt, invitedBy: actorUserId },
     });
   });
 
   // A mail provider failure must not leak a token or create another invitation.
-  await sendCollaborativeHiringInvitation({ to: input.email, companyName: company.companyName, role: input.role, token });
+  await sendCollaborativeHiringInvitation({ to: email, companyName: company.companyName, role: input.role, token });
   return invitation;
 }
 

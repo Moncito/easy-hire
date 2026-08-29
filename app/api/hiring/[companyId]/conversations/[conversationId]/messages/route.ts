@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { ZodError } from "zod";
 import { auth } from "@/Auth";
 import { errorResponse } from "@/lib/api-error";
 import { getCollaborativeMessagesAfter, sendCollaborativeMessage } from "@/lib/collaborative-messages";
@@ -25,7 +24,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ com
     const message = await sendCollaborativeMessage(companyId, session.user.id, conversationId, await request.json());
     return NextResponse.json({ message });
   } catch (error) {
-    if (error instanceof ZodError) return NextResponse.json({ error: error.issues[0]?.message ?? "Invalid message" }, { status: 400 });
     return errorResponse(error);
   }
 }

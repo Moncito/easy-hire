@@ -4,6 +4,7 @@ import { ApiError } from "@/lib/api-error";
 import { requireEmployerCompany } from "@/lib/employer-auth";
 import { encodedSkillVariants } from "@/lib/seeker-profile-format";
 import { talentSearchSchema, savedSeekerSchema } from "@/lib/validations/talent-search";
+import { signResumeUrl } from "@/lib/seeker/resume-urls";
 
 export type TalentListItem = {
   id: string;
@@ -64,6 +65,13 @@ function mapSeeker(
     photoUrl: seeker.photoUrl ?? null,
     saved: savedIds.has(seeker.id),
   };
+}
+
+/** Batch-signs `resumeUrl` across a page of talent search results. */
+async function signTalentList(items: TalentListItem[]): Promise<TalentListItem[]> {
+  return Promise.all(
+    items.map(async (item) => ({ ...item, resumeUrl: await signResumeUrl(item.resumeUrl) }))
+  );
 }
 
 function buildSeekerWhere(input: ReturnType<typeof talentSearchSchema.parse>): Prisma.SeekerProfileWhereInput {
@@ -195,17 +203,17 @@ export async function searchTalent(employerUserId: string, raw: unknown): Promis
             })
           : [];
       const savedIds = new Set(saved.map((s) => s.seekerId));
-      return {
-        seekers: ftsResult.seekers.map((s) => ({ ...s, saved: savedIds.has(s.id) })),
-        nextCursor: null,
-      };
+      const seekers = await signTalentList(
+        ftsResult.seekers.map((s) => ({ ...s, saved: savedIds.has(s.id) }))
+      );
+      return { seekers, nextCursor: null };
     } catch (error) {
       console.error("[talent] FTS search failed, falling back to Prisma:", error);
     }
   }
 
   const where = buildSeekerWhere(input);
-  const seekers = await prisma.seekerProfile.findMany({
+  const seekerRows = await prisma.seekerProfile.findMany({
     where,
     orderBy: { createdAt: "desc" },
     take: input.limit + 1,
@@ -228,8 +236,8 @@ export async function searchTalent(employerUserId: string, raw: unknown): Promis
     },
   });
 
-  const hasMore = seekers.length > input.limit;
-  const page = hasMore ? seekers.slice(0, input.limit) : seekers;
+  const hasMore = seekerRows.length > input.limit;
+  const page = hasMore ? seekerRows.slice(0, input.limit) : seekerRows;
   const pageIds = page.map((s) => s.id);
   const saved =
     pageIds.length > 0
@@ -240,8 +248,9 @@ export async function searchTalent(employerUserId: string, raw: unknown): Promis
       : [];
   const savedIds = new Set(saved.map((s) => s.seekerId));
 
+  const seekers = await signTalentList(page.map((s) => mapSeeker(s, savedIds)));
   return {
-    seekers: page.map((s) => mapSeeker(s, savedIds)),
+    seekers,
     nextCursor: hasMore ? page[page.length - 1]?.id ?? null : null,
   };
 }
@@ -275,7 +284,7 @@ export async function listSavedSeekers(employerUserId: string) {
   });
 
   const savedIds = new Set(saved.map((s) => s.seekerId));
-  return saved.map((s) => mapSeeker(s.seeker, savedIds));
+  return signTalentList(saved.map((s) => mapSeeker(s.seeker, savedIds)));
 }
 
 export async function saveSeeker(employerUserId: string, raw: unknown) {

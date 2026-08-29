@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { ZodError } from "zod";
 import { auth } from "@/Auth";
 import { errorResponse } from "@/lib/api-error";
 import { saveCollaborativeCandidateEvaluation } from "@/lib/collaborative-hiring-reviews";
@@ -13,7 +12,6 @@ export async function PUT(request: Request, { params }: { params: Promise<{ comp
     const input = collaborativeScorecardSchema.parse(await request.json());
     return NextResponse.json(await saveCollaborativeCandidateEvaluation(companyId, session.user.id, jobId, applicationId, input));
   } catch (error) {
-    if (error instanceof ZodError) return NextResponse.json({ error: error.issues[0]?.message ?? "Invalid scorecard" }, { status: 400 });
     return errorResponse(error);
   }
 }

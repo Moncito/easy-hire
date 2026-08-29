@@ -13,7 +13,7 @@ export async function PATCH(_req: Request, { params }: { params: Promise<{ id: s
 
     const { id } = await params;
     const { job, company } = await requireEmployerJob(session.user.id, id);
-    const updated = await submitJobForReview(job, company.id);
+    const updated = await submitJobForReview(job, company.id, session.user.id);
     return NextResponse.json(updated);
   } catch (error) {
     return errorResponse(error);

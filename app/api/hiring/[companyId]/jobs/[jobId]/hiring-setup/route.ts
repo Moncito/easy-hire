@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { ZodError } from "zod";
 import { auth } from "@/Auth";
 import { errorResponse } from "@/lib/api-error";
 import { getHiringSetup, saveHiringSetup } from "@/lib/hiring-setup";
@@ -24,7 +23,6 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ co
     const input = hiringSetupSchema.parse(await request.json());
     return NextResponse.json(await saveHiringSetup(companyId, session.user.id, jobId, input));
   } catch (error) {
-    if (error instanceof ZodError) return NextResponse.json({ error: error.issues[0]?.message ?? "Invalid input" }, { status: 400 });
     return errorResponse(error);
   }
 }

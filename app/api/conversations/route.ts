@@ -4,7 +4,6 @@ import { errorResponse } from "@/lib/api-error";
 import { parseJsonBody } from "@/lib/parse-json-body";
 import { listConversationsForUserCached } from "@/lib/conversations-cache";
 import { createOrGetConversation } from "@/lib/messages";
-import { ZodError } from "zod";
 
 export const dynamic = "force-dynamic";
 
@@ -36,9 +35,6 @@ export async function POST(req: Request) {
     const conversation = await createOrGetConversation(session.user.id, body);
     return NextResponse.json(conversation, { status: 201 });
   } catch (error) {
-    if (error instanceof ZodError) {
-      return NextResponse.json({ error: error.issues[0]?.message ?? "Invalid input" }, { status: 400 });
-    }
     return errorResponse(error);
   }
 }

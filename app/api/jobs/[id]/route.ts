@@ -4,7 +4,6 @@ import { errorResponse } from "@/lib/api-error";
 import { requireEmployerJob } from "@/lib/employer-auth";
 import { updateJob, updateJobStatus, deleteDraftJob } from "@/lib/jobs";
 import { jobStatusUpdateSchema } from "@/lib/validations/job";
-import { ZodError } from "zod";
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -41,9 +40,6 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const updatedJob = await updateJob(id, existingJob.status, body, company.id);
     return NextResponse.json(updatedJob);
   } catch (error) {
-    if (error instanceof ZodError) {
-      return NextResponse.json({ error: error.issues[0]?.message ?? "Invalid input" }, { status: 400 });
-    }
     return errorResponse(error);
   }
 }

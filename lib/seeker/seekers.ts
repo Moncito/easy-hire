@@ -4,6 +4,7 @@ import { Prisma } from "@prisma/client";
 import { seekerInputToData, seekerUpdateSchema } from "@/lib/validations/seeker";
 import { seekerApplicationsTag, seekerProfileTag } from "@/lib/seeker/cache-tags";
 import { reviveDates } from "@/lib/cache-utils";
+import { hydrateResumeFields } from "@/lib/seeker/resume-urls";
 
 const SEEKER_PROFILE_REVALIDATE_SECONDS = 30;
 
@@ -85,7 +86,9 @@ export async function getSeekerProfile(userId: string) {
     ["seeker-profile-full", userId],
     { revalidate: SEEKER_PROFILE_REVALIDATE_SECONDS, tags: [seekerProfileTag(userId), seekerApplicationsTag(userId)] }
   )();
-  return reviveDates(result);
+  const revived = reviveDates(result);
+  if (!revived) return revived;
+  return hydrateResumeFields(revived);
 }
 
 export async function updateSeekerProfile(userId: string, raw: unknown) {

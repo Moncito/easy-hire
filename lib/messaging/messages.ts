@@ -6,6 +6,7 @@ import { createNotification } from "@/lib/email";
 import { invalidateEmployerNav } from "@/lib/employer-cache";
 import { invalidateConversationsForParticipants } from "@/lib/conversations-cache";
 import { requireEmployerCompany } from "@/lib/employer-auth";
+import { requireVerifiedEmail } from "@/lib/auth/credentials-recovery";
 import { companyMemberRoleLabel } from "@/lib/collaborative-hiring";
 import {
   conversationCreateSchema,
@@ -319,6 +320,8 @@ export async function sendMessage(
   raw: unknown
 ) {
   const input = messageCreateSchema.parse(raw);
+  // Sending a message is one of the two gated actions (see requireVerifiedEmail).
+  await requireVerifiedEmail(userId);
   const conversation = await requireConversationAccess(userId, role, conversationId);
 
   const message = await prisma.message.create({

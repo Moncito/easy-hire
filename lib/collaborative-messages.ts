@@ -5,6 +5,7 @@ import { createNotification } from "@/lib/email";
 import { invalidateEmployerNav } from "@/lib/employer-cache";
 import { invalidateConversationsForParticipants } from "@/lib/conversations-cache";
 import { requireCompanyMembership, companyMemberRoleLabel } from "@/lib/collaborative-hiring";
+import { requireVerifiedEmail } from "@/lib/auth/credentials-recovery";
 import { conversationCreateSchema, messageCreateSchema } from "@/lib/validations/message";
 import type { ConversationListItem } from "@/lib/messages";
 
@@ -252,6 +253,8 @@ export async function getCollaborativeMessagesAfter(companyId: string, actorUser
 
 export async function sendCollaborativeMessage(companyId: string, actorUserId: string, conversationId: string, raw: unknown) {
   const input = messageCreateSchema.parse(raw);
+  // Sending a message is one of the two gated actions (see requireVerifiedEmail).
+  await requireVerifiedEmail(actorUserId);
   const conversation = await requireConversationInCompany(companyId, actorUserId, conversationId);
 
   const message = await prisma.message.create({ data: { conversationId, senderUserId: actorUserId, body: input.body } });

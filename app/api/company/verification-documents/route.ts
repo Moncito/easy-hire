@@ -3,7 +3,6 @@ import { auth } from "@/Auth";
 import { errorResponse } from "@/lib/api-error";
 import { requireEmployerCompany } from "@/lib/employer-auth";
 import { createVerificationDocument, listVerificationDocuments } from "@/lib/verification";
-import { ZodError } from "zod";
 
 export async function GET() {
   try {
@@ -32,9 +31,6 @@ export async function POST(req: Request) {
     const document = await createVerificationDocument(company.id, body);
     return NextResponse.json(document, { status: 201 });
   } catch (error) {
-    if (error instanceof ZodError) {
-      return NextResponse.json({ error: error.issues[0]?.message ?? "Invalid input" }, { status: 400 });
-    }
     return errorResponse(error);
   }
 }

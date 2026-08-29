@@ -4,6 +4,7 @@ import {
   getEmployerCompanyByUserId,
   getEmployerCompanyCached,
 } from "@/lib/auth/employer-company";
+import { signResumeUrl } from "@/lib/seeker/resume-urls";
 
 export { getEmployerCompanyCached, getEmployerCompanyByUserId };
 
@@ -67,5 +68,11 @@ export async function requireEmployerApplication(userId: string, applicationId: 
     throw new ApiError("Application not found", 404);
   }
 
-  return { company, application };
+  return {
+    company,
+    application: {
+      ...application,
+      seeker: { ...application.seeker, resumeUrl: await signResumeUrl(application.seeker.resumeUrl) },
+    },
+  };
 }

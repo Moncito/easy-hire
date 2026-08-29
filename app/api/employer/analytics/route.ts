@@ -4,6 +4,7 @@ import { errorResponse } from "@/lib/api-error";
 import { requireEmployerCompany } from "@/lib/employer-auth";
 import { getEmployerAnalytics } from "@/lib/employer-analytics";
 import { getAnalyticsRangeForPro } from "@/lib/employer/analytics-rollups";
+import { analyticsDateRangeSchema } from "@/lib/validations/analytics";
 
 /**
  * GET /api/employer/analytics — dashboard-style analytics (fixed windows) by
@@ -24,11 +25,7 @@ export async function GET(req: Request) {
     const toParam = searchParams.get("to");
 
     if (fromParam && toParam) {
-      const from = new Date(fromParam);
-      const to = new Date(toParam);
-      if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime())) {
-        return NextResponse.json({ error: "Invalid from/to date" }, { status: 400 });
-      }
+      const { from, to } = analyticsDateRangeSchema.parse({ from: fromParam, to: toParam });
 
       const range = await getAnalyticsRangeForPro(company.id, from, to);
       return NextResponse.json(range, { headers: { "Cache-Control": "no-store" } });

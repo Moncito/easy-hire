@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { auth } from "@/Auth";
 import { errorResponse } from "@/lib/api-error";
 import { searchTalentCached } from "@/lib/employer-cache";
-import { ZodError } from "zod";
 
 export const dynamic = "force-dynamic";
 
@@ -17,9 +16,6 @@ export async function GET(req: Request) {
     const result = await searchTalentCached(session.user.id, params);
     return NextResponse.json(result, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
-    if (error instanceof ZodError) {
-      return NextResponse.json({ error: error.issues[0]?.message ?? "Invalid input" }, { status: 400 });
-    }
     return errorResponse(error);
   }
 }

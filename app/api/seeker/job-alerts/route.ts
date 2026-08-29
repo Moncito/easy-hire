@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { auth } from "@/Auth";
 import { errorResponse } from "@/lib/api-error";
 import { listJobAlerts, createJobAlert } from "@/lib/job-alerts";
-import { ZodError } from "zod";
 
 export async function GET() {
   try {
@@ -29,9 +28,6 @@ export async function POST(req: Request) {
     const alert = await createJobAlert(session.user.id, body);
     return NextResponse.json(alert, { status: 201 });
   } catch (error) {
-    if (error instanceof ZodError) {
-      return NextResponse.json({ error: error.issues[0]?.message ?? "Invalid input" }, { status: 400 });
-    }
     return errorResponse(error);
   }
 }

@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/lib/api-error";
 import { verificationDocumentCreateSchema } from "@/lib/validations/verification";
+import { VERIFICATION_DOC_BUCKET, resolveSignedUrl } from "@/lib/storage";
+import type { VerificationDocument } from "@prisma/client";
 
 export const MAX_VERIFICATION_DOCUMENTS = 5;
 
@@ -26,11 +28,18 @@ function isCompanyProfileComplete(company: CompanyProfileFields) {
   );
 }
 
+/** Signs a verification document's `fileUrl` for display (private bucket, short TTL). */
+async function signVerificationDocument<T extends VerificationDocument>(document: T) {
+  return { ...document, fileUrl: (await resolveSignedUrl(VERIFICATION_DOC_BUCKET, document.fileUrl)) ?? "" };
+}
+
 export async function listVerificationDocuments(companyId: string) {
-  return prisma.verificationDocument.findMany({
+  const documents = await prisma.verificationDocument.findMany({
     where: { companyId },
     orderBy: { uploadedAt: "desc" },
   });
+
+  return Promise.all(documents.map(signVerificationDocument));
 }
 
 export async function createVerificationDocument(companyId: string, raw: unknown) {
@@ -67,7 +76,7 @@ export async function createVerificationDocument(companyId: string, raw: unknown
       : []),
   ]);
 
-  return document;
+  return signVerificationDocument(document);
 }
 
 export async function deleteVerificationDocument(companyId: string, documentId: string) {

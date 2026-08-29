@@ -1,15 +1,40 @@
-import NextAuth from "next-auth";
+import NextAuth, { CredentialsSignin } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { ensureSeekerProfile } from "@/lib/seekers";
+import { normalizeEmail } from "@/lib/email-address";
+import { checkRateLimit, clientKeyFromRequest } from "@/lib/rate-limit";
 import { authConfig } from "./auth.config";
+
+// Brute-force / credential-stuffing guard for the Credentials provider.
+// Keyed by IP *and* by the submitted email so one attacker can't spray many
+// accounts from a single IP, and one account can't be sprayed from many IPs.
+const LOGIN_RATE_LIMIT_PER_IP = 20;
+const LOGIN_RATE_LIMIT_PER_EMAIL = 8;
+const LOGIN_RATE_WINDOW_SECONDS = 15 * 60;
+
+/**
+ * `authorize` can't return an HTTP status, so a blocked attempt is signalled
+ * the same way next-auth already signals "wrong email/password": throwing
+ * `CredentialsSignin`. @auth/core catches any thrown error from `authorize`
+ * (see @auth/core/src/index.ts) and turns it into a normal
+ * `{ error: "CredentialsSignin" }` response instead of crashing the sign-in
+ * request — `CredentialsSignin` specifically is treated as a "safe" client
+ * error type, so it renders like every other failed-login case client-side.
+ * The client (components/auth/LoginForm.tsx) doesn't discriminate on the
+ * error code today, so this can't leak "you're rate-limited" info to an
+ * attacker — it just logs which guard tripped for server-side observability.
+ */
+class LoginRateLimited extends CredentialsSignin {
+  code = "rate_limited";
+}
 
 async function resolveDbUser(email?: string | null, userId?: string | null) {
   if (email) {
     const byEmail = await prisma.user.findUnique({
-      where: { email },
+      where: { email: normalizeEmail(email) },
       select: { id: true, role: true },
     });
     if (byEmail) return byEmail;
@@ -111,8 +136,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       // don't actually control. Revisit once email verification exists.
       allowDangerousEmailAccountLinking: false,
       async profile(profile) {
+        const email = normalizeEmail(profile.email!);
         let user = await prisma.user.findUnique({
-          where: { email: profile.email! },
+          where: { email },
           include: { seekerProfile: true },
         });
 
@@ -122,7 +148,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           // /api/register already does for Credentials sign-up.
           user = await prisma.user.create({
             data: {
-              email: profile.email!,
+              email,
               role: "SEEKER",
               passwordHash: null,
               seekerProfile: {
@@ -135,7 +161,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           // Older accounts (or partial sign-ups) may be SEEKER without a row.
           await ensureSeekerProfile(user.id, { fullName: profile.name || "" });
           user = await prisma.user.findUniqueOrThrow({
-            where: { email: profile.email! },
+            where: { email },
             include: { seekerProfile: true },
           });
         }
@@ -154,13 +180,35 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
-      async authorize(credentials) {
+      async authorize(credentials, request) {
         if (!credentials?.email || !credentials?.password) {
           return null;
         }
 
+        const email = normalizeEmail(credentials.email as string);
+
+        const [ipResult, emailResult] = await Promise.all([
+          checkRateLimit({
+            key: clientKeyFromRequest(request, "login"),
+            limit: LOGIN_RATE_LIMIT_PER_IP,
+            windowSeconds: LOGIN_RATE_WINDOW_SECONDS,
+          }),
+          checkRateLimit({
+            key: `login:email:${email}`,
+            limit: LOGIN_RATE_LIMIT_PER_EMAIL,
+            windowSeconds: LOGIN_RATE_WINDOW_SECONDS,
+          }),
+        ]);
+
+        if (!ipResult.allowed || !emailResult.allowed) {
+          console.warn(
+            `[auth] credentials login blocked by rate limit (${!emailResult.allowed ? "email" : "ip"})`
+          );
+          throw new LoginRateLimited();
+        }
+
         const user = await prisma.user.findUnique({
-          where: { email: credentials.email as string },
+          where: { email },
         });
 
         if (!user || !user.passwordHash) {

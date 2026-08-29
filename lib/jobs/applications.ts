@@ -5,6 +5,7 @@ import { notifyApplicationSubmitted, notifyApplicationRejected, createNotificati
 import { applicationCreateSchema, applicationUpdateSchema } from "@/lib/validations/application";
 import { invalidateEmployerWorkspace } from "@/lib/employer-cache";
 import { invalidateSeekerApplications } from "@/lib/seeker/cache";
+import { hydrateResumeFields } from "@/lib/seeker/resume-urls";
 
 const candidateSeekerSelect = {
   id: true,
@@ -28,16 +29,17 @@ const candidateSeekerSelect = {
   photoUrl: true,
 } as const;
 
-function normalizeCandidateSeeker<
+async function normalizeCandidateSeeker<
   T extends {
     skills?: string[] | null;
     languages?: string[] | null;
     education?: string[] | null;
+    resumeUrl?: string | null;
     resumes?: string[] | null;
     resumeUpdatedAt?: Date | null;
   },
 >(seeker: T) {
-  return {
+  const normalized = {
     ...seeker,
     skills: seeker.skills ?? [],
     languages: seeker.languages ?? [],
@@ -45,6 +47,7 @@ function normalizeCandidateSeeker<
     resumes: seeker.resumes ?? [],
     resumeUpdatedAt: seeker.resumeUpdatedAt?.toISOString() ?? null,
   };
+  return hydrateResumeFields(normalized);
 }
 
 export async function createApplication(seekerUserId: string, raw: unknown) {
@@ -252,7 +255,7 @@ export async function updateApplication(applicationId: string, raw: unknown) {
   invalidateSeekerApplications(existing.seeker.user.id);
   return {
     ...updated,
-    seeker: normalizeCandidateSeeker(updated.seeker),
+    seeker: await normalizeCandidateSeeker(updated.seeker),
   };
 }
 
@@ -280,11 +283,15 @@ export async function listJobApplications(jobId: string, page = 1, pageSize = 50
     prisma.application.count({ where: { jobId } }),
   ]);
 
-  return {
-    applications: applications.map((application) => ({
+  const hydratedApplications = await Promise.all(
+    applications.map(async (application) => ({
       ...application,
-      seeker: normalizeCandidateSeeker(application.seeker),
-    })),
+      seeker: await normalizeCandidateSeeker(application.seeker),
+    }))
+  );
+
+  return {
+    applications: hydratedApplications,
     total,
     page,
     pageSize,

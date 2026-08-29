@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Download, Eye, FileText } from "lucide-react";
-import { primaryFromResumes } from "@/lib/seeker-profile-format";
+import { fileExtensionFromLabel, primaryFromResumes } from "@/lib/seeker-profile-format";
 import { useEmployerShell } from "@/components/employer/EmployerShellContext";
 import type { CandidateApplication } from "./types";
 
@@ -10,7 +10,7 @@ function resumeMeta(seeker: CandidateApplication["seeker"]) {
   if (!seeker.resumeUrl) return null;
   const primary = primaryFromResumes(seeker.resumes ?? [], seeker.resumeUrl);
   const name = seeker.resumeLabel || primary?.label || "Resume";
-  const ext = seeker.resumeUrl.split(".").pop()?.toUpperCase() || "PDF";
+  const ext = fileExtensionFromLabel(name) || "PDF";
   const updated = seeker.resumeUpdatedAt
     ? new Date(seeker.resumeUpdatedAt).toLocaleDateString(undefined, {
         month: "short",

@@ -57,6 +57,40 @@ export async function sendCollaborativeHiringInvitation(ctx: {
   );
 }
 
+export async function sendPasswordResetEmail(ctx: { to: string; token: string }) {
+  const resetUrl = `${appUrl}/reset-password/${encodeURIComponent(ctx.token)}`;
+  await sendEmail(
+    ctx.to,
+    "Reset your EasyHire password",
+    renderEmailLayout({
+      preview: "Reset your EasyHire password.",
+      heading: "Reset your password",
+      bodyHtml: `
+        <p style="margin:0 0 16px;">We received a request to reset the password on your EasyHire account.</p>
+        <p style="margin:0;color:#5c6370;font-size:14px;">This link is single-use and expires in 1 hour. If you didn’t request this, you can safely ignore this email — your password won’t change.</p>
+      `,
+      cta: { label: "Reset password", href: resetUrl },
+    })
+  );
+}
+
+export async function sendEmailVerificationEmail(ctx: { to: string; token: string }) {
+  const verifyUrl = `${appUrl}/api/auth/verify-email/${encodeURIComponent(ctx.token)}`;
+  await sendEmail(
+    ctx.to,
+    "Verify your email address on EasyHire",
+    renderEmailLayout({
+      preview: "Verify your email address to finish setting up your EasyHire account.",
+      heading: "Verify your email address",
+      bodyHtml: `
+        <p style="margin:0 0 16px;">Confirm this is your email address to finish setting up your EasyHire account.</p>
+        <p style="margin:0;color:#5c6370;font-size:14px;">This link expires in 24 hours. If you didn’t create an EasyHire account, you can safely ignore this email.</p>
+      `,
+      cta: { label: "Verify email", href: verifyUrl },
+    })
+  );
+}
+
 export async function createNotification(userId: string, type: string, message: string) {
   const notification = await prisma.notification.create({
     data: { userId, type, message },

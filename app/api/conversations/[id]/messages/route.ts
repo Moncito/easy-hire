@@ -1,11 +1,15 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/Auth";
 import { errorResponse } from "@/lib/api-error";
+import { clientKeyFromRequest, enforceRateLimit } from "@/lib/rate-limit";
 import { parseJsonBody } from "@/lib/parse-json-body";
 import { getMessagesAfter, sendMessage } from "@/lib/messages";
-import { ZodError } from "zod";
 
 export const dynamic = "force-dynamic";
+
+// Authenticated, but a spam vector for both parties in a conversation.
+const SEND_MESSAGE_RATE_LIMIT = 30;
+const SEND_MESSAGE_RATE_WINDOW_SECONDS = 10 * 60;
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -33,14 +37,17 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    await enforceRateLimit({
+      key: clientKeyFromRequest(req, "conversations:messages", session.user.id),
+      limit: SEND_MESSAGE_RATE_LIMIT,
+      windowSeconds: SEND_MESSAGE_RATE_WINDOW_SECONDS,
+    });
+
     const { id } = await params;
     const body = await parseJsonBody(req);
     const message = await sendMessage(session.user.id, session.user.role, id, body);
     return NextResponse.json(message, { status: 201 });
   } catch (error) {
-    if (error instanceof ZodError) {
-      return NextResponse.json({ error: error.issues[0]?.message ?? "Invalid input" }, { status: 400 });
-    }
     return errorResponse(error);
   }
 }

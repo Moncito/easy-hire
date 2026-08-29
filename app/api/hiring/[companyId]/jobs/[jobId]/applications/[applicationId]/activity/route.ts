@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { z, ZodError } from "zod";
+import { z } from "zod";
 import { auth } from "@/Auth";
 import { errorResponse } from "@/lib/api-error";
 import { addApplicationActivityNote } from "@/lib/collaborative-hiring-reviews";
@@ -15,7 +15,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ com
     const note = await addApplicationActivityNote(companyId, session.user.id, jobId, applicationId, input.body);
     return NextResponse.json(note);
   } catch (error) {
-    if (error instanceof ZodError) return NextResponse.json({ error: error.issues[0]?.message ?? "Invalid note" }, { status: 400 });
     return errorResponse(error);
   }
 }

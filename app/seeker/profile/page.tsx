@@ -1,5 +1,6 @@
 import { requireSeekerPageContext } from "@/lib/auth/seeker-session";
 import { ensureSeekerProfile } from "@/lib/seekers";
+import { hydrateResumeFields } from "@/lib/seeker/resume-urls";
 import SeekerProfileAccountLinks from "@/components/seeker/SeekerProfileAccountLinks";
 import SeekerProfileEditor from "@/components/seeker/SeekerProfileEditor";
 import { PROFILE_BUCKETS, profileBucketCompletion, type ProfileBucketId } from "@/components/seeker/profile-buckets";
@@ -18,9 +19,11 @@ export default async function SeekerProfilePage({
 }) {
   const { session, userId } = await requireSeekerPageContext();
   const { bucket } = await searchParams;
-  const profile = await ensureSeekerProfile(userId, {
-    fullName: session.user.name ?? "",
-  });
+  const profile = await hydrateResumeFields(
+    await ensureSeekerProfile(userId, {
+      fullName: session.user.name ?? "",
+    })
+  );
 
   const { completed, total } = profileBucketCompletion({
     fullName: profile.fullName ?? "",
