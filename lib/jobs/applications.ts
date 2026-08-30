@@ -1,7 +1,13 @@
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { ApiError } from "@/lib/api-error";
-import { notifyApplicationSubmitted, notifyApplicationRejected, createNotification } from "@/lib/email";
+import {
+  notifyApplicationSubmitted,
+  notifyApplicationRejected,
+  notifyApplicationStatusChanged,
+  createNotification,
+  type NonRejectionApplicationStatus,
+} from "@/lib/email";
 import { applicationCreateSchema, applicationUpdateSchema } from "@/lib/validations/application";
 import { invalidateEmployerWorkspace } from "@/lib/employer-cache";
 import { invalidateSeekerApplications } from "@/lib/seeker/cache";
@@ -239,6 +245,11 @@ export async function updateApplication(applicationId: string, raw: unknown) {
   });
 
   const becameRejected = data.status === "REJECTED" && existing.status !== "REJECTED";
+  const NON_REJECTION_STATUSES = new Set(["SHORTLISTED", "INTERVIEW", "HIRED"]);
+  const becameOtherStatus =
+    data.status !== undefined &&
+    data.status !== existing.status &&
+    NON_REJECTION_STATUSES.has(data.status);
 
   if (becameRejected) {
     void notifyApplicationRejected({
@@ -249,6 +260,15 @@ export async function updateApplication(applicationId: string, raw: unknown) {
       companyName: existing.job.company.companyName,
       rejectionReason: data.rejectionReason ?? updated.rejectionReason ?? null,
     }).catch((err) => console.error("[applications] rejection notify failed:", err));
+  } else if (becameOtherStatus) {
+    void notifyApplicationStatusChanged({
+      seekerUserId: existing.seeker.user.id,
+      seekerEmail: existing.seeker.user.email,
+      seekerName: existing.seeker.fullName,
+      jobTitle: existing.job.title,
+      companyName: existing.job.company.companyName,
+      status: data.status as NonRejectionApplicationStatus,
+    }).catch((err) => console.error("[applications] status-change notify failed:", err));
   }
 
   invalidateEmployerWorkspace(existing.job.company.id);

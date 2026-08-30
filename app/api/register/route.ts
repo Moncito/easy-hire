@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { errorResponse } from "@/lib/api-error";
 import { clientKeyFromRequest, enforceRateLimit } from "@/lib/rate-limit";
 import { registerSchema } from "@/lib/validations/sign-up";
-import { requestEmailVerification } from "@/lib/auth/credentials-recovery";
+import { sendWelcomeVerification } from "@/lib/auth/credentials-recovery";
 
 // Unauthenticated + runs bcrypt.hash(cost 10) per call — keep this tight.
 const REGISTER_RATE_LIMIT = 5;
@@ -40,8 +40,8 @@ export async function POST(req: Request) {
 
     // Fire-and-forget: a mail provider failure must never break account
     // creation. The user can always request another verification email later.
-    requestEmailVerification(user.id).catch((err) =>
-      console.error("[register] failed to send verification email:", err)
+    sendWelcomeVerification(user.id, user.role).catch((err) =>
+      console.error("[register] failed to send welcome/verification email:", err)
     );
 
     return NextResponse.json({

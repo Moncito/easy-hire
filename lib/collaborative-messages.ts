@@ -1,7 +1,8 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/lib/api-error";
-import { createNotification } from "@/lib/email";
+import { createNotification, sendNewMessageEmail } from "@/lib/email";
+import { shouldSendNewMessageEmail } from "@/lib/messaging/message-notify";
 import { invalidateEmployerNav } from "@/lib/employer-cache";
 import { invalidateConversationsForParticipants } from "@/lib/conversations-cache";
 import { requireCompanyMembership, companyMemberRoleLabel } from "@/lib/collaborative-hiring";
@@ -263,6 +264,25 @@ export async function sendCollaborativeMessage(companyId: string, actorUserId: s
   void createNotification(conversation.seeker.userId, "NEW_MESSAGE", `${conversation.company.companyName} sent you a message.`).catch((err) =>
     console.error("[collaborative-messages] notification failed:", err)
   );
+
+  // Throttled email — see lib/messaging/message-notify.ts for the exact rule.
+  const seekerUserId = conversation.seeker.userId;
+  const companyName = conversation.company.companyName;
+  void (async () => {
+    const [earlierUnreadCount, recipient] = await Promise.all([
+      prisma.message.count({
+        where: {
+          conversationId,
+          senderUserId: { not: seekerUserId },
+          readAt: null,
+          id: { not: message.id },
+        },
+      }),
+      prisma.user.findUnique({ where: { id: seekerUserId }, select: { email: true } }),
+    ]);
+    if (!recipient || !shouldSendNewMessageEmail(earlierUnreadCount)) return;
+    await sendNewMessageEmail({ to: recipient.email, recipientRole: "SEEKER", senderName: companyName });
+  })().catch((err) => console.error("[collaborative-messages] new-message email failed:", err));
 
   invalidateEmployerNav(companyId);
   invalidateConversationsForParticipants(conversation.company.userId, conversation.seeker.userId);

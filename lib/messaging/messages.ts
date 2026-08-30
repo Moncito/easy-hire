@@ -2,15 +2,18 @@ import { prisma } from "@/lib/prisma";
 import { isDiscoverableInTalentSearch } from "@/lib/seeker-profile-format";
 import { Prisma } from "@prisma/client";
 import { ApiError } from "@/lib/api-error";
-import { createNotification } from "@/lib/email";
+import { createNotification, sendNewMessageEmail } from "@/lib/email";
+import { shouldSendNewMessageEmail } from "@/lib/messaging/message-notify";
 import { invalidateEmployerNav } from "@/lib/employer-cache";
 import { invalidateConversationsForParticipants } from "@/lib/conversations-cache";
 import { requireEmployerCompany } from "@/lib/employer-auth";
+import { requireSeekerProfile } from "@/lib/seeker-auth";
 import { requireVerifiedEmail } from "@/lib/auth/credentials-recovery";
 import { companyMemberRoleLabel } from "@/lib/collaborative-hiring";
 import {
   conversationCreateSchema,
   messageCreateSchema,
+  type ConversationCreate,
 } from "@/lib/validations/message";
 
 export type { ConversationListItem } from "@/lib/conversation-inbox";
@@ -222,8 +225,98 @@ export async function getMessagesAfter(
   }));
 }
 
-export async function createOrGetConversation(employerUserId: string, raw: unknown) {
-  const input = conversationCreateSchema.parse(raw);
+const conversationInclude = {
+  company: { select: { id: true, companyName: true, logoUrl: true } },
+  seeker: { select: { id: true, fullName: true, headline: true, photoUrl: true } },
+  job: { select: { id: true, title: true } },
+} as const;
+
+/**
+ * A seeker may only open a thread with a company they have an `Application`
+ * to — otherwise this endpoint would be a spam vector for cold-messaging any
+ * company on the platform. `appliedJobIds` must already be scoped to the
+ * target company (see the caller): that single scoping also makes "the job
+ * belongs to a different company" fall out for free, since such a job's id
+ * would never appear in the list.
+ *
+ * Pure — no DB access — so it's unit-testable without mocking Prisma.
+ */
+export function seekerCanMessageCompany(appliedJobIds: string[], jobId?: string | null): boolean {
+  if (jobId) {
+    return appliedJobIds.includes(jobId);
+  }
+  return appliedJobIds.length > 0;
+}
+
+export const SEEKER_MESSAGE_ACCESS_DENIED = "You can only message companies you've applied to.";
+
+type UpsertConversationArgs = {
+  companyId: string;
+  companyUserId: string;
+  seekerId: string;
+  seekerUserId: string;
+  jobId: string | null;
+  initialMessage?: string;
+  senderUserId: string;
+  senderRole: "EMPLOYER" | "SEEKER";
+};
+
+/** Shared create-or-get semantics for both the employer- and seeker-initiated paths. */
+async function upsertConversation(args: UpsertConversationArgs) {
+  const { companyId, companyUserId, seekerId, seekerUserId, jobId, initialMessage, senderUserId, senderRole } = args;
+
+  let conversation = await prisma.conversation.findUnique({
+    where: { companyId_seekerId: { companyId, seekerId } },
+    include: conversationInclude,
+  });
+
+  if (!conversation) {
+    try {
+      conversation = await prisma.conversation.create({
+        data: { companyId, seekerId, jobId },
+        include: conversationInclude,
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === "P2002"
+      ) {
+        conversation = await prisma.conversation.findUnique({
+          where: { companyId_seekerId: { companyId, seekerId } },
+          include: conversationInclude,
+        });
+      } else {
+        throw error;
+      }
+    }
+  }
+
+  if (!conversation) {
+    throw new ApiError("Could not create conversation", 500);
+  }
+
+  if (jobId && !conversation.jobId) {
+    conversation = await prisma.conversation.update({
+      where: { id: conversation.id },
+      data: { jobId },
+      include: conversationInclude,
+    });
+  }
+
+  if (initialMessage) {
+    await sendMessage(senderUserId, senderRole, conversation.id, { body: initialMessage });
+  } else {
+    invalidateConversationsForParticipants(companyUserId, seekerUserId);
+  }
+
+  return conversation;
+}
+
+async function createOrGetConversationAsEmployer(employerUserId: string, input: ConversationCreate) {
+  if (!input.seekerId) {
+    throw new ApiError("seekerId is required", 400);
+  }
+
   const company = await requireEmployerCompany(employerUserId);
 
   const seeker = await prisma.seekerProfile.findUnique({
@@ -248,69 +341,77 @@ export async function createOrGetConversation(employerUserId: string, raw: unkno
     }
   }
 
-  let conversation = await prisma.conversation.findUnique({
-    where: {
-      companyId_seekerId: { companyId: company.id, seekerId: seeker.id },
-    },
-    include: {
-      company: { select: { id: true, companyName: true, logoUrl: true } },
-      seeker: { select: { id: true, fullName: true, headline: true, photoUrl: true } },
-      job: { select: { id: true, title: true } },
-    },
+  return upsertConversation({
+    companyId: company.id,
+    companyUserId: employerUserId,
+    seekerId: seeker.id,
+    seekerUserId: seeker.user.id,
+    jobId: input.jobId ?? null,
+    initialMessage: input.initialMessage,
+    senderUserId: employerUserId,
+    senderRole: "EMPLOYER",
+  });
+}
+
+/**
+ * Scoping rule mirrors `getSeekerProfileForEmployer` in lib/employer/talent.ts
+ * (the employer side's "has this seeker applied to one of my jobs" check):
+ * a seeker may only open a conversation with a company they have an
+ * `Application` to. Fetching applications pre-scoped to `input.companyId`
+ * means a nonexistent company and "never applied" both resolve to the same
+ * generic 403 — we never confirm or deny that a company exists.
+ */
+async function createOrGetConversationAsSeeker(seekerUserId: string, input: ConversationCreate) {
+  if (!input.companyId) {
+    throw new ApiError("companyId is required", 400);
+  }
+
+  const seeker = await requireSeekerProfile(seekerUserId);
+
+  const appliedJobIds = (
+    await prisma.application.findMany({
+      where: { seekerId: seeker.id, job: { companyId: input.companyId } },
+      select: { jobId: true },
+    })
+  ).map((application) => application.jobId);
+
+  if (!seekerCanMessageCompany(appliedJobIds, input.jobId)) {
+    throw new ApiError(SEEKER_MESSAGE_ACCESS_DENIED, 403);
+  }
+
+  const company = await prisma.company.findUnique({
+    where: { id: input.companyId },
+    select: { id: true, userId: true },
   });
 
-  const conversationInclude = {
-    company: { select: { id: true, companyName: true, logoUrl: true } },
-    seeker: { select: { id: true, fullName: true, headline: true, photoUrl: true } },
-    job: { select: { id: true, title: true } },
-  } as const;
-
-  if (!conversation) {
-    try {
-      conversation = await prisma.conversation.create({
-        data: {
-          companyId: company.id,
-          seekerId: seeker.id,
-          jobId: input.jobId ?? null,
-        },
-        include: conversationInclude,
-      });
-    } catch (error) {
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === "P2002"
-      ) {
-        conversation = await prisma.conversation.findUnique({
-          where: {
-            companyId_seekerId: { companyId: company.id, seekerId: seeker.id },
-          },
-          include: conversationInclude,
-        });
-      } else {
-        throw error;
-      }
-    }
+  if (!company) {
+    // Defense in depth: in practice appliedJobIds is already empty when the
+    // company doesn't exist, since no job can reference it.
+    throw new ApiError(SEEKER_MESSAGE_ACCESS_DENIED, 403);
   }
 
-  if (!conversation) {
-    throw new ApiError("Could not create conversation", 500);
-  }
+  return upsertConversation({
+    companyId: company.id,
+    companyUserId: company.userId,
+    seekerId: seeker.id,
+    seekerUserId,
+    jobId: input.jobId ?? null,
+    initialMessage: input.initialMessage,
+    senderUserId: seekerUserId,
+    senderRole: "SEEKER",
+  });
+}
 
-  if (input.jobId && !conversation.jobId) {
-    conversation = await prisma.conversation.update({
-      where: { id: conversation.id },
-      data: { jobId: input.jobId },
-      include: conversationInclude,
-    });
-  }
+export async function createOrGetConversation(userId: string, role: string, raw: unknown) {
+  const input = conversationCreateSchema.parse(raw);
 
-  if (input.initialMessage) {
-    await sendMessage(employerUserId, "EMPLOYER", conversation.id, { body: input.initialMessage });
-  } else {
-    invalidateConversationsForParticipants(employerUserId, seeker.user.id);
+  if (role === "EMPLOYER") {
+    return createOrGetConversationAsEmployer(userId, input);
   }
-
-  return conversation;
+  if (role === "SEEKER") {
+    return createOrGetConversationAsSeeker(userId, input);
+  }
+  throw new ApiError("Forbidden", 403);
 }
 
 export async function sendMessage(
@@ -350,6 +451,26 @@ export async function sendMessage(
       "NEW_MESSAGE",
       `${senderName} sent you a message.`
     ).catch((err) => console.error("[messages] notification failed:", err));
+
+    // Throttled email — see lib/messaging/message-notify.ts for the exact
+    // rule. Fire-and-forget: neither the unread count nor the mail send may
+    // block or fail the message send itself.
+    const recipientRole: "SEEKER" | "EMPLOYER" = role === "EMPLOYER" ? "SEEKER" : "EMPLOYER";
+    void (async () => {
+      const [earlierUnreadCount, recipient] = await Promise.all([
+        prisma.message.count({
+          where: {
+            conversationId,
+            senderUserId: { not: recipientUserId },
+            readAt: null,
+            id: { not: message.id },
+          },
+        }),
+        prisma.user.findUnique({ where: { id: recipientUserId }, select: { email: true } }),
+      ]);
+      if (!recipient || !shouldSendNewMessageEmail(earlierUnreadCount)) return;
+      await sendNewMessageEmail({ to: recipient.email, recipientRole, senderName });
+    })().catch((err) => console.error("[messages] new-message email failed:", err));
   }
 
   if (role === "EMPLOYER") {

@@ -3,6 +3,7 @@ import { ApiError } from "@/lib/api-error";
 import { adminCompanyReviewSchema } from "@/lib/validations/admin";
 import { invalidateCollaborativeHiringEnabled } from "@/lib/collaborative-hiring";
 import { VERIFICATION_DOC_BUCKET, resolveSignedUrl } from "@/lib/storage";
+import { sendCompanyRejectedEmail, sendCompanyVerifiedEmail } from "@/lib/shared/email";
 
 export async function listPendingCompanies() {
   const companies = await prisma.company.findMany({
@@ -90,6 +91,11 @@ export async function reviewCompany(companyId: string, raw: unknown) {
       }),
     ]);
 
+    void sendCompanyVerifiedEmail({
+      to: company.user.email,
+      companyName: company.companyName,
+    }).catch((err) => console.error("[admin/companies] verified email failed:", err));
+
     return updated;
   }
 
@@ -118,6 +124,12 @@ export async function reviewCompany(companyId: string, raw: unknown) {
       },
     }),
   ]);
+
+  void sendCompanyRejectedEmail({
+    to: company.user.email,
+    companyName: company.companyName,
+    reason,
+  }).catch((err) => console.error("[admin/companies] rejected email failed:", err));
 
   return updated;
 }

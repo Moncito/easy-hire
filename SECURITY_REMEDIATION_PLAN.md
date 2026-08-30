@@ -16,9 +16,15 @@
 | 1 | 1.5 Input validation & error codes | ✅ done, verified |
 | 1 | 1.6 Data-subject rights (RA 10173) | ✅ done — backend only, **UI not built** |
 | 1 | *(added)* Email normalization | ✅ done, verified + 1 data row repaired |
-| 2 | Seeker-side parity | ⬜ not started |
+| 2 | 2.1 Seeker notification surface | ✅ backend + bell UI |
+| 2 | 2.2 Seeker-initiated messaging | ✅ backend + UI |
+| 2 | 2.3 Candidate-visible interviews | ✅ backend + UI, incl. `.ics` invites |
+| 2 | 2.4 Make the schedulers run | ✅ migration 25 applied — **needs Vercel Pro + `CRON_SECRET`** |
+| 2 | 2.5 Missing transactional emails | ✅ 7 added |
 | 3 | Distribution / Google for Jobs | ⬜ not started |
 | 4 | Trust wedge (reviews + verification score) | ⬜ not started |
+
+**Phase 2 closed 2026-08-30.** Tests **112** across 11 files. `tsc` clean, lint back to the 64 baseline, 25 migrations applied.
 
 **Phase 1 closed 2026-08-30.** Tree state: `npx tsc --noEmit` clean · `npm test` **72/72** across 6 files (was 45 across 3) · `npm run lint` 64 problems (30 errors / 34 warnings) — all pre-existing baseline, none added. One migration applied, `migrate status` clean. Nothing committed yet.
 
@@ -33,6 +39,16 @@ The script itself had a bug found only by running it — it duplicated `getSupab
 **Verified:** private-bucket URL returns 400 · backfill idempotent · migration applied and `migrate status` clean · 72/72 tests · no new lint.
 
 **NOT yet verified — requires a running app:** cron endpoint returning 503/401 · password-reset round trip through a real email · rate limiters actually returning 429 with `Retry-After` · invalid JSON returning 400 instead of 500 · the auth recovery pages rendering and submitting correctly.
+
+### Phase 2 — deploy blockers and open items
+
+1. **The crons need Vercel Pro.** Hobby caps total cron jobs at **2**; `vercel.json` declares **4**. Not collapsible without baking day-of-week branching into route logic purely to fit a plan limit.
+2. **`CRON_SECRET` must be set in the Vercel dashboard.** `requireCronAuth` fails closed with 503 until it exists. Deploy without it and every cron silently 503s.
+3. **New-message email throttling is approximate.** Rule: send only when the recipient has no *earlier* unread in that thread (uses existing `Message.readAt`, no migration). Two known failure modes — a race where two concurrent messages both see zero unread and both send, and no time-based cooldown. A `Conversation.lastNotifiedAt` column would fix both.
+4. **Dashboard message button does a click-time lookup.** `lib/seeker/dashboard.ts` selects `job.company.companyName` but not `company.id`, and `Application` has no `companyId` scalar — so `MessageEmployerButton` resolves the company via `GET /api/public/jobs/{jobId}` on click. Correct but an extra roundtrip; adding `id` to that select is a one-line fix.
+5. **One lint suppression added** — `app/seeker/dashboard/page.tsx`, `react-hooks/purity` on `const nowMs = Date.now()`. Justified in a comment: async Server Component, renders once per request, deliberately outside the `unstable_cache` boundary. The rule targets client render. This is a suppression, not a fix.
+6. **Message button is not hidden for rejected applications.** Backend permits it; no business rule was invented. May want one.
+7. **`EmployerNotificationBell.tsx:35` has the same unmount bug** the seeker bell was fixed for — a poll in flight after unmount calls `setState` on a dead component, no `cancelled` guard. One of the 30 baseline lint errors. Same fix applies.
 
 ### Open decisions for the product owner
 

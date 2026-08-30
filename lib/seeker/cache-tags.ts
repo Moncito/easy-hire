@@ -15,3 +15,11 @@ export function seekerSavedJobsTag(userId: string) {
 export function seekerJobAlertsTag(userId: string) {
   return `seeker-job-alerts-${userId}`;
 }
+
+export function seekerNotificationsTag(userId: string) {
+  return `seeker-notifications-${userId}`;
+}
+
+export function seekerInterviewsTag(userId: string) {
+  return `seeker-interviews-${userId}`;
+}

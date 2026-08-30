@@ -4,6 +4,7 @@ import { ensureSeekerProfile } from "@/lib/seekers";
 import { listJobAlerts } from "@/lib/job-alerts";
 import {
   seekerApplicationsTag,
+  seekerInterviewsTag,
   seekerJobAlertsTag,
   seekerProfileTag,
   seekerSavedJobsTag,
@@ -11,6 +12,11 @@ import {
 import { reviveDates } from "@/lib/cache-utils";
 
 const DASHBOARD_REVALIDATE_SECONDS = 20;
+const INTERVIEWS_REVALIDATE_SECONDS = 20;
+// Upcoming + recent past — a seeker's interview history is not unbounded the
+// way an employer's calendar can be, but this still caps the query per the
+// repo-wide findMany bound convention (see lib/seeker/saved-jobs.ts, take: 5).
+const INTERVIEWS_TAKE = 25;
 
 export async function getSeekerDashboardProfile(userId: string, fullName: string) {
   // Ensures the profile row exists before the cached read below — cheap now
@@ -74,6 +80,82 @@ export async function getSeekerDashboardProfile(userId: string, fullName: string
         seekerSavedJobsTag(userId),
         seekerJobAlertsTag(userId),
       ],
+    }
+  )();
+  return reviveDates(result);
+}
+
+export type SeekerInterview = {
+  id: string;
+  scheduledAt: Date;
+  durationMins: number;
+  format: string;
+  location: string | null;
+  status: string;
+  jobId: string;
+  jobTitle: string;
+  companyName: string;
+};
+
+/**
+ * A seeker's own interviews — scoped strictly to applications they own via
+ * seekerProfile.id (same ownership-by-profile-id guard as
+ * lib/seeker/saved-jobs.ts / lib/seeker/job-alerts.ts, not a hand-rolled
+ * check). Only candidate-facing fields are selected: this deliberately never
+ * touches InterviewParticipant.notes, InterviewParticipant.outcome,
+ * Interview.outcome, or CandidateEvaluation — those are the employer's
+ * private hiring notes and must never reach a seeker-facing response.
+ */
+export async function getSeekerInterviews(userId: string): Promise<SeekerInterview[]> {
+  const result = await unstable_cache(
+    async () => {
+      const profile = await prisma.seekerProfile.findUnique({
+        where: { userId },
+        select: { id: true },
+      });
+      if (!profile) return [];
+
+      const interviews = await prisma.interview.findMany({
+        where: { application: { seekerId: profile.id } },
+        orderBy: { scheduledAt: "desc" },
+        take: INTERVIEWS_TAKE,
+        select: {
+          id: true,
+          scheduledAt: true,
+          durationMins: true,
+          format: true,
+          location: true,
+          status: true,
+          application: {
+            select: {
+              job: {
+                select: {
+                  id: true,
+                  title: true,
+                  company: { select: { companyName: true } },
+                },
+              },
+            },
+          },
+        },
+      });
+
+      return interviews.map((interview) => ({
+        id: interview.id,
+        scheduledAt: interview.scheduledAt,
+        durationMins: interview.durationMins,
+        format: interview.format,
+        location: interview.location,
+        status: interview.status,
+        jobId: interview.application.job.id,
+        jobTitle: interview.application.job.title,
+        companyName: interview.application.job.company.companyName,
+      }));
+    },
+    ["seeker-interviews", userId],
+    {
+      revalidate: INTERVIEWS_REVALIDATE_SECONDS,
+      tags: [seekerInterviewsTag(userId)],
     }
   )();
   return reviveDates(result);

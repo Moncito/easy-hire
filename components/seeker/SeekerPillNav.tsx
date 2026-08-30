@@ -24,6 +24,7 @@ const navItems = [
 ];
 
 import SeekerMobileBottomNav from "@/components/seeker/SeekerMobileBottomNav";
+import SeekerNotificationBell from "@/components/seeker/SeekerNotificationBell";
 
 type Props = {
   userName?: string | null;
@@ -167,7 +168,7 @@ export default function SeekerPillNav({ userName, userEmail }: Props) {
 
   return (
     <>
-      <header className="pointer-events-none fixed inset-x-0 top-0 z-50 hidden justify-center pt-3 lg:flex">
+      <header className="pointer-events-none fixed inset-x-0 top-0 z-50 hidden items-start justify-center gap-2 pt-3 lg:flex">
       <div
         ref={shellRef}
         role="navigation"
@@ -315,6 +316,10 @@ export default function SeekerPillNav({ userName, userEmail }: Props) {
             Sign out
           </button>
         </div>
+      </div>
+
+      <div className="pointer-events-auto flex h-11 shrink-0 items-center rounded-full border border-white/20 bg-ink/90 px-1 shadow-[0_8px_32px_rgba(0,0,0,0.28)] backdrop-blur-xl">
+        <SeekerNotificationBell variant="dark" />
       </div>
     </header>
     <SeekerMobileBottomNav />

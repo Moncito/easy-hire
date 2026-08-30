@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/lib/api-error";
 import { normalizeEmail } from "@/lib/email-address";
 import { passwordSchema } from "@/lib/validations/sign-up";
-import { sendEmailVerificationEmail, sendPasswordResetEmail } from "@/lib/shared/email";
+import { sendEmailVerificationEmail, sendPasswordResetEmail, sendWelcomeVerificationEmail } from "@/lib/shared/email";
 
 export const PASSWORD_RESET_TTL_MS = 60 * 60 * 1000; // 1 hour
 export const EMAIL_VERIFY_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
@@ -127,7 +127,16 @@ export async function resetPassword(rawToken: string, newPassword: string): Prom
   });
 }
 
-export async function requestEmailVerification(userId: string): Promise<void> {
+/**
+ * Shared by requestEmailVerification (plain resend) and
+ * sendWelcomeVerificationEmail (registration) — issues a fresh EMAIL_VERIFY
+ * token and returns it plus the user's email, without sending any mail
+ * itself. Returns null when the account is already verified (nothing to do
+ * — mirrors requestEmailVerification's previous early return).
+ */
+async function issueEmailVerificationToken(
+  userId: string
+): Promise<{ email: string; token: string } | null> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: { id: true, email: true, emailVerifiedAt: true },
@@ -136,7 +145,7 @@ export async function requestEmailVerification(userId: string): Promise<void> {
     throw new ApiError("User not found", 404);
   }
   if (user.emailVerifiedAt) {
-    return;
+    return null;
   }
 
   const { token, tokenHash } = createVerificationToken();
@@ -152,7 +161,35 @@ export async function requestEmailVerification(userId: string): Promise<void> {
     });
   });
 
-  await sendEmailVerificationEmail({ to: user.email, token });
+  return { email: user.email, token };
+}
+
+export async function requestEmailVerification(userId: string): Promise<void> {
+  const issued = await issueEmailVerificationToken(userId);
+  if (!issued) {
+    return;
+  }
+  await sendEmailVerificationEmail({ to: issued.email, token: issued.token });
+}
+
+/**
+ * Registration-only variant of requestEmailVerification: same token
+ * issuance, but sends the combined "Welcome to EasyHire — verify your
+ * email" template instead of the plain verification email, so a brand-new
+ * account gets exactly one email instead of two near-identical ones back to
+ * back. Every other caller of requestEmailVerification (e.g. the "resend
+ * verification email" action for an existing, already-onboarded account)
+ * is untouched.
+ */
+export async function sendWelcomeVerification(
+  userId: string,
+  role: "SEEKER" | "EMPLOYER" | "ADMIN"
+): Promise<void> {
+  const issued = await issueEmailVerificationToken(userId);
+  if (!issued) {
+    return;
+  }
+  await sendWelcomeVerificationEmail({ to: issued.email, token: issued.token, role });
 }
 
 export async function verifyEmail(rawToken: string): Promise<{ userId: string }> {

@@ -583,17 +583,20 @@ model SavedJob {
 }
 
 model JobAlert {
-  id        String         @id @default(cuid())
-  seekerId  String         @map("seeker_id")
-  keywords  String
-  category  String?
-  frequency AlertFrequency
-  createdAt DateTime       @default(now()) @map("created_at")
-  updatedAt DateTime       @updatedAt @map("updated_at")
+  id         String         @id @default(cuid())
+  seekerId   String         @map("seeker_id")
+  keywords   String
+  category   String?
+  frequency  AlertFrequency
+  lastSentAt DateTime?      @map("last_sent_at")
+  createdAt  DateTime       @default(now()) @map("created_at")
+  updatedAt  DateTime       @updatedAt @map("updated_at")
 
   // Relations
   seeker SeekerProfile @relation(fields: [seekerId], references: [id], onDelete: Cascade)
 
+  // Supports the cron digest query: findMany({ where: { frequency, lastSentAt: ... } }).
+  @@index([frequency, lastSentAt])
   @@map("job_alerts")
 }
 
