@@ -7,7 +7,7 @@ export const SIGNED_URL_TTL_SECONDS = 300;
 export const RESUME_BUCKET = "resumes";
 export const VERIFICATION_DOC_BUCKET = "verification-docs";
 
-type BucketId = "resumes" | "logos" | "banners" | "photos" | "verification-docs";
+export type BucketId = "resumes" | "logos" | "banners" | "photos" | "verification-docs";
 
 type BucketConfig = {
   bucket: BucketId;
@@ -270,18 +270,22 @@ export async function uploadVerificationDocument(userId: string, file: File) {
   return { url: objectPath, fileName: sanitizeFilename(file.name) };
 }
 
-/** Buckets that hold RA 10173-sensitive files and support programmatic deletion (e.g. account deletion). */
+/**
+ * @deprecated Kept only so pre-existing call sites keep compiling without a
+ * change. Use `BucketId` (all buckets support programmatic deletion now).
+ */
 export type PrivateBucketId = "resumes" | "verification-docs";
 
 /**
- * Deletes a single object from a private bucket. Best-effort: logs and
- * swallows storage errors instead of throwing, so a flaky/slow Supabase
- * Storage call never rolls back a DB transaction (e.g. account deletion)
- * that has already committed. Callers that need to know about failures
- * should check server logs — this never blocks the caller's success path.
+ * Deletes a single object from any bucket (private or public). Best-effort:
+ * logs and swallows storage errors instead of throwing, so a flaky/slow
+ * Supabase Storage call never rolls back a DB transaction (e.g. account
+ * deletion) that has already committed. Callers that need to know about
+ * failures should check server logs — this never blocks the caller's
+ * success path.
  */
-export async function deletePrivateStorageObject(
-  bucket: PrivateBucketId,
+export async function deleteStorageObject(
+  bucket: BucketId,
   stored: string | null | undefined
 ): Promise<void> {
   if (!stored) return;
@@ -298,3 +302,6 @@ export async function deletePrivateStorageObject(
     console.error(`[storage] failed to delete ${bucket}/${path}:`, error);
   }
 }
+
+/** @deprecated Thin alias kept for existing callers — use `deleteStorageObject` for new code. */
+export const deletePrivateStorageObject = deleteStorageObject;

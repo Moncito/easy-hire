@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Bell } from "lucide-react";
 import { notificationHref } from "@/lib/notifications";
@@ -20,22 +20,28 @@ export default function EmployerNotificationBell() {
   const [unreadCount, setUnreadCount] = useState(0);
   const panelRef = useRef<HTMLDivElement>(null);
 
-  const fetchNotifications = useCallback(async () => {
-    try {
-      const data = await listEmployerNotifications();
-      if (!data) return;
-      setNotifications(data.notifications ?? []);
-      setUnreadCount(data.unreadCount ?? 0);
-    } catch {
-      /* ignore */
-    }
-  }, []);
-
   useEffect(() => {
-    fetchNotifications();
-    const interval = setInterval(fetchNotifications, 60_000);
-    return () => clearInterval(interval);
-  }, [fetchNotifications]);
+    let cancelled = false;
+
+    const run = () => {
+      listEmployerNotifications()
+        .then((data) => {
+          if (cancelled || !data) return;
+          setNotifications(data.notifications ?? []);
+          setUnreadCount(data.unreadCount ?? 0);
+        })
+        .catch(() => {
+          /* ignore — next poll will retry */
+        });
+    };
+
+    run();
+    const interval = setInterval(run, 60_000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, []);
 
   useEffect(() => {
     function onClickOutside(e: MouseEvent) {

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, User, Briefcase, LogOut, MessageSquare } from "lucide-react";
+import { LayoutDashboard, User, Briefcase, LogOut, MessageSquare, Settings } from "lucide-react";
 import { useSignOut } from "@/components/ui/useSignOut";
 import SeekerNotificationBell from "@/components/seeker/SeekerNotificationBell";
 
@@ -11,6 +11,7 @@ const navItems = [
   { label: "My Profile", href: "/seeker/profile", icon: User },
   { label: "Messages", href: "/seeker/messages", icon: MessageSquare },
   { label: "Browse Jobs", href: "/jobs", icon: Briefcase },
+  { label: "Settings", href: "/seeker/settings", icon: Settings },
 ];
 
 export default function SeekerSidebar() {

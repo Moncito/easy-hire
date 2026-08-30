@@ -318,8 +318,12 @@ export default function SeekerPillNav({ userName, userEmail }: Props) {
         </div>
       </div>
 
-      <div className="pointer-events-auto flex h-11 shrink-0 items-center rounded-full border border-white/20 bg-ink/90 px-1 shadow-[0_8px_32px_rgba(0,0,0,0.28)] backdrop-blur-xl">
-        <SeekerNotificationBell variant="dark" />
+      {/* Fixed square so `rounded-full` stays a true circle: the 32px bell
+          inside would otherwise leave this 40x44 and render as an ellipse.
+          44x44 around a 32px control also matches the nav island's own
+          min-h-[44px]-around-h-8 rhythm. */}
+      <div className="pointer-events-auto flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/20 bg-ink/90 shadow-[0_8px_32px_rgba(0,0,0,0.28)] backdrop-blur-xl">
+        <SeekerNotificationBell variant="dark" size="sm" />
       </div>
     </header>
     <SeekerMobileBottomNav />

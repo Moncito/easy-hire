@@ -4,6 +4,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { errorResponse } from "@/lib/api-error";
 import { clientKeyFromRequest, enforceRateLimit } from "@/lib/rate-limit";
+import { parseJsonBody } from "@/lib/parse-json-body";
 import { registerSchema } from "@/lib/validations/sign-up";
 import { sendWelcomeVerification } from "@/lib/auth/credentials-recovery";
 
@@ -19,7 +20,7 @@ export async function POST(req: Request) {
       windowSeconds: REGISTER_RATE_WINDOW_SECONDS,
     });
 
-    const body = await req.json();
+    const body = await parseJsonBody(req);
     const { email, password, role, fullName, companyName } = registerSchema.parse(body);
 
     const passwordHash = await bcrypt.hash(password, 10);

@@ -810,17 +810,18 @@ model AnalyticsDailyRollup {
  */
 model ExportAuditLog {
   id        String   @id @default(cuid())
-  companyId String   @map("company_id")
+  companyId String?  @map("company_id")
   userId    String   @map("user_id")
   kind      String
   meta      Json?
   createdAt DateTime @default(now()) @map("created_at")
 
   // Relations
-  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company Company? @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([companyId])
   @@index([companyId, createdAt])
+  @@index([userId, createdAt])
   @@map("export_audit_logs")
 }

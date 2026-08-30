@@ -15,6 +15,7 @@ type Notification = {
 };
 
 type Variant = "dark" | "light";
+type Size = "sm" | "md";
 
 type Props = {
   /**
@@ -26,6 +27,28 @@ type Props = {
   dropDirection?: "down" | "up";
   /** Horizontal alignment of the dropdown relative to the trigger. */
   align?: "left" | "right";
+  /**
+   * "md" (default) is the original size, used by SeekerSidebar and
+   * SeekerMobileBottomNav — do not change their rendering. "sm" matches the
+   * 32px / 14px-icon footprint of the SeekerPillNav nav buttons, for use
+   * only when the bell sits beside that nav.
+   */
+  size?: Size;
+};
+
+const sizeStyles: Record<Size, { button: string; icon: string; badge: string; badgePosition: string }> = {
+  md: {
+    button: "h-9 w-9",
+    icon: "h-5 w-5",
+    badge: "h-4 min-w-4 px-1 text-[9px]",
+    badgePosition: "right-0.5 top-0.5",
+  },
+  sm: {
+    button: "h-8 w-8",
+    icon: "h-3.5 w-3.5",
+    badge: "h-3.5 min-w-3.5 px-0.5 text-[8px]",
+    badgePosition: "right-0 top-0",
+  },
 };
 
 /**
@@ -46,7 +69,9 @@ export default function SeekerNotificationBell({
   variant = "light",
   dropDirection = "down",
   align = "right",
+  size = "md",
 }: Props) {
+  const s = sizeStyles[size];
   const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -152,13 +177,13 @@ export default function SeekerNotificationBell({
         aria-haspopup="true"
         aria-expanded={open}
         aria-controls={panelId}
-        className={`relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition ${triggerClass}`}
+        className={`relative flex ${s.button} shrink-0 items-center justify-center rounded-full transition ${triggerClass}`}
       >
-        <Bell className="h-5 w-5" strokeWidth={2} aria-hidden="true" />
+        <Bell className={s.icon} strokeWidth={2} aria-hidden="true" />
         {unreadCount > 0 && (
           <span
             aria-hidden="true"
-            className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-marigold px-1 text-[9px] font-bold text-ink"
+            className={`absolute ${s.badgePosition} flex ${s.badge} items-center justify-center rounded-full bg-marigold font-bold text-ink`}
           >
             {unreadCount > 9 ? "9+" : unreadCount}
           </span>

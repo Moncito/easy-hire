@@ -1,7 +1,7 @@
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/lib/api-error";
-import { deletePrivateStorageObject } from "@/lib/storage";
+import { deleteStorageObject, type BucketId } from "@/lib/storage";
 import { parseResume } from "@/lib/seeker-profile-format";
 import { invalidateEmployerWorkspace } from "@/lib/employer-cache";
 import { invalidateCompanyMembership, invalidateHiringWorkspaces } from "@/lib/collaborative-hiring";
@@ -58,6 +58,30 @@ export function assertCanDeleteOwnedCompany(input: {
       409
     );
   }
+}
+
+export type StorageDeletionTarget = { bucket: BucketId; path: string };
+
+/**
+ * Pure helper — no DB access, cheap to unit test (same rationale as
+ * assertCanDeleteOwnedCompany above). Collects the public-bucket profile
+ * images (company logo/banner, seeker photo, user avatar) that need to be
+ * removed from storage on account deletion. Stored values may carry a
+ * `?v=` cache-buster suffix — that's stripped downstream by `toObjectPath`,
+ * not here, so this function just passes the raw stored value through.
+ */
+export function collectProfileImageStorageTargets(input: {
+  companyLogoUrl?: string | null;
+  companyBannerUrl?: string | null;
+  seekerPhotoUrl?: string | null;
+  avatarUrl?: string | null;
+}): StorageDeletionTarget[] {
+  const targets: StorageDeletionTarget[] = [];
+  if (input.companyLogoUrl) targets.push({ bucket: "logos", path: input.companyLogoUrl });
+  if (input.companyBannerUrl) targets.push({ bucket: "banners", path: input.companyBannerUrl });
+  if (input.seekerPhotoUrl) targets.push({ bucket: "photos", path: input.seekerPhotoUrl });
+  if (input.avatarUrl) targets.push({ bucket: "photos", path: input.avatarUrl });
+  return targets;
 }
 
 async function assertReauthenticated(
@@ -123,6 +147,13 @@ export async function deleteUserAccount(
         select: { fileUrl: true },
       })
     : [];
+
+  const profileImageTargets = collectProfileImageStorageTargets({
+    companyLogoUrl: user.company?.logoUrl,
+    companyBannerUrl: user.company?.bannerUrl,
+    seekerPhotoUrl: user.seekerProfile?.photoUrl,
+    avatarUrl: user.avatarUrl,
+  });
 
   let membershipCompanyIds: string[] = [];
 
@@ -259,8 +290,9 @@ export async function deleteUserAccount(
   // part of Postgres's transaction, and a slow/flaky network call must never
   // hold the DB transaction open or roll back data that's already anonymized.
   await Promise.all([
-    ...resumePaths.map((path) => deletePrivateStorageObject("resumes", path)),
-    ...verificationDocuments.map((doc) => deletePrivateStorageObject("verification-docs", doc.fileUrl)),
+    ...resumePaths.map((path) => deleteStorageObject("resumes", path)),
+    ...verificationDocuments.map((doc) => deleteStorageObject("verification-docs", doc.fileUrl)),
+    ...profileImageTargets.map((target) => deleteStorageObject(target.bucket, target.path)),
   ]);
 
   if (user.company) {

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/Auth";
 import { errorResponse } from "@/lib/api-error";
+import { parseJsonBody } from "@/lib/parse-json-body";
 import { getSeekerProfile, updateSeekerProfile, ensureSeekerProfile } from "@/lib/seekers";
 
 export async function GET() {
@@ -29,7 +30,7 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const body = await req.json();
+    const body = await parseJsonBody(req);
     const updated = await updateSeekerProfile(session.user.id, body);
     return NextResponse.json(updated);
   } catch (error) {

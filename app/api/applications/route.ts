@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/Auth";
 import { errorResponse } from "@/lib/api-error";
 import { clientKeyFromRequest, enforceRateLimit } from "@/lib/rate-limit";
+import { parseJsonBody } from "@/lib/parse-json-body";
 import { createApplication } from "@/lib/applications";
 import { getSeekerApplicationForJob } from "@/lib/seekers";
 
@@ -41,7 +42,7 @@ export async function POST(req: Request) {
       windowSeconds: APPLY_RATE_WINDOW_SECONDS,
     });
 
-    const body = await req.json();
+    const body = await parseJsonBody(req);
     const application = await createApplication(session.user.id, body);
     return NextResponse.json(application, { status: 201 });
   } catch (error) {

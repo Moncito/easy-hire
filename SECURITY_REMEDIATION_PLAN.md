@@ -14,7 +14,7 @@
 | 1 | 1.3 Password reset + email verification | ✅ done — backend (migration applied) + UI |
 | 1 | 1.4 Rate limiting beyond AI | ✅ done, verified (+9 unit tests) |
 | 1 | 1.5 Input validation & error codes | ✅ done, verified |
-| 1 | 1.6 Data-subject rights (RA 10173) | ✅ done — backend only, **UI not built** |
+| 1 | 1.6 Data-subject rights (RA 10173) | ✅ done — backend + settings UI (export & delete), closed 2026-08-30 |
 | 1 | *(added)* Email normalization | ✅ done, verified + 1 data row repaired |
 | 2 | 2.1 Seeker notification surface | ✅ backend + bell UI |
 | 2 | 2.2 Seeker-initiated messaging | ✅ backend + UI |
@@ -40,6 +40,37 @@ The script itself had a bug found only by running it — it duplicated `getSupab
 
 **NOT yet verified — requires a running app:** cron endpoint returning 503/401 · password-reset round trip through a real email · rate limiters actually returning 429 with `Retry-After` · invalid JSON returning 400 instead of 500 · the auth recovery pages rendering and submitting correctly.
 
+### App actually run — 2026-08-30
+
+First live exercise of the app in this remediation. Driven against the dev server on `:3000`.
+
+**Passed:**
+- **Cron auth, full chain.** All three routes return **503** `{"error":"Cron is not configured"}` with no `CRON_SECRET`; **401** with no header, a wrong bearer, *and* a same-length wrong bearer (so `timingSafeEqual` is exercised, not just the length short-circuit); **200** with the correct secret. `analytics-rollups` ran for real: `{"ok":true,"rollups":{"companies":1},"unfeaturedJobs":0}`. Both of its operations are idempotent (`upsert` + clearing already-expired `featuredUntil`). `job-alerts` and `ai-digest` were deliberately NOT executed — the first sends real email to real seekers, the second needs the unprovisioned AI keys.
+- **Rate limiting.** `POST /api/register` allowed 5 then returned **429** with `retry-after: 3598`.
+- **Route guards.** `/seeker/settings` and `/employer/settings` both **307** to `/login` when signed out.
+
+**FAILED — Phase 1 task 1.5 is incomplete.** `POST /api/register` with malformed JSON returns **500**, not 400. Server log: `SyntaxError: Unexpected end of JSON input`. Cause: `app/api/register/route.ts` calls `await req.json()` directly instead of `parseJsonBody(req)`. It is not alone — **26 route files under `app/api` call `req.json()` raw; only 9 use `parseJsonBody`.** On the other 25 the auth check runs before the parse, so the bug needs a signed-in caller to reach; `/api/register` is the one reachable unauthenticated. Task 1.5 was marked "✅ done, verified" while this property was on the unverified list. **Open — must be fixed before Phase 3.**
+
+**Still unproven:** the settings pages have never *rendered*. The 307 above comes from `app/seeker/layout.tsx`'s guard, and the dev-server compile log confirms the page modules never compiled. Password-reset round trip through real email also still untested.
+
+`CRON_SECRET` is now generated and set in local `.env` (backup written alongside). Still needs setting in the Vercel dashboard.
+
+### Two defects found by running the app — both fixed 2026-08-30
+
+Neither was reachable by `tsc`, lint, or the unit suite. Both were found only by loading real pages.
+
+**1. Malformed JSON returned 500 instead of 400 (Phase 1 task 1.5 was incomplete).** `POST /api/register` returned 500 on a truncated body; server log `SyntaxError: Unexpected end of JSON input`. 26 route files called `req.json()` raw against 9 using `parseJsonBody`. Fixed across **27** files (the 26 found by grep, plus 2 the grep missed because the parameter was named `r`, minus one deliberate skip). Two routes were deliberately left alone — `app/api/employer/ai/[feature]/route.ts` and the interview-cancel route both use `.catch(() => ({}))` / `.catch(() => null)` as load-bearing business logic, where an absent body is a valid request. Verified live: `curl` with `--data '{'` now returns **400**. Three unit tests added in `lib/shared/parse-json-body.test.ts`.
+
+**2. `reviveDates` silently destroyed every real Date — a crash on the seeker dashboard.** Live error: `TypeError: app.appliedAt.toISOString is not a function` at `app/seeker/dashboard/page.tsx:247`.
+
+The root cause is the opposite of what the helper's own doc comment assumes. `reviveDates` (`lib/cache-utils.ts`) exists to turn `unstable_cache`'s JSON-serialized date *strings* back into Dates — and it did that correctly. But it had no `instanceof Date` guard before its object branch. Since `typeof new Date() === "object"` and a `Date` carries no own enumerable properties, `Object.entries(date)` returns `[]`, so a **real** Date — the value on a cache *miss*, straight from Prisma, never serialized — was rebuilt as `{}`.
+
+So every one of the **nine** `reviveDates` call sites (seeker dashboard ×2, seeker profile row ×2, public job detail, public companies, collaborative hiring ×2, collaborative hiring team, collaborative company profile) was destroying Dates on first/uncached read and working correctly only once cached. That inversion is why it survived Phase 2 review and every manual click-through: the *second* page load looks fine.
+
+Fixed with a three-line guard plus `lib/cache-utils.test.ts` (8 tests, split explicitly into cache-hit and cache-miss cases). Confirmed the tests fail 4/8 with the guard removed, so they actually pin the regression rather than passing alongside it.
+
+**Lesson, third time in this project.** A green `tsc`, green lint, and a green unit suite have now missed: the `ws` transport bug in the storage backfill script, the `set-state-in-effect` unmount bug copied between notification bells, and this. All three needed the code to actually execute. Type-level confidence on data crossing a serialization boundary is worth close to nothing — Prisma's types describe the database row, not what survives `unstable_cache`.
+
 ### Phase 2 — deploy blockers and open items
 
 1. **The crons need Vercel Pro.** Hobby caps total cron jobs at **2**; `vercel.json` declares **4**. Not collapsible without baking day-of-week branching into route logic purely to fit a plan limit.
@@ -50,13 +81,19 @@ The script itself had a bug found only by running it — it duplicated `getSupab
 6. **Message button is not hidden for rejected applications.** Backend permits it; no business rule was invented. May want one.
 7. **`EmployerNotificationBell.tsx:35` has the same unmount bug** the seeker bell was fixed for — a poll in flight after unmount calls `setState` on a dead component, no `cancelled` guard. One of the 30 baseline lint errors. Same fix applies.
 
-### Open decisions for the product owner
+### Open decisions for the product owner — resolved 2026-08-30
 
-1. **`allowDangerousEmailAccountLinking`** in `Auth.ts` is still `false`. Its own comment defers the decision to "once email verification exists" — which is now. Enabling it lets someone who registered with a password later sign in with Google on the same address.
-2. **`ExportAuditLog.companyId` is `NOT NULL`**, so a *seeker's* self-export cannot be logged to it. Employer exports log normally; seeker exports currently fall back to `console.info`. Fix is either making `companyId` nullable or adding a `userId`-keyed export log table. Needs a schema decision.
-3. **Account-deletion UI does not exist.** The backend at `POST /api/account/delete` and `GET /api/account/export` is built and guarded, but nothing calls it. Also: NextAuth uses JWT sessions with no server-side store, so the UI must call `signOut()` immediately after a successful delete — the backend alone cannot invalidate a live session.
-4. **Public-bucket files are not deleted on account deletion** — logos, banners, photos, avatars. DB references are nulled, files remain. Deliberate scope call; worth revisiting.
-5. **Lint is not green and never was** — 30 pre-existing errors, mostly React `set-state-in-effect` in `components/**`. The CI task cannot land as a blocking gate until those are cleared.
+All five closed before Phase 3 opened. Tree state after: `tsc` clean, lint **63** (29 errors / 34 warnings — one *fewer* error than the 64 baseline), `npm test` **121** across 12 files, 26 migrations applied, `migrate status` clean.
+
+1. **`allowDangerousEmailAccountLinking` — was not a decision. It was a live account-takeover path.** The flag is **inert**: it is only honored by a NextAuth database adapter, and this app has none (JWT sessions, no `adapter:` key, no `Account` model). Meanwhile the Google `profile()` callback already linked by email unconditionally, and nothing checked `emailVerifiedAt` at sign-in. Chain: attacker registers `victim@gmail.com` with a password → victim later signs in with Google → lands in the attacker's row, whose password the attacker still holds. **Fixed** by gating linking on proof of ownership instead of the flag — see `lib/auth/google-account-linking.ts` (pure decision function, 5 unit tests) and the `profile()` callback in `Auth.ts`. Four branches: new user → create with `emailVerifiedAt` stamped; verified existing user → link as-is; **unverified existing user with a password → evict** (clear `passwordHash`, stamp verified, delete outstanding `VerificationToken` rows, `console.warn` with userId only); Google-only-but-unstamped → backfill the stamp. The flag was left `false` so it becomes a correct default if an adapter is ever added.
+2. **`ExportAuditLog.companyId` → nullable.** Migration `20260830130000_export_audit_log_nullable_company` (hand-authored, applied with `migrate deploy`), plus `@@index([userId, createdAt])`. `logAccountDataExport` now always writes the row with `companyId: company?.id ?? null`; the `console.info` fallback is gone. `listExportAuditLog` filters by a concrete companyId, which never matches NULL in Postgres — no guard needed.
+3. **Account-deletion UI → built.** `components/account/AccountDataRightsPanel.tsx`, rendered by new `app/seeker/settings/page.tsx` and `app/employer/settings/page.tsx`, linked from all four navs. Two-step destructive flow, Ember-accented. Calls `signOut()` immediately on success. Re-auth control is chosen server-side via `accountHasPassword` (`lib/account/auth-method.ts`) — password field for Credentials accounts, typed `DELETE MY ACCOUNT` phrase for Google-only. The 409 sole-owner message is surfaced verbatim, not swallowed.
+4. **Public-bucket files → deleted on erasure.** `deletePrivateStorageObject` generalized to `deleteStorageObject(bucket: BucketId, …)` (old name kept as a deprecated alias). `collectProfileImageStorageTargets` — a pure, tested helper — maps company logo/banner, seeker photo, and user avatar to their buckets; captured before the transaction, deleted after commit, still best-effort.
+5. **Lint → not a gate; triaged instead.** `EmployerNotificationBell.tsx` was a real defect, not a style nit — an unguarded 60s poll calling `setState` after unmount on every route change. Fixed with the `cancelled` pattern already used by the seeker bell, dropping errors 30 → 29. The remaining 29 are deferred to a dedicated pass; CI cannot gate on lint until then.
+
+**Residual, accepted:** if an attacker pre-registers an email and the real owner then claims it via Google, the eviction locks the attacker out but the row keeps whatever profile/company data the attacker typed during registration. No access is retained, so this is data hygiene rather than a security hole. Also: a legitimate user who registered with a password, never verified, then signs in with Google will find that password no longer works — recoverable via password reset, which now passes its `emailVerifiedAt` check.
+
+**Still unverified — nothing here has been run.** Every check above is compiler, linter, unit tests, and a live `migrate status`. No page has been rendered, no deletion or export round trip exercised, no sign-in performed.
 
 ---
 

@@ -301,24 +301,15 @@ export async function buildUserDataExport(userId: string) {
  * Writes an export audit entry, mirroring lib/employer/exports.ts
  * (kind + meta only — the meta payload never carries the exported PII).
  *
- * NOTE: ExportAuditLog.companyId is NOT NULL, so a seeker's self-export
- * (no company) can't be written to this table without a schema change.
- * That's a product-owner decision per CLAUDE.md, so for now seeker exports
- * are only recorded via a server log line — flagged in the handoff report.
+ * A seeker exporting their own data has no company, so `companyId` is
+ * null for those rows — ExportAuditLog.companyId is nullable to allow it.
  */
 export async function logAccountDataExport(userId: string): Promise<void> {
   const company = await getEmployerCompanyByUserId(userId);
 
-  if (!company) {
-    console.info(
-      `[account-export] user ${userId} exported their own account data (no company — not written to ExportAuditLog)`
-    );
-    return;
-  }
-
   await prisma.exportAuditLog.create({
     data: {
-      companyId: company.id,
+      companyId: company?.id ?? null,
       userId,
       kind: "account_data_export",
       meta: { self: true },

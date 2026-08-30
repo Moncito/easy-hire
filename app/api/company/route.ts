@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/Auth";
 import { errorResponse } from "@/lib/api-error";
+import { parseJsonBody } from "@/lib/parse-json-body";
 import { requireEmployerCompany, requireEmployerJob } from "@/lib/employer-auth";
 import { updateCompany } from "@/lib/companies";
 import { invalidateCollaborativeCompanyBranding } from "@/lib/collaborative-company-profile";
@@ -14,7 +15,7 @@ export async function PATCH(req: Request) {
     }
 
     await requireEmployerCompany(session.user.id);
-    const body = await req.json();
+    const body = await parseJsonBody(req);
     const updated = await updateCompany(session.user.id, body);
     invalidateCollaborativeCompanyBranding(updated.id);
     invalidatePublicCompany(updated.id);

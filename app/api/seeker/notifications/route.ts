@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/Auth";
 import { errorResponse } from "@/lib/api-error";
+import { parseJsonBody } from "@/lib/parse-json-body";
 import { requireSeekerProfile } from "@/lib/seeker-auth";
 import {
   getSeekerNotificationsCached,
@@ -42,7 +43,7 @@ export async function PATCH(req: Request) {
     }
     await requireSeekerProfile(session.user.id);
 
-    const body = (await req.json()) as { ids?: string[] };
+    const body = (await parseJsonBody(req)) as { ids?: string[] };
     await markNotificationsRead(session.user.id, body.ids);
     invalidateSeekerNotifications(session.user.id);
 
