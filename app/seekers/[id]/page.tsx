@@ -1,11 +1,41 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
 import { getPublicSeeker } from "@/lib/public-seekers";
 import { auth } from "@/Auth";
 import { ensureSeekerProfile } from "@/lib/seekers";
 import { getSeekerProfileCompletion } from "@/lib/seeker-profile-completion";
 import PublicSeekerNavBand from "@/components/seekers/PublicSeekerNavBand";
 import PublicSeekerProfileSections from "@/components/seekers/PublicSeekerProfileSections";
+
+// getPublicSeeker only resolves profiles with visibility: "PUBLIC" (see
+// lib/seeker/public-seekers.ts) and throws otherwise. The catch block below
+// must stay generic — it must not distinguish "no such id" from "profile
+// exists but isn't public" in the returned metadata, or this page becomes an
+// oracle for probing seeker ids/visibility.
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  try {
+    const seeker = await getPublicSeeker(id);
+    const description =
+      seeker.bio?.slice(0, 160) ?? `${seeker.fullName}'s virtual assistant profile on EasyHire.`;
+    return {
+      title: `${seeker.fullName} — ${seeker.headline || "Virtual Assistant"}`,
+      description,
+      openGraph: {
+        title: seeker.fullName,
+        description,
+        type: "profile",
+      },
+    };
+  } catch {
+    return { title: "Profile not found" };
+  }
+}
 
 export default async function PublicSeekerPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

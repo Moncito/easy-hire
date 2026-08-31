@@ -11,6 +11,8 @@ import { listSavedJobIds } from "@/lib/saved-jobs";
 import { auth } from "@/Auth";
 import { ensureSeekerProfile } from "@/lib/seekers";
 import { getSeekerProfileCompletion } from "@/lib/seeker-profile-completion";
+import { buildJobPostingJsonLd } from "@/lib/seo/job-posting-jsonld";
+import { safeJsonLdString } from "@/lib/seo/safe-json-ld";
 
 export async function generateMetadata({
   params,
@@ -21,7 +23,7 @@ export async function generateMetadata({
   try {
     const job = await getPublicJob(id);
     return {
-      title: `${job.title} at ${job.company.companyName} — EasyHire`,
+      title: `${job.title} at ${job.company.companyName}`,
       description: job.description.slice(0, 160),
       openGraph: {
         title: job.title,
@@ -30,7 +32,7 @@ export async function generateMetadata({
       },
     };
   } catch {
-    return { title: "Job not found — EasyHire" };
+    return { title: "Job not found" };
   }
 }
 
@@ -83,8 +85,21 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
     company: job.company,
   };
 
+  // See lib/seo/safe-json-ld.ts for why `safeJsonLdString` (not plain
+  // JSON.stringify) is required here: job.description/requirements/benefits
+  // are employer-supplied free text, and an unescaped `</script>` inside them
+  // would prematurely close this tag — a stored-XSS vector.
+  const jobPostingJsonLd = safeJsonLdString(buildJobPostingJsonLd(job));
+
   return (
     <div className="jobs-detail-scroll min-h-0 flex-1">
+      {/* Structured data for Google for Jobs. __html is pre-escaped by
+          safeJsonLdString (see lib/seo/safe-json-ld.ts) — never swap this
+          for a raw JSON.stringify. */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: jobPostingJsonLd }}
+      />
       <JobViewTracker jobId={job.id} />
       <JobsNavBand
         isSeeker={isSeeker}

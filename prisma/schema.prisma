@@ -114,6 +114,13 @@ model SeekerProfile {
   resumeLabel      String?           @map("resume_label")
   resumeUpdatedAt  DateTime?         @map("resume_updated_at")
   resumes          String[]          @default([])
+  // SQL-only generated column (GENERATED ALWAYS AS ... STORED), created by
+  // prisma/migrations/20260728210000_sprint5_messaging_talent. Prisma has no schema-level
+  // concept of a STORED generated column, so this is declared as an Unsupported column
+  // with a matching dbgenerated() default purely so introspection/diff tooling sees a
+  // column here instead of nothing — it does NOT recreate the GENERATED ALWAYS AS
+  // behavior and must never be the source of a migration for this column.
+  searchVector     Unsupported("tsvector")? @default(dbgenerated("((setweight(to_tsvector('english'::regconfig, COALESCE(full_name, ''::text)), 'A'::\"char\") || setweight(to_tsvector('english'::regconfig, COALESCE(headline, ''::text)), 'B'::\"char\")) || setweight(to_tsvector('english'::regconfig, COALESCE(bio, ''::text)), 'C'::\"char\"))")) @map("search_vector")
 
   // Relations
   user          User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -124,6 +131,7 @@ model SeekerProfile {
   savedBy       SavedSeeker[]
   savedInLists  SavedTalentListItem[]
 
+  @@index([searchVector], type: Gin)
   @@map("seeker_profiles")
 }
 
@@ -279,6 +287,13 @@ model Job {
   createdAt             DateTime       @default(now()) @map("created_at")
   updatedAt             DateTime       @updatedAt @map("updated_at")
   expiresAt             DateTime?      @map("expires_at")
+  // SQL-only generated column (GENERATED ALWAYS AS ... STORED), created by
+  // prisma/migrations/20260727200000_sprint1_job_application_fields. Prisma has no
+  // schema-level concept of a STORED generated column, so this is declared as an
+  // Unsupported column with a matching dbgenerated() default purely so introspection/diff
+  // tooling sees a column here instead of nothing — it does NOT recreate the GENERATED
+  // ALWAYS AS behavior and must never be the source of a migration for this column.
+  searchVector          Unsupported("tsvector")? @default(dbgenerated("((((setweight(to_tsvector('english'::regconfig, COALESCE(title, ''::text)), 'A'::\"char\") || setweight(to_tsvector('english'::regconfig, COALESCE(description, ''::text)), 'B'::\"char\")) || setweight(to_tsvector('english'::regconfig, COALESCE(category, ''::text)), 'C'::\"char\")) || setweight(to_tsvector('english'::regconfig, COALESCE(requirements, ''::text)), 'C'::\"char\")) || setweight(to_tsvector('english'::regconfig, COALESCE(benefits, ''::text)), 'D'::\"char\"))")) @map("search_vector")
 
   // Relations
   company            Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
@@ -295,6 +310,22 @@ model Job {
   @@index([status])
   @@index([companyId, status])
   @@index([featuredUntil])
+  @@index([category])
+  @@index([publishedAt])
+  @@index([expiresAt])
+  // Matches the public job board's default listing query (lib/jobs/public-listing.ts:
+  // activeJobWhere()/buildOrderBy() default sort): WHERE status = 'ACTIVE' ORDER BY
+  // featuredUntil DESC NULLS LAST, createdAt DESC, id DESC. `status` leads because it's
+  // the one equality filter on this table that every public-board query applies (the
+  // other filter, company.verifiedStatus, lives on the joined Company table and can't
+  // be part of this composite); the remaining columns are ordered to mirror the ORDER BY
+  // exactly so Postgres can walk the index instead of sorting. The hand-authored SQL
+  // migration also adds NULLS LAST on featured_until to match the query precisely —
+  // Prisma's index DSL can't express NULLS LAST, so this Prisma-level declaration only
+  // captures the column list/direction (see migration for the exact DDL).
+  @@index([status, featuredUntil(sort: Desc), createdAt(sort: Desc), id(sort: Desc)])
+  // GIN index on the SQL-only search_vector column above (same migration as the column).
+  @@index([searchVector], type: Gin)
   @@map("jobs")
 }
 
@@ -485,6 +516,19 @@ enum InterviewStatus {
   CANCELLED
 }
 
+// interviews("application_id", "scheduled_at") also carries a partial unique index,
+// `interviews_application_id_scheduled_at_scheduled_key`, scoped to WHERE status =
+// 'SCHEDULED' (see prisma/migrations/20260825000000_interview_slot_unique_when_scheduled).
+// Prisma's schema DSL has no support for filtered/partial unique indexes (only
+// full-table @@unique) — attempted as part of this pass and deliberately not added:
+// declaring a plain `@@unique([applicationId, scheduledAt])` here would (a) be
+// semantically wrong, since it would also block re-scheduling after a CANCELLED
+// interview, which the partial index intentionally allows, and (b) surfaced in
+// `prisma migrate diff --from-schema-datamodel ... --to-schema-datasource ...` as a
+// mismatch the diff engine would try to reconcile by dropping the real partial index
+// and creating a full one in its place — exactly the drop this file exists to prevent.
+// Left SQL-only on purpose; do not add a `@@unique` here without re-running that diff
+// and confirming no DROP appears.
 model Interview {
   id            String          @id @default(cuid())
   applicationId String          @map("application_id")
@@ -682,6 +726,13 @@ model Conversation {
   @@map("conversations")
 }
 
+// This table is added to the `supabase_realtime` publication so the server-side
+// Realtime subscription can broadcast INSERTs for live message delivery (see
+// lib/messaging/messages.ts / lib/collaborative-messages.ts). Prisma's schema DSL has no
+// representation for Postgres publications at all — there is nothing to declare here.
+// The publication is created/maintained purely in SQL:
+// prisma/migrations/20260826020000_enable_messages_realtime/migration.sql. Verify it's
+// still attached to `public.messages` after any migration that touches this table.
 model Message {
   id             String    @id @default(cuid())
   conversationId String    @map("conversation_id")

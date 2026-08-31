@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Globe } from "lucide-react";
+import type { Metadata } from "next";
 import { getPublicCompany } from "@/lib/public-companies";
 import { auth } from "@/Auth";
 import { ensureSeekerProfile } from "@/lib/seekers";
@@ -8,6 +9,33 @@ import { getSeekerProfileCompletion } from "@/lib/seeker-profile-completion";
 import CompanyNavBand from "@/components/companies/CompanyNavBand";
 import CompanyAboutSection from "@/components/companies/CompanyAboutSection";
 import CompanyJobRow from "@/components/companies/CompanyJobRow";
+import { buildOrganizationJsonLd } from "@/lib/seo/organization-jsonld";
+import { safeJsonLdString } from "@/lib/seo/safe-json-ld";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  try {
+    const company = await getPublicCompany(id);
+    const description =
+      company.description?.slice(0, 160) ??
+      `${company.companyName} is hiring virtual assistants on EasyHire.`;
+    return {
+      title: company.companyName,
+      description,
+      openGraph: {
+        title: company.companyName,
+        description,
+        type: "website",
+      },
+    };
+  } catch {
+    return { title: "Company not found" };
+  }
+}
 
 export default async function CompanyPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -44,6 +72,15 @@ export default async function CompanyPage({ params }: { params: Promise<{ id: st
     .slice(0, 2)
     .toUpperCase();
 
+  // Gate structured data on APPROVED: unlike getPublicJob, getPublicCompany
+  // (lib/shared/public-companies.ts) does a plain findUnique with no
+  // verifiedStatus filter, so this page renders PENDING/REJECTED companies
+  // too. Emitting Organization JSON-LD for those would push unvetted
+  // companies into Google, undermining the admin-approval fraud-prevention
+  // requirement (see CLAUDE.md) — so only APPROVED companies get the script.
+  const organizationJsonLd =
+    company.verifiedStatus === "APPROVED" ? safeJsonLdString(buildOrganizationJsonLd(company)) : null;
+
   return (
     <div
       className="animate-fade-in"
@@ -53,6 +90,11 @@ export default async function CompanyPage({ params }: { params: Promise<{ id: st
         fontFamily: "Inter, system-ui, sans-serif",
       }}
     >
+      {organizationJsonLd && (
+        // __html is pre-escaped by safeJsonLdString (see lib/seo/safe-json-ld.ts)
+        // — company.description is employer-supplied free text.
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: organizationJsonLd }} />
+      )}
       <CompanyNavBand
         isSeeker={isSeeker}
         metaLabel={metaLabel}

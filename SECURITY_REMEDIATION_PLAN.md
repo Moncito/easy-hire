@@ -19,7 +19,7 @@
 | 2 | 2.1 Seeker notification surface | ✅ backend + bell UI |
 | 2 | 2.2 Seeker-initiated messaging | ✅ backend + UI |
 | 2 | 2.3 Candidate-visible interviews | ✅ backend + UI, incl. `.ics` invites |
-| 2 | 2.4 Make the schedulers run | ✅ migration 25 applied — **needs Vercel Pro + `CRON_SECRET`** |
+| 2 | 2.4 Make the schedulers run | ✅ done — GET handlers, `lastSentAt` guard, batching, 4 GitHub Actions workflows. Needs `CRON_SECRET` in Vercel + GitHub, and merge to `main` before schedules fire. |
 | 2 | 2.5 Missing transactional emails | ✅ 7 added |
 | 3 | Distribution / Google for Jobs | ⬜ not started |
 | 4 | Trust wedge (reviews + verification score) | ⬜ not started |
