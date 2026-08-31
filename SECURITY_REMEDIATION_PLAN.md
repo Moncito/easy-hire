@@ -73,8 +73,23 @@ Fixed with a three-line guard plus `lib/cache-utils.test.ts` (8 tests, split exp
 
 ### Phase 2 — deploy blockers and open items
 
-1. **The crons need Vercel Pro.** Hobby caps total cron jobs at **2**; `vercel.json` declares **4**. Not collapsible without baking day-of-week branching into route logic purely to fit a plan limit.
-2. **`CRON_SECRET` must be set in the Vercel dashboard.** `requireCronAuth` fails closed with 503 until it exists. Deploy without it and every cron silently 503s.
+1. ~~**The crons need Vercel Pro.**~~ **Resolved 2026-08-30 — moved to GitHub Actions instead.** Hobby caps a project at **2** cron jobs and `vercel.json` declared **4**, which is a hard deploy blocker, not just a scheduling one. Rather than pay for Pro pre-launch or bake day-of-week branching into route logic to fit a plan limit, the four schedules now live in `.github/workflows/cron-*.yml`. The routes already accept `GET` with a plain `Authorization: Bearer` header, so no application code changed. `vercel.json`'s `crons` key was removed (the file keeps only `$schema`).
+
+   **To move back to Vercel Pro later**, delete the four workflow files and restore this into `vercel.json`:
+   ```json
+   "crons": [
+     { "path": "/api/cron/job-alerts?frequency=DAILY",  "schedule": "0 13 * * *" },
+     { "path": "/api/cron/job-alerts?frequency=WEEKLY", "schedule": "0 13 * * 1" },
+     { "path": "/api/cron/analytics-rollups",           "schedule": "0 1 * * *"  },
+     { "path": "/api/cron/ai-digest",                   "schedule": "0 14 * * 1" }
+   ]
+   ```
+
+2. **`CRON_SECRET` must be set in two places.** `requireCronAuth` fails closed with 503 until the server has it, and every workflow fails loudly without it.
+   - **Vercel** → project → Settings → Environment Variables → `CRON_SECRET`. Env vars only bind to *new* deployments, so redeploy after adding.
+   - **GitHub** → repo → Settings → Secrets and variables → Actions → secret `CRON_SECRET` (same value), plus repository **variable** `APP_BASE_URL` set to the deployed origin with no trailing slash (e.g. `https://easyhire.example.com`).
+   - The value is already in local `.env`; read it from there rather than generating a new one.
+   - **GitHub only runs scheduled workflows from the default branch.** These files do nothing until merged to `main`. Scheduled runs are also best-effort under load, and GitHub disables them after 60 days of repository inactivity.
 3. **New-message email throttling is approximate.** Rule: send only when the recipient has no *earlier* unread in that thread (uses existing `Message.readAt`, no migration). Two known failure modes — a race where two concurrent messages both see zero unread and both send, and no time-based cooldown. A `Conversation.lastNotifiedAt` column would fix both.
 4. **Dashboard message button does a click-time lookup.** `lib/seeker/dashboard.ts` selects `job.company.companyName` but not `company.id`, and `Application` has no `companyId` scalar — so `MessageEmployerButton` resolves the company via `GET /api/public/jobs/{jobId}` on click. Correct but an extra roundtrip; adding `id` to that select is a one-line fix.
 5. **One lint suppression added** — `app/seeker/dashboard/page.tsx`, `react-hooks/purity` on `const nowMs = Date.now()`. Justified in a comment: async Server Component, renders once per request, deliberately outside the `unstable_cache` boundary. The rule targets client render. This is a suppression, not a fix.
