@@ -27,3 +27,19 @@ export function getPublicStorageUrl(bucket: string, path: string) {
 
   return `${url}/storage/v1/object/public/${bucket}/${path}`;
 }
+
+/**
+ * Mints a short-lived signed URL for an object in a private bucket. Unlike
+ * `getPublicStorageUrl`, this requires a round-trip to Supabase Storage
+ * because the URL embeds a time-boxed token.
+ */
+export async function getSignedStorageUrl(bucket: string, path: string, ttlSeconds: number) {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase.storage.from(bucket).createSignedUrl(path, ttlSeconds);
+
+  if (error || !data?.signedUrl) {
+    throw new ApiError(`Could not generate a download link: ${error?.message ?? "unknown error"}`, 500);
+  }
+
+  return data.signedUrl;
+}

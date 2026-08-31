@@ -2,14 +2,16 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, User, Briefcase, LogOut, MessageSquare } from "lucide-react";
+import { LayoutDashboard, User, Briefcase, LogOut, MessageSquare, Settings } from "lucide-react";
 import { useSignOut } from "@/components/ui/useSignOut";
+import SeekerNotificationBell from "@/components/seeker/SeekerNotificationBell";
 
 const navItems = [
   { label: "Dashboard", href: "/seeker/dashboard", icon: LayoutDashboard },
   { label: "My Profile", href: "/seeker/profile", icon: User },
   { label: "Messages", href: "/seeker/messages", icon: MessageSquare },
   { label: "Browse Jobs", href: "/jobs", icon: Briefcase },
+  { label: "Settings", href: "/seeker/settings", icon: Settings },
 ];
 
 export default function SeekerSidebar() {
@@ -18,7 +20,7 @@ export default function SeekerSidebar() {
 
   return (
     <aside className="fixed left-0 top-0 z-40 flex h-screen w-64 flex-col border-r border-ink/10 bg-white">
-      <div className="shrink-0 px-4 py-6">
+      <div className="flex shrink-0 items-center justify-between px-4 py-6">
         <Link href="/" className="flex items-center gap-2.5 px-3 transition-transform hover:scale-[1.02]">
           <div className="relative h-8 w-8 overflow-hidden rounded-full shadow-sm shadow-black/10">
             <div className="absolute inset-0 bg-marigold" style={{ clipPath: "polygon(0 0, 100% 0, 0 100%)" }} />
@@ -26,6 +28,7 @@ export default function SeekerSidebar() {
           </div>
           <span className="font-display text-lg font-bold tracking-tight text-ink">EasyHire</span>
         </Link>
+        <SeekerNotificationBell variant="light" />
       </div>
 
       <nav className="flex flex-1 flex-col gap-1.5 overflow-y-auto px-4">

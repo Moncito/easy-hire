@@ -8,7 +8,6 @@ import {
   renameTalentList,
   deleteTalentList,
 } from "@/lib/employer/talent-lists";
-import { ZodError } from "zod";
 
 export async function GET(_req: Request, { params }: { params: Promise<{ listId: string }> }) {
   try {
@@ -39,9 +38,6 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ listId
     const list = await renameTalentList(company.id, listId, body);
     return NextResponse.json(list);
   } catch (error) {
-    if (error instanceof ZodError) {
-      return NextResponse.json({ error: error.issues[0]?.message ?? "Invalid input" }, { status: 400 });
-    }
     return errorResponse(error);
   }
 }

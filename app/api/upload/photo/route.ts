@@ -1,9 +1,14 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/Auth";
 import { errorResponse } from "@/lib/api-error";
+import { clientKeyFromRequest, enforceRateLimit } from "@/lib/rate-limit";
 import { requireSeekerProfile } from "@/lib/seeker-auth";
 import { updateSeekerProfile } from "@/lib/seekers";
 import { uploadSeekerPhoto } from "@/lib/storage";
+
+// Authenticated, but each call buffers a whole file into memory.
+const UPLOAD_RATE_LIMIT = 10;
+const UPLOAD_RATE_WINDOW_SECONDS = 10 * 60;
 
 export async function POST(req: Request) {
   try {
@@ -11,6 +16,12 @@ export async function POST(req: Request) {
     if (!session?.user || session.user.role !== "SEEKER") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    await enforceRateLimit({
+      key: clientKeyFromRequest(req, "upload:photo", session.user.id),
+      limit: UPLOAD_RATE_LIMIT,
+      windowSeconds: UPLOAD_RATE_WINDOW_SECONDS,
+    });
 
     await requireSeekerProfile(session.user.id);
 

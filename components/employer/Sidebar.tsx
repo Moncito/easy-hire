@@ -15,6 +15,7 @@ import {
   PanelLeft,
   CreditCard,
   Sparkles,
+  Settings,
 } from "lucide-react";
 import { useEmployerShell } from "@/components/employer/EmployerShellContext";
 import { useRailTooltip } from "@/components/workspaces/useRailTooltip";
@@ -36,6 +37,7 @@ const navItems = [
   { label: "Company", href: "/employer/company-profile", icon: Building2, badgeKey: null },
   { label: "Reports", href: "/employer/reports", icon: BarChart3, badgeKey: null },
   { label: "Billing", href: "/employer/billing", icon: CreditCard, badgeKey: null },
+  { label: "Settings", href: "/employer/settings", icon: Settings, badgeKey: null },
 ];
 
 function NavLink({

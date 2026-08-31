@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { ZodError } from "zod";
 import { auth } from "@/Auth";
 import { errorResponse } from "@/lib/api-error";
+import { parseJsonBody } from "@/lib/parse-json-body";
 import { getHiringSetup, saveHiringSetup } from "@/lib/hiring-setup";
 import { hiringSetupSchema } from "@/lib/validations/hiring-setup";
 
@@ -21,10 +21,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ co
     const session = await auth();
     if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     const { companyId, jobId } = await params;
-    const input = hiringSetupSchema.parse(await request.json());
+    const input = hiringSetupSchema.parse(await parseJsonBody(request));
     return NextResponse.json(await saveHiringSetup(companyId, session.user.id, jobId, input));
   } catch (error) {
-    if (error instanceof ZodError) return NextResponse.json({ error: error.issues[0]?.message ?? "Invalid input" }, { status: 400 });
     return errorResponse(error);
   }
 }

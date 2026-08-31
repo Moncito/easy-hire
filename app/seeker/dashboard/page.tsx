@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getSeekerDashboardProfile } from "@/lib/seeker/dashboard";
+import { getSeekerDashboardProfile, getSeekerInterviews } from "@/lib/seeker/dashboard";
 import { relativeTime } from "@/lib/time-ago";
 import { requireSeekerPageContext } from "@/lib/auth/seeker-session";
 import {
@@ -15,6 +15,8 @@ import {
 import SeekerDashboardStats from "@/components/seeker/SeekerDashboardStats";
 import ApplicationTimeline from "@/components/seeker/ApplicationTimeline";
 import WithdrawApplicationButton from "@/components/seeker/WithdrawApplicationButton";
+import MessageEmployerButton from "@/components/seeker/MessageEmployerButton";
+import SeekerInterviewsSection from "@/components/seeker/SeekerInterviewsSection";
 import { SeekerNavBandBleed } from "@/components/seeker/SeekerNavBand";
 
 const STATUS_PIPELINE = ["APPLIED", "SHORTLISTED", "INTERVIEW", "HIRED", "REJECTED"] as const;
@@ -45,10 +47,22 @@ export default async function SeekerDashboardPage({
   const statusFilter: StatusFilter =
     normalized && STATUS_FILTERS.includes(normalized) ? normalized : "ALL";
 
-  const { profile, jobAlerts } = await getSeekerDashboardProfile(
-    userId,
-    session.user.name ?? ""
-  );
+  const [{ profile, jobAlerts }, interviews] = await Promise.all([
+    getSeekerDashboardProfile(userId, session.user.name ?? ""),
+    getSeekerInterviews(userId),
+  ]);
+
+  // Wall-clock read for splitting interviews into upcoming/past. Computed
+  // here, outside the unstable_cache boundaries inside getSeekerDashboardProfile
+  // and getSeekerInterviews, so it reflects the actual request time rather
+  // than being frozen at cache-write time.
+  //
+  // Server Component: renders once per request, so reading wall-clock time here
+  // is deterministic for this render. react-hooks/purity targets client render,
+  // where re-render/replay/resume would make this inconsistent; that does not
+  // apply to a server-rendered page.
+  // eslint-disable-next-line react-hooks/purity
+  const nowMs = Date.now();
 
   // Profile strength
   const strengthChecks = [
@@ -80,6 +94,13 @@ export default async function SeekerDashboardPage({
 
   // Featured app for timeline: most recent non-rejected
   const featuredApp = allApps.find((a) => a.status !== "REJECTED") ?? null;
+
+  // Interviews for the featured app — matched by jobId, since Application has
+  // a unique (jobId, seekerId) pair, so at most one application shares a job
+  // with this seeker. `interviews` is already ordered scheduledAt desc.
+  const featuredAppInterviews = featuredApp
+    ? interviews.filter((i) => i.jobId === featuredApp.job.id)
+    : [];
 
   // Apps to show in the pipeline list (respects filter, excludes featured in ALL view)
   const pipelineList =
@@ -195,7 +216,11 @@ export default async function SeekerDashboardPage({
               {/* Featured app with horizontal timeline */}
               {featuredApp && statusFilter !== "REJECTED" && (
                 <div className="rounded-2xl bg-white px-6 py-5 ring-1 ring-ink/8 shadow-[0_2px_12px_rgba(32,36,43,0.05)]">
-                  <ApplicationTimeline app={featuredApp} />
+                  <ApplicationTimeline
+                    app={featuredApp}
+                    interviews={featuredAppInterviews}
+                    nowMs={nowMs}
+                  />
                 </div>
               )}
 
@@ -231,6 +256,7 @@ export default async function SeekerDashboardPage({
                             compact
                           />
                         ) : null}
+                        <MessageEmployerButton jobId={app.job.id} compact />
                         <span
                           className={`rounded-lg px-2.5 py-1 text-xs font-semibold ${statusBadge(app.status)}`}
                         >
@@ -257,6 +283,9 @@ export default async function SeekerDashboardPage({
             </div>
           )}
         </section>
+
+        {/* ── Interviews ── */}
+        <SeekerInterviewsSection interviews={interviews} nowMs={nowMs} />
 
         {/* ── Bottom two-column grid ── */}
         <div className="grid gap-8 lg:grid-cols-2">

@@ -24,21 +24,23 @@ datasource db {
 // ============================================================================
 
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  passwordHash String?  @map("password_hash")
-  role         Role     @default(SEEKER)
-  avatarUrl    String?  @map("avatar_url")
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  id              String    @id @default(cuid())
+  email           String    @unique
+  passwordHash    String?   @map("password_hash")
+  role            Role      @default(SEEKER)
+  avatarUrl       String?   @map("avatar_url")
+  emailVerifiedAt DateTime? @map("email_verified_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
 
   // Relations
-  seekerProfile   SeekerProfile?
-  company         Company?
-  notifications   Notification[]
-  messagesSent    Message[]
-  exportAuditLogs ExportAuditLog[]
-  companyMemberships CompanyMember[]
+  seekerProfile      SeekerProfile?
+  company             Company?
+  notifications       Notification[]
+  messagesSent        Message[]
+  exportAuditLogs     ExportAuditLog[]
+  companyMemberships  CompanyMember[]
+  verificationTokens  VerificationToken[]
 
   @@map("users")
 }
@@ -53,6 +55,31 @@ enum ProfileVisibility {
   HIDDEN
   STANDARD
   PUBLIC
+}
+
+// ============================================================================
+// PASSWORD RESET & EMAIL VERIFICATION
+// ============================================================================
+
+enum VerificationPurpose {
+  EMAIL_VERIFY
+  PASSWORD_RESET
+}
+
+model VerificationToken {
+  id         String              @id @default(cuid())
+  userId     String              @map("user_id")
+  tokenHash  String              @unique @map("token_hash")
+  purpose    VerificationPurpose
+  expiresAt  DateTime            @map("expires_at")
+  consumedAt DateTime?           @map("consumed_at")
+  createdAt  DateTime            @default(now()) @map("created_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, purpose])
+  @@map("verification_tokens")
 }
 
 // ============================================================================
@@ -556,17 +583,20 @@ model SavedJob {
 }
 
 model JobAlert {
-  id        String         @id @default(cuid())
-  seekerId  String         @map("seeker_id")
-  keywords  String
-  category  String?
-  frequency AlertFrequency
-  createdAt DateTime       @default(now()) @map("created_at")
-  updatedAt DateTime       @updatedAt @map("updated_at")
+  id         String         @id @default(cuid())
+  seekerId   String         @map("seeker_id")
+  keywords   String
+  category   String?
+  frequency  AlertFrequency
+  lastSentAt DateTime?      @map("last_sent_at")
+  createdAt  DateTime       @default(now()) @map("created_at")
+  updatedAt  DateTime       @updatedAt @map("updated_at")
 
   // Relations
   seeker SeekerProfile @relation(fields: [seekerId], references: [id], onDelete: Cascade)
 
+  // Supports the cron digest query: findMany({ where: { frequency, lastSentAt: ... } }).
+  @@index([frequency, lastSentAt])
   @@map("job_alerts")
 }
 
@@ -780,17 +810,18 @@ model AnalyticsDailyRollup {
  */
 model ExportAuditLog {
   id        String   @id @default(cuid())
-  companyId String   @map("company_id")
+  companyId String?  @map("company_id")
   userId    String   @map("user_id")
   kind      String
   meta      Json?
   createdAt DateTime @default(now()) @map("created_at")
 
   // Relations
-  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company Company? @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([companyId])
   @@index([companyId, createdAt])
+  @@index([userId, createdAt])
   @@map("export_audit_logs")
 }

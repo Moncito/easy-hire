@@ -1,21 +1,30 @@
 import { NextResponse } from "next/server";
 import { sendWeeklyDigestToAllProCompanies } from "@/lib/ai/digest";
-
-const CRON_SECRET = process.env.CRON_SECRET;
+import { requireCronAuth } from "@/lib/cron-auth";
+import { errorResponse } from "@/lib/api-error";
 
 /**
- * POST /api/cron/ai-digest — sends the weekly Easy AI hiring digest to every
- * active Pro company. Intended to run once a week (e.g. Monday morning UTC).
- * No-ops per-company when Resend/AI provider keys aren't configured.
+ * Sends the weekly Easy AI hiring digest to every active Pro company.
+ * Intended to run once a week (e.g. Monday morning UTC). No-ops
+ * per-company when Resend/AI provider keys aren't configured.
  */
-export async function POST(req: Request) {
-  if (CRON_SECRET) {
-    const authHeader = req.headers.get("authorization");
-    if (authHeader !== `Bearer ${CRON_SECRET}`) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-  }
+async function handle(req: Request) {
+  try {
+    requireCronAuth(req);
 
-  const result = await sendWeeklyDigestToAllProCompanies();
-  return NextResponse.json({ ok: true, ...result });
+    const result = await sendWeeklyDigestToAllProCompanies();
+    return NextResponse.json({ ok: true, ...result });
+  } catch (error) {
+    return errorResponse(error);
+  }
+}
+
+/** GET /api/cron/ai-digest — invoked by Vercel Cron. */
+export async function GET(req: Request) {
+  return handle(req);
+}
+
+/** POST /api/cron/ai-digest — same as GET, kept for manual triggering. */
+export async function POST(req: Request) {
+  return handle(req);
 }

@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/Auth";
 import { errorResponse } from "@/lib/api-error";
+import { parseJsonBody } from "@/lib/parse-json-body";
 import { requireEmployerCompany } from "@/lib/employer-auth";
 import { createJob, listEmployerJobs } from "@/lib/jobs";
-import { ZodError } from "zod";
 
 export async function GET() {
   try {
@@ -28,13 +28,10 @@ export async function POST(req: Request) {
     }
 
     const company = await requireEmployerCompany(session.user.id);
-    const body = await req.json();
+    const body = await parseJsonBody(req);
     const job = await createJob(company.id, body);
     return NextResponse.json(job);
   } catch (error) {
-    if (error instanceof ZodError) {
-      return NextResponse.json({ error: error.issues[0]?.message ?? "Invalid input" }, { status: 400 });
-    }
     return errorResponse(error);
   }
 }

@@ -58,6 +58,15 @@ export async function sendWeeklyDigestForCompany(companyId: string): Promise<boo
   return true;
 }
 
+/**
+ * How many companies to process concurrently in the weekly cron. Each
+ * company does a full analytics + AI provider round trip, so this stays
+ * well below lib/employer/analytics-rollups.ts's ROLLUP_BATCH_SIZE to
+ * avoid hitting the platform's function timeout or the AI provider's own
+ * rate limits.
+ */
+const AI_DIGEST_BATCH_SIZE = 5;
+
 /** Sends the weekly digest to every currently active Pro company. Intended for a scheduled cron job. */
 export async function sendWeeklyDigestToAllProCompanies(): Promise<{ sent: number; failed: number }> {
   const proCompanies = await prisma.subscription.findMany({
@@ -69,14 +78,20 @@ export async function sendWeeklyDigestToAllProCompanies(): Promise<{ sent: numbe
   let sent = 0;
   let failed = 0;
 
-  for (const { companyId } of proCompanies) {
-    try {
-      const ok = await sendWeeklyDigestForCompany(companyId);
-      if (ok) sent += 1;
-    } catch (error) {
-      failed += 1;
-      console.error(`[ai-digest] failed for company ${companyId}:`, error);
-    }
+  for (let i = 0; i < proCompanies.length; i += AI_DIGEST_BATCH_SIZE) {
+    const batch = proCompanies.slice(i, i + AI_DIGEST_BATCH_SIZE);
+    const outcomes = await Promise.allSettled(
+      batch.map(({ companyId }) => sendWeeklyDigestForCompany(companyId))
+    );
+
+    outcomes.forEach((outcome, index) => {
+      if (outcome.status === "fulfilled") {
+        if (outcome.value) sent += 1;
+      } else {
+        failed += 1;
+        console.error(`[ai-digest] failed for company ${batch[index].companyId}:`, outcome.reason);
+      }
+    });
   }
 
   return { sent, failed };

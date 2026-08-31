@@ -19,6 +19,11 @@ export const companyUpdateSchema = z.object({
 
 export type CompanyUpdate = z.infer<typeof companyUpdateSchema>;
 
+export const employerOnboardingUpdateSchema = z.object({
+  industry: z.string().max(100, "Industry is too long").optional(),
+  teamSize: z.string().max(50, "Team size is too long").optional(),
+});
+
 export function companyInputToData(input: CompanyUpdate) {
   const emptyToNull = (v: string | null | undefined) => (v && v.trim() ? v.trim() : null);
   const foundedYear =

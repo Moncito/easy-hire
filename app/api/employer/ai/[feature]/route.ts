@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { ZodError } from "zod";
 import { auth } from "@/Auth";
 import { errorResponse } from "@/lib/api-error";
 import { requireProCompanyForAi } from "@/lib/ai/gates";
@@ -32,9 +31,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ feature
     const result = await route.run(company.id, input);
     return NextResponse.json(result);
   } catch (error) {
-    if (error instanceof ZodError) {
-      return NextResponse.json({ error: error.issues[0]?.message ?? "Invalid input" }, { status: 400 });
-    }
     return errorResponse(error);
   }
 }

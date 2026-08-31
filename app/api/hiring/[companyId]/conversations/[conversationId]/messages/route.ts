@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { ZodError } from "zod";
 import { auth } from "@/Auth";
 import { errorResponse } from "@/lib/api-error";
+import { parseJsonBody } from "@/lib/parse-json-body";
 import { getCollaborativeMessagesAfter, sendCollaborativeMessage } from "@/lib/collaborative-messages";
 
 export async function GET(request: Request, { params }: { params: Promise<{ companyId: string; conversationId: string }> }) {
@@ -22,10 +22,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ com
     const session = await auth();
     if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     const { companyId, conversationId } = await params;
-    const message = await sendCollaborativeMessage(companyId, session.user.id, conversationId, await request.json());
+    const message = await sendCollaborativeMessage(companyId, session.user.id, conversationId, await parseJsonBody(request));
     return NextResponse.json({ message });
   } catch (error) {
-    if (error instanceof ZodError) return NextResponse.json({ error: error.issues[0]?.message ?? "Invalid message" }, { status: 400 });
     return errorResponse(error);
   }
 }

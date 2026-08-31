@@ -16,6 +16,7 @@ import {
   CreditCard,
   Sparkles,
   LogOut,
+  Settings,
   X,
 } from "lucide-react";
 import { useSignOut } from "@/components/ui/useSignOut";
@@ -34,6 +35,7 @@ const overflowLinks = [
   { label: "Reports", href: "/employer/reports", icon: BarChart3 },
   { label: "Company profile", href: "/employer/company-profile", icon: Building2 },
   { label: "Billing", href: "/employer/billing", icon: CreditCard },
+  { label: "Settings", href: "/employer/settings", icon: Settings },
 ] as const;
 
 const proOverflowLinks = [{ label: "Easy AI", href: "/employer/easy-ai", icon: Sparkles }] as const;

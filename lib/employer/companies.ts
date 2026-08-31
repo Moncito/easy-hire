@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { companyInputToData, companyUpdateSchema } from "@/lib/validations/company";
+import { VERIFICATION_DOC_BUCKET, resolveSignedUrl } from "@/lib/storage";
 
 /** Creates a draft company when an employer user has no row (partial signup / Google). */
 export async function ensureEmployerCompany(
@@ -52,10 +53,16 @@ export async function getEmployerCompanyProfile(companyId: string) {
 
   if (!company) return null;
 
-  const [activeJobsCount, totalApplicantsCount] = await Promise.all([
+  const [activeJobsCount, totalApplicantsCount, verificationDocuments] = await Promise.all([
     prisma.job.count({ where: { companyId: company.id, status: "ACTIVE" } }),
     prisma.application.count({ where: { job: { companyId: company.id } } }),
+    Promise.all(
+      company.verificationDocuments.map(async (doc) => ({
+        ...doc,
+        fileUrl: (await resolveSignedUrl(VERIFICATION_DOC_BUCKET, doc.fileUrl)) ?? "",
+      }))
+    ),
   ]);
 
-  return { company, activeJobsCount, totalApplicantsCount };
+  return { company: { ...company, verificationDocuments }, activeJobsCount, totalApplicantsCount };
 }

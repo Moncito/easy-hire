@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/Auth";
 import { errorResponse } from "@/lib/api-error";
+import { parseJsonBody } from "@/lib/parse-json-body";
 import { getSeekerProfile, updateSeekerProfile, ensureSeekerProfile } from "@/lib/seekers";
-import { ZodError } from "zod";
 
 export async function GET() {
   try {
@@ -30,13 +30,10 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const body = await req.json();
+    const body = await parseJsonBody(req);
     const updated = await updateSeekerProfile(session.user.id, body);
     return NextResponse.json(updated);
   } catch (error) {
-    if (error instanceof ZodError) {
-      return NextResponse.json({ error: error.issues[0]?.message ?? "Invalid input" }, { status: 400 });
-    }
     return errorResponse(error);
   }
 }

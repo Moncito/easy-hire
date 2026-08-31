@@ -2,9 +2,11 @@ import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/lib/api-error";
 import { adminCompanyReviewSchema } from "@/lib/validations/admin";
 import { invalidateCollaborativeHiringEnabled } from "@/lib/collaborative-hiring";
+import { VERIFICATION_DOC_BUCKET, resolveSignedUrl } from "@/lib/storage";
+import { sendCompanyRejectedEmail, sendCompanyVerifiedEmail } from "@/lib/shared/email";
 
 export async function listPendingCompanies() {
-  return prisma.company.findMany({
+  const companies = await prisma.company.findMany({
     where: { verifiedStatus: "PENDING" },
     orderBy: { updatedAt: "asc" },
     include: {
@@ -20,6 +22,20 @@ export async function listPendingCompanies() {
       _count: { select: { jobs: true } },
     },
   });
+
+  // Admin review queue renders each document's fileUrl as a direct link —
+  // sign them all up front, batched (never sequentially) across companies.
+  return Promise.all(
+    companies.map(async (company) => ({
+      ...company,
+      verificationDocuments: await Promise.all(
+        company.verificationDocuments.map(async (doc) => ({
+          ...doc,
+          fileUrl: (await resolveSignedUrl(VERIFICATION_DOC_BUCKET, doc.fileUrl)) ?? "",
+        }))
+      ),
+    }))
+  );
 }
 
 export async function listCompaniesForCollaborativeHiring() {
@@ -75,6 +91,11 @@ export async function reviewCompany(companyId: string, raw: unknown) {
       }),
     ]);
 
+    void sendCompanyVerifiedEmail({
+      to: company.user.email,
+      companyName: company.companyName,
+    }).catch((err) => console.error("[admin/companies] verified email failed:", err));
+
     return updated;
   }
 
@@ -103,6 +124,12 @@ export async function reviewCompany(companyId: string, raw: unknown) {
       },
     }),
   ]);
+
+  void sendCompanyRejectedEmail({
+    to: company.user.email,
+    companyName: company.companyName,
+    reason,
+  }).catch((err) => console.error("[admin/companies] rejected email failed:", err));
 
   return updated;
 }

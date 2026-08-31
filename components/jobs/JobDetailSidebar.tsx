@@ -15,6 +15,7 @@ type ApplyProps = {
   jobId: string;
   jobTitle: string;
   companyName: string;
+  companyId: string;
   screeningQuestions?: {
     id: string;
     prompt: string;
@@ -34,6 +35,7 @@ export function JobApplyCta({
   jobId,
   jobTitle,
   companyName,
+  companyId,
   screeningQuestions = [],
 }: ApplyProps) {
   return (
@@ -47,6 +49,7 @@ export function JobApplyCta({
           jobId={jobId}
           jobTitle={jobTitle}
           companyName={companyName}
+          companyId={companyId}
           screeningQuestions={screeningQuestions}
         />
       </div>
@@ -107,6 +110,7 @@ export default function JobDetailSidebar({
           jobId={jobId}
           jobTitle={jobTitle}
           companyName={company.companyName}
+          companyId={company.id}
           screeningQuestions={screeningQuestions}
         />
       </div>

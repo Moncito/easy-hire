@@ -11,11 +11,15 @@ import {
   submitApplication as submitApplicationApi,
 } from "@/lib/client/applications";
 import { CheckCircle2, Loader2, X } from "lucide-react";
+import MessageEmployerButton from "@/components/seeker/MessageEmployerButton";
 
 type Props = {
   jobId: string;
   jobTitle: string;
   companyName: string;
+  /** Known server-side already (see app/jobs/[id]/page.tsx) — threaded down so the
+   *  post-apply "Message employer" action never needs a lookup fetch here. */
+  companyId: string;
   screeningQuestions?: {
     id: string;
     prompt: string;
@@ -49,6 +53,7 @@ export default function ApplyButton({
   jobId,
   jobTitle,
   companyName,
+  companyId,
   screeningQuestions = [],
 }: Props) {
   const { data: session, status } = useSession();
@@ -253,13 +258,16 @@ export default function ApplyButton({
 
   if (applied && !open) {
     return (
-      <button
-        type="button"
-        disabled
-        className={`${btnBase} cursor-default border border-navy/15 bg-mist text-ink/60`}
-      >
-        Applied
-      </button>
+      <div className="mt-4 space-y-2.5">
+        <button
+          type="button"
+          disabled
+          className="block w-full cursor-default rounded-xl border border-navy/15 bg-mist py-2.5 text-center text-sm font-semibold text-ink/60"
+        >
+          Applied
+        </button>
+        <MessageEmployerButton jobId={jobId} companyId={companyId} />
+      </div>
     );
   }
 

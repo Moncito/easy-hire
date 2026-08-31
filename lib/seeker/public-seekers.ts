@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/lib/api-error";
+import { signResumeUrl } from "@/lib/seeker/resume-urls";
 
 export async function getPublicSeeker(id: string) {
   const seeker = await prisma.seekerProfile.findFirst({
@@ -32,5 +33,5 @@ export async function getPublicSeeker(id: string) {
     throw new ApiError("Profile not found", 404);
   }
 
-  return seeker;
+  return { ...seeker, resumeUrl: await signResumeUrl(seeker.resumeUrl) };
 }

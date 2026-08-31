@@ -1,10 +1,17 @@
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { ApiError } from "@/lib/api-error";
-import { notifyApplicationSubmitted, notifyApplicationRejected, createNotification } from "@/lib/email";
+import {
+  notifyApplicationSubmitted,
+  notifyApplicationRejected,
+  notifyApplicationStatusChanged,
+  createNotification,
+  type NonRejectionApplicationStatus,
+} from "@/lib/email";
 import { applicationCreateSchema, applicationUpdateSchema } from "@/lib/validations/application";
 import { invalidateEmployerWorkspace } from "@/lib/employer-cache";
 import { invalidateSeekerApplications } from "@/lib/seeker/cache";
+import { hydrateResumeFields } from "@/lib/seeker/resume-urls";
 
 const candidateSeekerSelect = {
   id: true,
@@ -28,16 +35,17 @@ const candidateSeekerSelect = {
   photoUrl: true,
 } as const;
 
-function normalizeCandidateSeeker<
+async function normalizeCandidateSeeker<
   T extends {
     skills?: string[] | null;
     languages?: string[] | null;
     education?: string[] | null;
+    resumeUrl?: string | null;
     resumes?: string[] | null;
     resumeUpdatedAt?: Date | null;
   },
 >(seeker: T) {
-  return {
+  const normalized = {
     ...seeker,
     skills: seeker.skills ?? [],
     languages: seeker.languages ?? [],
@@ -45,6 +53,7 @@ function normalizeCandidateSeeker<
     resumes: seeker.resumes ?? [],
     resumeUpdatedAt: seeker.resumeUpdatedAt?.toISOString() ?? null,
   };
+  return hydrateResumeFields(normalized);
 }
 
 export async function createApplication(seekerUserId: string, raw: unknown) {
@@ -236,6 +245,11 @@ export async function updateApplication(applicationId: string, raw: unknown) {
   });
 
   const becameRejected = data.status === "REJECTED" && existing.status !== "REJECTED";
+  const NON_REJECTION_STATUSES = new Set(["SHORTLISTED", "INTERVIEW", "HIRED"]);
+  const becameOtherStatus =
+    data.status !== undefined &&
+    data.status !== existing.status &&
+    NON_REJECTION_STATUSES.has(data.status);
 
   if (becameRejected) {
     void notifyApplicationRejected({
@@ -246,13 +260,22 @@ export async function updateApplication(applicationId: string, raw: unknown) {
       companyName: existing.job.company.companyName,
       rejectionReason: data.rejectionReason ?? updated.rejectionReason ?? null,
     }).catch((err) => console.error("[applications] rejection notify failed:", err));
+  } else if (becameOtherStatus) {
+    void notifyApplicationStatusChanged({
+      seekerUserId: existing.seeker.user.id,
+      seekerEmail: existing.seeker.user.email,
+      seekerName: existing.seeker.fullName,
+      jobTitle: existing.job.title,
+      companyName: existing.job.company.companyName,
+      status: data.status as NonRejectionApplicationStatus,
+    }).catch((err) => console.error("[applications] status-change notify failed:", err));
   }
 
   invalidateEmployerWorkspace(existing.job.company.id);
   invalidateSeekerApplications(existing.seeker.user.id);
   return {
     ...updated,
-    seeker: normalizeCandidateSeeker(updated.seeker),
+    seeker: await normalizeCandidateSeeker(updated.seeker),
   };
 }
 
@@ -280,11 +303,15 @@ export async function listJobApplications(jobId: string, page = 1, pageSize = 50
     prisma.application.count({ where: { jobId } }),
   ]);
 
-  return {
-    applications: applications.map((application) => ({
+  const hydratedApplications = await Promise.all(
+    applications.map(async (application) => ({
       ...application,
-      seeker: normalizeCandidateSeeker(application.seeker),
-    })),
+      seeker: await normalizeCandidateSeeker(application.seeker),
+    }))
+  );
+
+  return {
+    applications: hydratedApplications,
     total,
     page,
     pageSize,

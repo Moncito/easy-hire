@@ -40,7 +40,7 @@ export async function deleteCollaborativeJob(companyId: string, actorUserId: str
 
 export async function submitCollaborativeJobForReview(companyId: string, actorUserId: string, jobId: string) {
   const { job } = await requireCollaborativeJob(companyId, actorUserId, jobId);
-  const result = await submitJobForReview(job, companyId);
+  const result = await submitJobForReview(job, companyId, actorUserId);
   invalidateCollaboratorQueue(companyId);
   return result;
 }

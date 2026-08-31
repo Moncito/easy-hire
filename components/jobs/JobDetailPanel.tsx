@@ -27,6 +27,7 @@ function PremiumApplyBlock({ job }: { job: JobDetailData }) {
           jobId={job.id}
           jobTitle={job.title}
           companyName={job.company.companyName}
+          companyId={job.company.id}
           screeningQuestions={job.screeningQuestions ?? []}
         />
       </div>

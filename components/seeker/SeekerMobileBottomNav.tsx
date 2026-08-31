@@ -10,6 +10,7 @@ import {
   Bookmark,
   User,
 } from "lucide-react";
+import SeekerNotificationBell from "@/components/seeker/SeekerNotificationBell";
 
 const tabs = [
   { label: "Home", href: "/seeker/dashboard", icon: LayoutDashboard },
@@ -82,10 +83,10 @@ export default function SeekerMobileBottomNav() {
       aria-label="Seeker navigation"
       className="seeker-mobile-bottom-nav pointer-events-none fixed inset-x-0 bottom-0 z-50 flex justify-center lg:hidden"
     >
-      <div className="flex w-[min(100%,24rem)] items-end px-3 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] pt-2 sm:px-4">
+      <div className="flex w-[min(100%,24rem)] items-end gap-2 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] pt-2 sm:px-4">
         <div
           ref={pillRef}
-          className="pointer-events-auto relative flex h-14 w-full items-center overflow-hidden rounded-full bg-white shadow-[0_8px_28px_rgba(32,36,43,0.14)] ring-1 ring-ink/10"
+          className="pointer-events-auto relative flex h-14 flex-1 items-center overflow-hidden rounded-full bg-white shadow-[0_8px_28px_rgba(32,36,43,0.14)] ring-1 ring-ink/10"
         >
           {activeCenter > 0 ? (
             <div
@@ -123,6 +124,10 @@ export default function SeekerMobileBottomNav() {
               );
             })}
           </div>
+        </div>
+
+        <div className="pointer-events-auto flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-white shadow-[0_8px_28px_rgba(32,36,43,0.14)] ring-1 ring-ink/10">
+          <SeekerNotificationBell variant="light" dropDirection="up" />
         </div>
       </div>
     </nav>

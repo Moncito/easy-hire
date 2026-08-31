@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/Auth";
 import { errorResponse, ApiError } from "@/lib/api-error";
 import { getSeekerProfileForEmployer } from "@/lib/talent";
-import { resumeFilenameFromUrl } from "@/lib/seeker-profile-format";
+import { signResumeUrl } from "@/lib/seeker/resume-urls";
 
 export async function GET(_req: Request, { params }: { params: Promise<{ seekerId: string }> }) {
   try {
@@ -18,20 +18,12 @@ export async function GET(_req: Request, { params }: { params: Promise<{ seekerI
       throw new ApiError("Resume not available", 404);
     }
 
-    const upstream = await fetch(profile.resumeUrl);
-    if (!upstream.ok || !upstream.body) {
-      throw new ApiError("Resume file could not be retrieved", 502);
+    const signedUrl = await signResumeUrl(profile.resumeUrl);
+    if (!signedUrl) {
+      throw new ApiError("Resume not available", 404);
     }
 
-    const filename = resumeFilenameFromUrl(profile.resumeUrl);
-    const contentType = upstream.headers.get("content-type") || "application/octet-stream";
-
-    return new NextResponse(upstream.body, {
-      headers: {
-        "Content-Type": contentType,
-        "Content-Disposition": `attachment; filename="${filename.replace(/"/g, "")}"`,
-      },
-    });
+    return NextResponse.redirect(signedUrl);
   } catch (error) {
     return errorResponse(error);
   }

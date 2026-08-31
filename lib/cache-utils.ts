@@ -8,6 +8,16 @@
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/;
 
 export function reviveDates<T>(value: T): T {
+  // MUST come before the object branch. `typeof new Date() === "object"`, and a
+  // Date has no own enumerable properties, so falling through to
+  // `Object.entries` below rebuilds it as `{}` — silently destroying every
+  // real Date on a cache *miss*, where the value comes straight from Prisma
+  // and was never serialized. That is the inverse of the bug this helper
+  // exists to fix, and it is why `app.appliedAt.toISOString()` threw on the
+  // seeker dashboard's first (uncached) render. Covered by cache-utils.test.ts.
+  if (value instanceof Date) {
+    return value;
+  }
   if (Array.isArray(value)) {
     return value.map((item) => reviveDates(item)) as unknown as T;
   }

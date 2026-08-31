@@ -114,6 +114,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
                     jobId={job.id}
                     jobTitle={job.title}
                     companyName={job.company.companyName}
+                    companyId={job.company.id}
                     screeningQuestions={job.screeningQuestions.map((q) => ({
                       id: q.id,
                       prompt: q.prompt,

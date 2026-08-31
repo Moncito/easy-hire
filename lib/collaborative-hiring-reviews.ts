@@ -2,6 +2,7 @@ import { ApplicationStatus, CompanyMemberRole, EvaluationRecommendation, JobStat
 import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/lib/api-error";
 import { hasCollaborativePermission, requireCompanyMembership } from "@/lib/collaborative-hiring";
+import { signResumeUrl } from "@/lib/seeker/resume-urls";
 import type { z } from "zod";
 import type { collaborativePipelineSchema, collaborativeScorecardSchema } from "@/lib/validations/collaborative-review";
 
@@ -80,6 +81,7 @@ export async function getCollaborativeCandidateReview(companyId: string, actorUs
     }),
   ]);
   if (!application) throw new ApiError("Candidate application not found", 404);
+  application.seeker.resumeUrl = await signResumeUrl(application.seeker.resumeUrl);
   const ownEvaluation = application.evaluations.find((evaluation) => evaluation.memberId === membership.id) ?? null;
   // Hiring managers review independently: they do not see peers' feedback
   // until they have committed their own scorecard. Recruiters/owners retain

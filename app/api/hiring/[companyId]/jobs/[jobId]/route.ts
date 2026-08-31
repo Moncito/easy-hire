@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { ZodError } from "zod";
 import { auth } from "@/Auth";
 import { errorResponse } from "@/lib/api-error";
+import { parseJsonBody } from "@/lib/parse-json-body";
 import { getCollaborativeJobForEdit, updateCollaborativeJob, deleteCollaborativeJob } from "@/lib/collaborative-job-management";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ companyId: string; jobId: string }> }) {
@@ -21,10 +21,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ co
     const session = await auth();
     if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     const { companyId, jobId } = await params;
-    const job = await updateCollaborativeJob(companyId, session.user.id, jobId, await request.json());
+    const job = await updateCollaborativeJob(companyId, session.user.id, jobId, await parseJsonBody(request));
     return NextResponse.json(job);
   } catch (error) {
-    if (error instanceof ZodError) return NextResponse.json({ error: error.issues[0]?.message ?? "Invalid input" }, { status: 400 });
     return errorResponse(error);
   }
 }

@@ -1,0 +1,46 @@
+name: Cron — analytics rollups
+
+# Replaces the Vercel Cron entry for this endpoint. Vercel Hobby caps a
+# project at 2 cron jobs and this app needs 4, so the schedule lives here
+# instead. See SECURITY_REMEDIATION_PLAN.md (Phase 2, item 2.4).
+#
+# NOTE: GitHub only runs scheduled workflows from the repository's DEFAULT
+# branch. Until this file is merged to `main`, nothing fires.
+
+on:
+  schedule:
+    # Daily, 01:00 UTC — mirrors the original vercel.json entry.
+    - cron: "0 1 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: cron-analytics-rollups
+  cancel-in-progress: false
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Invoke /api/cron/analytics-rollups
+        env:
+          BASE_URL: ${{ vars.APP_BASE_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          set -euo pipefail
+          [ -n "${BASE_URL:-}" ] || { echo "::error::repository variable APP_BASE_URL is not set"; exit 1; }
+          [ -n "${CRON_SECRET:-}" ] || { echo "::error::repository secret CRON_SECRET is not set"; exit 1; }
+
+          code=$(curl -sS -o response.json -w '%{http_code}' \
+            --retry 3 --retry-delay 15 --retry-all-errors --max-time 300 \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            "${BASE_URL}/api/cron/analytics-rollups")
+
+          echo "HTTP ${code}"
+          cat response.json || true
+          echo
+
+          # 503 means CRON_SECRET is missing on the server; 401 means it does
+          # not match this workflow's secret. Both are configuration errors
+          # worth failing loudly on rather than retrying into silence.
+          [ "${code}" = "200" ] || { echo "::error::cron returned HTTP ${code}"; exit 1; }

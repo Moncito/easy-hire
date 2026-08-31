@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { errorResponse } from "@/lib/api-error";
 import { searchPublicJobs, listJobCategories } from "@/lib/public-jobs";
 import { jobSearchSchema } from "@/lib/validations/job-search";
-import { ZodError } from "zod";
 
 export async function GET(req: Request) {
   try {
@@ -30,9 +29,6 @@ export async function GET(req: Request) {
 
     return NextResponse.json({ ...result, categories });
   } catch (error) {
-    if (error instanceof ZodError) {
-      return NextResponse.json({ error: error.issues[0]?.message ?? "Invalid input" }, { status: 400 });
-    }
     return errorResponse(error);
   }
 }

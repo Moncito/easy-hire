@@ -29,6 +29,14 @@ export type SeekerNavBandProps = {
   actions?: React.ReactNode;
   /** Reserve empty center space for the floating pill. Default true. */
   reserveCenter?: boolean;
+  /**
+   * Internal only — set by SeekerNavBandBleed, which is the only place this
+   * band shares the viewport with the fixed SeekerWorkspaceSwitcher pill
+   * (app/seeker/layout.tsx). Reserves room on the right, lg: and up, so the
+   * greeting/badge group ends before the switcher instead of running under
+   * it. Not intended to be passed by other callers of SeekerNavBand.
+   */
+  reserveSwitcherGutter?: boolean;
 };
 
 export default function SeekerNavBand({
@@ -41,6 +49,7 @@ export default function SeekerNavBand({
   className,
   actions,
   reserveCenter = true,
+  reserveSwitcherGutter = false,
 }: SeekerNavBandProps) {
   const fallbackHint = hint ?? "VA marketplace";
 
@@ -48,8 +57,24 @@ export default function SeekerNavBand({
     <div
       className={`seeker-nav-band relative flex h-12 shrink-0 items-center justify-between gap-3 px-4 sm:h-14 sm:px-6 lg:h-16 lg:px-8${className ? ` ${className}` : ""}`}
     >
-      {/* Brand + section */}
-      <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3 lg:flex-none">
+      {/* Brand + section + greeting/badge — bounded on lg+ (only when
+          reserveCenter is on) so it can never reach the centered reserve
+          where the floating pill nav sits. At lg, the reserve is
+          min(100%,30rem) wide, centered on the full band
+          (absolute inset-x-0 against the band's own padding box, ignoring
+          the band's px-8). Left content starts after that lg:px-8 (2rem)
+          inset. calc(50% - 16rem) — where the 50% resolves against this
+          flex item's containing block, i.e. the band's *content* box
+          (already inside the 2rem/side padding) — lands the left cluster's
+          right edge a constant ~1rem short of the reserve's left edge at
+          any band width from 1024px up to the 1440px shell cap. Below lg
+          the reserve is hidden entirely (replaced by the bottom nav), so no
+          cap is needed there. overflow-hidden is a backstop: individual
+          text nodes already truncate, this just guarantees nothing (e.g. a
+          non-truncating badge pill) can visually bleed past the boundary. */}
+      <div
+        className={`flex min-w-0 flex-1 items-center gap-2 overflow-hidden sm:gap-3 lg:flex-none${reserveCenter ? " lg:max-w-[calc(50%-16rem)]" : ""}`}
+      >
         <Link
           href={homeHref}
           className="flex shrink-0 items-center gap-2 transition-opacity hover:opacity-85"
@@ -66,6 +91,34 @@ export default function SeekerNavBand({
             {section}
           </span>
         </span>
+
+        {/* Greeting/badge, relocated from the right edge. The separator
+            mirrors the divider above; it must track the same visibility as
+            whatever follows it, otherwise a bare "|" shows with nothing
+            after it. `badge` (when passed) renders at every breakpoint
+            (unchanged from before), so the divider does too; the
+            fallback-hint text stays sm+-only, so the divider matches that
+            instead when there's no badge. */}
+        <span
+          className={
+            badge
+              ? "h-4 w-px shrink-0 bg-ink/10"
+              : "hidden h-4 w-px shrink-0 bg-ink/10 sm:inline-block"
+          }
+          aria-hidden="true"
+        />
+        {metaLabel && (
+          <span className="hidden max-w-[6.5rem] truncate text-xs font-medium text-ink/50 sm:inline lg:max-w-[11rem]">
+            {metaLabel}
+          </span>
+        )}
+        <span className="shrink-0">
+          {badge ?? (
+            <span className="hidden text-[10px] font-semibold uppercase tracking-widest text-ink/30 sm:inline">
+              {fallbackHint}
+            </span>
+          )}
+        </span>
       </div>
 
       {reserveCenter && (
@@ -77,22 +130,17 @@ export default function SeekerNavBand({
         </div>
       )}
 
-      <div className="flex shrink-0 items-center justify-end gap-2">
-        {actions ?? (
-          <>
-            {metaLabel && (
-              <span className="hidden max-w-[6.5rem] truncate text-xs font-medium text-ink/50 sm:inline lg:max-w-[11rem]">
-                {metaLabel}
-              </span>
-            )}
-            {badge ?? (
-              <span className="hidden text-[10px] font-semibold uppercase tracking-widest text-ink/30 sm:inline">
-                {fallbackHint}
-              </span>
-            )}
-          </>
-        )}
-      </div>
+      {/* Only actions (e.g. guest Log in / Get started) live on the right
+          now — metaLabel/badge moved into the left cluster above. Render
+          nothing at all when there are no actions, so an empty div doesn't
+          sit in this justify-between row carrying a stale gutter margin. */}
+      {actions && (
+        <div
+          className={`flex shrink-0 items-center justify-end gap-2${reserveSwitcherGutter ? " lg:mr-52" : ""}`}
+        >
+          {actions}
+        </div>
+      )}
     </div>
   );
 }
@@ -100,7 +148,9 @@ export default function SeekerNavBand({
 export function SeekerNavBandBleed(props: SeekerNavBandProps) {
   return (
     <div className="-mx-4 sm:-mx-6 lg:-mx-8">
-      <SeekerNavBand {...props} />
+      {/* reserveSwitcherGutter is forced here (not exposed to callers) —
+          see the prop doc above for why this is the one seam that needs it. */}
+      <SeekerNavBand {...props} reserveSwitcherGutter />
     </div>
   );
 }
