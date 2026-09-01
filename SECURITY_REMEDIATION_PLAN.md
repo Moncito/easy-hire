@@ -21,8 +21,10 @@
 | 2 | 2.3 Candidate-visible interviews | ✅ backend + UI, incl. `.ics` invites |
 | 2 | 2.4 Make the schedulers run | ✅ done — GET handlers, `lastSentAt` guard, batching, 4 GitHub Actions workflows. Needs `CRON_SECRET` in Vercel + GitHub, and merge to `main` before schedules fire. |
 | 2 | 2.5 Missing transactional emails | ✅ 7 added |
-| 3 | Distribution / Google for Jobs | ⬜ not started |
-| 4 | Trust wedge (reviews + verification score) | ⬜ not started |
+| 3 | Distribution / Google for Jobs | ✅ done 2026-08-31 — JSON-LD, metadata, OG image, sitemap; verified against a running server |
+| 4 | 4.1 Two-way reviews | ✅ backend done 2026-08-31 — double-blind reveal + dispute path. **UI not built** |
+| 4 | 4.2 VA verification score | ⬜ not started |
+| 4 | 4.3 Public response metrics | ⬜ not started |
 
 **Phase 2 closed 2026-08-30.** Tests **112** across 11 files. `tsc` clean, lint back to the 64 baseline, 25 migrations applied.
 
@@ -234,7 +236,33 @@ Zero `application/ld+json`, zero `JobPosting`, zero `schema.org` in the repo. `g
 
 ---
 
-## Phase 4 — Trust wedge ⬜
+## Phase 4 — Trust wedge
+
+### 4.1 closed 2026-08-31 (backend only — UI not built)
+
+Two product decisions were made by the owner and are baked into the data model. Changing either after real reviews exist is expensive.
+
+**Double-blind reveal.** Neither side sees the other's review until both submit, or a 14-day window expires — then both publish together. The reason is retaliation: if an employer can read the VA's review before writing theirs, VAs self-censor, and the whole differentiator dies. `PENDING_REVEAL` is excluded from *every* public read — lists **and** counts and aggregates — because an "N reviews pending" hint would leak that the other side has already written something.
+
+**Publish-then-dispute moderation.** Reviews go live on reveal; the subject may dispute, moving the row to `DISPUTED` and flagging it to admin, who resolves to `PUBLISHED` or `HIDDEN`. `HIDDEN` rows are retained for audit, not deleted.
+
+**Data model.** `Review` uses **two nullable subject FKs** (`subject_company_id` / `subject_seeker_id`), not the polymorphic `subjectType`/`subjectId` originally sketched. Polymorphic ids carry no referential integrity, and it matters here because `deleteUserAccount` anonymizes companies and seeker profiles *in place* keeping their ids — so real FKs stay valid and reviews survive an account deletion. Two raw-SQL CHECK constraints (Prisma's DSL cannot express them) enforce `rating BETWEEN 1 AND 5` and that the set subject FK matches `direction`. `@@unique([applicationId, direction])` enforces one review per side; nullable columns could not, since Postgres treats NULLs as distinct in unique indexes.
+
+`Application.hiredAt` was added as the window anchor — `updatedAt` cannot serve, since it moves on every later edit. It is stamped only on the *first* transition into `HIRED`, so a re-hire cannot restart an elapsed window. Existing `HIRED` rows were backfilled from `updated_at`, which is approximate and acceptable only pre-launch; the migration says so inline.
+
+**The race.** Two simultaneous opposite-direction submissions can each observe "the other side hasn't submitted" under Read Committed and both settle at `PENDING_REVEAL` — a pair hidden forever, since no third submission will ever arrive to trigger the reveal. Submission therefore runs at **SERIALIZABLE** isolation with a bounded, jittered retry on Prisma `P2034`. Postgres SSI detects the read-write dependency cycle and aborts one; on retry it sees the committed opposite row and publishes both.
+
+**One spec correction found by checking the real code:** the employer-side eligibility check must use `getActiveCompanyMembership`, **not** `requireCompanyMembership` — the latter calls `requireCollaborativeHiringEnabled` first (`lib/collaborative-hiring.ts:154`), which would have blocked every Free-plan company from ever reviewing a VA, disabling the differentiator for the segment most likely to use it.
+
+**Reveal sweep** runs in the existing daily `analytics-rollups` cron, batched with `ROLLUP_BATCH_SIZE`, idempotent by construction (it only ever matches rows still `PENDING_REVEAL`).
+
+**Verified:** `tsc` clean · lint 63 (29/34, baseline held) · `npm test` **190** across 19 files · `migrate status` clean, 28 migrations. Against a running server: public company and seeker review endpoints return 200 with the correct empty shape; review submit, dispute, and admin resolve all return 401 unauthenticated.
+
+**Not done:** no UI. Nothing surfaces reviews on `/companies/[id]` or `/seekers/[id]`, and there is no way for either party to write one.
+
+---
+
+## Phase 4 — Trust wedge (original plan) ⬜
 
 Nothing here exists in schema. This is the reason to pick EasyHire over OnlineJobs.ph, where the loudest recurring complaint is that workers cannot review employers.
 

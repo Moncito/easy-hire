@@ -93,8 +93,12 @@ export async function upsertDailyRollup(companyId: string, date: Date): Promise<
  * How many companies to process concurrently in the daily cron. Keeps the
  * total connection count inside Supabase's pooler limit while still being
  * ~ROLLUP_BATCH_SIZE× faster than the previous serial loop.
+ *
+ * Exported so other daily-cron tasks batch identically instead of picking
+ * their own arbitrary concurrency (see sweepExpiredReviewReveals in
+ * lib/reviews.ts).
  */
-const ROLLUP_BATCH_SIZE = 20;
+export const ROLLUP_BATCH_SIZE = 20;
 
 /** Runs the previous day's rollup for every company with at least one job — intended for a daily cron. */
 export async function runDailyRollupsForAllCompanies(

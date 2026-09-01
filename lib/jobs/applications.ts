@@ -229,6 +229,11 @@ export async function updateApplication(applicationId: string, raw: unknown) {
     throw new ApiError("Application not found", 404);
   }
 
+  // Stamp once, the first time this application transitions into HIRED —
+  // never overwritten on a later re-hire (see the Application.hiredAt schema
+  // comment). This anchors the two-way review window (lib/reviews.ts).
+  const becameHired = data.status === "HIRED" && existing.status !== "HIRED" && !existing.hiredAt;
+
   const updated = await prisma.application.update({
     where: { id: applicationId },
     data: {
@@ -236,6 +241,7 @@ export async function updateApplication(applicationId: string, raw: unknown) {
       ...(data.internalNotes !== undefined ? { internalNotes: data.internalNotes } : {}),
       ...(data.rating !== undefined ? { rating: data.rating } : {}),
       ...(data.rejectionReason !== undefined ? { rejectionReason: data.rejectionReason } : {}),
+      ...(becameHired ? { hiredAt: new Date() } : {}),
     },
     include: {
       seeker: {
