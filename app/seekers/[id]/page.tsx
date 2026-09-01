@@ -7,6 +7,14 @@ import { ensureSeekerProfile } from "@/lib/seekers";
 import { getSeekerProfileCompletion } from "@/lib/seeker-profile-completion";
 import PublicSeekerNavBand from "@/components/seekers/PublicSeekerNavBand";
 import PublicSeekerProfileSections from "@/components/seekers/PublicSeekerProfileSections";
+import {
+  listPublishedReviewsForSeeker,
+  getSeekerReviewAggregate,
+  subjectReviewIdsForViewer,
+  REVIEWS_PAGE_SIZE,
+} from "@/lib/reviews";
+import ReviewSummary from "@/components/reviews/ReviewSummary";
+import ReviewList from "@/components/reviews/ReviewList";
 
 // getPublicSeeker only resolves profiles with visibility: "PUBLIC" (see
 // lib/seeker/public-seekers.ts) and throws otherwise. The catch block below
@@ -37,8 +45,16 @@ export async function generateMetadata({
   }
 }
 
-export default async function PublicSeekerPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function PublicSeekerPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ reviewsPage?: string }>;
+}) {
   const { id } = await params;
+  const { reviewsPage: reviewsPageParam } = await searchParams;
+  const reviewsPage = Math.max(1, Number(reviewsPageParam) || 1);
 
   let seeker;
   try {
@@ -50,6 +66,18 @@ export default async function PublicSeekerPage({ params }: { params: Promise<{ i
   const session = await auth();
   const isSeeker = session?.user?.role === "SEEKER";
   const isEmployer = session?.user?.role === "EMPLOYER";
+
+  const [reviewAggregate, reviewRows] = await Promise.all([
+    getSeekerReviewAggregate(seeker.id),
+    listPublishedReviewsForSeeker(seeker.id, reviewsPage),
+  ]);
+  const disputableReviewIds = session?.user
+    ? await subjectReviewIdsForViewer(
+        session.user.id,
+        reviewRows.map((row) => row.id)
+      )
+    : [];
+  const reviewsTotalPages = Math.max(1, Math.ceil(reviewAggregate.count / REVIEWS_PAGE_SIZE));
 
   let metaLabel: string | null = null;
   let profileCompleted = 0;
@@ -335,6 +363,30 @@ export default async function PublicSeekerPage({ params }: { params: Promise<{ i
             updatedAt: seeker.updatedAt,
           }}
         />
+
+        <section id="reviews" className="border-t border-[#E4E2DC] pt-10 mt-10">
+          <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h2 className="font-display text-xl font-bold text-ink">Reviews</h2>
+              <p className="mt-1 text-sm text-ink/45">
+                From employers who&apos;ve actually hired this VA — unlocked only after a completed
+                hire.
+              </p>
+            </div>
+          </div>
+
+          <ReviewSummary aggregate={reviewAggregate} subjectType="seeker" />
+
+          <div className="mt-6">
+            <ReviewList
+              reviews={reviewRows}
+              disputableReviewIds={disputableReviewIds}
+              page={reviewsPage}
+              totalPages={reviewsTotalPages}
+              baseHref={`/seekers/${id}`}
+            />
+          </div>
+        </section>
       </div>
     </div>
   );

@@ -363,7 +363,8 @@ const PUBLIC_REVIEW_SELECT = {
   },
 } satisfies Prisma.ReviewSelect;
 
-const REVIEWS_PAGE_SIZE = 20;
+/** Exported so page-level pagination math (e.g. Math.ceil(count / REVIEWS_PAGE_SIZE)) stays in sync with the server-side `take` — do not un-export as dead code. */
+export const REVIEWS_PAGE_SIZE = 20;
 const REVIEWS_LIST_REVALIDATE_SECONDS = 60;
 const REVIEWS_AGGREGATE_REVALIDATE_SECONDS = 60;
 
@@ -445,6 +446,341 @@ export function invalidateCompanyReviews(companyId: string) {
 /** Drop cached review lists/aggregates for one seeker (same triggers as invalidateCompanyReviews). */
 export function invalidateSeekerReviews(seekerId: string) {
   revalidateTag(seekerReviewsTag(seekerId), "max");
+}
+
+// ============================================================================
+// "REVIEWABLE APPLICATIONS" — per-viewer, so this section is NEVER wrapped in
+// unstable_cache (a cached read must stay identical for every visitor; a
+// viewer's own applications/review state is the opposite of that). Mirrors
+// submitReview's "seeker vs. active company member" resolution rather than
+// re-deriving eligibility rules.
+// ============================================================================
+
+/** Safety cap on the reviewable-applications read paths — never an unbounded findMany. */
+const REVIEWABLE_APPLICATIONS_TAKE = 100;
+
+export type MyReviewSummary = {
+  id: string;
+  rating: number;
+  status: ReviewStatus;
+  submittedAt: Date;
+  revealedAt: Date | null;
+};
+
+export type ReviewableCounterpart =
+  | { type: "COMPANY"; id: string; name: string; logoUrl: string | null }
+  | { type: "SEEKER"; id: string; name: string; headline: string | null; photoUrl: string | null };
+
+/** Shape as fetched from Prisma, before the eligibility decision is applied. */
+export type ReviewableApplicationCandidate = {
+  applicationId: string;
+  jobId: string;
+  jobTitle: string;
+  status: ApplicationStatus;
+  hiredAt: Date | null;
+  counterpart: ReviewableCounterpart;
+  myReview: MyReviewSummary | null;
+};
+
+export type ReviewableApplicationEntry = {
+  applicationId: string;
+  role: ReviewAuthorRole;
+  jobId: string;
+  jobTitle: string;
+  hiredAt: Date;
+  windowExpiresAt: Date;
+  counterpart: ReviewableCounterpart;
+  myReview: MyReviewSummary | null;
+};
+
+/**
+ * Pure — the eligibility + shaping decision for one candidate application,
+ * reusing isWithinReviewWindow rather than re-deriving the window rule.
+ * Ineligible cases return null so the caller can filter with `.filter(Boolean)`-style
+ * mapping:
+ *  - never reached HIRED (or missing hiredAt) → never eligible, in either direction.
+ *  - reached HIRED but the window has since closed AND this viewer never
+ *    submitted → drop it, nothing left for them to do or see here.
+ *  - already submitted (myReview set) → always kept, even past the window,
+ *    so the UI can show "submitted, awaiting the other side" or the final
+ *    outcome once revealed.
+ */
+export function shapeReviewableApplication(
+  candidate: ReviewableApplicationCandidate,
+  role: ReviewAuthorRole,
+  now: Date
+): ReviewableApplicationEntry | null {
+  if (candidate.status !== "HIRED" || !candidate.hiredAt) return null;
+  if (!candidate.myReview && !isWithinReviewWindow(candidate.hiredAt, now)) return null;
+
+  return {
+    applicationId: candidate.applicationId,
+    role,
+    jobId: candidate.jobId,
+    jobTitle: candidate.jobTitle,
+    hiredAt: candidate.hiredAt,
+    windowExpiresAt: new Date(candidate.hiredAt.getTime() + REVIEW_WINDOW_MS),
+    counterpart: candidate.counterpart,
+    myReview: candidate.myReview,
+  };
+}
+
+/** All company ids this user can act for: companies they own outright, plus active collaborative-hiring memberships. Deliberately queries CompanyMember directly (not requireCompanyMembership/requireCollaborativeHiringEnabled) — a Free-plan owner must still see their own reviewable applications. */
+async function getViewerCompanyIds(userId: string): Promise<string[]> {
+  const [ownedCompany, memberships] = await Promise.all([
+    prisma.company.findUnique({ where: { userId }, select: { id: true } }),
+    prisma.companyMember.findMany({
+      where: { userId, status: "ACTIVE" },
+      select: { companyId: true },
+      take: REVIEWABLE_APPLICATIONS_TAKE,
+    }),
+  ]);
+  const ids = new Set(memberships.map((member) => member.companyId));
+  if (ownedCompany) ids.add(ownedCompany.id);
+  return Array.from(ids);
+}
+
+async function fetchReviewableApplicationsAsSeeker(
+  userId: string,
+  jobId?: string
+): Promise<ReviewableApplicationCandidate[]> {
+  const seeker = await prisma.seekerProfile.findUnique({ where: { userId }, select: { id: true } });
+  if (!seeker) return [];
+
+  const applications = await prisma.application.findMany({
+    where: {
+      seekerId: seeker.id,
+      status: "HIRED",
+      hiredAt: { not: null },
+      ...(jobId ? { jobId } : {}),
+    },
+    select: {
+      id: true,
+      status: true,
+      hiredAt: true,
+      job: {
+        select: {
+          id: true,
+          title: true,
+          company: { select: { id: true, companyName: true, logoUrl: true } },
+        },
+      },
+      // Direction alone identifies "my" row here — the @@unique([applicationId,
+      // direction]) constraint plus resolveReviewAuthorRole guarantee a
+      // SEEKER_TO_COMPANY row on this seeker's own application can only ever
+      // have been authored by this seeker.
+      reviews: {
+        where: { direction: "SEEKER_TO_COMPANY" },
+        select: { id: true, rating: true, status: true, submittedAt: true, revealedAt: true },
+        take: 1,
+      },
+    },
+    orderBy: { hiredAt: "desc" },
+    take: REVIEWABLE_APPLICATIONS_TAKE,
+  });
+
+  return applications.map((app) => ({
+    applicationId: app.id,
+    jobId: app.job.id,
+    jobTitle: app.job.title,
+    status: app.status,
+    hiredAt: app.hiredAt,
+    counterpart: {
+      type: "COMPANY",
+      id: app.job.company.id,
+      name: app.job.company.companyName,
+      logoUrl: app.job.company.logoUrl,
+    },
+    myReview: app.reviews[0] ?? null,
+  }));
+}
+
+async function fetchReviewableApplicationsAsCompanyMember(
+  userId: string,
+  jobId?: string
+): Promise<ReviewableApplicationCandidate[]> {
+  const companyIds = await getViewerCompanyIds(userId);
+  if (companyIds.length === 0) return [];
+
+  const applications = await prisma.application.findMany({
+    where: {
+      status: "HIRED",
+      hiredAt: { not: null },
+      // companyIds stays in the where even when jobId is given — it is the
+      // authorization boundary (which companies this viewer can act for),
+      // not just a scoping convenience, so a jobId from an unrelated company
+      // must still resolve to zero rows rather than bypassing it.
+      job: jobId ? { id: jobId, companyId: { in: companyIds } } : { companyId: { in: companyIds } },
+    },
+    select: {
+      id: true,
+      status: true,
+      hiredAt: true,
+      job: { select: { id: true, title: true } },
+      seeker: { select: { id: true, fullName: true, headline: true, photoUrl: true } },
+      // See the matching comment in fetchReviewableApplicationsAsSeeker —
+      // same reasoning, opposite direction.
+      reviews: {
+        where: { direction: "COMPANY_TO_SEEKER" },
+        select: { id: true, rating: true, status: true, submittedAt: true, revealedAt: true },
+        take: 1,
+      },
+    },
+    orderBy: { hiredAt: "desc" },
+    take: REVIEWABLE_APPLICATIONS_TAKE,
+  });
+
+  return applications.map((app) => ({
+    applicationId: app.id,
+    jobId: app.job.id,
+    jobTitle: app.job.title,
+    status: app.status,
+    hiredAt: app.hiredAt,
+    counterpart: {
+      type: "SEEKER",
+      id: app.seeker.id,
+      name: app.seeker.fullName,
+      headline: app.seeker.headline,
+      photoUrl: app.seeker.photoUrl,
+    },
+    myReview: app.reviews[0] ?? null,
+  }));
+}
+
+/**
+ * A user can in principle be both a seeker and an active member of a company
+ * workspace (distinct accounts in practice, but nothing in the schema
+ * forbids it) — so this always checks both angles rather than branching on
+ * `session.user.role`, and merges the results.
+ *
+ * `options.jobId` narrows the DB query to one job (e.g. the per-job
+ * applicants page) so the REVIEWABLE_APPLICATIONS_TAKE cap applies to the
+ * already-narrowed set, not the caller's company-wide result — a per-job
+ * caller must never filter by jobId *after* the take, since that silently
+ * truncates older hires once a company has more than the cap's worth of
+ * hires across all its jobs. Omitting it (the seeker dashboard's call)
+ * behaves exactly as before.
+ */
+export async function listReviewableApplications(
+  userId: string,
+  options?: { jobId?: string }
+): Promise<ReviewableApplicationEntry[]> {
+  const now = new Date();
+  const [seekerCandidates, companyCandidates] = await Promise.all([
+    fetchReviewableApplicationsAsSeeker(userId, options?.jobId),
+    fetchReviewableApplicationsAsCompanyMember(userId, options?.jobId),
+  ]);
+
+  const entries: ReviewableApplicationEntry[] = [];
+  for (const candidate of seekerCandidates) {
+    const entry = shapeReviewableApplication(candidate, "SEEKER", now);
+    if (entry) entries.push(entry);
+  }
+  for (const candidate of companyCandidates) {
+    const entry = shapeReviewableApplication(candidate, "COMPANY_MEMBER", now);
+    if (entry) entries.push(entry);
+  }
+
+  entries.sort((a, b) => b.hiredAt.getTime() - a.hiredAt.getTime());
+  return entries;
+}
+
+// ============================================================================
+// SUBJECT IDENTIFICATION for the public review lists — lets a viewer know
+// which returned rows they may dispute (they are the subject, and the row is
+// still PUBLISHED). Deliberately NOT part of listPublishedReviewsForCompany /
+// listPublishedReviewsForSeeker or their unstable_cache — those two stay
+// viewer-agnostic so the cached payload is identical for every visitor. This
+// is a separate, uncached, per-viewer lookup layered on top.
+// ============================================================================
+
+type SubjectReviewRow = {
+  id: string;
+  status: ReviewStatus;
+  subjectCompanyId: string | null;
+  subjectSeekerId: string | null;
+};
+
+type ViewerSubjectContext = { seekerId: string | null; companyIds: string[] };
+
+/** Pure — which of these rows the viewer is the subject of AND may still dispute (PUBLISHED only; an already-DISPUTED row is not re-disputable). */
+export function filterDisputableReviewIds(
+  rows: SubjectReviewRow[],
+  viewer: ViewerSubjectContext
+): string[] {
+  const companyIdSet = new Set(viewer.companyIds);
+  return rows
+    .filter((row) => {
+      if (row.status !== "PUBLISHED") return false;
+      if (row.subjectCompanyId) return companyIdSet.has(row.subjectCompanyId);
+      if (row.subjectSeekerId) return row.subjectSeekerId === viewer.seekerId;
+      return false;
+    })
+    .map((row) => row.id);
+}
+
+/**
+ * Uncached, per-viewer. `reviewIds` is expected to be a page's worth of ids
+ * already narrowed to PUBLIC_REVIEW_STATUSES by the caller (the public list
+ * endpoints) — this never independently widens that, so it can't become a
+ * second path for a PENDING_REVEAL row to leak.
+ */
+export async function subjectReviewIdsForViewer(userId: string, reviewIds: string[]): Promise<string[]> {
+  if (reviewIds.length === 0) return [];
+
+  const [seeker, companyIds, rows] = await Promise.all([
+    prisma.seekerProfile.findUnique({ where: { userId }, select: { id: true } }),
+    getViewerCompanyIds(userId),
+    prisma.review.findMany({
+      where: { id: { in: reviewIds } },
+      select: { id: true, status: true, subjectCompanyId: true, subjectSeekerId: true },
+      take: Math.min(reviewIds.length, REVIEWS_PAGE_SIZE),
+    }),
+  ]);
+
+  return filterDisputableReviewIds(rows, { seekerId: seeker?.id ?? null, companyIds });
+}
+
+// ============================================================================
+// ADMIN DISPUTE QUEUE — read path for the DISPUTED moderation list.
+// ============================================================================
+
+const DISPUTED_REVIEWS_PAGE_SIZE = REVIEWS_PAGE_SIZE;
+
+/** All DISPUTED reviews, newest dispute first — paired with PATCH /api/admin/reviews/[id] (resolveDisputedReview). */
+export async function listDisputedReviews(page = 1) {
+  const skip = Math.max(0, (page - 1) * DISPUTED_REVIEWS_PAGE_SIZE);
+  return prisma.review.findMany({
+    where: { status: "DISPUTED" },
+    select: {
+      id: true,
+      direction: true,
+      rating: true,
+      body: true,
+      disputeReason: true,
+      disputedAt: true,
+      submittedAt: true,
+      author: { select: { id: true, email: true } },
+      subjectCompanyId: true,
+      subjectSeekerId: true,
+      application: {
+        select: {
+          id: true,
+          job: {
+            select: {
+              id: true,
+              title: true,
+              company: { select: { id: true, companyName: true, logoUrl: true } },
+            },
+          },
+          seeker: { select: { id: true, fullName: true, headline: true, photoUrl: true } },
+        },
+      },
+    },
+    orderBy: { disputedAt: "desc" },
+    skip,
+    take: DISPUTED_REVIEWS_PAGE_SIZE,
+  });
 }
 
 // ============================================================================

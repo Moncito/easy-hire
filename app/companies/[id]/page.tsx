@@ -11,6 +11,14 @@ import CompanyAboutSection from "@/components/companies/CompanyAboutSection";
 import CompanyJobRow from "@/components/companies/CompanyJobRow";
 import { buildOrganizationJsonLd } from "@/lib/seo/organization-jsonld";
 import { safeJsonLdString } from "@/lib/seo/safe-json-ld";
+import {
+  listPublishedReviewsForCompany,
+  getCompanyReviewAggregate,
+  subjectReviewIdsForViewer,
+  REVIEWS_PAGE_SIZE,
+} from "@/lib/reviews";
+import ReviewSummary from "@/components/reviews/ReviewSummary";
+import ReviewList from "@/components/reviews/ReviewList";
 
 export async function generateMetadata({
   params,
@@ -37,8 +45,16 @@ export async function generateMetadata({
   }
 }
 
-export default async function CompanyPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function CompanyPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ reviewsPage?: string }>;
+}) {
   const { id } = await params;
+  const { reviewsPage: reviewsPageParam } = await searchParams;
+  const reviewsPage = Math.max(1, Number(reviewsPageParam) || 1);
 
   let company;
   try {
@@ -49,6 +65,18 @@ export default async function CompanyPage({ params }: { params: Promise<{ id: st
 
   const session = await auth();
   const isSeeker = session?.user?.role === "SEEKER";
+
+  const [reviewAggregate, reviewRows] = await Promise.all([
+    getCompanyReviewAggregate(company.id),
+    listPublishedReviewsForCompany(company.id, reviewsPage),
+  ]);
+  const disputableReviewIds = session?.user
+    ? await subjectReviewIdsForViewer(
+        session.user.id,
+        reviewRows.map((row) => row.id)
+      )
+    : [];
+  const reviewsTotalPages = Math.max(1, Math.ceil(reviewAggregate.count / REVIEWS_PAGE_SIZE));
 
   let metaLabel: string | null = null;
   let profileCompleted = 0;
@@ -350,6 +378,30 @@ export default async function CompanyPage({ params }: { params: Promise<{ id: st
               ))}
             </div>
           )}
+        </section>
+
+        <section id="reviews" className="border-t border-[#E4E2DC] pt-10 mt-10">
+          <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h2 className="font-display text-xl font-bold text-ink">Reviews</h2>
+              <p className="mt-1 text-sm text-ink/45">
+                From virtual assistants this company has actually hired — unlocked only after a
+                completed hire.
+              </p>
+            </div>
+          </div>
+
+          <ReviewSummary aggregate={reviewAggregate} subjectType="company" />
+
+          <div className="mt-6">
+            <ReviewList
+              reviews={reviewRows}
+              disputableReviewIds={disputableReviewIds}
+              page={reviewsPage}
+              totalPages={reviewsTotalPages}
+              baseHref={`/companies/${id}`}
+            />
+          </div>
         </section>
       </div>
     </div>

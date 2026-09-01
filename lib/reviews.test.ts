@@ -5,12 +5,15 @@ import {
   REVIEW_WINDOW_DAYS,
   assertApplicationReviewable,
   directionForAuthorRole,
+  filterDisputableReviewIds,
   isPubliclyVisibleReviewStatus,
   isReviewWindowExpired,
   isWithinReviewWindow,
   oppositeDirection,
   resolveReviewAuthorRole,
+  shapeReviewableApplication,
   shouldRevealOnSubmit,
+  type ReviewableApplicationCandidate,
 } from "@/lib/reviews";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -182,5 +185,115 @@ describe("PENDING_REVEAL never appears in a public read", () => {
     expect(isPubliclyVisibleReviewStatus("DISPUTED")).toBe(true);
     expect(isPubliclyVisibleReviewStatus("PENDING_REVEAL")).toBe(false);
     expect(isPubliclyVisibleReviewStatus("HIDDEN")).toBe(false);
+  });
+});
+
+describe("shapeReviewableApplication — the /api/reviews/pending eligibility + shaping decision", () => {
+  const hiredAt = new Date("2026-01-01T00:00:00.000Z");
+
+  const seekerSideCandidate: ReviewableApplicationCandidate = {
+    applicationId: "app-1",
+    jobId: "job-1",
+    jobTitle: "Executive VA",
+    status: "HIRED",
+    hiredAt,
+    counterpart: { type: "COMPANY", id: "company-1", name: "Acme Co", logoUrl: null },
+    myReview: null,
+  };
+
+  const companySideCandidate: ReviewableApplicationCandidate = {
+    applicationId: "app-2",
+    jobId: "job-2",
+    jobTitle: "Bookkeeper",
+    status: "HIRED",
+    hiredAt,
+    counterpart: { type: "SEEKER", id: "seeker-1", name: "Jane Doe", headline: "Bookkeeper", photoUrl: null },
+    myReview: null,
+  };
+
+  it("a reviewable application appears for the SEEKER role, inside the window, with no prior review", () => {
+    const now = new Date(hiredAt.getTime() + 5 * DAY_MS);
+    const entry = shapeReviewableApplication(seekerSideCandidate, "SEEKER", now);
+    expect(entry).not.toBeNull();
+    expect(entry!.role).toBe("SEEKER");
+    expect(entry!.applicationId).toBe("app-1");
+    expect(entry!.counterpart).toEqual(seekerSideCandidate.counterpart);
+    expect(entry!.myReview).toBeNull();
+    expect(entry!.windowExpiresAt.getTime()).toBe(hiredAt.getTime() + REVIEW_WINDOW_DAYS * DAY_MS);
+  });
+
+  it("a reviewable application appears for the COMPANY_MEMBER role, inside the window, with no prior review", () => {
+    const now = new Date(hiredAt.getTime() + 5 * DAY_MS);
+    const entry = shapeReviewableApplication(companySideCandidate, "COMPANY_MEMBER", now);
+    expect(entry).not.toBeNull();
+    expect(entry!.role).toBe("COMPANY_MEMBER");
+    expect(entry!.applicationId).toBe("app-2");
+    expect(entry!.counterpart).toEqual(companySideCandidate.counterpart);
+    expect(entry!.myReview).toBeNull();
+  });
+
+  it("an already-reviewed application comes back with myReview populated — even past the window", () => {
+    const now = new Date(hiredAt.getTime() + 30 * DAY_MS); // well past the 14-day window
+    const myReview = {
+      id: "review-1",
+      rating: 5,
+      status: "PENDING_REVEAL" as const,
+      submittedAt: new Date(hiredAt.getTime() + DAY_MS),
+      revealedAt: null,
+    };
+    const entry = shapeReviewableApplication({ ...seekerSideCandidate, myReview }, "SEEKER", now);
+    expect(entry).not.toBeNull();
+    expect(entry!.myReview).toEqual(myReview);
+  });
+
+  it("a non-HIRED application does not appear, regardless of role or hiredAt", () => {
+    const now = new Date(hiredAt.getTime() + 5 * DAY_MS);
+    const applied = { ...seekerSideCandidate, status: "APPLIED" as const, hiredAt: null };
+    expect(shapeReviewableApplication(applied, "SEEKER", now)).toBeNull();
+
+    const rejected = { ...companySideCandidate, status: "REJECTED" as const };
+    expect(shapeReviewableApplication(rejected, "COMPANY_MEMBER", now)).toBeNull();
+  });
+
+  it("drops a HIRED application whose window has closed and which was never reviewed", () => {
+    const now = new Date(hiredAt.getTime() + 15 * DAY_MS);
+    expect(shapeReviewableApplication(seekerSideCandidate, "SEEKER", now)).toBeNull();
+  });
+});
+
+describe("filterDisputableReviewIds — subject identification for the public review lists", () => {
+  const companyRow = { id: "review-company-1", status: "PUBLISHED" as const, subjectCompanyId: "company-1", subjectSeekerId: null };
+  const seekerRow = { id: "review-seeker-1", status: "PUBLISHED" as const, subjectCompanyId: null, subjectSeekerId: "seeker-1" };
+  const disputedCompanyRow = { id: "review-company-2", status: "DISPUTED" as const, subjectCompanyId: "company-1", subjectSeekerId: null };
+
+  it("returns nothing for a viewer who is not the subject of any row", () => {
+    const ids = filterDisputableReviewIds([companyRow, seekerRow], {
+      seekerId: "seeker-999",
+      companyIds: ["company-999"],
+    });
+    expect(ids).toEqual([]);
+  });
+
+  it("returns a row's id when the viewer is the subject company (active member) and it is PUBLISHED", () => {
+    const ids = filterDisputableReviewIds([companyRow], { seekerId: null, companyIds: ["company-1"] });
+    expect(ids).toEqual(["review-company-1"]);
+  });
+
+  it("returns a row's id when the viewer is the subject seeker and it is PUBLISHED", () => {
+    const ids = filterDisputableReviewIds([seekerRow], { seekerId: "seeker-1", companyIds: [] });
+    expect(ids).toEqual(["review-seeker-1"]);
+  });
+
+  it("excludes an already-DISPUTED row even when the viewer is its subject — not re-disputable", () => {
+    const ids = filterDisputableReviewIds([disputedCompanyRow], { seekerId: null, companyIds: ["company-1"] });
+    expect(ids).toEqual([]);
+  });
+
+  it("only returns the subject's own rows out of a mixed batch", () => {
+    const ids = filterDisputableReviewIds([companyRow, seekerRow, disputedCompanyRow], {
+      seekerId: "seeker-1",
+      companyIds: [],
+    });
+    expect(ids).toEqual(["review-seeker-1"]);
   });
 });

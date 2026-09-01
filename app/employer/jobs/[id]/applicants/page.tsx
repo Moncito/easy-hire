@@ -3,6 +3,8 @@ import ApplicantsBoard from "@/components/employer/ApplicantsBoard";
 import { requireEmployerPageContext } from "@/lib/employer-session";
 import { listJobApplications } from "@/lib/applications";
 import { getEmployerJobForApplicants } from "@/lib/employer-jobs";
+import { listReviewableApplications } from "@/lib/reviews";
+import ReviewablePromptList from "@/components/reviews/ReviewablePromptList";
 
 const PAGE_SIZE = 50;
 
@@ -13,7 +15,7 @@ export default async function ApplicantsPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ page?: string }>;
 }) {
-  const { company } = await requireEmployerPageContext();
+  const { company, session } = await requireEmployerPageContext();
   const { id } = await params;
   const { page: pageParam } = await searchParams;
   const page = Math.max(1, Number(pageParam) || 1);
@@ -24,7 +26,16 @@ export default async function ApplicantsPage({
     redirect("/employer/jobs");
   }
 
-  const { applications, total, totalPages } = await listJobApplications(job.id, page, PAGE_SIZE);
+  const [{ applications, total, totalPages }, jobReviewablePrompts] = await Promise.all([
+    listJobApplications(job.id, page, PAGE_SIZE),
+    listReviewableApplications(session.user.id, { jobId: job.id }),
+  ]);
+
+  // Wall-clock read for the "days left"/"auto-reveals in" labels below —
+  // Server Component render, same rationale as the identical pattern in
+  // app/seeker/dashboard/page.tsx.
+  // eslint-disable-next-line react-hooks/purity
+  const nowMs = Date.now();
 
   const staleThreshold = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
   const unreviewedStale = applications.filter(
@@ -35,6 +46,11 @@ export default async function ApplicantsPage({
 
   return (
     <>
+      {jobReviewablePrompts.length > 0 && (
+        <div className="mb-6">
+          <ReviewablePromptList entries={jobReviewablePrompts} nowMs={nowMs} />
+        </div>
+      )}
       {total > PAGE_SIZE && (
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-xs text-ink/45">
           <p>
