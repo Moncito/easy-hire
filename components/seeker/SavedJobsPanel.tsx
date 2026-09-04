@@ -127,6 +127,7 @@ export default function SavedJobsPanel({ initialSaved, appliedJobIds }: Props) {
                 <button
                   key={f.id}
                   type="button"
+                  aria-pressed={active}
                   onClick={() => setFilter(f.id)}
                   className={`cursor-pointer rounded-full px-3.5 py-1.5 text-xs font-semibold transition ${
                     active
