@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Briefcase, Building2, Flag, LogOut } from "lucide-react";
+import { LayoutDashboard, Briefcase, Building2, Flag, LogOut, ShieldCheck } from "lucide-react";
 import { useSignOut } from "@/components/ui/useSignOut";
 
 const navItems = [
   { label: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
   { label: "Company verifications", href: "/admin/companies", icon: Building2 },
+  { label: "Seeker verifications", href: "/admin/seekers/verifications", icon: ShieldCheck },
   { label: "Job approvals", href: "/admin/jobs", icon: Briefcase },
   { label: "Review disputes", href: "/admin/reviews", icon: Flag },
 ];

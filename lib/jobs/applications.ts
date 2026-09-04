@@ -12,6 +12,7 @@ import { applicationCreateSchema, applicationUpdateSchema } from "@/lib/validati
 import { invalidateEmployerWorkspace } from "@/lib/employer-cache";
 import { invalidateSeekerApplications } from "@/lib/seeker/cache";
 import { hydrateResumeFields } from "@/lib/seeker/resume-urls";
+import { recomputeVerificationScore } from "@/lib/seeker/identity-verification";
 
 const candidateSeekerSelect = {
   id: true,
@@ -275,6 +276,15 @@ export async function updateApplication(applicationId: string, raw: unknown) {
       companyName: existing.job.company.companyName,
       status: data.status as NonRejectionApplicationStatus,
     }).catch((err) => console.error("[applications] status-change notify failed:", err));
+  }
+
+  if (becameHired) {
+    // A confirmed hire feeds the "history" factor of the verification score
+    // (see lib/seeker/verification-score.ts). Fire-and-forget: must never
+    // block the hiring transition.
+    void recomputeVerificationScore(existing.seekerId).catch((err) =>
+      console.error("[applications] verification score recompute failed:", err)
+    );
   }
 
   invalidateEmployerWorkspace(existing.job.company.id);

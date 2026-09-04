@@ -1,8 +1,10 @@
 import { requireSeekerPageContext } from "@/lib/auth/seeker-session";
 import { ensureSeekerProfile } from "@/lib/seekers";
 import { hydrateResumeFields } from "@/lib/seeker/resume-urls";
+import { listIdentityDocuments } from "@/lib/seeker/identity-verification";
 import SeekerProfileAccountLinks from "@/components/seeker/SeekerProfileAccountLinks";
 import SeekerProfileEditor from "@/components/seeker/SeekerProfileEditor";
+import IdentityVerificationPanel from "@/components/seeker/IdentityVerificationPanel";
 import { PROFILE_BUCKETS, profileBucketCompletion, type ProfileBucketId } from "@/components/seeker/profile-buckets";
 import { SeekerNavBandBleed } from "@/components/seeker/SeekerNavBand";
 import { User } from "lucide-react";
@@ -24,6 +26,7 @@ export default async function SeekerProfilePage({
       fullName: session.user.name ?? "",
     })
   );
+  const identityDocuments = await listIdentityDocuments(userId);
 
   const { completed, total } = profileBucketCompletion({
     fullName: profile.fullName ?? "",
@@ -97,6 +100,24 @@ export default async function SeekerProfilePage({
           visibility: profile.visibility ?? "STANDARD",
         }}
       />
+
+      <div className="mt-5 lg:mt-6">
+        <IdentityVerificationPanel
+          status={profile.idVerificationStatus}
+          rejectionReason={profile.idVerificationRejectionReason}
+          score={profile.verificationScore}
+          idVerifiedAt={profile.idVerifiedAt?.toISOString() ?? null}
+          profileBucketsCompleted={completed}
+          profileBucketsTotal={total}
+          initialDocuments={identityDocuments.map((doc) => ({
+            id: doc.id,
+            fileUrl: doc.fileUrl,
+            fileName: doc.fileName,
+            docType: doc.docType,
+            uploadedAt: doc.uploadedAt.toISOString(),
+          }))}
+        />
+      </div>
       </div>
     </>
   );

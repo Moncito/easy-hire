@@ -115,6 +115,17 @@ model SeekerProfile {
   resumeLabel      String?                  @map("resume_label")
   resumeUpdatedAt  DateTime?                @map("resume_updated_at")
   resumes          String[]                 @default([])
+  // Phase 4.2 — VA identity verification score. `idVerificationStatus` is
+  // null until the seeker submits their first identity document (unlike
+  // Company.verifiedStatus, which defaults to PENDING at creation) — see
+  // lib/seeker/identity-verification.ts for the submit/review flow and
+  // lib/seeker/verification-score.ts for how these feed verificationScore.
+  // This score measures IDENTITY CONFIDENCE, not skill or work quality.
+  idVerificationStatus           VerificationStatus? @map("id_verification_status")
+  idVerifiedAt                   DateTime?           @map("id_verified_at")
+  idVerificationRejectionReason  String?             @map("id_verification_rejection_reason")
+  verificationScore              Int                 @default(0) @map("verification_score")
+  verificationScoreUpdatedAt     DateTime?           @map("verification_score_updated_at")
   // SQL-only generated column (GENERATED ALWAYS AS ... STORED), created by
   // prisma/migrations/20260728210000_sprint5_messaging_talent. Prisma has no schema-level
   // concept of a STORED generated column, so this is declared as an Unsupported column
@@ -132,9 +143,29 @@ model SeekerProfile {
   savedBy         SavedSeeker[]
   savedInLists    SavedTalentListItem[]
   reviewsReceived Review[]
+  identityDocuments SeekerIdentityDocument[]
 
   @@index([searchVector], type: Gin)
+  @@index([idVerificationStatus])
   @@map("seeker_profiles")
+}
+
+// ============================================================================
+// SEEKER IDENTITY VERIFICATION (Phase 4.2)
+// ============================================================================
+
+model SeekerIdentityDocument {
+  id              String   @id @default(cuid())
+  seekerProfileId String   @map("seeker_profile_id")
+  fileUrl         String   @map("file_url") // object PATH in the private bucket, never a public URL
+  fileName        String   @map("file_name")
+  docType         String   @map("doc_type") // GOVERNMENT_ID | PROOF_OF_ADDRESS | SELFIE_WITH_ID | OTHER
+  uploadedAt      DateTime @default(now()) @map("uploaded_at")
+
+  seekerProfile SeekerProfile @relation(fields: [seekerProfileId], references: [id], onDelete: Cascade)
+
+  @@index([seekerProfileId])
+  @@map("seeker_identity_documents")
 }
 
 // ============================================================================

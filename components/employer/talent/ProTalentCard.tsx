@@ -4,6 +4,8 @@ import { formatPesoRange } from "@/lib/format";
 import SaveSeekerButton from "@/components/employer/SaveSeekerButton";
 import MessageSeekerButton from "@/components/employer/MessageSeekerButton";
 import EmployerAvatar from "@/components/employer/ui/EmployerAvatar";
+import VerificationBadge from "@/components/seeker/VerificationBadge";
+import type { VerificationTier } from "@/lib/seeker/verification-score";
 
 export type ProTalentCardSeeker = {
   id: string;
@@ -18,6 +20,9 @@ export type ProTalentCardSeeker = {
   desiredSalaryMax: number | null;
   resumeUrl: string | null;
   saved: boolean;
+  verificationScore: number;
+  verificationTier: VerificationTier;
+  idVerifiedAt: string | null;
 };
 
 type Props = {
@@ -43,12 +48,20 @@ export default function ProTalentCard({ seeker, onToggleSaved }: Props) {
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <Link
-                href={`/employer/talent/${seeker.id}`}
-                className="font-display text-base font-bold text-ink transition hover:text-[#9A5B12]"
-              >
-                {seeker.fullName}
-              </Link>
+              <div className="flex flex-wrap items-center gap-2">
+                <Link
+                  href={`/employer/talent/${seeker.id}`}
+                  className="font-display text-base font-bold text-ink transition hover:text-[#9A5B12]"
+                >
+                  {seeker.fullName}
+                </Link>
+                <VerificationBadge
+                  score={seeker.verificationScore}
+                  tier={seeker.verificationTier}
+                  idVerifiedAt={seeker.idVerifiedAt}
+                  accent="employer"
+                />
+              </div>
               <p className="mt-0.5 truncate text-sm text-ink/55">
                 {seeker.headline || "Virtual Assistant"}
               </p>

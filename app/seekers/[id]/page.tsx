@@ -15,6 +15,7 @@ import {
 } from "@/lib/reviews";
 import ReviewSummary from "@/components/reviews/ReviewSummary";
 import ReviewList from "@/components/reviews/ReviewList";
+import VerificationBadge from "@/components/seeker/VerificationBadge";
 
 // getPublicSeeker only resolves profiles with visibility: "PUBLIC" (see
 // lib/seeker/public-seekers.ts) and throws otherwise. The catch block below
@@ -302,6 +303,14 @@ export default async function PublicSeekerPage({
               >
                 {seeker.headline || "Virtual Assistant"}
               </p>
+              <div className="mt-2">
+                <VerificationBadge
+                  score={seeker.verificationScore}
+                  tier={seeker.verificationTier}
+                  idVerifiedAt={seeker.idVerifiedAt}
+                  accent="seeker"
+                />
+              </div>
             </div>
           </div>
 

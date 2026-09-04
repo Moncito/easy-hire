@@ -5,6 +5,7 @@ import { requireEmployerCompany } from "@/lib/employer-auth";
 import { encodedSkillVariants } from "@/lib/seeker-profile-format";
 import { talentSearchSchema, savedSeekerSchema } from "@/lib/validations/talent-search";
 import { signResumeUrl } from "@/lib/seeker/resume-urls";
+import { verificationTier, type VerificationTier } from "@/lib/seeker/verification-score";
 
 export type TalentListItem = {
   id: string;
@@ -22,6 +23,12 @@ export type TalentListItem = {
   certifications: string[];
   photoUrl: string | null;
   saved: boolean;
+  // Identity-confidence signals only (Phase 4.2) — never the raw documents,
+  // rejection reason, or idVerificationStatus itself. See
+  // lib/seeker/verification-score.ts: this is NOT a skill measure.
+  verificationScore: number;
+  verificationTier: VerificationTier;
+  idVerifiedAt: string | null;
 };
 
 type TalentSearchResult = {
@@ -45,9 +52,12 @@ function mapSeeker(
     portfolioUrl?: string | null;
     certifications?: string[];
     photoUrl?: string | null;
+    verificationScore?: number;
+    idVerifiedAt?: Date | null;
   },
   savedIds: Set<string>
 ): TalentListItem {
+  const verificationScore = seeker.verificationScore ?? 0;
   return {
     id: seeker.id,
     fullName: seeker.fullName,
@@ -64,6 +74,9 @@ function mapSeeker(
     certifications: seeker.certifications ?? [],
     photoUrl: seeker.photoUrl ?? null,
     saved: savedIds.has(seeker.id),
+    verificationScore,
+    verificationTier: verificationTier(verificationScore),
+    idVerifiedAt: seeker.idVerifiedAt ? seeker.idVerifiedAt.toISOString() : null,
   };
 }
 
@@ -125,6 +138,8 @@ async function searchSeekersFts(
     certifications: string[];
     photo_url: string | null;
     created_at: Date;
+    verification_score: number;
+    id_verified_at: Date | null;
   };
 
   const rows = await prisma.$queryRaw<Row[]>`
@@ -143,7 +158,9 @@ async function searchSeekersFts(
       sp.portfolio_url,
       sp.certifications,
       sp.photo_url,
-      sp.created_at
+      sp.created_at,
+      sp.verification_score,
+      sp.id_verified_at
     FROM seeker_profiles sp
     WHERE sp.visibility IN ('STANDARD', 'PUBLIC')
       AND sp.search_vector @@ plainto_tsquery('english', ${q})
@@ -172,6 +189,8 @@ async function searchSeekersFts(
           portfolioUrl: r.portfolio_url,
           certifications: r.certifications,
           photoUrl: r.photo_url,
+          verificationScore: r.verification_score,
+          idVerifiedAt: r.id_verified_at,
         },
         savedIds
       )
@@ -233,6 +252,8 @@ export async function searchTalent(employerUserId: string, raw: unknown): Promis
       portfolioUrl: true,
       certifications: true,
       photoUrl: true,
+      verificationScore: true,
+      idVerifiedAt: true,
     },
   });
 
@@ -278,6 +299,8 @@ export async function listSavedSeekers(employerUserId: string) {
           portfolioUrl: true,
           certifications: true,
           photoUrl: true,
+          verificationScore: true,
+          idVerifiedAt: true,
         },
       },
     },

@@ -197,6 +197,51 @@ export function toObjectPath(bucket: string, stored: string): string {
 }
 
 /**
+ * Normalizes a client-supplied stored value to an object path and asserts it
+ * lives under one of the caller's own prefixes. Guards every read-path call
+ * site that accepts a `fileUrl`/`resumeUrl`-shaped value from the client
+ * before minting a signed URL for it — without this, a caller could submit
+ * another user's object path and read back a signed URL for their private
+ * file (resume, ID document, business permit, etc).
+ *
+ * Prefix comparison is exact-segment safe: every entry in `allowedPrefixes`
+ * must end in `/` so `"12/"` can never match a path belonging to user `123`.
+ *
+ * `opts.allowUnchanged` is an escape hatch for legacy rows written before a
+ * private-bucket migration whose path may not match today's prefix
+ * convention — when the normalized path exactly equals that value, it is
+ * allowed through regardless of prefix, so a user re-saving a form that
+ * echoes back their own already-stored value never starts failing.
+ */
+export function assertOwnedObjectPath(
+  bucket: string,
+  stored: string,
+  allowedPrefixes: string[],
+  opts?: { allowUnchanged?: string | null }
+): string {
+  const path = toObjectPath(bucket, stored);
+
+  // Normalize both sides before comparing: a legacy row may still hold a full
+  // public/signed URL while `path` is already bare, and those must still match.
+  if (opts?.allowUnchanged && path === toObjectPath(bucket, opts.allowUnchanged)) {
+    return path;
+  }
+
+  const isOwned = allowedPrefixes.some((prefix) => {
+    if (!prefix.endsWith("/")) {
+      throw new Error(`assertOwnedObjectPath: prefix "${prefix}" must end in "/"`);
+    }
+    return path.startsWith(prefix);
+  });
+
+  if (!isOwned) {
+    throw new ApiError("Invalid file reference", 400);
+  }
+
+  return path;
+}
+
+/**
  * Resolves a stored value to a short-lived signed URL, safe to hand to a
  * browser. Returns `null` for null/empty input so DTOs can pass through
  * "no resume yet" without an extra branch at every call site.
@@ -266,6 +311,21 @@ export async function uploadVerificationDocument(userId: string, file: File) {
   await assertFile(file, config);
 
   const path = `${userId}/${Date.now()}-${sanitizeFilename(file.name)}`;
+  const objectPath = await uploadObject(config, path, file);
+  return { url: objectPath, fileName: sanitizeFilename(file.name) };
+}
+
+/**
+ * Seeker identity documents (Phase 4.2) share the same private
+ * `verification-docs` bucket as employer verification documents — no new
+ * bucket — but live under an `identity/${userId}/` prefix so the two
+ * document kinds never collide on object path.
+ */
+export async function uploadIdentityDocument(userId: string, file: File) {
+  const config = BUCKETS["verification-docs"];
+  await assertFile(file, config);
+
+  const path = `identity/${userId}/${Date.now()}-${sanitizeFilename(file.name)}`;
   const objectPath = await uploadObject(config, path, file);
   return { url: objectPath, fileName: sanitizeFilename(file.name) };
 }

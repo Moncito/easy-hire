@@ -14,6 +14,8 @@ import { useEmployerShell } from "@/components/employer/EmployerShellContext";
 import ProTalentPageHeader from "@/components/employer/pro-dashboard/ProTalentPageHeader";
 import ProTalentCard from "@/components/employer/talent/ProTalentCard";
 import ProButton from "@/components/employer/pro/ProButton";
+import VerificationBadge from "@/components/seeker/VerificationBadge";
+import type { VerificationTier } from "@/lib/seeker/verification-score";
 
 type TalentItem = {
   id: string;
@@ -28,6 +30,9 @@ type TalentItem = {
   desiredSalaryMax: number | null;
   resumeUrl: string | null;
   saved: boolean;
+  verificationScore: number;
+  verificationTier: VerificationTier;
+  idVerifiedAt: string | null;
 };
 
 const availabilityOptions = [
@@ -303,7 +308,15 @@ export default function TalentSearchBoard() {
                     size="lg"
                   />
                   <div className="min-w-0">
-                    <p className="font-display font-bold text-ink hover:text-teal">{seeker.fullName}</p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="font-display font-bold text-ink hover:text-teal">{seeker.fullName}</p>
+                      <VerificationBadge
+                        score={seeker.verificationScore}
+                        tier={seeker.verificationTier}
+                        idVerifiedAt={seeker.idVerifiedAt}
+                        accent="employer"
+                      />
+                    </div>
                     <p className="truncate text-xs text-ink/45">
                       {seeker.headline || "Virtual Assistant"}
                       {seeker.location ? ` · ${seeker.location}` : ""}
