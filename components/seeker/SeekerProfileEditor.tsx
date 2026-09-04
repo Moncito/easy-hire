@@ -13,7 +13,6 @@ import ProfileBucketNav from "@/components/seeker/ProfileBucketNav";
 import {
   PROFILE_BUCKETS,
   hasSkill,
-  profileBucketCompletion,
   type ProfileBucketId,
 } from "@/components/seeker/profile-buckets";
 import {
@@ -116,11 +115,17 @@ function normalizeFormData(data: Partial<FormData>): FormData {
   };
 }
 
+// Underline style — no box, no fill — consistent with summaryHeadlineClassName
+// / summaryBioClassName below. The box-focus treatment (border-on-all-sides +
+// ring) doesn't read well on an unboxed field, so focus now moves the
+// border-bottom color to marigold; the ring is kept (not dropped) purely as
+// an accessibility signal for keyboard focus, sized down so it doesn't look
+// like a box reappearing around the field.
 const inputClassName =
-  "w-full rounded-xl border border-ink/10 bg-white px-4 py-3 text-sm text-ink outline-none transition-colors focus-visible:border-marigold focus-visible:ring-2 focus-visible:ring-marigold/20";
+  "w-full border-0 border-b-[1.5px] border-ink/12 bg-transparent py-3 text-sm text-ink outline-none transition-colors placeholder:text-ink/30 focus-visible:border-marigold focus-visible:ring-2 focus-visible:ring-marigold/20 focus-visible:ring-offset-0";
 
 const selectClassName =
-  "w-full cursor-pointer appearance-none rounded-xl border border-ink/10 bg-white px-4 py-3 text-sm text-ink outline-none transition-colors focus-visible:border-marigold focus-visible:ring-2 focus-visible:ring-marigold/20";
+  "w-full cursor-pointer appearance-none border-0 border-b-[1.5px] border-ink/12 bg-transparent py-3 text-sm text-ink outline-none transition-colors focus-visible:border-marigold focus-visible:ring-2 focus-visible:ring-marigold/20 focus-visible:ring-offset-0";
 
 const summaryHeadlineClassName =
   "w-full border-b-2 border-ink/12 bg-transparent py-3 text-xl font-semibold text-ink placeholder:text-ink/25 outline-none transition-colors focus:border-marigold";
@@ -178,7 +183,6 @@ export default function SeekerProfileEditor({
     education: form.education,
   };
   const activeMeta = PROFILE_BUCKETS.find((b) => b.id === activeBucket)!;
-  const { completed, total } = profileBucketCompletion(previewData);
 
   function updateField<K extends keyof FormData>(key: K, value: FormData[K]) {
     setForm((prev) => normalizeFormData({ ...prev, [key]: value }));
@@ -661,29 +665,41 @@ export default function SeekerProfileEditor({
                 Type specialty + proficiency — e.g. Shopify (Advanced), QuickBooks (Expert).
               </p>
               <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_180px_auto]">
-                <input
-                  value={customSkillDraft}
-                  onChange={(e) => setCustomSkillDraft(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      addCustomSkill();
-                    }
-                  }}
-                  placeholder="e.g. Shopify, Canva, Medical billing…"
-                  className={inputClassName}
-                />
-                <select
-                  value={skillProficiencyDraft}
-                  onChange={(e) => setSkillProficiencyDraft(e.target.value)}
-                  className={selectClassName}
-                >
-                  {SKILL_PROFICIENCY_OPTIONS.map((level) => (
-                    <option key={level} value={level}>
-                      {level}
-                    </option>
-                  ))}
-                </select>
+                <div>
+                  <label htmlFor="customSkillDraft" className="sr-only">
+                    Skill name
+                  </label>
+                  <input
+                    id="customSkillDraft"
+                    value={customSkillDraft}
+                    onChange={(e) => setCustomSkillDraft(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        addCustomSkill();
+                      }
+                    }}
+                    placeholder="e.g. Shopify, Canva, Medical billing…"
+                    className={inputClassName}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="customSkillProficiency" className="sr-only">
+                    Skill proficiency level
+                  </label>
+                  <select
+                    id="customSkillProficiency"
+                    value={skillProficiencyDraft}
+                    onChange={(e) => setSkillProficiencyDraft(e.target.value)}
+                    className={selectClassName}
+                  >
+                    {SKILL_PROFICIENCY_OPTIONS.map((level) => (
+                      <option key={level} value={level}>
+                        {level}
+                      </option>
+                    ))}
+                  </select>
+                </div>
                 <button
                   type="button"
                   onClick={addCustomSkill}
@@ -773,38 +789,68 @@ export default function SeekerProfileEditor({
               Add roles in reverse chronological order — most recent first.
             </p>
             <div className="grid gap-3 sm:grid-cols-2">
-              <input
-                value={workDraft.title}
-                onChange={(e) => setWorkDraft((d) => ({ ...d, title: e.target.value }))}
-                placeholder="Job title"
-                className={inputClassName}
-              />
-              <input
-                value={workDraft.company}
-                onChange={(e) => setWorkDraft((d) => ({ ...d, company: e.target.value }))}
-                placeholder="Company / client"
-                className={inputClassName}
-              />
-              <input
-                value={workDraft.startDate}
-                onChange={(e) => setWorkDraft((d) => ({ ...d, startDate: e.target.value }))}
-                placeholder="Start (e.g. Jan 2022)"
-                className={inputClassName}
-              />
-              <input
-                value={workDraft.endDate}
-                onChange={(e) => setWorkDraft((d) => ({ ...d, endDate: e.target.value }))}
-                placeholder="End (e.g. Present)"
-                className={inputClassName}
+              <div>
+                <label htmlFor="workDraftTitle" className="sr-only">
+                  Job title
+                </label>
+                <input
+                  id="workDraftTitle"
+                  value={workDraft.title}
+                  onChange={(e) => setWorkDraft((d) => ({ ...d, title: e.target.value }))}
+                  placeholder="Job title"
+                  className={inputClassName}
+                />
+              </div>
+              <div>
+                <label htmlFor="workDraftCompany" className="sr-only">
+                  Company or client
+                </label>
+                <input
+                  id="workDraftCompany"
+                  value={workDraft.company}
+                  onChange={(e) => setWorkDraft((d) => ({ ...d, company: e.target.value }))}
+                  placeholder="Company / client"
+                  className={inputClassName}
+                />
+              </div>
+              <div>
+                <label htmlFor="workDraftStartDate" className="sr-only">
+                  Start date
+                </label>
+                <input
+                  id="workDraftStartDate"
+                  value={workDraft.startDate}
+                  onChange={(e) => setWorkDraft((d) => ({ ...d, startDate: e.target.value }))}
+                  placeholder="Start (e.g. Jan 2022)"
+                  className={inputClassName}
+                />
+              </div>
+              <div>
+                <label htmlFor="workDraftEndDate" className="sr-only">
+                  End date
+                </label>
+                <input
+                  id="workDraftEndDate"
+                  value={workDraft.endDate}
+                  onChange={(e) => setWorkDraft((d) => ({ ...d, endDate: e.target.value }))}
+                  placeholder="End (e.g. Present)"
+                  className={inputClassName}
+                />
+              </div>
+            </div>
+            <div>
+              <label htmlFor="workDraftDescription" className="sr-only">
+                Role description
+              </label>
+              <textarea
+                id="workDraftDescription"
+                value={workDraft.description}
+                onChange={(e) => setWorkDraft((d) => ({ ...d, description: e.target.value }))}
+                rows={3}
+                placeholder="What you did — tools, outcomes, team size…"
+                className={`${inputClassName} resize-y`}
               />
             </div>
-            <textarea
-              value={workDraft.description}
-              onChange={(e) => setWorkDraft((d) => ({ ...d, description: e.target.value }))}
-              rows={3}
-              placeholder="What you did — tools, outcomes, team size…"
-              className={`${inputClassName} resize-y`}
-            />
             <button
               type="button"
               onClick={addWorkExperience}
@@ -860,30 +906,54 @@ export default function SeekerProfileEditor({
           <div className="space-y-6">
             <p className="text-sm text-ink/55">School, degree, and year — optional but builds trust.</p>
             <div className="grid gap-3 sm:grid-cols-2">
-              <input
-                value={eduDraft.school}
-                onChange={(e) => setEduDraft((d) => ({ ...d, school: e.target.value }))}
-                placeholder="School / university"
-                className={inputClassName}
-              />
-              <input
-                value={eduDraft.degree}
-                onChange={(e) => setEduDraft((d) => ({ ...d, degree: e.target.value }))}
-                placeholder="Degree (e.g. BS IT)"
-                className={inputClassName}
-              />
-              <input
-                value={eduDraft.field}
-                onChange={(e) => setEduDraft((d) => ({ ...d, field: e.target.value }))}
-                placeholder="Field of study (optional)"
-                className={inputClassName}
-              />
-              <input
-                value={eduDraft.year}
-                onChange={(e) => setEduDraft((d) => ({ ...d, year: e.target.value }))}
-                placeholder="Year graduated"
-                className={inputClassName}
-              />
+              <div>
+                <label htmlFor="eduDraftSchool" className="sr-only">
+                  School or university
+                </label>
+                <input
+                  id="eduDraftSchool"
+                  value={eduDraft.school}
+                  onChange={(e) => setEduDraft((d) => ({ ...d, school: e.target.value }))}
+                  placeholder="School / university"
+                  className={inputClassName}
+                />
+              </div>
+              <div>
+                <label htmlFor="eduDraftDegree" className="sr-only">
+                  Degree
+                </label>
+                <input
+                  id="eduDraftDegree"
+                  value={eduDraft.degree}
+                  onChange={(e) => setEduDraft((d) => ({ ...d, degree: e.target.value }))}
+                  placeholder="Degree (e.g. BS IT)"
+                  className={inputClassName}
+                />
+              </div>
+              <div>
+                <label htmlFor="eduDraftField" className="sr-only">
+                  Field of study
+                </label>
+                <input
+                  id="eduDraftField"
+                  value={eduDraft.field}
+                  onChange={(e) => setEduDraft((d) => ({ ...d, field: e.target.value }))}
+                  placeholder="Field of study (optional)"
+                  className={inputClassName}
+                />
+              </div>
+              <div>
+                <label htmlFor="eduDraftYear" className="sr-only">
+                  Year graduated
+                </label>
+                <input
+                  id="eduDraftYear"
+                  value={eduDraft.year}
+                  onChange={(e) => setEduDraft((d) => ({ ...d, year: e.target.value }))}
+                  placeholder="Year graduated"
+                  className={inputClassName}
+                />
+              </div>
             </div>
             <button
               type="button"
@@ -1159,24 +1229,42 @@ export default function SeekerProfileEditor({
               <p className="mb-2 text-sm font-medium text-ink">Certifications</p>
               <p className="mb-3 text-sm text-ink/55">Name, issuer, and year for each credential.</p>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                <input
-                  value={certDraft.name}
-                  onChange={(e) => setCertDraft((d) => ({ ...d, name: e.target.value }))}
-                  placeholder="Certificate name"
-                  className={inputClassName}
-                />
-                <input
-                  value={certDraft.issuer}
-                  onChange={(e) => setCertDraft((d) => ({ ...d, issuer: e.target.value }))}
-                  placeholder="Issuer (optional)"
-                  className={inputClassName}
-                />
-                <input
-                  value={certDraft.year}
-                  onChange={(e) => setCertDraft((d) => ({ ...d, year: e.target.value }))}
-                  placeholder="Year (optional)"
-                  className={inputClassName}
-                />
+                <div>
+                  <label htmlFor="certDraftName" className="sr-only">
+                    Certificate name
+                  </label>
+                  <input
+                    id="certDraftName"
+                    value={certDraft.name}
+                    onChange={(e) => setCertDraft((d) => ({ ...d, name: e.target.value }))}
+                    placeholder="Certificate name"
+                    className={inputClassName}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="certDraftIssuer" className="sr-only">
+                    Certificate issuer
+                  </label>
+                  <input
+                    id="certDraftIssuer"
+                    value={certDraft.issuer}
+                    onChange={(e) => setCertDraft((d) => ({ ...d, issuer: e.target.value }))}
+                    placeholder="Issuer (optional)"
+                    className={inputClassName}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="certDraftYear" className="sr-only">
+                    Certificate year
+                  </label>
+                  <input
+                    id="certDraftYear"
+                    value={certDraft.year}
+                    onChange={(e) => setCertDraft((d) => ({ ...d, year: e.target.value }))}
+                    placeholder="Year (optional)"
+                    className={inputClassName}
+                  />
+                </div>
                 <button
                   type="button"
                   onClick={addCertification}
@@ -1274,20 +1362,16 @@ export default function SeekerProfileEditor({
 
   return (
     <div className="space-y-5">
-      {/* ── Progress toolbar (replaces old "Profile hub" card) ── */}
-      <div className="animate-fade-in flex flex-wrap items-center justify-between gap-4 pb-2">
+      {/* ── Progress toolbar (replaces old "Profile hub" card) ──
+          The N/total "sections complete" widget itself now lives solely in
+          ProfileHeaderCard's strength ring, above this page — this toolbar
+          keeps only the save-state text and the Save button so the fact
+          isn't shown twice. Lightened (no card background, subtler shadow)
+          so it sits well above the now-unboxed form. */}
+      <div className="animate-fade-in flex flex-wrap items-center justify-between gap-4 pb-1">
         <div>
-          <p className="font-data text-xs font-bold uppercase tracking-widest text-marigold">
-            {completed}/{total} sections complete
-          </p>
-          <div className="mt-2 h-[2px] w-48 overflow-hidden rounded-full bg-ink/8 sm:w-64">
-            <div
-              className="h-full rounded-full bg-marigold transition-all duration-500"
-              style={{ width: `${(completed / total) * 100}%` }}
-            />
-          </div>
           {profileUpdatedAt && (
-            <p className="mt-1.5 text-[11px] text-ink/40">
+            <p className="text-xs text-ink/40">
               Saved {formatRelativeUpdated(profileUpdatedAt)}
             </p>
           )}
@@ -1296,7 +1380,7 @@ export default function SeekerProfileEditor({
           type="submit"
           form="seeker-profile-form"
           disabled={loading}
-          className="cursor-pointer rounded-xl bg-marigold px-5 py-2.5 text-sm font-semibold text-ink shadow-sm hover:bg-marigold/90 disabled:opacity-60"
+          className="cursor-pointer rounded-xl bg-marigold px-6 py-2.5 text-sm font-bold text-ink shadow-[0_6px_18px_-6px_rgba(242,169,59,0.55)] transition-colors hover:bg-marigold/90 disabled:opacity-60"
         >
           {loading ? "Saving..." : "Save profile"}
         </button>
