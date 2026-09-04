@@ -19,6 +19,7 @@ import {
 } from "@/lib/reviews";
 import ReviewSummary from "@/components/reviews/ReviewSummary";
 import ReviewList from "@/components/reviews/ReviewList";
+import ResponseMetricsBadge from "@/components/companies/ResponseMetricsBadge";
 
 export async function generateMetadata({
   params,
@@ -391,7 +392,14 @@ export default async function CompanyPage({
             </div>
           </div>
 
-          <ReviewSummary aggregate={reviewAggregate} subjectType="company" />
+          <div className="flex flex-col gap-6 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
+            <ReviewSummary aggregate={reviewAggregate} subjectType="company" />
+            <ResponseMetricsBadge
+              responseRate={company.responseRate}
+              medianResponseMinutes={company.medianResponseMinutes}
+              responseSampleSize={company.responseSampleSize}
+            />
+          </div>
 
           <div className="mt-6">
             <ReviewList

@@ -148,6 +148,12 @@ async function CompanyProfileContent() {
         stats={{
           activeJobsCount,
           totalApplicantsCount,
+          responseRate: company.responseRate,
+          medianResponseMinutes: company.medianResponseMinutes,
+          responseSampleSize: company.responseSampleSize,
+          responseMetricsUpdatedAt: company.responseMetricsUpdatedAt
+            ? company.responseMetricsUpdatedAt.toISOString()
+            : null,
         }}
         verificationDocuments={company.verificationDocuments.map((doc) => ({
           id: doc.id,

@@ -24,6 +24,7 @@ import VerificationDocumentsPanel, {
 import { useEmployerShell } from "@/components/employer/EmployerShellContext";
 import { useEasyAi } from "@/components/employer/pro/useEasyAi";
 import ProBadge from "@/components/employer/pro/ProBadge";
+import ResponseMetricsBadge from "@/components/companies/ResponseMetricsBadge";
 
 const industryOptions = [
   "E-commerce",
@@ -92,9 +93,23 @@ type Props = {
   stats: {
     activeJobsCount: number;
     totalApplicantsCount: number;
+    responseRate: number | null;
+    medianResponseMinutes: number | null;
+    responseSampleSize: number | null;
+    responseMetricsUpdatedAt: string | null;
   };
   verificationDocuments?: VerificationDoc[];
 };
+
+const lastUpdatedFormatter = new Intl.DateTimeFormat("en-US", {
+  month: "short",
+  day: "numeric",
+  year: "numeric",
+});
+
+function formatLastUpdated(iso: string) {
+  return lastUpdatedFormatter.format(new Date(iso));
+}
 
 function getProfileStrengthLabel(percentage: number) {
   if (percentage >= 75) return "Complete";
@@ -781,7 +796,7 @@ export default function CompanyProfileEditor({
             </div>
           </EmployerFormSection>
 
-          <EmployerFormSection title="Social presence" last>
+          <EmployerFormSection title="Social presence">
             <div className="mb-3 flex items-center gap-2 text-ink/40">
               <Share2 className="h-4 w-4" aria-hidden="true" />
               <span className="text-xs">Links shown on your public company page.</span>
@@ -815,6 +830,25 @@ export default function CompanyProfileEditor({
             <p className="mt-3 text-[11px] text-ink/40">
               YouTube, GitHub, Behance, and Dribbble — more platforms coming soon.
             </p>
+          </EmployerFormSection>
+
+          <EmployerFormSection
+            title="Response metrics"
+            description="How quickly candidates hear back from you — computed automatically from your hiring activity, not editable here."
+            last
+          >
+            <div className="rounded-2xl border border-teal/15 bg-teal/5 px-5 py-4">
+              <ResponseMetricsBadge
+                responseRate={stats.responseRate}
+                medianResponseMinutes={stats.medianResponseMinutes}
+                responseSampleSize={stats.responseSampleSize}
+              />
+              {stats.responseMetricsUpdatedAt && (
+                <p className="mt-3 font-data text-[11px] text-ink/35">
+                  Last updated {formatLastUpdated(stats.responseMetricsUpdatedAt)}
+                </p>
+              )}
+            </div>
           </EmployerFormSection>
           </div>
 
