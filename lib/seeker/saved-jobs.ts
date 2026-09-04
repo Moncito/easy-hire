@@ -84,6 +84,17 @@ export async function saveJob(userId: string, jobId: string) {
 
   const profile = await ensureSeekerProfile(userId);
 
+  const alreadySaved = await prisma.savedJob.findUnique({
+    where: { seekerId_jobId: { seekerId: profile.id, jobId } },
+  });
+
+  if (!alreadySaved) {
+    const savedCount = await prisma.savedJob.count({ where: { seekerId: profile.id } });
+    if (savedCount >= 200) {
+      throw new ApiError("You've reached the maximum number of saved jobs (200)", 400);
+    }
+  }
+
   await prisma.savedJob.upsert({
     where: { seekerId_jobId: { seekerId: profile.id, jobId } },
     create: { seekerId: profile.id, jobId },

@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { ChevronDown, FileText, Plus, Upload, X } from "lucide-react";
@@ -477,8 +478,13 @@ export default function SeekerProfileEditor({
               <p className="mb-3 text-sm text-ink/55">JPEG, PNG, or WebP. Max 2MB.</p>
               <div className="flex flex-wrap items-center gap-4">
                 {photoUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={photoUrl} alt="" className="h-16 w-16 rounded-2xl object-cover" />
+                  <Image
+                    src={photoUrl}
+                    alt=""
+                    width={64}
+                    height={64}
+                    className="h-16 w-16 rounded-2xl object-cover"
+                  />
                 ) : (
                   <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-marigold/15 font-display text-xl font-bold text-marigold">
                     {(form.fullName?.[0] || "V").toUpperCase()}

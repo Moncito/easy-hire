@@ -21,12 +21,15 @@ export default async function SeekerProfilePage({
 }) {
   const { session, userId } = await requireSeekerPageContext();
   const { bucket } = await searchParams;
-  const profile = await hydrateResumeFields(
-    await ensureSeekerProfile(userId, {
-      fullName: session.user.name ?? "",
-    })
-  );
-  const identityDocuments = await listIdentityDocuments(userId);
+  const ensuredProfile = await ensureSeekerProfile(userId, {
+    fullName: session.user.name ?? "",
+  });
+  // Both depend on the profile existing (ensured above), but not on each
+  // other — run them concurrently.
+  const [profile, identityDocuments] = await Promise.all([
+    hydrateResumeFields(ensuredProfile),
+    listIdentityDocuments(userId),
+  ]);
 
   const { completed, total } = profileBucketCompletion({
     fullName: profile.fullName ?? "",

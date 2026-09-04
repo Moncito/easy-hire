@@ -5,7 +5,7 @@ import type { Metadata } from "next";
 import { getPublicCompany } from "@/lib/public-companies";
 import { auth } from "@/Auth";
 import { ensureSeekerProfile } from "@/lib/seekers";
-import { getSeekerProfileCompletion } from "@/lib/seeker-profile-completion";
+import { getSeekerProfileCompletion } from "@/lib/seeker/profile-completion";
 import CompanyNavBand from "@/components/companies/CompanyNavBand";
 import CompanyAboutSection from "@/components/companies/CompanyAboutSection";
 import CompanyJobRow from "@/components/companies/CompanyJobRow";

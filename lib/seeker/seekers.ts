@@ -6,6 +6,7 @@ import { seekerApplicationsTag, seekerProfileTag } from "@/lib/seeker/cache-tags
 import { reviveDates } from "@/lib/cache-utils";
 import { hydrateResumeFields } from "@/lib/seeker/resume-urls";
 import { recomputeVerificationScore } from "@/lib/seeker/identity-verification";
+import { invalidatePublicSeeker } from "@/lib/seeker/public-seekers";
 import { RESUME_BUCKET, assertOwnedObjectPath } from "@/lib/shared/storage";
 import { parseResume, formatResume } from "@/lib/seeker-profile-format";
 
@@ -123,6 +124,7 @@ export async function updateSeekerProfile(userId: string, raw: unknown) {
     data: seekerInputToData(input),
   });
   invalidateSeekerProfile(userId);
+  invalidatePublicSeeker(updated.id);
   // Profile completeness feeds the verification score — recompute on every
   // save. Fire-and-forget: must never block a profile save.
   void recomputeVerificationScore(updated.id).catch((err) =>
@@ -141,10 +143,20 @@ export async function getSeekerApplicationForJob(userId: string, jobId: string) 
   });
 }
 
-export async function listSeekerAppliedJobIds(userId: string) {
-  const apps = await prisma.application.findMany({
-    where: { seeker: { userId } },
-    select: { jobId: true },
-  });
-  return apps.map((a) => a.jobId);
+export function listSeekerAppliedJobIds(userId: string): Promise<string[]> {
+  return unstable_cache(
+    async () => {
+      const apps = await prisma.application.findMany({
+        where: { seeker: { userId } },
+        select: { jobId: true },
+        // Hard ceiling for the "which jobs have I applied to" id-list use
+        // case — a real seeker's lifetime application count should never
+        // approach this.
+        take: 500,
+      });
+      return apps.map((a) => a.jobId);
+    },
+    ["seeker-applied-job-ids", userId],
+    { revalidate: 30, tags: [seekerApplicationsTag(userId)] }
+  )();
 }

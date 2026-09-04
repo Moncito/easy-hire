@@ -1,5 +1,3 @@
-"use client";
-
 import type { CSSProperties, ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
 import {
@@ -575,14 +573,8 @@ export default function PublicSeekerProfileSections({ seeker }: { seeker: Public
                   href={href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="cursor-pointer"
+                  className="talent-cert-link cursor-pointer"
                   style={certLinkStyle}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = "#D4930A";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = "#E4E2DC";
-                  }}
                 >
                   {inner}
                 </a>
@@ -609,16 +601,8 @@ export default function PublicSeekerProfileSections({ seeker }: { seeker: Public
               href={link.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="cursor-pointer"
+              className="talent-doc-link cursor-pointer"
               style={docLinkStyle}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = "#D4930A";
-                e.currentTarget.style.color = "#D4930A";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = "#E4E2DC";
-                e.currentTarget.style.color = "#374140";
-              }}
             >
               {link.label}
             </a>
@@ -660,6 +644,13 @@ export default function PublicSeekerProfileSections({ seeker }: { seeker: Public
           border-color: #E8C97A;
           box-shadow: 0 4px 14px rgba(17, 17, 16, 0.08);
           transform: translateY(-1px);
+        }
+        .talent-cert-link:hover {
+          border-color: #D4930A;
+        }
+        .talent-doc-link:hover {
+          border-color: #D4930A;
+          color: #D4930A;
         }
       `}</style>
 

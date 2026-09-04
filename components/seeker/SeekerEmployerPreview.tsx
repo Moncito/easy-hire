@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { formatPesoRange } from "@/lib/format";
 import {
   displayCertification,
@@ -127,8 +128,13 @@ export default function SeekerEmployerPreview({ data, profileId }: { data: Emplo
 
       <div className="flex items-start gap-3">
         {data.photoUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={data.photoUrl} alt="" className="h-14 w-14 rounded-xl object-cover" />
+          <Image
+            src={data.photoUrl}
+            alt=""
+            width={56}
+            height={56}
+            className="h-14 w-14 rounded-xl object-cover"
+          />
         ) : (
           <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-marigold/15 font-display text-lg font-bold text-marigold">
             {initials}

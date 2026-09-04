@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Bookmark, MapPin, Search, Wallet, Clock } from "lucide-react";
 import { formatEnumLabel, formatPesoRange, type SalaryPeriod } from "@/lib/format";
 import { timeAgo } from "@/lib/time-ago";
@@ -175,10 +176,11 @@ export default function SavedJobsPanel({ initialSaved, appliedJobIds }: Props) {
               >
                 <div className="flex min-w-0 flex-1 items-start gap-4">
                   {job.company.logoUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
+                    <Image
                       src={job.company.logoUrl}
                       alt=""
+                      width={48}
+                      height={48}
                       className="h-12 w-12 shrink-0 rounded-xl object-cover ring-1 ring-ink/8"
                     />
                   ) : (

@@ -120,14 +120,20 @@ export async function getConversationThread(userId: string, role: string, conver
     relationLoadStrategy: "join",
     include: {
       ...conversationParties,
+      // Hard ceiling on initial thread load, not real pagination — a
+      // pathologically long thread (thousands of messages) must not blow up
+      // a single request. Fetch the latest 300 descending, then reverse in
+      // JS so the returned shape/order (ascending) is unchanged. Follow-up:
+      // replace with real cursor-based pagination for message history.
       messages: {
-        orderBy: { createdAt: "asc" },
+        orderBy: { createdAt: "desc" },
+        take: 300,
         select: { id: true, body: true, createdAt: true, senderUserId: true, readAt: true },
       },
     },
   });
   assertConversationAccess(conversation, userId, role);
-  const { messages } = conversation;
+  const messages = [...conversation.messages].reverse();
 
   // Fire-and-forget read receipt — never block the thread response on it.
   void prisma.message
@@ -193,9 +199,14 @@ export async function getMessagesAfter(
         })
       : [];
   } else {
-    messages = await prisma.message.findMany({
+    // No cursor yet — this only fires when a client polls before its first
+    // getConversationThread load, so it should be rare in practice. Same
+    // hard ceiling as getConversationThread above: latest 300, reversed, for
+    // safety on a pathologically long thread. Not real pagination.
+    const latest = await prisma.message.findMany({
       where: { conversationId },
-      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      take: 300,
       select: {
         id: true,
         body: true,
@@ -203,6 +214,7 @@ export async function getMessagesAfter(
         senderUserId: true,
       },
     });
+    messages = latest.reverse();
   }
 
   if (messages.some((m) => m.senderUserId !== userId)) {

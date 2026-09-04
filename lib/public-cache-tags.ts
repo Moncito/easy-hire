@@ -11,3 +11,7 @@ export function publicJobTag(jobId: string) {
 export function publicCompanyTag(companyId: string) {
   return `public-company-${companyId}`;
 }
+
+export function publicSeekerTag(seekerId: string) {
+  return `public-seeker-${seekerId}`;
+}

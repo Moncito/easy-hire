@@ -1,10 +1,11 @@
 import Link from "next/link";
+import Image from "next/image";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { getPublicSeeker } from "@/lib/public-seekers";
 import { auth } from "@/Auth";
 import { ensureSeekerProfile } from "@/lib/seekers";
-import { getSeekerProfileCompletion } from "@/lib/seeker-profile-completion";
+import { getSeekerProfileCompletion } from "@/lib/seeker/profile-completion";
 import PublicSeekerNavBand from "@/components/seekers/PublicSeekerNavBand";
 import PublicSeekerProfileSections from "@/components/seekers/PublicSeekerProfileSections";
 import {
@@ -68,27 +69,36 @@ export default async function PublicSeekerPage({
   const isSeeker = session?.user?.role === "SEEKER";
   const isEmployer = session?.user?.role === "EMPLOYER";
 
-  const [reviewAggregate, reviewRows] = await Promise.all([
+  // subjectReviewIdsForViewer genuinely needs the ids of the reviews just
+  // fetched (it filters to that exact page of reviews), so it can't be a
+  // sibling of listPublishedReviewsForSeeker in the Promise.all — it's
+  // chained after it instead. That chain still runs concurrently with
+  // getSeekerReviewAggregate and the self-view ensureSeekerProfile call
+  // below (neither of which depends on it), so nothing here is more
+  // sequential than it has to be.
+  const [reviewAggregate, { reviewRows, disputableReviewIds }, ownProfile] = await Promise.all([
     getSeekerReviewAggregate(seeker.id),
-    listPublishedReviewsForSeeker(seeker.id, reviewsPage),
+    listPublishedReviewsForSeeker(seeker.id, reviewsPage).then(async (rows) => {
+      const ids = session?.user
+        ? await subjectReviewIdsForViewer(
+            session.user.id,
+            rows.map((row) => row.id)
+          )
+        : [];
+      return { reviewRows: rows, disputableReviewIds: ids };
+    }),
+    isSeeker && session?.user
+      ? ensureSeekerProfile(session.user.id, { fullName: session.user.name ?? "" })
+      : Promise.resolve(null),
   ]);
-  const disputableReviewIds = session?.user
-    ? await subjectReviewIdsForViewer(
-        session.user.id,
-        reviewRows.map((row) => row.id)
-      )
-    : [];
   const reviewsTotalPages = Math.max(1, Math.ceil(reviewAggregate.count / REVIEWS_PAGE_SIZE));
 
   let metaLabel: string | null = null;
   let profileCompleted = 0;
   let profileTotal = 0;
 
-  if (isSeeker && session?.user) {
-    const profile = await ensureSeekerProfile(session.user.id, {
-      fullName: session.user.name ?? "",
-    });
-    const { completed, total } = getSeekerProfileCompletion(profile);
+  if (isSeeker && session?.user && ownProfile) {
+    const { completed, total } = getSeekerProfileCompletion(ownProfile);
     profileCompleted = completed;
     profileTotal = total;
     const firstName = session.user.name?.trim().split(/\s+/)[0];
@@ -234,10 +244,11 @@ export default async function PublicSeekerPage({
             }}
           >
             {seeker.photoUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
+              <Image
                 src={seeker.photoUrl}
                 alt=""
+                width={96}
+                height={96}
                 style={{
                   width: 96,
                   height: 96,

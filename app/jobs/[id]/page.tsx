@@ -10,7 +10,7 @@ import JobsNavBand from "@/components/jobs/JobsNavBand";
 import { listSavedJobIds } from "@/lib/saved-jobs";
 import { auth } from "@/Auth";
 import { ensureSeekerProfile } from "@/lib/seekers";
-import { getSeekerProfileCompletion } from "@/lib/seeker-profile-completion";
+import { getSeekerProfileCompletion } from "@/lib/seeker/profile-completion";
 import { buildJobPostingJsonLd } from "@/lib/seo/job-posting-jsonld";
 import { safeJsonLdString } from "@/lib/seo/safe-json-ld";
 
