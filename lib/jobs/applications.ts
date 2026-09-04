@@ -13,6 +13,7 @@ import { invalidateEmployerWorkspace } from "@/lib/employer-cache";
 import { invalidateSeekerApplications } from "@/lib/seeker/cache";
 import { hydrateResumeFields } from "@/lib/seeker/resume-urls";
 import { recomputeVerificationScore } from "@/lib/seeker/identity-verification";
+import { isFirstEmployerResponseTransition } from "@/lib/employer/response-metrics";
 
 const candidateSeekerSelect = {
   id: true,
@@ -235,6 +236,16 @@ export async function updateApplication(applicationId: string, raw: unknown) {
   // comment). This anchors the two-way review window (lib/reviews.ts).
   const becameHired = data.status === "HIRED" && existing.status !== "HIRED" && !existing.hiredAt;
 
+  // Site 1 of 3 for Application.firstEmployerResponseAt (see its schema
+  // comment): the plain (non-collaborative) employer flow moving an
+  // application off APPLIED. Stamp-once via isFirstEmployerResponseTransition
+  // — never overwritten on a later status change.
+  const becameResponded = isFirstEmployerResponseTransition(
+    existing.status,
+    data.status,
+    Boolean(existing.firstEmployerResponseAt)
+  );
+
   const updated = await prisma.application.update({
     where: { id: applicationId },
     data: {
@@ -243,6 +254,7 @@ export async function updateApplication(applicationId: string, raw: unknown) {
       ...(data.rating !== undefined ? { rating: data.rating } : {}),
       ...(data.rejectionReason !== undefined ? { rejectionReason: data.rejectionReason } : {}),
       ...(becameHired ? { hiredAt: new Date() } : {}),
+      ...(becameResponded ? { firstEmployerResponseAt: new Date() } : {}),
     },
     include: {
       seeker: {

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/lib/api-error";
 import { hasCollaborativePermission, requireCompanyMembership } from "@/lib/collaborative-hiring";
 import { signResumeUrl } from "@/lib/seeker/resume-urls";
+import { isFirstEmployerResponseTransition } from "@/lib/employer/response-metrics";
 import type { z } from "zod";
 import type { collaborativePipelineSchema, collaborativeScorecardSchema } from "@/lib/validations/collaborative-review";
 
@@ -146,10 +147,25 @@ export async function saveCollaborativeCandidateEvaluation(companyId: string, ac
 export async function updateCollaborativePipeline(companyId: string, actorUserId: string, jobId: string, applicationId: string, input: PipelineInput) {
   const { membership } = await requireCollaborativeJobAccess(companyId, actorUserId, jobId);
     if (!(hasCollaborativePermission(membership.role, "applicants:manage") || hasCollaborativePermission(membership.role, "applicants:assigned"))) throw new ApiError("You do not have permission to move candidates.", 403);
-  const application = await prisma.application.findFirst({ where: { id: applicationId, jobId }, select: { id: true, status: true } });
+  const application = await prisma.application.findFirst({ where: { id: applicationId, jobId }, select: { id: true, status: true, firstEmployerResponseAt: true } });
   if (!application) throw new ApiError("Candidate application not found", 404);
+  // Site 2 of 3 for Application.firstEmployerResponseAt (see its schema
+  // comment): the collaborative-hiring workspace's STAGE_CHANGE path.
+  const becameResponded = isFirstEmployerResponseTransition(
+    application.status,
+    input.status,
+    Boolean(application.firstEmployerResponseAt)
+  );
   const [updated] = await prisma.$transaction([
-    prisma.application.update({ where: { id: application.id }, data: { status: input.status, rejectionReason: input.status === "REJECTED" ? input.rejectionReason ?? null : null }, select: { id: true, status: true, rejectionReason: true, updatedAt: true } }),
+    prisma.application.update({
+      where: { id: application.id },
+      data: {
+        status: input.status,
+        rejectionReason: input.status === "REJECTED" ? input.rejectionReason ?? null : null,
+        ...(becameResponded ? { firstEmployerResponseAt: new Date() } : {}),
+      },
+      select: { id: true, status: true, rejectionReason: true, updatedAt: true },
+    }),
     prisma.applicationActivity.create({ data: { applicationId, type: "STAGE_CHANGE", body: `${application.status} → ${input.status}`, actorMemberId: membership.id } }),
   ]);
   return updated;

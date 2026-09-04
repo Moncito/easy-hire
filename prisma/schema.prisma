@@ -210,6 +210,16 @@ model Company {
   invitations                CompanyInvitation[]
   reviewsReceived            Review[]
 
+  // Denormalized public "response metrics" rollup (Phase 4.3), recomputed nightly by
+  // runResponseMetricsForAllCompanies (lib/employer/response-metrics.ts) over a rolling
+  // 90-day window of Application.firstEmployerResponseAt. responseRate/medianResponseMinutes
+  // stay null until responseSampleSize clears the minimum-sample gate in computeResponseMetrics
+  // — never publish a rate derived from a handful of applications.
+  responseRate             Int?      @map("response_rate")
+  medianResponseMinutes    Int?      @map("median_response_minutes")
+  responseSampleSize       Int?      @map("response_sample_size")
+  responseMetricsUpdatedAt DateTime? @map("response_metrics_updated_at")
+
   @@index([verifiedStatus])
   @@map("companies")
 }
@@ -421,6 +431,16 @@ model Application {
   // (lib/reviews.ts) and `updatedAt` changes on every edit so it can't serve
   // that purpose.
   hiredAt         DateTime?         @map("hired_at")
+  // Same stamp-once precedent as hiredAt above, but for the *first* employer
+  // engagement with this candidate — powers the public "response rate /
+  // median response time" metrics (Phase 4.3, lib/employer/response-metrics.ts).
+  // `updatedAt` can't serve this because it also advances on internal notes
+  // and ratings, and ApplicationActivity only covers the collaborative-hiring
+  // path, not the plain employer flow. Stamped at exactly three sites — see
+  // the doc comment on each: lib/jobs/applications.ts's updateApplication,
+  // lib/collaborative-hiring-reviews.ts's updateCollaborativePipeline, and
+  // lib/messaging/messages.ts's sendMessage. Never overwritten once set.
+  firstEmployerResponseAt DateTime? @map("first_employer_response_at")
 
   // Relations
   job         Job                   @relation(fields: [jobId], references: [id], onDelete: Cascade)
@@ -436,6 +456,14 @@ model Application {
   @@index([seekerId])
   @@index([status])
   @@index([jobId, status])
+  // Supports recomputeCompanyResponseMetrics's per-company load (lib/employer/
+  // response-metrics.ts): for each of a company's job ids, "applications whose
+  // appliedAt falls in the rolling 90-day window." `appliedAt`, not
+  // `firstEmployerResponseAt`, is the second key because the WHERE clause
+  // filters on the window bound — firstEmployerResponseAt is only *read* per
+  // row (the grace-period/qualifying decision runs in computeResponseMetrics,
+  // in JS, not in SQL) so indexing it wouldn't help this query's WHERE clause.
+  @@index([jobId, appliedAt])
   @@map("applications")
 }
 
