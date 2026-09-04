@@ -16,6 +16,9 @@ import type { VerificationStatus } from "@prisma/client";
  * below and persists the result.
  */
 
+/** Max identity documents a seeker may have on file. Lives here (not identity-verification.ts) so client components can import it without pulling in the server-only Prisma/storage graph. */
+export const MAX_IDENTITY_DOCUMENTS = 3;
+
 export const VERIFICATION_SCORE_WEIGHTS = {
   identity: 40,
   email: 10,

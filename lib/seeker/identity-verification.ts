@@ -4,10 +4,8 @@ import { seekerIdentityDocumentCreateSchema } from "@/lib/validations/verificati
 import { VERIFICATION_DOC_BUCKET, assertOwnedObjectPath, resolveSignedUrl } from "@/lib/storage";
 import { invalidateSeekerProfile } from "@/lib/seeker/seekers";
 import { getSeekerProfileCompletion, type SeekerProfileCompletionInput } from "@/lib/seeker/profile-completion";
-import { computeVerificationScore } from "@/lib/seeker/verification-score";
+import { computeVerificationScore, MAX_IDENTITY_DOCUMENTS } from "@/lib/seeker/verification-score";
 import type { SeekerIdentityDocument } from "@prisma/client";
-
-export const MAX_IDENTITY_DOCUMENTS = 3;
 
 /** Signs a seeker identity document's `fileUrl` for display (private bucket, short TTL) — mirrors signVerificationDocument in lib/employer/verification.ts. */
 async function signIdentityDocument<T extends SeekerIdentityDocument>(document: T) {

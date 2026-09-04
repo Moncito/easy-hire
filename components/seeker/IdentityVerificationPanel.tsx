@@ -4,8 +4,7 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertCircle, Check, Clock, FileText, Loader2, Trash2, Upload } from "lucide-react";
 import VerificationBadge, { VERIFICATION_QUALIFIER } from "@/components/seeker/VerificationBadge";
-import { VERIFICATION_SCORE_WEIGHTS, verificationTier } from "@/lib/seeker/verification-score";
-import { MAX_IDENTITY_DOCUMENTS } from "@/lib/seeker/identity-verification";
+import { VERIFICATION_SCORE_WEIGHTS, verificationTier, MAX_IDENTITY_DOCUMENTS } from "@/lib/seeker/verification-score";
 import { parseJsonBody } from "@/lib/client/fetch-json";
 
 /**
