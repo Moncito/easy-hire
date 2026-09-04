@@ -8,7 +8,7 @@ import { hydrateResumeFields } from "@/lib/seeker/resume-urls";
 import { recomputeVerificationScore } from "@/lib/seeker/identity-verification";
 import { invalidatePublicSeeker } from "@/lib/seeker/public-seekers";
 import { RESUME_BUCKET, assertOwnedObjectPath } from "@/lib/shared/storage";
-import { parseResume, formatResume } from "@/lib/seeker-profile-format";
+import { parseResume, formatResume } from "@/lib/seeker/profile-format";
 
 const SEEKER_PROFILE_REVALIDATE_SECONDS = 30;
 

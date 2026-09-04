@@ -18,7 +18,7 @@ import {
   parseSkill,
   parseWorkExperience,
   timezoneLabel,
-} from "@/lib/seeker-profile-format";
+} from "@/lib/seeker/profile-format";
 import CopyProfileLinkButton from "@/components/seekers/CopyProfileLinkButton";
 
 export type PublicSeekerData = {

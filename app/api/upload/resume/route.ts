@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/Auth";
 import { errorResponse, ApiError } from "@/lib/api-error";
 import { clientKeyFromRequest, enforceRateLimit } from "@/lib/rate-limit";
-import { requireSeekerProfile } from "@/lib/seeker-auth";
+import { requireSeekerProfile } from "@/lib/auth/seeker-guards";
 import { updateSeekerProfile } from "@/lib/seekers";
 import { uploadResume } from "@/lib/storage";
 import { hydrateResumeFields } from "@/lib/seeker/resume-urls";
@@ -10,7 +10,7 @@ import {
   formatResume,
   MAX_RESUMES,
   resumeFilenameFromUrl,
-} from "@/lib/seeker-profile-format";
+} from "@/lib/seeker/profile-format";
 
 // Authenticated, but each call buffers a whole file into memory.
 const UPLOAD_RATE_LIMIT = 10;

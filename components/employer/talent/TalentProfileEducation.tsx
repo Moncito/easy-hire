@@ -4,7 +4,7 @@ import {
   displayCertification,
   displayEducation,
   parseEducation,
-} from "@/lib/seeker-profile-format";
+} from "@/lib/seeker/profile-format";
 
 type Props = {
   education: string[];

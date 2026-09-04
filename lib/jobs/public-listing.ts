@@ -428,6 +428,9 @@ async function getPublicJobUncached(jobId: string) {
           verifiedStatus: true,
           headquarters: true,
           highlights: true,
+          responseRate: true,
+          medianResponseMinutes: true,
+          responseSampleSize: true,
         },
       },
       screeningQuestions: {

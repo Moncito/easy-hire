@@ -211,6 +211,9 @@ describe("buildJobPostingJsonLd", () => {
             verifiedStatus: "APPROVED",
             headquarters: null,
             highlights: [],
+            responseRate: null,
+            medianResponseMinutes: null,
+            responseSampleSize: null,
           },
         } as Partial<PublicJobForJsonLd>)
       );

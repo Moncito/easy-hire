@@ -11,7 +11,7 @@ import {
   Star,
 } from "lucide-react";
 import { formatPesoRange } from "@/lib/format";
-import { skillName } from "@/lib/seeker-profile-format";
+import { skillName } from "@/lib/seeker/profile-format";
 import { useEmployerShell } from "@/components/employer/EmployerShellContext";
 import CandidateEasyAiPanel from "./CandidateEasyAiPanel";
 import type { CandidateApplication } from "./types";

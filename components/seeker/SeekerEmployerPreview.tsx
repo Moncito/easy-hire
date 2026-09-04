@@ -11,7 +11,7 @@ import {
   displayWorkExperience,
   isDiscoverableInTalentSearch,
   timezoneLabel,
-} from "@/lib/seeker-profile-format";
+} from "@/lib/seeker/profile-format";
 import { ExternalLink, FileText, Globe, Link2, MapPin, Users } from "lucide-react";
 import { profileBucketCompletion } from "@/components/seeker/profile-buckets";
 import type { ProfileVisibilityLevel } from "@/lib/validations/seeker";

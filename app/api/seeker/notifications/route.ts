@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/Auth";
 import { errorResponse } from "@/lib/api-error";
 import { parseJsonBody } from "@/lib/parse-json-body";
-import { requireSeekerProfile } from "@/lib/seeker-auth";
+import { requireSeekerProfile } from "@/lib/auth/seeker-guards";
 import {
   getSeekerNotificationsCached,
   invalidateSeekerNotifications,

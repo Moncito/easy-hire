@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/lib/api-error";
 import { RESUME_BUCKET, VERIFICATION_DOC_BUCKET, resolveSignedUrl } from "@/lib/storage";
-import { parseResume } from "@/lib/seeker-profile-format";
+import { parseResume } from "@/lib/seeker/profile-format";
 import { getEmployerCompanyByUserId } from "@/lib/auth/employer-company";
 
 /**

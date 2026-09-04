@@ -16,7 +16,7 @@ import {
   displaySkill,
   isDiscoverableInTalentSearch,
   timezoneLabel,
-} from "@/lib/seeker-profile-format";
+} from "@/lib/seeker/profile-format";
 import { profileBucketCompletion } from "@/components/seeker/profile-buckets";
 import type { EmployerPreviewData } from "@/components/seeker/SeekerEmployerPreview";
 import DashboardSurface from "@/components/employer/dashboard/DashboardSurface";

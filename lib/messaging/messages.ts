@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { isDiscoverableInTalentSearch } from "@/lib/seeker-profile-format";
+import { isDiscoverableInTalentSearch } from "@/lib/seeker/profile-format";
 import { Prisma } from "@prisma/client";
 import { ApiError } from "@/lib/api-error";
 import { createNotification, sendNewMessageEmail } from "@/lib/email";
@@ -8,7 +8,7 @@ import { invalidateEmployerNav } from "@/lib/employer-cache";
 import { invalidateConversationsForParticipants } from "@/lib/conversations-cache";
 import { stampFirstEmployerResponseForMessage } from "@/lib/employer/response-metrics";
 import { requireEmployerCompany } from "@/lib/employer-auth";
-import { requireSeekerProfile } from "@/lib/seeker-auth";
+import { requireSeekerProfile } from "@/lib/auth/seeker-guards";
 import { requireVerifiedEmail } from "@/lib/auth/credentials-recovery";
 import { companyMemberRoleLabel } from "@/lib/collaborative-hiring";
 import {

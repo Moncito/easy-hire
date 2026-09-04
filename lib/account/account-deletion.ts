@@ -2,7 +2,7 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/lib/api-error";
 import { deleteStorageObject, type BucketId } from "@/lib/storage";
-import { parseResume } from "@/lib/seeker-profile-format";
+import { parseResume } from "@/lib/seeker/profile-format";
 import { invalidateEmployerWorkspace } from "@/lib/employer-cache";
 import { invalidateCompanyMembership, invalidateHiringWorkspaces } from "@/lib/collaborative-hiring";
 import { invalidateSeekerApplications } from "@/lib/seeker/cache";

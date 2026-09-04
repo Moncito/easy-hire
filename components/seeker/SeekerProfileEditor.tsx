@@ -44,7 +44,7 @@ import {
   displayEducation,
   displaySkill,
   skillName,
-} from "@/lib/seeker-profile-format";
+} from "@/lib/seeker/profile-format";
 import type { ProfileVisibilityLevel } from "@/lib/validations/seeker";
 import Link from "next/link";
 
