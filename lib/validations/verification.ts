@@ -24,3 +24,19 @@ export const verificationDocumentCreateSchema = z.object({
 });
 
 export type VerificationDocumentCreateInput = z.infer<typeof verificationDocumentCreateSchema>;
+
+export const seekerIdentityDocTypeSchema = z.enum([
+  "GOVERNMENT_ID",
+  "PROOF_OF_ADDRESS",
+  "SELFIE_WITH_ID",
+  "OTHER",
+]);
+
+/** Same object-path-or-legacy-URL shape as verificationDocumentCreateSchema above. */
+export const seekerIdentityDocumentCreateSchema = z.object({
+  fileUrl: urlOrObjectPath,
+  fileName: z.string().min(1, "File name is required").max(255),
+  docType: seekerIdentityDocTypeSchema,
+});
+
+export type SeekerIdentityDocumentCreateInput = z.infer<typeof seekerIdentityDocumentCreateSchema>;

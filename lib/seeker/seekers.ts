@@ -5,6 +5,9 @@ import { seekerInputToData, seekerUpdateSchema } from "@/lib/validations/seeker"
 import { seekerApplicationsTag, seekerProfileTag } from "@/lib/seeker/cache-tags";
 import { reviveDates } from "@/lib/cache-utils";
 import { hydrateResumeFields } from "@/lib/seeker/resume-urls";
+import { recomputeVerificationScore } from "@/lib/seeker/identity-verification";
+import { RESUME_BUCKET, assertOwnedObjectPath } from "@/lib/shared/storage";
+import { parseResume, formatResume } from "@/lib/seeker-profile-format";
 
 const SEEKER_PROFILE_REVALIDATE_SECONDS = 30;
 
@@ -94,13 +97,37 @@ export async function getSeekerProfile(userId: string) {
 export async function updateSeekerProfile(userId: string, raw: unknown) {
   const input = seekerUpdateSchema.parse(raw);
 
-  await ensureSeekerProfile(userId);
+  const existing = await ensureSeekerProfile(userId);
+
+  const allowedPrefixes = [`${userId}/`];
+
+  if (input.resumeUrl) {
+    input.resumeUrl = assertOwnedObjectPath(RESUME_BUCKET, input.resumeUrl, allowedPrefixes, {
+      allowUnchanged: existing.resumeUrl,
+    });
+  }
+
+  if (input.resumes) {
+    const existingResumeUrls = new Set(existing.resumes.map((r) => parseResume(r).url));
+    input.resumes = input.resumes.map((entry) => {
+      const parsed = parseResume(entry);
+      const ownedUrl = assertOwnedObjectPath(RESUME_BUCKET, parsed.url, allowedPrefixes, {
+        allowUnchanged: existingResumeUrls.has(parsed.url) ? parsed.url : null,
+      });
+      return formatResume({ ...parsed, url: ownedUrl });
+    });
+  }
 
   const updated = await prisma.seekerProfile.update({
     where: { userId },
     data: seekerInputToData(input),
   });
   invalidateSeekerProfile(userId);
+  // Profile completeness feeds the verification score — recompute on every
+  // save. Fire-and-forget: must never block a profile save.
+  void recomputeVerificationScore(updated.id).catch((err) =>
+    console.error("[seekers] verification score recompute failed:", err)
+  );
   return updated;
 }
 

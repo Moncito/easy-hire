@@ -191,12 +191,42 @@ function mapJob(job: {
   };
 }
 
+// Throttle window for the FTS-fallback warning below. A single serverless
+// instance can see many searches per minute, so logging on every failure
+// would flood output; a fixed 5-minute window per warm instance is a
+// deliberate middle ground between "once per cold start" (which would go
+// silent for the lifetime of a long-warm instance even if the underlying
+// cause — e.g. a dropped search_vector index — is still broken) and logging
+// on every request. It re-surfaces periodically so an ongoing problem stays
+// visible without spamming.
+const FTS_FALLBACK_LOG_THROTTLE_MS = 5 * 60 * 1000;
+let lastFtsFallbackLogAt = 0;
+
+function logFtsFallback(error: unknown, input: JobSearchInput): void {
+  try {
+    const now = Date.now();
+    if (now - lastFtsFallbackLogAt < FTS_FALLBACK_LOG_THROTTLE_MS) return;
+    lastFtsFallbackLogAt = now;
+
+    console.error(
+      "[public-listing] Full-text job search failed; falling back to a full-table ILIKE " +
+        "scan for this and subsequent searches within the throttle window below. This " +
+        "usually means jobs.search_vector / jobs_search_vector_idx is missing or broken " +
+        "(see prisma/migrations/20260727200000_sprint1_job_application_fields/migration.sql). " +
+        `Further occurrences are throttled to at most once per ${FTS_FALLBACK_LOG_THROTTLE_MS / 60000}m.`,
+      { q: input.q, sort: input.sort, category: input.category, industry: input.industry, error }
+    );
+  } catch {
+    // Logging must never take down the fallback path it's reporting on.
+  }
+}
+
 async function searchPublicJobsUncached(input: JobSearchInput): Promise<SearchResult> {
   if (input.q && input.sort !== "salary_high") {
     try {
       return await searchPublicJobsFts(input);
-    } catch {
-      // Fall back if search_vector migration is not applied yet.
+    } catch (error) {
+      logFtsFallback(error, input);
     }
   }
 

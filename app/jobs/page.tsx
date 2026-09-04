@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { auth } from "@/Auth";
 import { ensureSeekerProfile } from "@/lib/seekers";
 import {
@@ -8,6 +9,19 @@ import JobSearchPanel from "@/components/jobs/JobSearchPanel";
 import ProfileStrengthNudge from "@/components/jobs/ProfileStrengthNudge";
 import CollapsibleJobsHeader from "@/components/jobs/CollapsibleJobsHeader";
 import JobsNavBand from "@/components/jobs/JobsNavBand";
+
+const description =
+  "Search verified Virtual Assistant jobs from Philippines-hiring employers. Filter by category, pay, and remote type — apply direct, no agency markup.";
+
+export const metadata: Metadata = {
+  title: "Find VA Jobs",
+  description,
+  openGraph: {
+    title: "Find VA Jobs — EasyHire",
+    description,
+    type: "website",
+  },
+};
 
 export default async function JobsPage() {
   const session = await auth();

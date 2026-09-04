@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Globe } from "lucide-react";
+import type { Metadata } from "next";
 import { getPublicCompany } from "@/lib/public-companies";
 import { auth } from "@/Auth";
 import { ensureSeekerProfile } from "@/lib/seekers";
@@ -8,9 +9,53 @@ import { getSeekerProfileCompletion } from "@/lib/seeker-profile-completion";
 import CompanyNavBand from "@/components/companies/CompanyNavBand";
 import CompanyAboutSection from "@/components/companies/CompanyAboutSection";
 import CompanyJobRow from "@/components/companies/CompanyJobRow";
+import { buildOrganizationJsonLd } from "@/lib/seo/organization-jsonld";
+import { safeJsonLdString } from "@/lib/seo/safe-json-ld";
+import {
+  listPublishedReviewsForCompany,
+  getCompanyReviewAggregate,
+  subjectReviewIdsForViewer,
+  REVIEWS_PAGE_SIZE,
+} from "@/lib/reviews";
+import ReviewSummary from "@/components/reviews/ReviewSummary";
+import ReviewList from "@/components/reviews/ReviewList";
+import ResponseMetricsBadge from "@/components/companies/ResponseMetricsBadge";
 
-export default async function CompanyPage({ params }: { params: Promise<{ id: string }> }) {
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
   const { id } = await params;
+  try {
+    const company = await getPublicCompany(id);
+    const description =
+      company.description?.slice(0, 160) ??
+      `${company.companyName} is hiring virtual assistants on EasyHire.`;
+    return {
+      title: company.companyName,
+      description,
+      openGraph: {
+        title: company.companyName,
+        description,
+        type: "website",
+      },
+    };
+  } catch {
+    return { title: "Company not found" };
+  }
+}
+
+export default async function CompanyPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ reviewsPage?: string }>;
+}) {
+  const { id } = await params;
+  const { reviewsPage: reviewsPageParam } = await searchParams;
+  const reviewsPage = Math.max(1, Number(reviewsPageParam) || 1);
 
   let company;
   try {
@@ -21,6 +66,18 @@ export default async function CompanyPage({ params }: { params: Promise<{ id: st
 
   const session = await auth();
   const isSeeker = session?.user?.role === "SEEKER";
+
+  const [reviewAggregate, reviewRows] = await Promise.all([
+    getCompanyReviewAggregate(company.id),
+    listPublishedReviewsForCompany(company.id, reviewsPage),
+  ]);
+  const disputableReviewIds = session?.user
+    ? await subjectReviewIdsForViewer(
+        session.user.id,
+        reviewRows.map((row) => row.id)
+      )
+    : [];
+  const reviewsTotalPages = Math.max(1, Math.ceil(reviewAggregate.count / REVIEWS_PAGE_SIZE));
 
   let metaLabel: string | null = null;
   let profileCompleted = 0;
@@ -44,6 +101,15 @@ export default async function CompanyPage({ params }: { params: Promise<{ id: st
     .slice(0, 2)
     .toUpperCase();
 
+  // Gate structured data on APPROVED: unlike getPublicJob, getPublicCompany
+  // (lib/shared/public-companies.ts) does a plain findUnique with no
+  // verifiedStatus filter, so this page renders PENDING/REJECTED companies
+  // too. Emitting Organization JSON-LD for those would push unvetted
+  // companies into Google, undermining the admin-approval fraud-prevention
+  // requirement (see CLAUDE.md) — so only APPROVED companies get the script.
+  const organizationJsonLd =
+    company.verifiedStatus === "APPROVED" ? safeJsonLdString(buildOrganizationJsonLd(company)) : null;
+
   return (
     <div
       className="animate-fade-in"
@@ -53,6 +119,11 @@ export default async function CompanyPage({ params }: { params: Promise<{ id: st
         fontFamily: "Inter, system-ui, sans-serif",
       }}
     >
+      {organizationJsonLd && (
+        // __html is pre-escaped by safeJsonLdString (see lib/seo/safe-json-ld.ts)
+        // — company.description is employer-supplied free text.
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: organizationJsonLd }} />
+      )}
       <CompanyNavBand
         isSeeker={isSeeker}
         metaLabel={metaLabel}
@@ -308,6 +379,37 @@ export default async function CompanyPage({ params }: { params: Promise<{ id: st
               ))}
             </div>
           )}
+        </section>
+
+        <section id="reviews" className="border-t border-[#E4E2DC] pt-10 mt-10">
+          <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h2 className="font-display text-xl font-bold text-ink">Reviews</h2>
+              <p className="mt-1 text-sm text-ink/45">
+                From virtual assistants this company has actually hired — unlocked only after a
+                completed hire.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-6 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
+            <ReviewSummary aggregate={reviewAggregate} subjectType="company" />
+            <ResponseMetricsBadge
+              responseRate={company.responseRate}
+              medianResponseMinutes={company.medianResponseMinutes}
+              responseSampleSize={company.responseSampleSize}
+            />
+          </div>
+
+          <div className="mt-6">
+            <ReviewList
+              reviews={reviewRows}
+              disputableReviewIds={disputableReviewIds}
+              page={reviewsPage}
+              totalPages={reviewsTotalPages}
+              baseHref={`/companies/${id}`}
+            />
+          </div>
         </section>
       </div>
     </div>

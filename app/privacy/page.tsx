@@ -3,7 +3,9 @@ import { Shield } from "lucide-react";
 import LegalPageShell, { Section } from "@/components/legal/LegalPageShell";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy — EasyHire",
+  // No trailing "— EasyHire": the root layout's title template already
+  // appends it, so hardcoding it here would double it up.
+  title: "Privacy Policy",
   description: "How EasyHire collects, uses, and protects your personal information.",
 };
 

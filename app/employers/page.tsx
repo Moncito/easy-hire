@@ -15,10 +15,19 @@ import { getLandingStats } from "@/lib/landing";
 
 export const revalidate = 300;
 
+const description =
+  "Post a job for free and hire a verified Filipino VA. Admin-reviewed job postings, no salary markup or commission, and free messaging with applicants at launch. Built for US, AU and UK founders.";
+
 export const metadata: Metadata = {
-  title: "Hire Verified Filipino Virtual Assistants — EasyHire for Employers",
-  description:
-    "Post a job for free and hire a verified Filipino VA. Admin-reviewed job postings, no salary markup or commission, and free messaging with applicants at launch. Built for US, AU and UK founders.",
+  // No trailing "— EasyHire": the root layout's title template already
+  // appends it, so hardcoding it here would double it up.
+  title: "Hire Verified Filipino Virtual Assistants",
+  description,
+  openGraph: {
+    title: "Hire Verified Filipino Virtual Assistants — EasyHire for Employers",
+    description,
+    type: "website",
+  },
 };
 
 export default async function EmployersPage() {

@@ -3,7 +3,9 @@ import { FileText } from "lucide-react";
 import LegalPageShell, { Section } from "@/components/legal/LegalPageShell";
 
 export const metadata: Metadata = {
-  title: "Terms of Service — EasyHire",
+  // No trailing "— EasyHire": the root layout's title template already
+  // appends it, so hardcoding it here would double it up.
+  title: "Terms of Service",
   description: "Terms governing use of the EasyHire job board platform.",
 };
 

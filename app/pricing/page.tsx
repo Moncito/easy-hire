@@ -5,9 +5,18 @@ import LegalPageShell, { Section } from "@/components/legal/LegalPageShell";
 import PlanComparisonTable from "@/components/pricing/PlanComparisonTable";
 import { isStripeCheckoutEnabled } from "@/lib/billing/plan-comparison";
 
+const description = "EasyHire is free during MVP. See what's included, and what Employer Pro adds.";
+
 export const metadata: Metadata = {
-  title: "Pricing — EasyHire",
-  description: "EasyHire is free during MVP. See what's included, and what Employer Pro adds.",
+  // No trailing "— EasyHire": the root layout's title template already
+  // appends it, so hardcoding it here would double it up.
+  title: "Pricing",
+  description,
+  openGraph: {
+    title: "Pricing — EasyHire",
+    description,
+    type: "website",
+  },
 };
 
 const included = [

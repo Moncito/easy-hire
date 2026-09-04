@@ -6,6 +6,7 @@ import { createNotification, sendNewMessageEmail } from "@/lib/email";
 import { shouldSendNewMessageEmail } from "@/lib/messaging/message-notify";
 import { invalidateEmployerNav } from "@/lib/employer-cache";
 import { invalidateConversationsForParticipants } from "@/lib/conversations-cache";
+import { stampFirstEmployerResponseForMessage } from "@/lib/employer/response-metrics";
 import { requireEmployerCompany } from "@/lib/employer-auth";
 import { requireSeekerProfile } from "@/lib/seeker-auth";
 import { requireVerifiedEmail } from "@/lib/auth/credentials-recovery";
@@ -475,6 +476,16 @@ export async function sendMessage(
 
   if (role === "EMPLOYER") {
     invalidateEmployerNav(conversation.company.id);
+
+    // Site 3 of 3 for Application.firstEmployerResponseAt (see its schema
+    // comment): the employer's first message to this seeker. Only an
+    // EMPLOYER-role sender may stamp — a seeker's own message must never
+    // count as the employer's response.
+    await stampFirstEmployerResponseForMessage({
+      companyId: conversation.company.id,
+      seekerId: conversation.seeker.id,
+      jobId: conversation.jobId,
+    }).catch((err) => console.error("[messages] response-metric stamp failed:", err));
   }
 
   invalidateInboxForConversation(conversation);

@@ -12,6 +12,8 @@ import { applicationCreateSchema, applicationUpdateSchema } from "@/lib/validati
 import { invalidateEmployerWorkspace } from "@/lib/employer-cache";
 import { invalidateSeekerApplications } from "@/lib/seeker/cache";
 import { hydrateResumeFields } from "@/lib/seeker/resume-urls";
+import { recomputeVerificationScore } from "@/lib/seeker/identity-verification";
+import { isFirstEmployerResponseTransition } from "@/lib/employer/response-metrics";
 
 const candidateSeekerSelect = {
   id: true,
@@ -229,6 +231,21 @@ export async function updateApplication(applicationId: string, raw: unknown) {
     throw new ApiError("Application not found", 404);
   }
 
+  // Stamp once, the first time this application transitions into HIRED —
+  // never overwritten on a later re-hire (see the Application.hiredAt schema
+  // comment). This anchors the two-way review window (lib/reviews.ts).
+  const becameHired = data.status === "HIRED" && existing.status !== "HIRED" && !existing.hiredAt;
+
+  // Site 1 of 3 for Application.firstEmployerResponseAt (see its schema
+  // comment): the plain (non-collaborative) employer flow moving an
+  // application off APPLIED. Stamp-once via isFirstEmployerResponseTransition
+  // — never overwritten on a later status change.
+  const becameResponded = isFirstEmployerResponseTransition(
+    existing.status,
+    data.status,
+    Boolean(existing.firstEmployerResponseAt)
+  );
+
   const updated = await prisma.application.update({
     where: { id: applicationId },
     data: {
@@ -236,6 +253,8 @@ export async function updateApplication(applicationId: string, raw: unknown) {
       ...(data.internalNotes !== undefined ? { internalNotes: data.internalNotes } : {}),
       ...(data.rating !== undefined ? { rating: data.rating } : {}),
       ...(data.rejectionReason !== undefined ? { rejectionReason: data.rejectionReason } : {}),
+      ...(becameHired ? { hiredAt: new Date() } : {}),
+      ...(becameResponded ? { firstEmployerResponseAt: new Date() } : {}),
     },
     include: {
       seeker: {
@@ -269,6 +288,15 @@ export async function updateApplication(applicationId: string, raw: unknown) {
       companyName: existing.job.company.companyName,
       status: data.status as NonRejectionApplicationStatus,
     }).catch((err) => console.error("[applications] status-change notify failed:", err));
+  }
+
+  if (becameHired) {
+    // A confirmed hire feeds the "history" factor of the verification score
+    // (see lib/seeker/verification-score.ts). Fire-and-forget: must never
+    // block the hiring transition.
+    void recomputeVerificationScore(existing.seekerId).catch((err) =>
+      console.error("[applications] verification score recompute failed:", err)
+    );
   }
 
   invalidateEmployerWorkspace(existing.job.company.id);

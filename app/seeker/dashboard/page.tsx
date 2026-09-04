@@ -18,6 +18,8 @@ import WithdrawApplicationButton from "@/components/seeker/WithdrawApplicationBu
 import MessageEmployerButton from "@/components/seeker/MessageEmployerButton";
 import SeekerInterviewsSection from "@/components/seeker/SeekerInterviewsSection";
 import { SeekerNavBandBleed } from "@/components/seeker/SeekerNavBand";
+import ReviewablePromptList from "@/components/reviews/ReviewablePromptList";
+import { listReviewableApplications } from "@/lib/reviews";
 
 const STATUS_PIPELINE = ["APPLIED", "SHORTLISTED", "INTERVIEW", "HIRED", "REJECTED"] as const;
 type StatusFilter = (typeof STATUS_PIPELINE)[number] | "ALL";
@@ -47,9 +49,10 @@ export default async function SeekerDashboardPage({
   const statusFilter: StatusFilter =
     normalized && STATUS_FILTERS.includes(normalized) ? normalized : "ALL";
 
-  const [{ profile, jobAlerts }, interviews] = await Promise.all([
+  const [{ profile, jobAlerts }, interviews, reviewablePrompts] = await Promise.all([
     getSeekerDashboardProfile(userId, session.user.name ?? ""),
     getSeekerInterviews(userId),
+    listReviewableApplications(userId),
   ]);
 
   // Wall-clock read for splitting interviews into upcoming/past. Computed
@@ -133,6 +136,11 @@ export default async function SeekerDashboardPage({
           </h1>
           <p className="mt-1.5 text-sm text-ink/50">Your job search command center</p>
         </div>
+
+        {/* ── Post-hire reviews to write ── */}
+        {reviewablePrompts.length > 0 && (
+          <ReviewablePromptList entries={reviewablePrompts} nowMs={nowMs} />
+        )}
 
         {/* ── Stats strip ── */}
         <SeekerDashboardStats

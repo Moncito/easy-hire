@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/lib/api-error";
 import { verificationDocumentCreateSchema } from "@/lib/validations/verification";
-import { VERIFICATION_DOC_BUCKET, resolveSignedUrl } from "@/lib/storage";
+import { VERIFICATION_DOC_BUCKET, assertOwnedObjectPath, resolveSignedUrl } from "@/lib/storage";
 import type { VerificationDocument } from "@prisma/client";
 
 export const MAX_VERIFICATION_DOCUMENTS = 5;
@@ -50,6 +50,8 @@ export async function createVerificationDocument(companyId: string, raw: unknown
     throw new ApiError("Company not found", 404);
   }
 
+  const fileUrl = assertOwnedObjectPath(VERIFICATION_DOC_BUCKET, input.fileUrl, [`${company.userId}/`]);
+
   const docCount = await prisma.verificationDocument.count({ where: { companyId } });
   if (docCount >= MAX_VERIFICATION_DOCUMENTS) {
     throw new ApiError(`You can upload up to ${MAX_VERIFICATION_DOCUMENTS} documents`, 400);
@@ -61,7 +63,7 @@ export async function createVerificationDocument(companyId: string, raw: unknown
     prisma.verificationDocument.create({
       data: {
         companyId,
-        fileUrl: input.fileUrl,
+        fileUrl,
         fileName: input.fileName,
         docType: input.docType,
       },

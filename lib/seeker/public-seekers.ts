@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/lib/api-error";
 import { signResumeUrl } from "@/lib/seeker/resume-urls";
+import { verificationTier } from "@/lib/seeker/verification-score";
 
 export async function getPublicSeeker(id: string) {
   const seeker = await prisma.seekerProfile.findFirst({
@@ -26,6 +27,12 @@ export async function getPublicSeeker(id: string) {
       photoUrl: true,
       resumeUrl: true,
       updatedAt: true,
+      // Identity-confidence signals only — never the raw documents,
+      // idVerificationRejectionReason, or idVerificationStatus itself (see
+      // lib/seeker/verification-score.ts's doc comment: this is NOT a skill
+      // measure).
+      verificationScore: true,
+      idVerifiedAt: true,
     },
   });
 
@@ -33,5 +40,9 @@ export async function getPublicSeeker(id: string) {
     throw new ApiError("Profile not found", 404);
   }
 
-  return { ...seeker, resumeUrl: await signResumeUrl(seeker.resumeUrl) };
+  return {
+    ...seeker,
+    resumeUrl: await signResumeUrl(seeker.resumeUrl),
+    verificationTier: verificationTier(seeker.verificationScore),
+  };
 }

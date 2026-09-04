@@ -4,6 +4,7 @@ import { Toaster } from "sonner";
 import AuthProvider from "@/components/providers/AuthProvider";
 import CommandPalette from "@/components/CommandPalette";
 import { getSession } from "@/lib/employer-session";
+import { BASE_URL } from "@/lib/seo/base-url";
 import "./globals.css";
 
 const spaceGrotesk = Space_Grotesk({
@@ -25,7 +26,17 @@ const ibmPlexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "EasyHire VA Solutions",
+  // Required for relative OG image URLs (including the generated
+  // app/opengraph-image.tsx) and any relative `metadata` URL fields
+  // anywhere in the app to resolve to an absolute URL.
+  metadataBase: new URL(BASE_URL),
+  title: {
+    // Child routes set a bare `title` (e.g. "Pricing") and get this
+    // suffix appended automatically — they must NOT also hardcode
+    // "— EasyHire" themselves, or it doubles up.
+    template: "%s — EasyHire",
+    default: "EasyHire VA Solutions",
+  },
   description: "Find verified VA jobs, or hire your next virtual assistant.",
 };
 

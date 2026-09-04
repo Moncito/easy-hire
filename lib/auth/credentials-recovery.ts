@@ -6,6 +6,7 @@ import { ApiError } from "@/lib/api-error";
 import { normalizeEmail } from "@/lib/email-address";
 import { passwordSchema } from "@/lib/validations/sign-up";
 import { sendEmailVerificationEmail, sendPasswordResetEmail, sendWelcomeVerificationEmail } from "@/lib/shared/email";
+import { recomputeVerificationScoreForUser } from "@/lib/seeker/identity-verification";
 
 export const PASSWORD_RESET_TTL_MS = 60 * 60 * 1000; // 1 hour
 export const EMAIL_VERIFY_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
@@ -195,7 +196,7 @@ export async function sendWelcomeVerification(
 export async function verifyEmail(rawToken: string): Promise<{ userId: string }> {
   const tokenHash = hashVerificationToken(rawToken);
 
-  return prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     const record = await tx.verificationToken.findUnique({ where: { tokenHash } });
     assertTokenUsable(record, "EMAIL_VERIFY");
 
@@ -212,4 +213,13 @@ export async function verifyEmail(rawToken: string): Promise<{ userId: string }>
 
     return { userId: record.userId };
   });
+
+  // Email verification feeds the "email" factor of the verification score
+  // — no-ops for non-seeker accounts. Fire-and-forget: must never block the
+  // verify-email flow.
+  void recomputeVerificationScoreForUser(result.userId).catch((err) =>
+    console.error("[credentials-recovery] verification score recompute failed:", err)
+  );
+
+  return result;
 }

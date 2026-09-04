@@ -35,12 +35,13 @@ model User {
 
   // Relations
   seekerProfile      SeekerProfile?
-  company             Company?
-  notifications       Notification[]
-  messagesSent        Message[]
-  exportAuditLogs     ExportAuditLog[]
-  companyMemberships  CompanyMember[]
-  verificationTokens  VerificationToken[]
+  company            Company?
+  notifications      Notification[]
+  messagesSent       Message[]
+  exportAuditLogs    ExportAuditLog[]
+  companyMemberships CompanyMember[]
+  verificationTokens VerificationToken[]
+  reviewsAuthored    Review[]
 
   @@map("users")
 }
@@ -87,44 +88,84 @@ model VerificationToken {
 // ============================================================================
 
 model SeekerProfile {
-  id               String            @id @default(cuid())
-  userId           String            @unique @map("user_id")
-  fullName         String            @map("full_name")
+  id               String                   @id @default(cuid())
+  userId           String                   @unique @map("user_id")
+  fullName         String                   @map("full_name")
   phone            String?
   location         String?
   headline         String?
   bio              String?
-  resumeUrl        String?           @map("resume_url")
+  resumeUrl        String?                  @map("resume_url")
   skills           String[]
-  desiredSalaryMin Int?              @map("desired_salary_min")
-  desiredSalaryMax Int?              @map("desired_salary_max")
-  visibility       ProfileVisibility @default(STANDARD)
-  createdAt        DateTime          @default(now()) @map("created_at")
-  updatedAt        DateTime          @updatedAt @map("updated_at")
-  availability     String?           @map("availability")
-  yearsExperience  String?           @map("years_experience")
-  linkedinUrl      String?           @map("linkedin_url")
-  portfolioUrl     String?           @map("portfolio_url")
-  certifications   String[]          @default([])
-  photoUrl         String?           @map("photo_url")
-  languages        String[]          @default([])
-  timezone         String?           @default("Asia/Manila")
-  workExperience   String[]          @default([]) @map("work_experience")
-  education        String[]          @default([])
-  resumeLabel      String?           @map("resume_label")
-  resumeUpdatedAt  DateTime?         @map("resume_updated_at")
-  resumes          String[]          @default([])
+  desiredSalaryMin Int?                     @map("desired_salary_min")
+  desiredSalaryMax Int?                     @map("desired_salary_max")
+  visibility       ProfileVisibility        @default(STANDARD)
+  createdAt        DateTime                 @default(now()) @map("created_at")
+  updatedAt        DateTime                 @updatedAt @map("updated_at")
+  availability     String?                  @map("availability")
+  yearsExperience  String?                  @map("years_experience")
+  linkedinUrl      String?                  @map("linkedin_url")
+  portfolioUrl     String?                  @map("portfolio_url")
+  certifications   String[]                 @default([])
+  photoUrl         String?                  @map("photo_url")
+  languages        String[]                 @default([])
+  timezone         String?                  @default("Asia/Manila")
+  workExperience   String[]                 @default([]) @map("work_experience")
+  education        String[]                 @default([])
+  resumeLabel      String?                  @map("resume_label")
+  resumeUpdatedAt  DateTime?                @map("resume_updated_at")
+  resumes          String[]                 @default([])
+  // Phase 4.2 — VA identity verification score. `idVerificationStatus` is
+  // null until the seeker submits their first identity document (unlike
+  // Company.verifiedStatus, which defaults to PENDING at creation) — see
+  // lib/seeker/identity-verification.ts for the submit/review flow and
+  // lib/seeker/verification-score.ts for how these feed verificationScore.
+  // This score measures IDENTITY CONFIDENCE, not skill or work quality.
+  idVerificationStatus           VerificationStatus? @map("id_verification_status")
+  idVerifiedAt                   DateTime?           @map("id_verified_at")
+  idVerificationRejectionReason  String?             @map("id_verification_rejection_reason")
+  verificationScore              Int                 @default(0) @map("verification_score")
+  verificationScoreUpdatedAt     DateTime?           @map("verification_score_updated_at")
+  // SQL-only generated column (GENERATED ALWAYS AS ... STORED), created by
+  // prisma/migrations/20260728210000_sprint5_messaging_talent. Prisma has no schema-level
+  // concept of a STORED generated column, so this is declared as an Unsupported column
+  // with a matching dbgenerated() default purely so introspection/diff tooling sees a
+  // column here instead of nothing — it does NOT recreate the GENERATED ALWAYS AS
+  // behavior and must never be the source of a migration for this column.
+  searchVector     Unsupported("tsvector")? @default(dbgenerated("((setweight(to_tsvector('english'::regconfig, COALESCE(full_name, ''::text)), 'A'::\"char\") || setweight(to_tsvector('english'::regconfig, COALESCE(headline, ''::text)), 'B'::\"char\")) || setweight(to_tsvector('english'::regconfig, COALESCE(bio, ''::text)), 'C'::\"char\"))")) @map("search_vector")
 
   // Relations
-  user          User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  applications  Application[]
-  savedJobs     SavedJob[]
-  jobAlerts     JobAlert[]
-  conversations Conversation[]
-  savedBy       SavedSeeker[]
-  savedInLists  SavedTalentListItem[]
+  user            User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  applications    Application[]
+  savedJobs       SavedJob[]
+  jobAlerts       JobAlert[]
+  conversations   Conversation[]
+  savedBy         SavedSeeker[]
+  savedInLists    SavedTalentListItem[]
+  reviewsReceived Review[]
+  identityDocuments SeekerIdentityDocument[]
 
+  @@index([searchVector], type: Gin)
+  @@index([idVerificationStatus])
   @@map("seeker_profiles")
+}
+
+// ============================================================================
+// SEEKER IDENTITY VERIFICATION (Phase 4.2)
+// ============================================================================
+
+model SeekerIdentityDocument {
+  id              String   @id @default(cuid())
+  seekerProfileId String   @map("seeker_profile_id")
+  fileUrl         String   @map("file_url") // object PATH in the private bucket, never a public URL
+  fileName        String   @map("file_name")
+  docType         String   @map("doc_type") // GOVERNMENT_ID | PROOF_OF_ADDRESS | SELFIE_WITH_ID | OTHER
+  uploadedAt      DateTime @default(now()) @map("uploaded_at")
+
+  seekerProfile SeekerProfile @relation(fields: [seekerProfileId], references: [id], onDelete: Cascade)
+
+  @@index([seekerProfileId])
+  @@map("seeker_identity_documents")
 }
 
 // ============================================================================
@@ -154,19 +195,30 @@ model Company {
   verificationRejectionReason String?            @map("verification_rejection_reason")
 
   // Relations
-  user                  User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  jobs                  Job[]
-  subscriptions         Subscription[]
-  conversations         Conversation[]
-  savedSeekers          SavedSeeker[]
-  verificationDocuments VerificationDocument[]
-  aiUsageEvents         AiUsageEvent[]
-  savedTalentLists      SavedTalentList[]
-  analyticsDailyRollups AnalyticsDailyRollup[]
-  exportAuditLogs       ExportAuditLog[]
-  collaborativeHiringEnabled Boolean @default(false) @map("collaborative_hiring_enabled")
-  members               CompanyMember[]
-  invitations           CompanyInvitation[]
+  user                       User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobs                       Job[]
+  subscriptions              Subscription[]
+  conversations              Conversation[]
+  savedSeekers               SavedSeeker[]
+  verificationDocuments      VerificationDocument[]
+  aiUsageEvents              AiUsageEvent[]
+  savedTalentLists           SavedTalentList[]
+  analyticsDailyRollups      AnalyticsDailyRollup[]
+  exportAuditLogs            ExportAuditLog[]
+  collaborativeHiringEnabled Boolean                @default(false) @map("collaborative_hiring_enabled")
+  members                    CompanyMember[]
+  invitations                CompanyInvitation[]
+  reviewsReceived            Review[]
+
+  // Denormalized public "response metrics" rollup (Phase 4.3), recomputed nightly by
+  // runResponseMetricsForAllCompanies (lib/employer/response-metrics.ts) over a rolling
+  // 90-day window of Application.firstEmployerResponseAt. responseRate/medianResponseMinutes
+  // stay null until responseSampleSize clears the minimum-sample gate in computeResponseMetrics
+  // — never publish a rate derived from a handful of applications.
+  responseRate             Int?      @map("response_rate")
+  medianResponseMinutes    Int?      @map("median_response_minutes")
+  responseSampleSize       Int?      @map("response_sample_size")
+  responseMetricsUpdatedAt DateTime? @map("response_metrics_updated_at")
 
   @@index([verifiedStatus])
   @@map("companies")
@@ -195,11 +247,11 @@ model CompanyMember {
   createdAt DateTime            @default(now()) @map("created_at")
   updatedAt DateTime            @updatedAt @map("updated_at")
 
-  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  jobAssignments JobTeamMember[]
-  evaluations    CandidateEvaluation[]
-  interviewAssignments InterviewParticipant[]
+  company               Company                @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  user                  User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobAssignments        JobTeamMember[]
+  evaluations           CandidateEvaluation[]
+  interviewAssignments  InterviewParticipant[]
   applicationActivities ApplicationActivity[]
 
   @@unique([companyId, userId])
@@ -209,16 +261,16 @@ model CompanyMember {
 }
 
 model CompanyInvitation {
-  id        String            @id @default(cuid())
-  companyId String            @map("company_id")
-  email     String
-  role      CompanyMemberRole
-  tokenHash String            @unique @map("token_hash")
-  expiresAt DateTime          @map("expires_at")
-  invitedBy String            @map("invited_by")
-  acceptedAt DateTime?        @map("accepted_at")
-  revokedAt DateTime?         @map("revoked_at")
-  createdAt DateTime          @default(now()) @map("created_at")
+  id         String            @id @default(cuid())
+  companyId  String            @map("company_id")
+  email      String
+  role       CompanyMemberRole
+  tokenHash  String            @unique @map("token_hash")
+  expiresAt  DateTime          @map("expires_at")
+  invitedBy  String            @map("invited_by")
+  acceptedAt DateTime?         @map("accepted_at")
+  revokedAt  DateTime?         @map("revoked_at")
+  createdAt  DateTime          @default(now()) @map("created_at")
 
   company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
@@ -257,28 +309,35 @@ enum VerificationStatus {
 // ============================================================================
 
 model Job {
-  id                    String         @id @default(cuid())
-  companyId             String         @map("company_id")
+  id                    String                   @id @default(cuid())
+  companyId             String                   @map("company_id")
   title                 String
   description           String
   requirements          String?
   benefits              String?
   category              String
   industry              String?
-  employmentType        EmploymentType @map("employment_type")
-  salaryMin             Int?           @map("salary_min")
-  salaryMax             Int?           @map("salary_max")
-  salaryPeriod          SalaryPeriod   @default(MONTHLY) @map("salary_period")
+  employmentType        EmploymentType           @map("employment_type")
+  salaryMin             Int?                     @map("salary_min")
+  salaryMax             Int?                     @map("salary_max")
+  salaryPeriod          SalaryPeriod             @default(MONTHLY) @map("salary_period")
   location              String
-  remoteType            RemoteType     @default(REMOTE) @map("remote_type")
-  status                JobStatus      @default(DRAFT)
-  targetHireCount       Int            @default(1) @map("target_hire_count")
-  publishedAt           DateTime?      @map("published_at")
-  reviewRejectionReason String?        @map("review_rejection_reason")
-  featuredUntil         DateTime?      @map("featured_until")
-  createdAt             DateTime       @default(now()) @map("created_at")
-  updatedAt             DateTime       @updatedAt @map("updated_at")
-  expiresAt             DateTime?      @map("expires_at")
+  remoteType            RemoteType               @default(REMOTE) @map("remote_type")
+  status                JobStatus                @default(DRAFT)
+  targetHireCount       Int                      @default(1) @map("target_hire_count")
+  publishedAt           DateTime?                @map("published_at")
+  reviewRejectionReason String?                  @map("review_rejection_reason")
+  featuredUntil         DateTime?                @map("featured_until")
+  createdAt             DateTime                 @default(now()) @map("created_at")
+  updatedAt             DateTime                 @updatedAt @map("updated_at")
+  expiresAt             DateTime?                @map("expires_at")
+  // SQL-only generated column (GENERATED ALWAYS AS ... STORED), created by
+  // prisma/migrations/20260727200000_sprint1_job_application_fields. Prisma has no
+  // schema-level concept of a STORED generated column, so this is declared as an
+  // Unsupported column with a matching dbgenerated() default purely so introspection/diff
+  // tooling sees a column here instead of nothing — it does NOT recreate the GENERATED
+  // ALWAYS AS behavior and must never be the source of a migration for this column.
+  searchVector          Unsupported("tsvector")? @default(dbgenerated("((((setweight(to_tsvector('english'::regconfig, COALESCE(title, ''::text)), 'A'::\"char\") || setweight(to_tsvector('english'::regconfig, COALESCE(description, ''::text)), 'B'::\"char\")) || setweight(to_tsvector('english'::regconfig, COALESCE(category, ''::text)), 'C'::\"char\")) || setweight(to_tsvector('english'::regconfig, COALESCE(requirements, ''::text)), 'C'::\"char\")) || setweight(to_tsvector('english'::regconfig, COALESCE(benefits, ''::text)), 'D'::\"char\"))")) @map("search_vector")
 
   // Relations
   company            Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
@@ -295,6 +354,22 @@ model Job {
   @@index([status])
   @@index([companyId, status])
   @@index([featuredUntil])
+  @@index([category])
+  @@index([publishedAt])
+  @@index([expiresAt])
+  // Matches the public job board's default listing query (lib/jobs/public-listing.ts:
+  // activeJobWhere()/buildOrderBy() default sort): WHERE status = 'ACTIVE' ORDER BY
+  // featuredUntil DESC NULLS LAST, createdAt DESC, id DESC. `status` leads because it's
+  // the one equality filter on this table that every public-board query applies (the
+  // other filter, company.verifiedStatus, lives on the joined Company table and can't
+  // be part of this composite); the remaining columns are ordered to mirror the ORDER BY
+  // exactly so Postgres can walk the index instead of sorting. The hand-authored SQL
+  // migration also adds NULLS LAST on featured_until to match the query precisely —
+  // Prisma's index DSL can't express NULLS LAST, so this Prisma-level declaration only
+  // captures the column list/direction (see migration for the exact DDL).
+  @@index([status, featuredUntil(sort: Desc), createdAt(sort: Desc), id(sort: Desc)])
+  // GIN index on the SQL-only search_vector column above (same migration as the column).
+  @@index([searchVector], type: Gin)
   @@map("jobs")
 }
 
@@ -350,30 +425,55 @@ model Application {
   rejectionReason String?           @map("rejection_reason")
   appliedAt       DateTime          @default(now()) @map("applied_at")
   updatedAt       DateTime          @updatedAt @map("updated_at")
+  // Set once, the first time this application transitions into HIRED (see
+  // lib/jobs/applications.ts's updateApplication) — never overwritten on a
+  // later re-hire, because it anchors the 14-day two-way review window
+  // (lib/reviews.ts) and `updatedAt` changes on every edit so it can't serve
+  // that purpose.
+  hiredAt         DateTime?         @map("hired_at")
+  // Same stamp-once precedent as hiredAt above, but for the *first* employer
+  // engagement with this candidate — powers the public "response rate /
+  // median response time" metrics (Phase 4.3, lib/employer/response-metrics.ts).
+  // `updatedAt` can't serve this because it also advances on internal notes
+  // and ratings, and ApplicationActivity only covers the collaborative-hiring
+  // path, not the plain employer flow. Stamped at exactly three sites — see
+  // the doc comment on each: lib/jobs/applications.ts's updateApplication,
+  // lib/collaborative-hiring-reviews.ts's updateCollaborativePipeline, and
+  // lib/messaging/messages.ts's sendMessage. Never overwritten once set.
+  firstEmployerResponseAt DateTime? @map("first_employer_response_at")
 
   // Relations
-  job     Job                 @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  seeker  SeekerProfile       @relation(fields: [seekerId], references: [id], onDelete: Cascade)
-  answers ApplicationAnswer[]
+  job         Job                   @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  seeker      SeekerProfile         @relation(fields: [seekerId], references: [id], onDelete: Cascade)
+  answers     ApplicationAnswer[]
   evaluations CandidateEvaluation[]
-  interviews   Interview[]
-  activities   ApplicationActivity[]
+  interviews  Interview[]
+  activities  ApplicationActivity[]
+  reviews     Review[]
 
   @@unique([jobId, seekerId])
   @@index([jobId])
   @@index([seekerId])
   @@index([status])
   @@index([jobId, status])
+  // Supports recomputeCompanyResponseMetrics's per-company load (lib/employer/
+  // response-metrics.ts): for each of a company's job ids, "applications whose
+  // appliedAt falls in the rolling 90-day window." `appliedAt`, not
+  // `firstEmployerResponseAt`, is the second key because the WHERE clause
+  // filters on the window bound — firstEmployerResponseAt is only *read* per
+  // row (the grace-period/qualifying decision runs in computeResponseMetrics,
+  // in JS, not in SQL) so indexing it wouldn't help this query's WHERE clause.
+  @@index([jobId, appliedAt])
   @@map("applications")
 }
 
 model ApplicationActivity {
-  id            String                   @id @default(cuid())
-  applicationId String                   @map("application_id")
+  id            String                  @id @default(cuid())
+  applicationId String                  @map("application_id")
   type          ApplicationActivityType
   body          String?
-  actorMemberId String?                  @map("actor_member_id")
-  createdAt     DateTime                 @default(now()) @map("created_at")
+  actorMemberId String?                 @map("actor_member_id")
+  createdAt     DateTime                @default(now()) @map("created_at")
 
   application Application    @relation(fields: [applicationId], references: [id], onDelete: Cascade)
   actorMember CompanyMember? @relation(fields: [actorMemberId], references: [id], onDelete: SetNull)
@@ -392,9 +492,9 @@ enum ApplicationActivityType {
 // ============================================================================
 
 model JobTeamMember {
-  id        String   @id @default(cuid())
-  jobId     String   @map("job_id")
-  memberId  String   @map("member_id")
+  id         String   @id @default(cuid())
+  jobId      String   @map("job_id")
+  memberId   String   @map("member_id")
   assignedAt DateTime @default(now()) @map("assigned_at")
 
   job    Job           @relation(fields: [jobId], references: [id], onDelete: Cascade)
@@ -414,8 +514,8 @@ model ScorecardTemplate {
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
-  job        Job                  @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  criteria   ScorecardCriterion[]
+  job         Job                   @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  criteria    ScorecardCriterion[]
   evaluations CandidateEvaluation[]
 
   @@index([jobId, isActive])
@@ -423,13 +523,13 @@ model ScorecardTemplate {
 }
 
 model ScorecardCriterion {
-  id         String   @id @default(cuid())
-  templateId String   @map("template_id")
-  label      String
+  id          String  @id @default(cuid())
+  templateId  String  @map("template_id")
+  label       String
   description String?
-  sortOrder  Int      @default(0) @map("sort_order")
+  sortOrder   Int     @default(0) @map("sort_order")
 
-  template ScorecardTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  template ScorecardTemplate  @relation(fields: [templateId], references: [id], onDelete: Cascade)
   ratings  EvaluationRating[]
 
   @@index([templateId, sortOrder])
@@ -444,19 +544,19 @@ enum EvaluationRecommendation {
 }
 
 model CandidateEvaluation {
-  id             String                   @id @default(cuid())
-  applicationId  String                   @map("application_id")
-  memberId       String                   @map("member_id")
-  templateId     String                   @map("template_id")
+  id             String                    @id @default(cuid())
+  applicationId  String                    @map("application_id")
+  memberId       String                    @map("member_id")
+  templateId     String                    @map("template_id")
   recommendation EvaluationRecommendation?
   summary        String?
-  submittedAt    DateTime?                @map("submitted_at")
-  createdAt      DateTime                 @default(now()) @map("created_at")
-  updatedAt      DateTime                 @updatedAt @map("updated_at")
+  submittedAt    DateTime?                 @map("submitted_at")
+  createdAt      DateTime                  @default(now()) @map("created_at")
+  updatedAt      DateTime                  @updatedAt @map("updated_at")
 
-  application Application       @relation(fields: [applicationId], references: [id], onDelete: Cascade)
-  member      CompanyMember     @relation(fields: [memberId], references: [id], onDelete: Cascade)
-  template    ScorecardTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  application Application        @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  member      CompanyMember      @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  template    ScorecardTemplate  @relation(fields: [templateId], references: [id], onDelete: Cascade)
   ratings     EvaluationRating[]
 
   @@unique([applicationId, memberId])
@@ -466,9 +566,9 @@ model CandidateEvaluation {
 }
 
 model EvaluationRating {
-  id           String   @id @default(cuid())
-  evaluationId String   @map("evaluation_id")
-  criterionId  String   @map("criterion_id")
+  id           String @id @default(cuid())
+  evaluationId String @map("evaluation_id")
+  criterionId  String @map("criterion_id")
   score        Int
 
   evaluation CandidateEvaluation @relation(fields: [evaluationId], references: [id], onDelete: Cascade)
@@ -485,6 +585,19 @@ enum InterviewStatus {
   CANCELLED
 }
 
+// interviews("application_id", "scheduled_at") also carries a partial unique index,
+// `interviews_application_id_scheduled_at_scheduled_key`, scoped to WHERE status =
+// 'SCHEDULED' (see prisma/migrations/20260825000000_interview_slot_unique_when_scheduled).
+// Prisma's schema DSL has no support for filtered/partial unique indexes (only
+// full-table @@unique) — attempted as part of this pass and deliberately not added:
+// declaring a plain `@@unique([applicationId, scheduledAt])` here would (a) be
+// semantically wrong, since it would also block re-scheduling after a CANCELLED
+// interview, which the partial index intentionally allows, and (b) surfaced in
+// `prisma migrate diff --from-schema-datamodel ... --to-schema-datasource ...` as a
+// mismatch the diff engine would try to reconcile by dropping the real partial index
+// and creating a full one in its place — exactly the drop this file exists to prevent.
+// Left SQL-only on purpose; do not add a `@@unique` here without re-running that diff
+// and confirming no DROP appears.
 model Interview {
   id            String          @id @default(cuid())
   applicationId String          @map("application_id")
@@ -498,7 +611,7 @@ model Interview {
   createdAt     DateTime        @default(now()) @map("created_at")
   updatedAt     DateTime        @updatedAt @map("updated_at")
 
-  application  Application          @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  application  Application            @relation(fields: [applicationId], references: [id], onDelete: Cascade)
   participants InterviewParticipant[]
 
   @@index([applicationId, scheduledAt])
@@ -507,12 +620,12 @@ model Interview {
 }
 
 model InterviewParticipant {
-  id          String          @id @default(cuid())
-  interviewId String          @map("interview_id")
-  memberId    String          @map("member_id")
+  id          String    @id @default(cuid())
+  interviewId String    @map("interview_id")
+  memberId    String    @map("member_id")
   notes       String?
   outcome     String?
-  completedAt DateTime?       @map("completed_at")
+  completedAt DateTime? @map("completed_at")
 
   interview Interview     @relation(fields: [interviewId], references: [id], onDelete: Cascade)
   member    CompanyMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
@@ -682,6 +795,13 @@ model Conversation {
   @@map("conversations")
 }
 
+// This table is added to the `supabase_realtime` publication so the server-side
+// Realtime subscription can broadcast INSERTs for live message delivery (see
+// lib/messaging/messages.ts / lib/collaborative-messages.ts). Prisma's schema DSL has no
+// representation for Postgres publications at all — there is nothing to declare here.
+// The publication is created/maintained purely in SQL:
+// prisma/migrations/20260826020000_enable_messages_realtime/migration.sql. Verify it's
+// still attached to `public.messages` after any migration that touches this table.
 model Message {
   id             String    @id @default(cuid())
   conversationId String    @map("conversation_id")
@@ -824,4 +944,73 @@ model ExportAuditLog {
   @@index([companyId, createdAt])
   @@index([userId, createdAt])
   @@map("export_audit_logs")
+}
+
+// ============================================================================
+// TWO-WAY REVIEWS (Phase 4.1)
+// ============================================================================
+//
+// Reviews unlock only from an Application that reached HIRED — that
+// proof-of-relationship anchor is what makes them non-gameable. Two nullable
+// subject FKs (subjectCompanyId / subjectSeekerId) are used instead of a
+// polymorphic subjectType/subjectId pair specifically because
+// lib/account/account-deletion.ts anonymizes Company/SeekerProfile rows IN
+// PLACE (keeps the id) rather than hard-deleting them, so real FK references
+// stay valid and a user's reviews survive their own account deletion intact.
+// A polymorphic id would carry no such referential integrity.
+//
+// Double-blind reveal: both `Review` rows for one application stay
+// PENDING_REVEAL until either (a) both sides have submitted, or (b) the
+// 14-day window off Application.hiredAt expires — see lib/reviews.ts for how
+// the simultaneous-submission race is handled (Serializable isolation) and
+// the reveal sweep for (b).
+
+enum ReviewDirection {
+  SEEKER_TO_COMPANY
+  COMPANY_TO_SEEKER
+}
+
+enum ReviewStatus {
+  PENDING_REVEAL
+  PUBLISHED
+  DISPUTED
+  HIDDEN
+}
+
+model Review {
+  id               String          @id @default(cuid())
+  applicationId    String          @map("application_id")
+  authorUserId     String          @map("author_user_id")
+  direction        ReviewDirection
+  subjectCompanyId String?         @map("subject_company_id")
+  subjectSeekerId  String?         @map("subject_seeker_id")
+  rating           Int
+  body             String
+  status           ReviewStatus    @default(PENDING_REVEAL)
+  submittedAt      DateTime        @default(now()) @map("submitted_at")
+  revealedAt       DateTime?       @map("revealed_at")
+  disputeReason    String?         @map("dispute_reason")
+  disputedAt       DateTime?       @map("disputed_at")
+  // Resolution fields — set once an admin acts on a DISPUTED review (see
+  // lib/reviews.ts resolveDisputedReview). `resolvedByUserId` is a plain id,
+  // not a relation, matching the existing "who did this" precedent of
+  // CompanyInvitation.invitedBy / ApplicationActivity.actorMemberId elsewhere
+  // in this schema — a review must never be able to cascade-delete if an
+  // admin account is later removed, and a second FK-to-User relation here
+  // would also require a disambiguating @relation name against `author`.
+  resolvedAt       DateTime?       @map("resolved_at")
+  resolvedByUserId String?         @map("resolved_by_user_id")
+  resolutionNote   String?         @map("resolution_note")
+  createdAt        DateTime        @default(now()) @map("created_at")
+  updatedAt        DateTime        @updatedAt @map("updated_at")
+
+  application    Application    @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  author         User           @relation(fields: [authorUserId], references: [id], onDelete: Cascade)
+  subjectCompany Company?       @relation(fields: [subjectCompanyId], references: [id], onDelete: Cascade)
+  subjectSeeker  SeekerProfile? @relation(fields: [subjectSeekerId], references: [id], onDelete: Cascade)
+
+  @@unique([applicationId, direction])
+  @@index([subjectCompanyId, status])
+  @@index([subjectSeekerId, status])
+  @@map("reviews")
 }

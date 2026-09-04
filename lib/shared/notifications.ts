@@ -62,15 +62,18 @@ export type NotificationRecipientRole = "SEEKER" | "EMPLOYER";
  * components/employer/EmployerNotificationBell.tsx) keep their exact
  * behaviour unchanged.
  *
- * Seeker-bound types are APPLICATION_REJECTED, NEW_MESSAGE, and
+ * Seeker-bound types are APPLICATION_REJECTED, NEW_MESSAGE,
  * INTERVIEW_SCHEDULED (written from scheduleInterview in
- * lib/collaborative-interviews.ts) — every other type is only ever written
+ * lib/collaborative-interviews.ts), and SEEKER_ID_APPROVED /
+ * SEEKER_ID_REJECTED (written from reviewSeekerVerification in
+ * lib/admin/seekers.ts, Phase 4.2) — every other type is only ever written
  * to an employer user (see createNotification call sites across /lib).
  * NEW_MESSAGE can't deep-link to a specific conversation: the notifications
  * table stores just { userId, type, message } with no conversationId, so
- * this always routes to the seeker inbox. INTERVIEW_SCHEDULED currently
- * routes to the dashboard too — there is no dedicated seeker interviews page
- * yet (backend-only Phase 2.3; a UI agent adds that landing separately).
+ * this always routes to the seeker inbox. INTERVIEW_SCHEDULED and the
+ * SEEKER_ID_* types currently route to the dashboard too — there is no
+ * dedicated seeker interviews or identity-verification page yet
+ * (backend-only; a UI agent adds those landings separately).
  */
 export function notificationHref(
   type: string,
@@ -83,6 +86,10 @@ export function notificationHref(
       case "APPLICATION_REJECTED":
         return "/seeker/dashboard";
       case "INTERVIEW_SCHEDULED":
+        return "/seeker/dashboard";
+      case "SEEKER_ID_APPROVED":
+        return "/seeker/dashboard";
+      case "SEEKER_ID_REJECTED":
         return "/seeker/dashboard";
       default:
         return "/seeker/dashboard";
