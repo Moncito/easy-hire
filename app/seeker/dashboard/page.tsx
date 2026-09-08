@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { getSeekerDashboardProfile, getSeekerInterviews } from "@/lib/seeker/dashboard";
+import { getTopSeekerJobRecommendations } from "@/lib/seeker/job-recommendations";
+import { listSavedJobIds } from "@/lib/seeker/saved-jobs";
 import { relativeTime } from "@/lib/time-ago";
 import { requireSeekerPageContext } from "@/lib/auth/seeker-session";
 import {
@@ -17,6 +19,7 @@ import ApplicationTimeline from "@/components/seeker/ApplicationTimeline";
 import WithdrawApplicationButton from "@/components/seeker/WithdrawApplicationButton";
 import MessageEmployerButton from "@/components/seeker/MessageEmployerButton";
 import SeekerInterviewsSection from "@/components/seeker/SeekerInterviewsSection";
+import RecommendedJobsSection from "@/components/seeker/RecommendedJobsSection";
 import { SeekerNavBandBleed } from "@/components/seeker/SeekerNavBand";
 import ReviewablePromptList from "@/components/reviews/ReviewablePromptList";
 import { listReviewableApplications } from "@/lib/reviews";
@@ -50,11 +53,14 @@ export default async function SeekerDashboardPage({
   const statusFilter: StatusFilter =
     normalized && STATUS_FILTERS.includes(normalized) ? normalized : "ALL";
 
-  const [{ profile, jobAlerts }, interviews, reviewablePrompts] = await Promise.all([
-    getSeekerDashboardProfile(userId, session.user.name ?? ""),
-    getSeekerInterviews(userId),
-    listReviewableApplications(userId),
-  ]);
+  const [{ profile, jobAlerts }, interviews, reviewablePrompts, recommendations, savedJobIds] =
+    await Promise.all([
+      getSeekerDashboardProfile(userId, session.user.name ?? ""),
+      getSeekerInterviews(userId),
+      listReviewableApplications(userId),
+      getTopSeekerJobRecommendations(userId, 3),
+      listSavedJobIds(userId),
+    ]);
 
   // Wall-clock read for splitting interviews into upcoming/past. Computed
   // here, outside the unstable_cache boundaries inside getSeekerDashboardProfile
@@ -287,6 +293,9 @@ export default async function SeekerDashboardPage({
 
         {/* ── Interviews ── */}
         <SeekerInterviewsSection interviews={interviews} nowMs={nowMs} />
+
+        {/* ── Recommended for you ── */}
+        <RecommendedJobsSection recommendations={recommendations} variant="dashboard" savedJobIds={savedJobIds} />
 
         {/* ── Bottom two-column grid ── */}
         <div className="grid gap-8 lg:grid-cols-2">

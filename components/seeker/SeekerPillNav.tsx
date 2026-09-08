@@ -10,6 +10,7 @@ import {
   Briefcase,
   Bookmark,
   Bell,
+  Sparkles,
   LogOut,
 } from "lucide-react";
 import { useSignOut } from "@/components/ui/useSignOut";
@@ -20,6 +21,7 @@ const navItems = [
   { label: "Messages", href: "/seeker/messages", icon: MessageSquare },
   { label: "Jobs", href: "/jobs", icon: Briefcase },
   { label: "Saved", href: "/seeker/saved-jobs", icon: Bookmark },
+  { label: "Matches", href: "/seeker/recommended", icon: Sparkles },
   { label: "Alerts", href: "/seeker/job-alerts", icon: Bell },
 ];
 
