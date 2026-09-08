@@ -252,6 +252,13 @@ export default function SeekerNotificationBell({
               })
             )}
           </div>
+          <Link
+            href="/seeker/notifications"
+            onClick={() => setOpen(false)}
+            className="block border-t border-ink/5 px-4 py-2.5 text-center text-xs font-semibold text-navy hover:underline"
+          >
+            View all
+          </Link>
         </div>
       )}
     </div>

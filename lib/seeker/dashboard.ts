@@ -92,6 +92,8 @@ export type SeekerInterview = {
   format: string;
   location: string | null;
   status: string;
+  seekerResponseStatus: string | null;
+  seekerRespondedAt: Date | null;
   jobId: string;
   jobTitle: string;
   companyName: string;
@@ -126,6 +128,8 @@ export async function getSeekerInterviews(userId: string): Promise<SeekerIntervi
           format: true,
           location: true,
           status: true,
+          seekerResponseStatus: true,
+          seekerRespondedAt: true,
           application: {
             select: {
               job: {
@@ -147,6 +151,8 @@ export async function getSeekerInterviews(userId: string): Promise<SeekerIntervi
         format: interview.format,
         location: interview.location,
         status: interview.status,
+        seekerResponseStatus: interview.seekerResponseStatus,
+        seekerRespondedAt: interview.seekerRespondedAt,
         jobId: interview.application.job.id,
         jobTitle: interview.application.job.title,
         companyName: interview.application.job.company.companyName,

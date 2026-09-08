@@ -74,6 +74,19 @@ export type NotificationRecipientRole = "SEEKER" | "EMPLOYER";
  * SEEKER_ID_* types currently route to the dashboard too — there is no
  * dedicated seeker interviews or identity-verification page yet
  * (backend-only; a UI agent adds those landings separately).
+ *
+ * INTERVIEW_ACCEPTED / INTERVIEW_DECLINED (written from respondToInterview in
+ * lib/seeker/interviews.ts) are only ever written to an employer user (the
+ * company owner, via Interview -> Application -> Job -> Company.userId) —
+ * never to a seeker — so they're only handled in the EMPLOYER branch below.
+ * Interviews are only ever created through the collaborative-hiring flow
+ * (lib/collaborative-interviews.ts), whose own workspace UI has a separate,
+ * company-scoped href map (components/workspaces/WorkspaceNotificationBell.tsx)
+ * that doesn't call this function at all. This EMPLOYER-branch mapping exists
+ * for the plain (non-collaborative) EmployerNotificationBell, which reads
+ * every notification written to a company owner's userId regardless of
+ * which surface produced it — routed to /employer/applicants, the one
+ * plain-employer page that already surfaces interview status.
  */
 export function notificationHref(
   type: string,
@@ -107,6 +120,9 @@ export function notificationHref(
     case "COMPANY_APPROVED":
     case "COMPANY_REJECTED":
       return "/employer/company-profile";
+    case "INTERVIEW_ACCEPTED":
+    case "INTERVIEW_DECLINED":
+      return "/employer/applicants";
     default:
       return "/employer/dashboard";
   }

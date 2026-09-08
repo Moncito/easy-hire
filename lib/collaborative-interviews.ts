@@ -21,15 +21,19 @@ type InterviewLifecycleRecord = {
  * identity) for one application. Deliberately only reads what an interview
  * email needs — never touches InterviewParticipant.notes/outcome or
  * CandidateEvaluation, which are employer-private.
+ *
+ * Exported (not just used internally) so lib/seeker/interviews.ts can reuse
+ * the exact same relation traversal for the in-app .ics download and the
+ * RSVP-notifies-employer side effect, instead of duplicating this query.
  */
-async function loadInterviewEmailContext(applicationId: string) {
+export async function loadInterviewEmailContext(applicationId: string) {
   const application = await prisma.application.findUnique({
     where: { id: applicationId },
     select: {
       job: {
         select: {
           title: true,
-          company: { select: { companyName: true, user: { select: { email: true } } } },
+          company: { select: { companyName: true, userId: true, user: { select: { email: true } } } },
         },
       },
       seeker: {
@@ -42,6 +46,7 @@ async function loadInterviewEmailContext(applicationId: string) {
     jobTitle: application.job.title,
     companyName: application.job.company.companyName,
     organizerEmail: application.job.company.user.email,
+    companyUserId: application.job.company.userId,
     seekerUserId: application.seeker.user.id,
     seekerEmail: application.seeker.user.email,
     seekerName: application.seeker.fullName,
@@ -57,8 +62,11 @@ async function loadInterviewEmailContext(applicationId: string) {
  * updated at least once. Reschedule and cancel add their own offsets on top
  * so a cancellation's SEQUENCE is always higher than any reschedule that
  * could have preceded it.
+ *
+ * Exported so the in-app .ics download endpoint (lib/seeker/interviews.ts)
+ * computes the same SEQUENCE an emailed invite would have used.
  */
-function priorIcsSequence(record: Pick<InterviewLifecycleRecord, "createdAt" | "updatedAt">): number {
+export function priorIcsSequence(record: Pick<InterviewLifecycleRecord, "createdAt" | "updatedAt">): number {
   return record.updatedAt.getTime() > record.createdAt.getTime() ? 1 : 0;
 }
 

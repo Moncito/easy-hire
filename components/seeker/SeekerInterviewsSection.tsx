@@ -1,4 +1,8 @@
-import { Calendar, Clock, MapPin, Video, XCircle } from "lucide-react";
+"use client";
+
+import { useState } from "react";
+import { Calendar, CalendarPlus, Check, Clock, MapPin, Video, X, XCircle } from "lucide-react";
+import { toast } from "sonner";
 import type { SeekerInterview } from "@/lib/seeker/dashboard";
 import {
   formatInterviewDuration,
@@ -6,10 +10,41 @@ import {
   interviewFormatLabel,
 } from "./interview-time";
 
-function InterviewRow({ interview }: { interview: SeekerInterview }) {
+function InterviewRow({ interview, nowMs }: { interview: SeekerInterview; nowMs: number }) {
+  const [responseStatus, setResponseStatus] = useState(interview.seekerResponseStatus);
+  const [submitting, setSubmitting] = useState(false);
+
   const cancelled = interview.status === "CANCELLED";
   const completed = interview.status === "COMPLETED";
+  const isUpcoming = interview.scheduledAt.getTime() >= nowMs;
   const iso = interview.scheduledAt.toISOString();
+
+  // .ics downloads are only ever refused for CANCELLED interviews
+  // (getInterviewIcsForSeeker), but we also hide the link for COMPLETED
+  // ones here — no value in downloading a calendar entry for an interview
+  // that already happened.
+  const showCalendarLink = !cancelled && !completed;
+  const canRespond = !cancelled && !completed && isUpcoming && responseStatus === null;
+  const showStatusBadge = !cancelled && !completed && responseStatus !== null;
+
+  async function respond(response: "ACCEPTED" | "DECLINED") {
+    setSubmitting(true);
+    const prev = responseStatus;
+    setResponseStatus(response);
+    try {
+      const res = await fetch(`/api/seeker/interviews/${interview.id}/respond`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ response }),
+      });
+      if (!res.ok) throw new Error("Failed");
+    } catch {
+      setResponseStatus(prev);
+      toast.error("Couldn't record your response. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   return (
     <li className="flex items-start gap-3 py-3.5 first:pt-4 last:pb-4">
@@ -54,6 +89,57 @@ function InterviewRow({ interview }: { interview: SeekerInterview }) {
             </span>
           )}
         </div>
+
+        {(canRespond || showStatusBadge || showCalendarLink) && (
+          <div className="mt-2.5 flex flex-wrap items-center gap-2">
+            {canRespond && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => respond("ACCEPTED")}
+                  disabled={submitting}
+                  aria-label={`Accept interview for ${interview.jobTitle} at ${interview.companyName}`}
+                  className="inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-teal px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-teal/90 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <Check className="h-3.5 w-3.5" aria-hidden="true" />
+                  Accept
+                </button>
+                <button
+                  type="button"
+                  onClick={() => respond("DECLINED")}
+                  disabled={submitting}
+                  aria-label={`Decline interview for ${interview.jobTitle} at ${interview.companyName}`}
+                  className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-ink/15 px-3 py-1.5 text-xs font-semibold text-ink/60 transition hover:border-ink/30 hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <X className="h-3.5 w-3.5" aria-hidden="true" />
+                  Decline
+                </button>
+              </>
+            )}
+
+            {showStatusBadge && (
+              <span
+                className={`rounded-lg px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
+                  responseStatus === "ACCEPTED"
+                    ? "bg-teal/10 text-teal"
+                    : "bg-ink/5 text-ink/45"
+                }`}
+              >
+                {responseStatus === "ACCEPTED" ? "Accepted" : "Declined"}
+              </span>
+            )}
+
+            {showCalendarLink && (
+              <a
+                href={`/api/seeker/interviews/${interview.id}/ics`}
+                className="inline-flex items-center gap-1.5 rounded-full border border-ink/12 px-3 py-1.5 text-xs font-semibold text-ink/55 transition hover:border-navy/25 hover:text-navy"
+              >
+                <CalendarPlus className="h-3.5 w-3.5" aria-hidden="true" />
+                Add to calendar
+              </a>
+            )}
+          </div>
+        )}
       </div>
     </li>
   );
@@ -98,7 +184,7 @@ export default function SeekerInterviewsSection({
               </h3>
               <ul className="divide-y divide-ink/5" aria-label="Upcoming interviews">
                 {upcoming.map((interview) => (
-                  <InterviewRow key={interview.id} interview={interview} />
+                  <InterviewRow key={interview.id} interview={interview} nowMs={nowMs} />
                 ))}
               </ul>
             </div>
@@ -111,7 +197,7 @@ export default function SeekerInterviewsSection({
               </h3>
               <ul className="divide-y divide-ink/5" aria-label="Past interviews">
                 {past.map((interview) => (
-                  <InterviewRow key={interview.id} interview={interview} />
+                  <InterviewRow key={interview.id} interview={interview} nowMs={nowMs} />
                 ))}
               </ul>
             </div>
