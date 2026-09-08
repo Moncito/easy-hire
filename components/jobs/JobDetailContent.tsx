@@ -1,5 +1,5 @@
 import { MapPin, Wallet, Building2, Globe, Briefcase, Clock, AlarmClock } from "lucide-react";
-import { formatEnumLabel, formatPesoRange, type SalaryPeriod } from "@/lib/format";
+import { formatEnumLabel, formatSalaryRange, type SalaryPeriod } from "@/lib/format";
 import { timeAgo, isClosingSoon, closingLabel } from "@/lib/time-ago";
 import Badge from "@/components/ui/Badge";
 import Divider from "@/components/ui/Divider";
@@ -115,7 +115,7 @@ export default function JobDetailContent({
             </span>
             <span className="inline-flex items-center gap-1.5 font-data font-semibold text-ink/80">
               <Wallet className="h-3.5 w-3.5 text-navy/50" aria-hidden="true" />
-              {formatPesoRange(job.salaryMin, job.salaryMax, job.salaryPeriod as SalaryPeriod)}
+              {formatSalaryRange(job.salaryMin, job.salaryMax, job.salaryPeriod as SalaryPeriod)}
             </span>
             {job.publishedAt && (
               <span className="inline-flex items-center gap-1.5 text-xs text-ink/45">

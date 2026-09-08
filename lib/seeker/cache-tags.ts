@@ -12,6 +12,10 @@ export function seekerSavedJobsTag(userId: string) {
   return `seeker-saved-jobs-${userId}`;
 }
 
+export function seekerSavedJobFoldersTag(userId: string) {
+  return `seeker-saved-job-folders-${userId}`;
+}
+
 export function seekerJobAlertsTag(userId: string) {
   return `seeker-job-alerts-${userId}`;
 }

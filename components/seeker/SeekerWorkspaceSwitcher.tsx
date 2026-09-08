@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { BriefcaseBusiness, Building2, Check, ChevronDown, UsersRound } from "lucide-react";
 
@@ -35,10 +36,11 @@ function roleLabel(role: string) {
 function CompanyMark({ workspace }: { workspace: Workspace }) {
   if (workspace.company.logoUrl) {
     return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
+      <Image
         src={workspace.company.logoUrl}
         alt=""
+        width={32}
+        height={32}
         className="h-8 w-8 shrink-0 rounded-lg object-cover ring-1 ring-ink/10"
       />
     );

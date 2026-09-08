@@ -1,5 +1,5 @@
 import { RESUME_BUCKET, resolveSignedUrl } from "@/lib/storage";
-import { formatResume, parseResume } from "@/lib/seeker-profile-format";
+import { formatResume, parseResume } from "@/lib/seeker/profile-format";
 
 /**
  * Signs a single stored resume value (bare object path, or a legacy full

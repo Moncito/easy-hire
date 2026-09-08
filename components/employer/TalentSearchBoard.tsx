@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Search, SlidersHorizontal, Download } from "lucide-react";
-import { formatPesoRange } from "@/lib/format";
+import { formatSalaryRange } from "@/lib/format";
 import { listSavedSeekers } from "@/lib/client/saved-seekers";
 import SaveSeekerButton from "@/components/employer/SaveSeekerButton";
 import MessageSeekerButton from "@/components/employer/MessageSeekerButton";
@@ -330,7 +330,7 @@ export default function TalentSearchBoard() {
                 </Link>
 
                 <p className="hidden shrink-0 font-data text-xs tabular-nums text-ink/55 sm:block">
-                  {formatPesoRange(seeker.desiredSalaryMin, seeker.desiredSalaryMax)}
+                  {formatSalaryRange(seeker.desiredSalaryMin, seeker.desiredSalaryMax)}
                 </p>
 
                 <div className="flex shrink-0 items-center gap-2">

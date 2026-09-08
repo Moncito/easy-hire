@@ -1,6 +1,6 @@
 import { Languages } from "lucide-react";
 import DashboardSurface from "@/components/employer/dashboard/DashboardSurface";
-import { displayLanguage } from "@/lib/seeker-profile-format";
+import { displayLanguage } from "@/lib/seeker/profile-format";
 
 type Props = {
   bio: string | null;

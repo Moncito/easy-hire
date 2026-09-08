@@ -83,10 +83,11 @@ export async function recomputeVerificationScore(seekerProfileId: string): Promi
   });
 
   invalidateSeekerProfile(profile.userId);
-  // No separate "public seeker" cache tag exists in this codebase today —
-  // app/seekers/[id]/page.tsx calls getPublicSeeker() uncached (no
-  // unstable_cache/cacheTag wrapper) — so invalidateSeekerProfile above is
-  // the only tag to drop. Revisit this comment if that page is later cached.
+  // Deliberately NOT calling invalidatePublicSeeker here: verificationScore
+  // recomputes are frequent/fire-and-forget background updates, and the
+  // public profile cache (lib/seeker/public-seekers.ts) already has a 30s
+  // TTL, so a stale verification badge self-heals within that window without
+  // needing an explicit tag drop on every recompute.
 
   return score;
 }

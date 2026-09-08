@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Download, Eye, FileText } from "lucide-react";
-import { fileExtensionFromLabel, primaryFromResumes } from "@/lib/seeker-profile-format";
+import { fileExtensionFromLabel, primaryFromResumes } from "@/lib/seeker/profile-format";
 import { useEmployerShell } from "@/components/employer/EmployerShellContext";
 import type { CandidateApplication } from "./types";
 

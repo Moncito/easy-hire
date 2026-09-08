@@ -3,7 +3,12 @@ import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/lib/api-error";
 import { ensureSeekerProfile } from "@/lib/seekers";
 import { seekerJobAlertsTag } from "@/lib/seeker/cache-tags";
-import { createJobAlertSchema, type CreateJobAlertInput } from "@/lib/validations/job-alert";
+import {
+  createJobAlertSchema,
+  updateJobAlertSchema,
+  type CreateJobAlertInput,
+  type UpdateJobAlertInput,
+} from "@/lib/validations/job-alert";
 
 const JOB_ALERTS_REVALIDATE_SECONDS = 30;
 
@@ -68,6 +73,48 @@ export async function createJobAlert(userId: string, raw: unknown) {
     category: alert.category,
     frequency: alert.frequency,
     createdAt: alert.createdAt.toISOString(),
+  };
+}
+
+export async function updateJobAlert(userId: string, alertId: string, raw: unknown) {
+  const input: UpdateJobAlertInput = updateJobAlertSchema.parse(raw);
+
+  const profile = await prisma.seekerProfile.findUnique({ where: { userId } });
+  if (!profile) throw new ApiError("Alert not found", 404);
+
+  const alert = await prisma.jobAlert.findUnique({ where: { id: alertId } });
+  if (!alert || alert.seekerId !== profile.id) {
+    throw new ApiError("Alert not found", 404);
+  }
+
+  const nextKeywords = input.keywords ?? alert.keywords;
+
+  // Same duplicate-keywords guard as createJobAlert, excluding this alert's
+  // own id — otherwise a no-op edit (or editing only frequency, which
+  // re-submits the unchanged keywords) would false-positive against itself.
+  const existing = await prisma.jobAlert.findFirst({
+    where: { seekerId: profile.id, keywords: nextKeywords, NOT: { id: alertId } },
+  });
+  if (existing) {
+    throw new ApiError("You already have an alert for this search", 409);
+  }
+
+  const updated = await prisma.jobAlert.update({
+    where: { id: alertId },
+    data: {
+      keywords: nextKeywords,
+      category: input.category !== undefined ? input.category || null : alert.category,
+      frequency: input.frequency ?? alert.frequency,
+    },
+  });
+  invalidateSeekerJobAlerts(userId);
+
+  return {
+    id: updated.id,
+    keywords: updated.keywords,
+    category: updated.category,
+    frequency: updated.frequency,
+    createdAt: updated.createdAt.toISOString(),
   };
 }
 

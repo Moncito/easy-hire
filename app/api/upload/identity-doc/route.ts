@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/Auth";
 import { errorResponse } from "@/lib/api-error";
 import { clientKeyFromRequest, enforceRateLimit } from "@/lib/rate-limit";
-import { requireSeekerProfile } from "@/lib/seeker-auth";
+import { requireSeekerProfile } from "@/lib/auth/seeker-guards";
 import { uploadIdentityDocument } from "@/lib/storage";
 
 // Authenticated, but each call buffers a whole file into memory — same

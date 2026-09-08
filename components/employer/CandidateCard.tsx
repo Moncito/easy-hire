@@ -1,7 +1,7 @@
 "use client";
 
 import { Paperclip } from "lucide-react";
-import { displaySkill } from "@/lib/seeker-profile-format";
+import { displaySkill } from "@/lib/seeker/profile-format";
 import EmployerAvatar from "@/components/employer/ui/EmployerAvatar";
 import { useEmployerShell } from "@/components/employer/EmployerShellContext";
 import { PRO_STAGE_CARD_ACCENT } from "@/components/employer/pipeline-stage-styles";

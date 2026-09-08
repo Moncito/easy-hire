@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { MapPin, Wallet, Clock } from "lucide-react";
-import { formatEnumLabel, formatPesoRange, type SalaryPeriod } from "@/lib/format";
+import { formatEnumLabel, formatSalaryRange, type SalaryPeriod } from "@/lib/format";
 import Badge from "@/components/ui/Badge";
 import SaveJobButton from "@/components/jobs/SaveJobButton";
 import { timeAgo, isClosingSoon, closingLabel } from "@/lib/time-ago";
@@ -103,7 +103,7 @@ export default function JobListingCard({ job, applied, saved, onToggleSaved, sho
           </span>
           <span className="inline-flex items-center gap-1.5 font-data font-semibold text-ink/75">
             <Wallet className="h-3.5 w-3.5 text-navy/50" aria-hidden="true" />
-            {formatPesoRange(job.salaryMin, job.salaryMax, (job.salaryPeriod as SalaryPeriod) || "MONTHLY")}
+            {formatSalaryRange(job.salaryMin, job.salaryMax, (job.salaryPeriod as SalaryPeriod) || "MONTHLY")}
           </span>
           {postedAt && (
             <span className="inline-flex items-center gap-1.5">

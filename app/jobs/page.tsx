@@ -4,7 +4,7 @@ import { ensureSeekerProfile } from "@/lib/seekers";
 import {
   firstIncompleteBucket,
   getSeekerProfileCompletion,
-} from "@/lib/seeker-profile-completion";
+} from "@/lib/seeker/profile-completion";
 import JobSearchPanel from "@/components/jobs/JobSearchPanel";
 import ProfileStrengthNudge from "@/components/jobs/ProfileStrengthNudge";
 import CollapsibleJobsHeader from "@/components/jobs/CollapsibleJobsHeader";

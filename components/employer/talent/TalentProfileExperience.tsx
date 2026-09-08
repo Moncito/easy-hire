@@ -1,6 +1,6 @@
 import { Briefcase } from "lucide-react";
 import DashboardSurface from "@/components/employer/dashboard/DashboardSurface";
-import { displayWorkExperience, parseWorkExperience } from "@/lib/seeker-profile-format";
+import { displayWorkExperience, parseWorkExperience } from "@/lib/seeker/profile-format";
 
 type Props = {
   workExperience: string[];

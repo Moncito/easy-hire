@@ -9,7 +9,7 @@ import {
   ShieldCheck,
   Users,
 } from "lucide-react";
-import { formatEnumLabel, formatPesoRange, type SalaryPeriod } from "@/lib/format";
+import { formatEnumLabel, formatSalaryRange, type SalaryPeriod } from "@/lib/format";
 import { relativeTime, isClosingSoon, closingLabel } from "@/lib/time-ago";
 import Badge from "@/components/ui/Badge";
 import MarkdownContent from "@/components/ui/MarkdownContent";
@@ -97,7 +97,7 @@ function buildGlanceMetrics(job: JobDetailData): GlanceMetric[] {
     {
       icon: Wallet,
       label: "Base pay",
-      value: formatPesoRange(job.salaryMin, job.salaryMax, job.salaryPeriod as SalaryPeriod),
+      value: formatSalaryRange(job.salaryMin, job.salaryMax, job.salaryPeriod as SalaryPeriod),
       hint: "Guaranteed USD range · no hidden cuts",
       accent: "marigold",
     },

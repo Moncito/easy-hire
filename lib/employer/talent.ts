@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { ApiError } from "@/lib/api-error";
 import { requireEmployerCompany } from "@/lib/employer-auth";
-import { encodedSkillVariants } from "@/lib/seeker-profile-format";
+import { encodedSkillVariants } from "@/lib/seeker/profile-format";
 import { talentSearchSchema, savedSeekerSchema } from "@/lib/validations/talent-search";
 import { signResumeUrl } from "@/lib/seeker/resume-urls";
 import { verificationTier, type VerificationTier } from "@/lib/seeker/verification-score";

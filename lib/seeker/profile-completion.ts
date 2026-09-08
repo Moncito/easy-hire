@@ -5,7 +5,7 @@ import {
   type ProfileBucketId,
 } from "@/components/seeker/profile-buckets";
 import type { ProfileVisibilityLevel } from "@/lib/validations/seeker";
-import { normalizeSkillEntry } from "@/lib/seeker-profile-format";
+import { normalizeSkillEntry } from "@/lib/seeker/profile-format";
 
 export type SeekerProfileCompletionInput = {
   fullName: string;

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Bell, Plus, Search, Trash2 } from "lucide-react";
+import { Bell, Pencil, Plus, Search, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 
 export type JobAlertItem = {
@@ -13,9 +13,13 @@ export type JobAlertItem = {
   createdAt: string;
 };
 
+type Frequency = "DAILY" | "WEEKLY";
+
 export default function JobAlertsList({ initialAlerts }: { initialAlerts: JobAlertItem[] }) {
   const [alerts, setAlerts] = useState(initialAlerts);
   const [removingId, setRemovingId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [patchingId, setPatchingId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
 
   async function remove(id: string) {
@@ -30,6 +34,27 @@ export default function JobAlertsList({ initialAlerts }: { initialAlerts: JobAle
       toast.error("Couldn't remove this alert");
     } finally {
       setRemovingId(null);
+    }
+  }
+
+  async function updateFrequency(id: string, frequency: Frequency) {
+    const prev = alerts;
+    if (prev.find((a) => a.id === id)?.frequency === frequency) return;
+    setPatchingId(id);
+    setAlerts((a) => a.map((x) => (x.id === id ? { ...x, frequency } : x)));
+    try {
+      const res = await fetch(`/api/seeker/job-alerts/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ frequency }),
+      });
+      if (!res.ok) throw new Error("Failed");
+      setEditingId(null);
+    } catch {
+      setAlerts(prev);
+      toast.error("Couldn't update this alert");
+    } finally {
+      setPatchingId(null);
     }
   }
 
@@ -119,9 +144,52 @@ export default function JobAlertsList({ initialAlerts }: { initialAlerts: JobAle
                 </div>
 
                 <div className="flex shrink-0 items-center gap-2 sm:gap-3">
-                  <span className="rounded-full bg-ink/[0.06] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-ink/45">
-                    {alert.frequency === "DAILY" ? "Daily" : "Weekly"}
-                  </span>
+                  {editingId === alert.id ? (
+                    <div
+                      role="group"
+                      aria-label={`Edit frequency for "${alert.keywords}" alert`}
+                      className="inline-flex overflow-hidden rounded-full border border-ink/12"
+                    >
+                      {(["DAILY", "WEEKLY"] as const).map((freq) => {
+                        const active = alert.frequency === freq;
+                        return (
+                          <button
+                            key={freq}
+                            type="button"
+                            aria-pressed={active}
+                            disabled={patchingId === alert.id}
+                            onClick={() => updateFrequency(alert.id, freq)}
+                            className={`cursor-pointer px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide transition disabled:cursor-not-allowed disabled:opacity-50 ${
+                              active ? "bg-marigold text-ink" : "text-ink/50 hover:bg-ink/[0.05]"
+                            }`}
+                          >
+                            {freq === "DAILY" ? "Daily" : "Weekly"}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <span className="rounded-full bg-ink/[0.06] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-ink/45">
+                      {alert.frequency === "DAILY" ? "Daily" : "Weekly"}
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setEditingId((id) => (id === alert.id ? null : alert.id))}
+                    aria-label={
+                      editingId === alert.id
+                        ? `Close frequency editor for "${alert.keywords}" alert`
+                        : `Edit frequency for "${alert.keywords}" alert`
+                    }
+                    aria-expanded={editingId === alert.id}
+                    className="inline-flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full border border-ink/12 text-ink/55 transition hover:border-navy/30 hover:text-navy"
+                  >
+                    {editingId === alert.id ? (
+                      <X className="h-3.5 w-3.5" />
+                    ) : (
+                      <Pencil className="h-3.5 w-3.5" />
+                    )}
+                  </button>
                   <button
                     type="button"
                     onClick={() => remove(alert.id)}

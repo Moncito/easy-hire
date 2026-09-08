@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check, X, Building2, MapPin, Clock } from "lucide-react";
-import { formatEnumLabel, formatPesoRange } from "@/lib/format";
+import { formatEnumLabel, formatSalaryRange } from "@/lib/format";
 
 type PendingJob = {
   id: string;
@@ -117,7 +117,7 @@ export default function JobReviewQueue({ initialJobs }: Props) {
                   <MapPin className="h-3.5 w-3.5" aria-hidden="true" />
                   {job.location}
                 </span>
-                <span>{formatPesoRange(job.salaryMin, job.salaryMax)}</span>
+                <span>{formatSalaryRange(job.salaryMin, job.salaryMax)}</span>
                 <span className="inline-flex items-center gap-1">
                   <Clock className="h-3.5 w-3.5" aria-hidden="true" />
                   Submitted {new Date(job.updatedAt).toLocaleString()}

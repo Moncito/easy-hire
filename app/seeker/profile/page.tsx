@@ -4,6 +4,7 @@ import { hydrateResumeFields } from "@/lib/seeker/resume-urls";
 import { listIdentityDocuments } from "@/lib/seeker/identity-verification";
 import SeekerProfileAccountLinks from "@/components/seeker/SeekerProfileAccountLinks";
 import SeekerProfileEditor from "@/components/seeker/SeekerProfileEditor";
+import ProfileHeaderCard from "@/components/seeker/ProfileHeaderCard";
 import IdentityVerificationPanel from "@/components/seeker/IdentityVerificationPanel";
 import { PROFILE_BUCKETS, profileBucketCompletion, type ProfileBucketId } from "@/components/seeker/profile-buckets";
 import { SeekerNavBandBleed } from "@/components/seeker/SeekerNavBand";
@@ -21,12 +22,15 @@ export default async function SeekerProfilePage({
 }) {
   const { session, userId } = await requireSeekerPageContext();
   const { bucket } = await searchParams;
-  const profile = await hydrateResumeFields(
-    await ensureSeekerProfile(userId, {
-      fullName: session.user.name ?? "",
-    })
-  );
-  const identityDocuments = await listIdentityDocuments(userId);
+  const ensuredProfile = await ensureSeekerProfile(userId, {
+    fullName: session.user.name ?? "",
+  });
+  // Both depend on the profile existing (ensured above), but not on each
+  // other — run them concurrently.
+  const [profile, identityDocuments] = await Promise.all([
+    hydrateResumeFields(ensuredProfile),
+    listIdentityDocuments(userId),
+  ]);
 
   const { completed, total } = profileBucketCompletion({
     fullName: profile.fullName ?? "",
@@ -56,11 +60,6 @@ export default async function SeekerProfilePage({
         section="Profile"
         icon={User}
         metaLabel={profile.headline?.trim() || null}
-        badge={
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-marigold/15 px-2.5 py-1 font-data text-[10px] font-bold uppercase tracking-wide text-[#8a5a10]">
-            {completed}/{total} sections
-          </span>
-        }
         hint="Professional presence"
       />
 
@@ -70,6 +69,14 @@ export default async function SeekerProfilePage({
         <p className="mt-1.5 text-sm text-ink/50">Manage your professional presence</p>
       </div>
       <SeekerProfileAccountLinks />
+      <ProfileHeaderCard
+        fullName={profile.fullName ?? ""}
+        headline={profile.headline}
+        photoUrl={profile.photoUrl}
+        completed={completed}
+        total={total}
+        idVerificationStatus={profile.idVerificationStatus}
+      />
       <SeekerProfileEditor
         profileId={profile.id}
         profileUpdatedAt={profile.updatedAt.toISOString()}

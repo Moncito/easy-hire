@@ -20,7 +20,7 @@ type Size = "sm" | "md";
 type Props = {
   /**
    * "dark" sits on the glass Harbor-Navy pill nav (SeekerPillNav); "light"
-   * sits on white chrome (SeekerSidebar, SeekerMobileBottomNav).
+   * sits on white chrome (SeekerMobileBottomNav).
    */
   variant?: Variant;
   /** Which way the dropdown opens relative to the trigger. */
@@ -28,8 +28,8 @@ type Props = {
   /** Horizontal alignment of the dropdown relative to the trigger. */
   align?: "left" | "right";
   /**
-   * "md" (default) is the original size, used by SeekerSidebar and
-   * SeekerMobileBottomNav — do not change their rendering. "sm" matches the
+   * "md" (default) is the original size, used by
+   * SeekerMobileBottomNav — do not change its rendering. "sm" matches the
    * 32px / 14px-icon footprint of the SeekerPillNav nav buttons, for use
    * only when the bell sits beside that nav.
    */
@@ -252,6 +252,13 @@ export default function SeekerNotificationBell({
               })
             )}
           </div>
+          <Link
+            href="/seeker/notifications"
+            onClick={() => setOpen(false)}
+            className="block border-t border-ink/5 px-4 py-2.5 text-center text-xs font-semibold text-navy hover:underline"
+          >
+            View all
+          </Link>
         </div>
       )}
     </div>

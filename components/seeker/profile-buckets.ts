@@ -4,7 +4,7 @@ import {
   parseEducation,
   parseWorkExperience,
   skillName,
-} from "@/lib/seeker-profile-format";
+} from "@/lib/seeker/profile-format";
 
 export type ProfileBucketId =
   | "summary"

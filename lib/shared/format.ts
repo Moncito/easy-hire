@@ -45,9 +45,6 @@ export function formatSalaryRange(
   return `Up to ${fmt(max!)}${suffix}`;
 }
 
-/** @deprecated Use formatSalaryRange — job pay is USD. */
-export const formatPesoRange = formatSalaryRange;
-
 export function formatEnumLabel(value: string) {
   return value.replace(/_/g, " ");
 }

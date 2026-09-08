@@ -48,7 +48,7 @@ const POSTED_WITHIN_MS: Record<string, number> = {
   "30d": 30 * 24 * 60 * 60 * 1000,
 };
 
-function baseActiveJobWhere(): Prisma.JobWhereInput[] {
+export function baseActiveJobWhere(): Prisma.JobWhereInput[] {
   const now = new Date();
   return [
     { status: "ACTIVE" },
@@ -428,6 +428,9 @@ async function getPublicJobUncached(jobId: string) {
           verifiedStatus: true,
           headquarters: true,
           highlights: true,
+          responseRate: true,
+          medianResponseMinutes: true,
+          responseSampleSize: true,
         },
       },
       screeningQuestions: {

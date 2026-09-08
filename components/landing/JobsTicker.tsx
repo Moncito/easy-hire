@@ -4,7 +4,7 @@ import type { CSSProperties } from "react";
 import Link from "next/link";
 import { ArrowRight, BadgeCheck, Sparkles } from "lucide-react";
 import type { PublicJobListItem } from "@/lib/public-jobs";
-import { formatPesoRange, formatEnumLabel } from "@/lib/format";
+import { formatSalaryRange, formatEnumLabel } from "@/lib/format";
 import type { SalaryPeriod } from "@/lib/format";
 
 interface JobsTickerProps {
@@ -99,7 +99,7 @@ function MarqueeRow({
 function JobCard({ job, inert = false }: { job: PublicJobListItem; inert?: boolean }) {
   const salary =
     job.salaryMin != null || job.salaryMax != null
-      ? formatPesoRange(job.salaryMin, job.salaryMax, job.salaryPeriod as SalaryPeriod)
+      ? formatSalaryRange(job.salaryMin, job.salaryMax, job.salaryPeriod as SalaryPeriod)
       : "Salary undisclosed";
 
   return (

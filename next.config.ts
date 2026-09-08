@@ -6,6 +6,15 @@ const nextConfig: NextConfig = {
       dynamic: 30,
     },
   },
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "**.supabase.co",
+        pathname: "/storage/v1/object/public/**",
+      },
+    ],
+  },
   // Bundle the Linux query engine on Vercel; avoid serverExternalPackages here
   // because it breaks Turbopack dev resolution of `.prisma/client/default`.
   outputFileTracingIncludes: {

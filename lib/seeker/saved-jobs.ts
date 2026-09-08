@@ -52,6 +52,10 @@ export function listSavedJobs(userId: string) {
       return saved
         .filter((s) => s.job.status === "ACTIVE")
         .map((s) => ({
+          // The underlying SavedJob row's id — needed by addJobToFolder as
+          // `savedJobId`. Named distinctly from `job.id` so call sites can't
+          // confuse the two.
+          savedJobId: s.id,
           savedAt: s.savedAt.toISOString(),
           job: {
             id: s.job.id,
@@ -83,6 +87,17 @@ export async function saveJob(userId: string, jobId: string) {
   }
 
   const profile = await ensureSeekerProfile(userId);
+
+  const alreadySaved = await prisma.savedJob.findUnique({
+    where: { seekerId_jobId: { seekerId: profile.id, jobId } },
+  });
+
+  if (!alreadySaved) {
+    const savedCount = await prisma.savedJob.count({ where: { seekerId: profile.id } });
+    if (savedCount >= 200) {
+      throw new ApiError("You've reached the maximum number of saved jobs (200)", 400);
+    }
+  }
 
   await prisma.savedJob.upsert({
     where: { seekerId_jobId: { seekerId: profile.id, jobId } },

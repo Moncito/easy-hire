@@ -61,12 +61,16 @@ function buildBaseSalary(job: PublicJobForJsonLd) {
 
   return {
     "@type": "MonetaryAmount",
-    // There is no currency column on Job (prisma/schema.prisma) — PHP is a
-    // fixed, safe assumption rather than a guess, because the whole app
-    // renders every price with ₱ (see `formatPhp` in
-    // `components/employers/EmployerSalaryGuide.tsx`) and this is a
-    // Philippines-only VA marketplace.
-    currency: "PHP",
+    // There is no currency column on Job (prisma/schema.prisma), so this is
+    // a fixed assumption rather than per-row data — but it's grounded in how
+    // salaryMin/salaryMax are actually collected and rendered: the employer
+    // job form (`components/employer/JobForm.tsx`) labels these fields
+    // "Minimum (USD/mo)" / "Maximum (USD/mo)" and states the range is in US
+    // dollars, and `formatSalaryRange` (`lib/shared/format.ts`) — the
+    // function that renders every job's pay on the site — formats them with
+    // a `$` prefix. If a currency column is ever added to Job, this should
+    // be revisited to read from it instead of assuming USD.
+    currency: "USD",
     value: {
       "@type": "QuantitativeValue",
       unitText,

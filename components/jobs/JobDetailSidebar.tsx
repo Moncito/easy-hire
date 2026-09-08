@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import ApplyButton from "@/components/jobs/ApplyButton";
 import SaveJobButton from "@/components/jobs/SaveJobButton";
+import ResponseMetricsBadge from "@/components/companies/ResponseMetricsBadge";
 
 type Company = {
   id: string;
@@ -9,6 +10,9 @@ type Company = {
   logoUrl: string | null;
   industry: string | null;
   verifiedStatus: string;
+  responseRate: number | null;
+  medianResponseMinutes: number | null;
+  responseSampleSize: number | null;
 };
 
 type ApplyProps = {
@@ -94,6 +98,15 @@ export default function JobDetailSidebar({
             </div>
           </div>
           <SaveJobButton jobId={jobId} saved={isSaved} className="shrink-0" />
+        </div>
+
+        <div className="mt-4">
+          <ResponseMetricsBadge
+            responseRate={company.responseRate}
+            medianResponseMinutes={company.medianResponseMinutes}
+            responseSampleSize={company.responseSampleSize}
+            size="sm"
+          />
         </div>
 
         <Link

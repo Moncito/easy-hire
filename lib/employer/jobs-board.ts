@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import type { AttentionItem } from "@/lib/employer-analytics";
-import { formatPesoRange, type SalaryPeriod } from "@/lib/format";
+import { formatSalaryRange, type SalaryPeriod } from "@/lib/format";
 
 export type EmployerJobCardData = {
   id: string;
@@ -140,7 +140,7 @@ export function formatJobSubtitle(
 ) {
   const remote = REMOTE_LABELS[job.remoteType] ?? job.remoteType;
   const employment = EMPLOYMENT_LABELS[job.employmentType] ?? job.employmentType.replace("_", " ");
-  const salary = formatPesoRange(
+  const salary = formatSalaryRange(
     job.salaryMin,
     job.salaryMax,
     job.salaryPeriod as SalaryPeriod

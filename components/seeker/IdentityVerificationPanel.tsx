@@ -181,10 +181,32 @@ export default function IdentityVerificationPanel({
   }
 
   return (
-    <section className="rounded-2xl border border-ink/8 bg-white p-6 lg:p-7">
+    <section
+      id="identity-verification"
+      className="scroll-mt-28 relative overflow-hidden rounded-[28px] bg-[#FDFBF6] p-6 lg:p-11"
+    >
+      {/* Soft marigold-tinted wash + a faint teal accent blob replace the
+          hard white box + border — a deliberately distinct "trust moment"
+          treatment, per the approved profile-redesign mockup. */}
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{ backgroundImage: "radial-gradient(circle at 8% 0%, rgba(242,169,59,0.12), transparent 55%)" }}
+        aria-hidden="true"
+      />
+      <div
+        className="pointer-events-none absolute right-0 top-0 h-[220px] w-[220px]"
+        style={{ backgroundImage: "radial-gradient(circle, rgba(31,128,115,0.08), transparent 70%)" }}
+        aria-hidden="true"
+      />
+
+      {/* Everything below is wrapped in one relative layer so it paints
+          above the two absolute wash/blob overlays (position:absolute
+          content paints after static content by default, regardless of
+          DOM order — this wrapper keeps that from covering real content). */}
+      <div className="relative">
       <div className="mb-1 h-0.5 w-10 rounded-full bg-marigold" />
       <div className="mb-5 mt-3">
-        <h2 className="font-display text-xl font-bold text-ink">Identity verification</h2>
+        <h2 className="font-display text-xl font-bold text-ink lg:text-[26px]">Identity verification</h2>
         <p className="mt-1.5 max-w-2xl text-sm text-ink/55">{VERIFICATION_QUALIFIER} Employers see your
           badge on your public profile and in talent search.</p>
       </div>
@@ -265,27 +287,30 @@ export default function IdentityVerificationPanel({
       )}
 
       <div className="mb-6">
-        <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-ink/45">
+        <h3 className="mb-4 text-xs font-semibold uppercase tracking-wider text-ink/45">
           How your score is calculated
         </h3>
-        <div className="grid gap-3 sm:grid-cols-3">
-          <BreakdownRow
+        <div className="grid gap-6 sm:grid-cols-3 sm:gap-0">
+          <BreakdownColumn
             label="Identity document"
             earned={identityEarned}
             max={VERIFICATION_SCORE_WEIGHTS.identity}
             hint={localStatus === "APPROVED" ? "Approved" : "Awaiting an approved ID"}
+            className="sm:pr-7"
           />
-          <BreakdownRow
+          <BreakdownColumn
             label="Profile completeness"
             earned={profileEarned}
             max={VERIFICATION_SCORE_WEIGHTS.profile}
             hint={`${profileBucketsCompleted}/${profileBucketsTotal} sections filled`}
+            className="sm:border-l sm:border-r sm:border-ink/8 sm:px-7"
           />
-          <BreakdownRow
+          <BreakdownColumn
             label="Email & hire history"
             earned={trustSignalsEarned}
             max={trustSignalsMax}
             hint="Verified email + confirmed hires, tracked automatically"
+            className="sm:pl-7"
           />
         </div>
       </div>
@@ -362,27 +387,32 @@ export default function IdentityVerificationPanel({
             }}
           />
 
+          {/* Dropzone-styled trigger — there's no real drag-and-drop here,
+              this is still the same click-to-upload button, just restyled
+              to look like a dropzone per the mockup. */}
           <button
             type="button"
             disabled={uploading || atCap}
             onClick={() => fileInputRef.current?.click()}
-            className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-ink/15 bg-white px-4 py-3 text-sm font-semibold text-ink/70 transition hover:border-marigold/40 hover:bg-marigold/5 hover:text-[#8a5a10] disabled:cursor-not-allowed disabled:opacity-50"
+            aria-describedby="identity-doc-help"
+            className="flex w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-marigold/50 bg-white/50 px-4 py-8 text-center transition hover:border-marigold hover:bg-marigold/8 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {uploading ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-                Uploading…
-              </>
+              <Loader2 className="h-6 w-6 animate-spin text-marigold" aria-hidden="true" />
             ) : (
-              <>
-                <Upload className="h-4 w-4" aria-hidden="true" />
-                {atCap ? `Document limit reached (${MAX_IDENTITY_DOCUMENTS})` : "Upload document"}
-              </>
+              <Upload className="h-6 w-6 text-marigold" aria-hidden="true" />
             )}
+            <span className="text-sm font-semibold text-ink">
+              {uploading
+                ? "Uploading…"
+                : atCap
+                  ? `Document limit reached (${MAX_IDENTITY_DOCUMENTS})`
+                  : "Upload document"}
+            </span>
+            <span id="identity-doc-help" className="text-xs text-ink/40">
+              PDF, JPG, or PNG · up to {MAX_IDENTITY_DOCUMENTS} files
+            </span>
           </button>
-          <p id="identity-doc-help" className="text-[11px] leading-relaxed text-ink/40">
-            PDF, JPG, or PNG · up to {MAX_IDENTITY_DOCUMENTS} files
-          </p>
 
           {(localStatus === null || localStatus === "REJECTED") && (
             <button
@@ -396,24 +426,27 @@ export default function IdentityVerificationPanel({
           )}
         </div>
       )}
+      </div>
     </section>
   );
 }
 
-function BreakdownRow({
+function BreakdownColumn({
   label,
   earned,
   max,
   hint,
+  className = "",
 }: {
   label: string;
   earned: number;
   max: number;
   hint: string;
+  className?: string;
 }) {
   const pct = max > 0 ? Math.min(100, Math.round((earned / max) * 100)) : 0;
   return (
-    <div className="rounded-xl border border-ink/8 bg-mist/40 p-3.5">
+    <div className={className}>
       <div className="flex items-center justify-between gap-2">
         <p className="text-xs font-semibold text-ink">{label}</p>
         <p className="font-data text-xs font-semibold text-ink/70">

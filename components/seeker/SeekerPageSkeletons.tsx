@@ -112,6 +112,113 @@ export function SeekerDashboardSkeleton() {
   );
 }
 
+/**
+ * Shared list-page skeleton for thin seeker list routes (job alerts, saved
+ * jobs, and similar). Parameterized so callers can opt into a search/filter
+ * bar and a denser "detailed" row (larger avatar + extra description line)
+ * without duplicating the nav band + Bone markup per route.
+ */
+export function SeekerListPageSkeleton({
+  titleWidth = "w-40",
+  subtitleWidth = "w-64",
+  showSearchBar = false,
+  filterPillCount = 0,
+  showSignalChips = false,
+  showFolderBar = false,
+  folderPillCount = 2,
+  rowCount = 3,
+  variant = "compact",
+}: {
+  titleWidth?: string;
+  subtitleWidth?: string;
+  showSearchBar?: boolean;
+  /** Filter pills. Rendered beside the search bar when there is one, on their own row otherwise. */
+  filterPillCount?: number;
+  /** The labelled chip row on /seeker/recommended ("What shapes your matches"). */
+  showSignalChips?: boolean;
+  /** The "All saved" + per-folder pill row on /seeker/saved-jobs, above everything else including the search bar. */
+  showFolderBar?: boolean;
+  /** Number of folder pills to bone out, not counting the leading "All saved" pill or the trailing "New folder" pill. */
+  folderPillCount?: number;
+  rowCount?: number;
+  variant?: "compact" | "detailed";
+}) {
+  const detailed = variant === "detailed";
+  return (
+    <div className="pb-16">
+      <SeekerNavBandSkeleton />
+      <div className="space-y-6 pt-6 sm:pt-8">
+        <div className="space-y-2">
+          <Bone className={`h-9 ${titleWidth}`} />
+          <Bone className={`h-4 ${subtitleWidth}`} />
+        </div>
+
+        {showFolderBar && (
+          <div className="flex flex-wrap gap-1.5">
+            <Bone className="h-7 w-20 rounded-full" />
+            {Array.from({ length: folderPillCount }).map((_, i) => (
+              <Bone key={i} className="h-7 w-24 rounded-full" />
+            ))}
+            <Bone className="h-7 w-28 rounded-full" />
+          </div>
+        )}
+
+        {showSignalChips && (
+          <div className="space-y-2">
+            <Bone className="h-3 w-40" />
+            <div className="flex flex-wrap gap-2">
+              {["w-20", "w-24", "w-24", "w-32", "w-32"].map((w, i) => (
+                <Bone key={i} className={`h-7 ${w} rounded-full`} />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {showSearchBar ? (
+          <div className="flex flex-col gap-3 lg:flex-row">
+            <Bone className="h-10 flex-1 rounded-full" />
+            {filterPillCount > 0 && (
+              <div className="flex gap-2">
+                {Array.from({ length: filterPillCount }).map((_, i) => (
+                  <Bone key={i} className="h-8 w-16 rounded-full" />
+                ))}
+              </div>
+            )}
+          </div>
+        ) : (
+          filterPillCount > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {Array.from({ length: filterPillCount }).map((_, i) => (
+                <Bone key={i} className="h-8 w-16 rounded-full" />
+              ))}
+            </div>
+          )
+        )}
+
+        <div className="divide-y divide-ink/8">
+          {Array.from({ length: rowCount }).map((_, i) => (
+            <div key={i} className="flex gap-4 py-5">
+              <Bone
+                className={
+                  detailed
+                    ? "h-12 w-12 shrink-0 rounded-xl"
+                    : "h-11 w-11 shrink-0 rounded-full"
+                }
+              />
+              <div className="flex-1 space-y-2">
+                <Bone className="h-5 w-48" />
+                <Bone className="h-3 w-32" />
+                {detailed && <Bone className="h-4 w-full max-w-sm" />}
+              </div>
+              <Bone className={detailed ? "h-9 w-24 rounded-full" : "h-8 w-20 rounded-full"} />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function SeekerProfileSkeleton() {
   return (
     <div className="pb-16 pt-6 sm:pt-8">
