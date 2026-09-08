@@ -5,6 +5,8 @@ export default function Loading() {
     <SeekerListPageSkeleton
       titleWidth="w-48"
       subtitleWidth="w-64"
+      showFolderBar
+      folderPillCount={2}
       showSearchBar
       filterPillCount={4}
       rowCount={3}

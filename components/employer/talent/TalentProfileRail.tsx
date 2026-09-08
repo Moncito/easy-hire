@@ -10,7 +10,7 @@ import {
   Link2,
   ExternalLink,
 } from "lucide-react";
-import { formatPesoRange } from "@/lib/format";
+import { formatSalaryRange } from "@/lib/format";
 import {
   displayLanguage,
   displaySkill,
@@ -54,7 +54,7 @@ export default function TalentProfileRail({ data, seekerId, canDownloadResume }:
   const languages = data.languages ?? [];
   const { completed, total } = profileBucketCompletion(data);
   const discoverable = isDiscoverableInTalentSearch(data.visibility);
-  const salary = formatPesoRange(data.desiredSalaryMin, data.desiredSalaryMax);
+  const salary = formatSalaryRange(data.desiredSalaryMin, data.desiredSalaryMax);
   const primarySkill = skills[0] ? displaySkill(skills[0]) : "—";
 
   return (

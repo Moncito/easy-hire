@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Download, MapPin } from "lucide-react";
-import { formatPesoRange } from "@/lib/format";
+import { formatSalaryRange } from "@/lib/format";
 import SaveSeekerButton from "@/components/employer/SaveSeekerButton";
 import MessageSeekerButton from "@/components/employer/MessageSeekerButton";
 import EmployerAvatar from "@/components/employer/ui/EmployerAvatar";
@@ -67,7 +67,7 @@ export default function ProTalentCard({ seeker, onToggleSaved }: Props) {
               </p>
             </div>
             <p className="hidden shrink-0 text-right font-data text-xs font-semibold tabular-nums text-ink sm:block">
-              {formatPesoRange(seeker.desiredSalaryMin, seeker.desiredSalaryMax)}
+              {formatSalaryRange(seeker.desiredSalaryMin, seeker.desiredSalaryMax)}
             </p>
           </div>
           <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink/45">
@@ -103,7 +103,7 @@ export default function ProTalentCard({ seeker, onToggleSaved }: Props) {
       )}
 
       <p className="mt-2 font-data text-xs tabular-nums text-ink/55 sm:hidden">
-        {formatPesoRange(seeker.desiredSalaryMin, seeker.desiredSalaryMax)}
+        {formatSalaryRange(seeker.desiredSalaryMin, seeker.desiredSalaryMax)}
       </p>
 
       <div className="mt-auto flex flex-wrap items-center gap-2 pt-4">

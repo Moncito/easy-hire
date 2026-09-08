@@ -103,6 +103,52 @@ export type RecommendationSeekerInput = {
   availability: string | null;
 };
 
+export type RecommendationSignal = {
+  key: "skills" | "headline" | "location" | "salary" | "availability";
+  present: boolean;
+  /** Max points this signal can contribute, from RECOMMENDATION_WEIGHTS. */
+  weight: number;
+};
+
+/**
+ * Derives which scorer inputs this seeker has actually filled in, so the UI
+ * can show what's shaping their matches and what would sharpen them. Pure —
+ * reuses the same predicates the scorer itself uses (`usableNormalizedSkills`,
+ * `hasHeadline`, `hasDesiredSalaryRange`) so "present" here always agrees
+ * with what actually earns points above. Ordered by descending weight;
+ * there's deliberately no `recency` entry — that's a property of the job,
+ * not something the seeker controls.
+ */
+export function recommendationSignals(seeker: RecommendationSeekerInput): RecommendationSignal[] {
+  return [
+    {
+      key: "skills",
+      present: usableNormalizedSkills(seeker.skills).length > 0,
+      weight: RECOMMENDATION_WEIGHTS.skills,
+    },
+    {
+      key: "headline",
+      present: hasHeadline(seeker.headline),
+      weight: RECOMMENDATION_WEIGHTS.headline,
+    },
+    {
+      key: "location",
+      present: !!seeker.location && seeker.location.trim().length > 0,
+      weight: RECOMMENDATION_WEIGHTS.location,
+    },
+    {
+      key: "salary",
+      present: hasDesiredSalaryRange(seeker.desiredSalaryMin, seeker.desiredSalaryMax),
+      weight: RECOMMENDATION_WEIGHTS.salary,
+    },
+    {
+      key: "availability",
+      present: !!seeker.availability && seeker.availability.trim().length > 0,
+      weight: RECOMMENDATION_WEIGHTS.availability,
+    },
+  ];
+}
+
 export type RecommendationJobInput = {
   title: string;
   description: string;
@@ -318,6 +364,17 @@ export function scoreJobForSeeker(
 
   candidates.sort((a, b) => (b.points !== a.points ? b.points - a.points : a.priority - b.priority));
 
+  // The skills reason (priority 0) is the only reason naming something
+  // concrete about the seeker, and it's half of the `relevant` gate — so
+  // whenever it scored above zero, surface it first regardless of how its
+  // points compare to the profile-independent components (location, recency,
+  // etc). Everything else keeps the points-desc/priority ordering above.
+  const skillsIndex = candidates.findIndex((c) => c.priority === 0);
+  if (skillsIndex > 0) {
+    const [skillsCandidate] = candidates.splice(skillsIndex, 1);
+    candidates.unshift(skillsCandidate);
+  }
+
   const reasons = candidates.slice(0, 3).map((c) => c.text);
   const relevant = skills.points > 0 || headline.points > 0;
 
@@ -354,8 +411,8 @@ export type RecommendedJob = {
 };
 
 export type SeekerRecommendations =
-  | { status: "ok"; items: RecommendedJob[] }
-  | { status: "profile_incomplete"; items: [] };
+  | { status: "ok"; items: RecommendedJob[]; signals: RecommendationSignal[] }
+  | { status: "profile_incomplete"; items: []; signals: RecommendationSignal[] };
 
 type RecommendationProfile = {
   id: string;
@@ -516,16 +573,19 @@ export async function getSeekerJobRecommendations(userId: string): Promise<Seeke
   const candidateJobs = reviveDates(pool);
   const { profile, appliedJobIds } = reviveDates(profileData);
 
-  if (!profile || isColdStartProfile(profile)) {
-    return { status: "profile_incomplete", items: [] };
+  if (!profile) {
+    // No seeker profile row at all — every signal is absent, not an empty
+    // list, so the UI always has the full five to render.
+    const emptySeekerInput: RecommendationSeekerInput = {
+      skills: [],
+      headline: null,
+      location: null,
+      desiredSalaryMin: null,
+      desiredSalaryMax: null,
+      availability: null,
+    };
+    return { status: "profile_incomplete", items: [], signals: recommendationSignals(emptySeekerInput) };
   }
-
-  // NOTE: take: 200 (RECOMMENDATION_CANDIDATE_POOL_TAKE) is applied to the
-  // shared pool BEFORE this per-seeker applied-jobs filter, so a seeker who
-  // has applied to many of the newest jobs sees a slightly smaller effective
-  // pool than one who hasn't. Acceptable for MVP — not a bug.
-  const appliedJobIdSet = new Set(appliedJobIds);
-  const jobs = candidateJobs.filter((job) => !appliedJobIdSet.has(job.id));
 
   const seekerInput: RecommendationSeekerInput = {
     skills: profile.skills,
@@ -535,6 +595,18 @@ export async function getSeekerJobRecommendations(userId: string): Promise<Seeke
     desiredSalaryMax: profile.desiredSalaryMax,
     availability: profile.availability,
   };
+  const signals = recommendationSignals(seekerInput);
+
+  if (isColdStartProfile(profile)) {
+    return { status: "profile_incomplete", items: [], signals };
+  }
+
+  // NOTE: take: 200 (RECOMMENDATION_CANDIDATE_POOL_TAKE) is applied to the
+  // shared pool BEFORE this per-seeker applied-jobs filter, so a seeker who
+  // has applied to many of the newest jobs sees a slightly smaller effective
+  // pool than one who hasn't. Acceptable for MVP — not a bug.
+  const appliedJobIdSet = new Set(appliedJobIds);
+  const jobs = candidateJobs.filter((job) => !appliedJobIdSet.has(job.id));
 
   const scored = jobs
     .map((job) => {
@@ -583,12 +655,12 @@ export async function getSeekerJobRecommendations(userId: string): Promise<Seeke
     reasons,
   }));
 
-  return { status: "ok", items };
+  return { status: "ok", items, signals };
 }
 
 /** Thin wrapper over getSeekerJobRecommendations for the dashboard's "recommended for you" card. */
 export async function getTopSeekerJobRecommendations(userId: string, limit = 3): Promise<SeekerRecommendations> {
   const result = await getSeekerJobRecommendations(userId);
   if (result.status !== "ok") return result;
-  return { status: "ok", items: result.items.slice(0, limit) };
+  return { status: "ok", items: result.items.slice(0, limit), signals: result.signals };
 }

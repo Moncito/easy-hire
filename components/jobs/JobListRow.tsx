@@ -1,7 +1,7 @@
 "use client";
 
 import { MapPin, Wallet } from "lucide-react";
-import { formatEnumLabel, formatPesoRange, type SalaryPeriod } from "@/lib/format";
+import { formatEnumLabel, formatSalaryRange, type SalaryPeriod } from "@/lib/format";
 import { timeAgo, isClosingSoon, closingLabel } from "@/lib/time-ago";
 import Badge from "@/components/ui/Badge";
 import JobListQuickActions from "@/components/jobs/JobListQuickActions";
@@ -103,7 +103,7 @@ export default function JobListRow({ job, active, applied, saved, onToggleSaved,
             </span>
             <span className="inline-flex items-center gap-1 font-data font-semibold text-ink/65">
               <Wallet className="h-3 w-3" aria-hidden="true" />
-              {formatPesoRange(job.salaryMin, job.salaryMax, (job.salaryPeriod as SalaryPeriod) || "MONTHLY")}
+              {formatSalaryRange(job.salaryMin, job.salaryMax, (job.salaryPeriod as SalaryPeriod) || "MONTHLY")}
             </span>
           </div>
           {(job.publishedAt ?? job.createdAt) && (

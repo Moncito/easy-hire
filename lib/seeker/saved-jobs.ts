@@ -52,6 +52,10 @@ export function listSavedJobs(userId: string) {
       return saved
         .filter((s) => s.job.status === "ACTIVE")
         .map((s) => ({
+          // The underlying SavedJob row's id — needed by addJobToFolder as
+          // `savedJobId`. Named distinctly from `job.id` so call sites can't
+          // confuse the two.
+          savedJobId: s.id,
           savedAt: s.savedAt.toISOString(),
           job: {
             id: s.job.id,

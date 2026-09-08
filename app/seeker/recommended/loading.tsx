@@ -5,6 +5,8 @@ export default function Loading() {
     <SeekerListPageSkeleton
       titleWidth="w-56"
       subtitleWidth="w-72"
+      showSignalChips
+      filterPillCount={4}
       rowCount={5}
       variant="detailed"
     />

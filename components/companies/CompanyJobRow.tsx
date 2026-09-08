@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { MapPin, Wallet, ChevronRight } from "lucide-react";
-import { formatEnumLabel, formatPesoRange } from "@/lib/format";
+import { formatEnumLabel, formatSalaryRange } from "@/lib/format";
 
 export type CompanyJobListItem = {
   id: string;
@@ -42,7 +42,7 @@ export default function CompanyJobRow({ job }: { job: CompanyJobListItem }) {
       <div className="flex shrink-0 items-center gap-3">
         <p className="font-data text-sm font-semibold text-[#111110]">
           <Wallet className="mr-1 inline h-4 w-4 text-teal/80" aria-hidden="true" />
-          {formatPesoRange(job.salaryMin, job.salaryMax)}
+          {formatSalaryRange(job.salaryMin, job.salaryMax)}
         </p>
         <ChevronRight
           className="h-4 w-4 text-[#A8A49D] transition group-hover:translate-x-0.5 group-hover:text-[#D4930A]"

@@ -15,6 +15,17 @@ type Props = {
    * row. The full page (compact=false, the default) is where detail lives.
    */
   compact?: boolean;
+  /**
+   * "band" (default) shows the qualitative label ("Strong match") plus the
+   * score — used wherever a card appears without a group heading already
+   * carrying that label (the dashboard teaser).
+   *
+   * "number" shows only the score. Used inside the grouped `/seeker/recommended`
+   * list, where the surrounding "Strong matches" <h2> already names the band —
+   * repeating "Strong match" on every card under it would be the same
+   * duplicate-metric pattern Phase B2 removed from the profile page.
+   */
+  scoreDisplay?: "band" | "number";
 };
 
 function companyInitials(name: string) {
@@ -31,18 +42,54 @@ function companyInitials(name: string) {
  * marigold/navy/ink palette — a weak match is not a warning, so Ember is
  * never used here (see CLAUDE.md: Ember is reserved for genuine
  * warnings/rejections).
+ *
+ * `heading` is the plural form used for the `/seeker/recommended` group
+ * headings; `pillLabel` is the singular form used on the card itself when
+ * `scoreDisplay="band"`. Exported as a single source of truth so the group
+ * heading and the card can never disagree about where the 70/50 cutoffs sit.
  */
-function matchBand(score: number): { label: string; className: string } {
-  if (score >= 70) {
-    return { label: "Strong match", className: "bg-marigold/20 text-[#8a5a10]" };
-  }
-  if (score >= 50) {
-    return { label: "Good match", className: "bg-navy/8 text-navy" };
-  }
-  return { label: "Possible match", className: "bg-ink/[0.06] text-ink/55" };
+export type MatchBandKey = "strong" | "good" | "worth-a-look";
+
+export type MatchBand = {
+  key: MatchBandKey;
+  /** Minimum score (inclusive) that qualifies for this band. */
+  threshold: number;
+  /** Plural, used for `/seeker/recommended` group headings. */
+  heading: string;
+  /** Singular, used on the card's own badge when scoreDisplay="band". */
+  pillLabel: string;
+  className: string;
+};
+
+export const MATCH_BANDS: MatchBand[] = [
+  {
+    key: "strong",
+    threshold: 70,
+    heading: "Strong matches",
+    pillLabel: "Strong match",
+    className: "bg-marigold/20 text-[#8a5a10]",
+  },
+  {
+    key: "good",
+    threshold: 50,
+    heading: "Good matches",
+    pillLabel: "Good match",
+    className: "bg-navy/8 text-navy",
+  },
+  {
+    key: "worth-a-look",
+    threshold: 0,
+    heading: "Worth a look",
+    pillLabel: "Possible match",
+    className: "bg-ink/[0.06] text-ink/55",
+  },
+];
+
+export function matchBand(score: number): MatchBand {
+  return MATCH_BANDS.find((b) => score >= b.threshold) ?? MATCH_BANDS[MATCH_BANDS.length - 1];
 }
 
-export default function RecommendedJobCard({ job, saved, compact = false }: Props) {
+export default function RecommendedJobCard({ job, saved, compact = false, scoreDisplay = "band" }: Props) {
   const postedAt = job.publishedAt ?? job.createdAt ?? null;
   const verified = job.company.verifiedStatus === "APPROVED";
   const band = matchBand(job.score);
@@ -80,9 +127,13 @@ export default function RecommendedJobCard({ job, saved, compact = false }: Prop
             )}
             <span
               className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${band.className}`}
-              aria-label={`Match strength: ${band.label}, score ${job.score} out of 100`}
+              aria-label={
+                scoreDisplay === "number"
+                  ? `Match score ${job.score} out of 100`
+                  : `Match strength: ${band.pillLabel}, score ${job.score} out of 100`
+              }
             >
-              {band.label}
+              {scoreDisplay === "band" && band.pillLabel}
               <span className="font-data font-semibold" aria-hidden="true">
                 {job.score}
               </span>

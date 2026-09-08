@@ -9,7 +9,7 @@ import {
   Sparkles,
   User,
 } from "lucide-react";
-import { formatPesoRange } from "@/lib/format";
+import { formatSalaryRange } from "@/lib/format";
 import {
   formatRelativeUpdated,
   parseCertification,
@@ -105,7 +105,7 @@ function buildFacts(seeker: PublicSeekerData): Fact[] {
   if (seeker.desiredSalaryMin || seeker.desiredSalaryMax) {
     facts.push({
       label: "Expected Pay",
-      value: formatPesoRange(seeker.desiredSalaryMin, seeker.desiredSalaryMax),
+      value: formatSalaryRange(seeker.desiredSalaryMin, seeker.desiredSalaryMax),
       sub: "Monthly USD",
       mono: true,
     });

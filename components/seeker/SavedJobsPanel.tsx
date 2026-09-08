@@ -3,23 +3,91 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Bookmark, MapPin, Search, Wallet, Clock } from "lucide-react";
-import { formatEnumLabel, formatPesoRange, type SalaryPeriod } from "@/lib/format";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { Bookmark, MapPin, Search, Wallet, Clock, FolderMinus } from "lucide-react";
+import { formatEnumLabel, formatSalaryRange, type SalaryPeriod } from "@/lib/format";
 import { timeAgo } from "@/lib/time-ago";
+import { fetchJsonSafe } from "@/lib/client/fetch-json";
 import SaveJobButton from "@/components/jobs/SaveJobButton";
 import type { JobCardData } from "@/components/jobs/JobListingCard";
+import SavedJobFolderBar, { type FolderSummary } from "@/components/seeker/SavedJobFolderBar";
+import FolderManagementMenu from "@/components/seeker/FolderManagementMenu";
+import AddToFolderMenu from "@/components/seeker/AddToFolderMenu";
 
 export type SavedJobEntry = {
+  /**
+   * The underlying SavedJob record's id — required to add/remove a folder
+   * item. Always present for entries loaded from a folder (getSavedJobFolder
+   * returns it directly). NOT currently available for entries loaded from
+   * the unfiltered "All saved" list: lib/seeker/saved-jobs.ts's
+   * `listSavedJobs` maps each row down to `{ savedAt, job }` and drops the
+   * SavedJob id along the way, even though Prisma fetches it. Until that's
+   * added back (one field in that mapping), "Add to folder" is hidden for
+   * All-saved rows where this is undefined — see the guard below — rather
+   * than sending a guaranteed-wrong id.
+   */
+  savedJobId?: string;
   savedAt: string;
   job: JobCardData;
 };
 
 type FilterId = "ALL" | "REMOTE" | "VERIFIED" | string;
 
+type ActiveFolder = { id: string; name: string };
+
 type Props = {
   initialSaved: SavedJobEntry[];
   appliedJobIds: string[];
+  /** All of this seeker's folders — used to populate the "Add to folder" menu in the unfiltered view, and the folder bar's pills/counts. */
+  folders: FolderSummary[];
+  /** Set when viewing `?folder=<id>`; null in the unfiltered "All saved" view. */
+  activeFolder: ActiveFolder | null;
+  /** Whether the seeker has any saved jobs at all — decides whether the folder bar shows anything when there are no folders yet. */
+  hasSavedJobs: boolean;
 };
+
+function RemoveFromFolderButton({
+  folderId,
+  savedJobId,
+  jobTitle,
+  onRemoved,
+}: {
+  folderId: string;
+  savedJobId: string;
+  jobTitle: string;
+  onRemoved: () => void;
+}) {
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+
+  async function handleRemove() {
+    setLoading(true);
+    const result = await fetchJsonSafe(`/api/seeker/saved-job-folders/${folderId}/items/${savedJobId}`, {
+      method: "DELETE",
+    });
+    setLoading(false);
+    if (!result.ok) {
+      toast.error(result.error || "Couldn't remove from folder — try again");
+      return;
+    }
+    onRemoved();
+    router.refresh();
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => void handleRemove()}
+      disabled={loading}
+      aria-label={`Remove "${jobTitle}" from this folder`}
+      className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-ink/15 bg-white px-3.5 py-2 text-xs font-semibold text-ink/60 transition hover:border-ember/30 hover:text-ember disabled:cursor-not-allowed disabled:opacity-60"
+    >
+      <FolderMinus className="h-3.5 w-3.5" aria-hidden="true" />
+      {loading ? "Removing…" : "Remove from folder"}
+    </button>
+  );
+}
 
 function companyInitials(name: string) {
   return name
@@ -30,7 +98,13 @@ function companyInitials(name: string) {
     .toUpperCase();
 }
 
-export default function SavedJobsPanel({ initialSaved, appliedJobIds }: Props) {
+export default function SavedJobsPanel({
+  initialSaved,
+  appliedJobIds,
+  folders,
+  activeFolder,
+  hasSavedJobs,
+}: Props) {
   const [saved, setSaved] = useState(initialSaved);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<FilterId>("ALL");
@@ -92,17 +166,32 @@ export default function SavedJobsPanel({ initialSaved, appliedJobIds }: Props) {
     <div className="space-y-6">
       <div className="animate-fade-in">
         <div className="flex flex-wrap items-center gap-3">
-          <h1 className="font-display text-3xl font-bold text-ink sm:text-4xl">Saved jobs</h1>
+          <h1 className="font-display text-3xl font-bold text-ink sm:text-4xl">
+            {activeFolder ? activeFolder.name : "Saved jobs"}
+          </h1>
           {saved.length > 0 && (
             <span className="rounded-full bg-ink/[0.06] px-3 py-1 text-xs font-semibold text-ink/55">
               {countLabel}
             </span>
           )}
+          {activeFolder && <FolderManagementMenu folder={activeFolder} />}
         </div>
         <p className="mt-1.5 text-sm text-ink/50">
-          Your shortlist — come back anytime to apply.
+          {activeFolder ? (
+            <>
+              One of your saved-job folders —{" "}
+              <Link href="/seeker/saved-jobs" className="font-semibold text-navy hover:underline">
+                back to all saved jobs
+              </Link>
+              .
+            </>
+          ) : (
+            "Your shortlist — come back anytime to apply."
+          )}
         </p>
       </div>
+
+      <SavedJobFolderBar folders={folders} activeFolderId={activeFolder?.id ?? null} hasSavedJobs={hasSavedJobs} />
 
       {saved.length > 0 && (
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -115,7 +204,7 @@ export default function SavedJobsPanel({ initialSaved, appliedJobIds }: Props) {
               type="search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search saved jobs..."
+              placeholder={activeFolder ? "Search this folder..." : "Search saved jobs..."}
               className="w-full rounded-full border border-ink/10 bg-white py-2.5 pl-10 pr-4 text-sm text-ink outline-none transition focus:border-navy/25 focus:ring-2 focus:ring-navy/10"
             />
           </label>
@@ -148,16 +237,35 @@ export default function SavedJobsPanel({ initialSaved, appliedJobIds }: Props) {
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-ink/[0.04]">
             <Bookmark className="h-8 w-8 text-ink/20" aria-hidden="true" />
           </div>
-          <h2 className="mt-5 font-display text-lg font-bold text-ink">No saved jobs yet</h2>
-          <p className="mx-auto mt-2 max-w-sm text-sm text-ink/50">
-            Tap the bookmark icon on any listing to save it here for later.
-          </p>
-          <Link
-            href="/jobs"
-            className="mt-6 inline-flex cursor-pointer rounded-xl bg-marigold px-5 py-2.5 text-sm font-semibold text-ink hover:bg-marigold/90"
-          >
-            Browse jobs
-          </Link>
+          {activeFolder ? (
+            <>
+              <h2 className="mt-5 font-display text-lg font-bold text-ink">
+                No jobs in &ldquo;{activeFolder.name}&rdquo; yet
+              </h2>
+              <p className="mx-auto mt-2 max-w-sm text-sm text-ink/50">
+                Add jobs to this folder from your full saved-jobs list.
+              </p>
+              <Link
+                href="/seeker/saved-jobs"
+                className="mt-6 inline-flex cursor-pointer rounded-xl bg-marigold px-5 py-2.5 text-sm font-semibold text-ink hover:bg-marigold/90"
+              >
+                Go to all saved jobs
+              </Link>
+            </>
+          ) : (
+            <>
+              <h2 className="mt-5 font-display text-lg font-bold text-ink">No saved jobs yet</h2>
+              <p className="mx-auto mt-2 max-w-sm text-sm text-ink/50">
+                Tap the bookmark icon on any listing to save it here for later.
+              </p>
+              <Link
+                href="/jobs"
+                className="mt-6 inline-flex cursor-pointer rounded-xl bg-marigold px-5 py-2.5 text-sm font-semibold text-ink hover:bg-marigold/90"
+              >
+                Browse jobs
+              </Link>
+            </>
+          )}
         </div>
       ) : visible.length === 0 ? (
         <p className="py-8 text-center text-sm text-ink/45">No saved jobs match your search.</p>
@@ -227,7 +335,7 @@ export default function SavedJobsPanel({ initialSaved, appliedJobIds }: Props) {
                     </span>
                     <span className="inline-flex items-center gap-1 font-data font-medium text-ink/60">
                       <Wallet className="h-3 w-3" aria-hidden="true" />
-                      {formatPesoRange(
+                      {formatSalaryRange(
                         job.salaryMin,
                         job.salaryMax,
                         (job.salaryPeriod as SalaryPeriod) || "MONTHLY"
@@ -242,8 +350,25 @@ export default function SavedJobsPanel({ initialSaved, appliedJobIds }: Props) {
                   </div>
                 </div>
 
-                <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+                <div className="flex shrink-0 flex-wrap items-center gap-2 sm:gap-3">
                   <SaveJobButton jobId={job.id} saved onToggle={handleUnsave} />
+                  {activeFolder ? (
+                    entry.savedJobId && (
+                      <RemoveFromFolderButton
+                        folderId={activeFolder.id}
+                        savedJobId={entry.savedJobId}
+                        jobTitle={job.title}
+                        onRemoved={() => setSaved((prev) => prev.filter((s) => s.job.id !== job.id))}
+                      />
+                    )
+                  ) : (
+                    // Hidden until lib/seeker/saved-jobs.ts's listSavedJobs
+                    // returns each row's SavedJob id — see the SavedJobEntry
+                    // doc comment above.
+                    entry.savedJobId && (
+                      <AddToFolderMenu savedJobId={entry.savedJobId} jobTitle={job.title} folders={folders} />
+                    )
+                  )}
                   {applied ? (
                     <Link
                       href={`/jobs/${job.id}`}

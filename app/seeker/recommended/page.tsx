@@ -2,15 +2,33 @@ import { requireSeekerPageContext } from "@/lib/auth/seeker-session";
 import { getSeekerJobRecommendations } from "@/lib/seeker/job-recommendations";
 import { listSavedJobIds } from "@/lib/seeker/saved-jobs";
 import { SeekerNavBandBleed } from "@/components/seeker/SeekerNavBand";
-import RecommendedJobsSection from "@/components/seeker/RecommendedJobsSection";
+import RecommendedJobsSection, {
+  RECOMMENDED_FILTER_ALL,
+  recommendedFilterIds,
+} from "@/components/seeker/RecommendedJobsSection";
 import { Sparkles } from "lucide-react";
 
-export default async function RecommendedJobsPage() {
+export default async function RecommendedJobsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ filter?: string }>;
+}) {
   const { userId } = await requireSeekerPageContext();
-  const [recommendations, savedJobIds] = await Promise.all([
+  const [recommendations, savedJobIds, { filter: filterParam }] = await Promise.all([
     getSeekerJobRecommendations(userId),
     listSavedJobIds(userId),
+    searchParams,
   ]);
+
+  // The known filter set is dynamic (it depends on which employment types
+  // are actually present in this seeker's results), unlike the dashboard's
+  // fixed STATUS_FILTERS — so it's derived here before validating the raw
+  // query param, then falls back to "all" for anything unrecognized.
+  const knownFilterIds =
+    recommendations.status === "ok" ? recommendedFilterIds(recommendations.items) : [RECOMMENDED_FILTER_ALL];
+  const activeFilter =
+    (filterParam && knownFilterIds.find((id) => id.toLowerCase() === filterParam.toLowerCase())) ||
+    RECOMMENDED_FILTER_ALL;
 
   const countLabel =
     recommendations.status === "ok" && recommendations.items.length > 0
@@ -35,7 +53,12 @@ export default async function RecommendedJobsPage() {
       />
 
       <div className="pt-6 sm:pt-8">
-        <RecommendedJobsSection recommendations={recommendations} variant="page" savedJobIds={savedJobIds} />
+        <RecommendedJobsSection
+          recommendations={recommendations}
+          variant="page"
+          savedJobIds={savedJobIds}
+          filter={activeFilter}
+        />
       </div>
     </div>
   );

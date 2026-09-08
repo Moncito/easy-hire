@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   RECOMMENDATION_WEIGHTS,
+  recommendationSignals,
   scoreJobForSeeker,
   type RecommendationJobInput,
   type RecommendationSeekerInput,
@@ -307,5 +308,134 @@ describe("scoreJobForSeeker", () => {
     expect(matching.score).toBe(RECOMMENDATION_WEIGHTS.availability);
     expect(noAvailability.score).toBe(Math.round(RECOMMENDATION_WEIGHTS.availability / 2));
     expect(mismatch.score).toBe(0);
+  });
+
+  it("surfaces the skills reason first even when it scored fewer points than another component", () => {
+    // Skills: 1 of 5 listed skills matches -> 40 * (1/5) = 8 points.
+    // Location: REMOTE -> flat 15 points. Points-desc alone would put
+    // "Fully remote" first; the skills reason must lead anyway.
+    const seeker = isolatingSeeker({
+      skills: ["Canva", "Unrelated1", "Unrelated2", "Unrelated3", "Unrelated4"],
+    });
+    const job = isolatingJob({
+      title: "Marketing Assistant",
+      category: "Marketing",
+      description: "Design assets in Canva for social campaigns.",
+      remoteType: "REMOTE",
+    });
+
+    const { reasons } = scoreJobForSeeker(seeker, job, NOW);
+    expect(reasons).toEqual(["Matches 1 of your skills: Canva", "Fully remote"]);
+  });
+
+  it("keeps pure points-desc (with priority tie-break) ordering when there is no skill match", () => {
+    const seeker = isolatingSeeker({
+      skills: [],
+      headline: "Marketing Manager Ops Specialist",
+      desiredSalaryMin: 30000,
+      desiredSalaryMax: 50000,
+    });
+    const job = isolatingJob({
+      title: "Marketing Manager",
+      category: "Marketing Ops",
+      salaryMin: 40000,
+      salaryMax: 60000,
+      salaryPeriod: "MONTHLY",
+      publishedAt: new Date(NOW.getTime() - 5 * DAY_MS),
+      createdAt: new Date(NOW.getTime() - 5 * DAY_MS),
+    });
+
+    const { reasons } = scoreJobForSeeker(seeker, job, NOW);
+    // headline (15) and salary (15) tie on points -> priority tie-break keeps
+    // headline (priority 1) ahead of salary (priority 3); recency (~8.33)
+    // trails both, unaffected since skills never scored above zero here.
+    expect(reasons).toEqual([
+      "Your headline matches this role",
+      "Pay range fits your target",
+      "Posted 5 days ago",
+    ]);
+  });
+
+  it("still caps reasons at 3 while leading with skills, even displacing components that would otherwise make the cut", () => {
+    const seeker = isolatingSeeker({
+      skills: ["Canva", "Unrelated1", "Unrelated2", "Unrelated3", "Unrelated4"],
+      headline: "Marketing Manager Ops Specialist",
+      desiredSalaryMin: 30000,
+      desiredSalaryMax: 50000,
+      availability: "Available full-time",
+    });
+    const job = isolatingJob({
+      title: "Marketing Manager",
+      category: "Marketing Ops",
+      description: "Design assets in Canva for social campaigns.",
+      remoteType: "REMOTE",
+      employmentType: "FULL_TIME",
+      salaryMin: 40000,
+      salaryMax: 60000,
+      salaryPeriod: "MONTHLY",
+    });
+
+    const { reasons } = scoreJobForSeeker(seeker, job, NOW);
+    // Without the skills-first rule, points-desc would rank
+    // headline/location/salary (15 each) ahead of skills (8), pushing skills
+    // out of the top 3 entirely. With the rule, skills leads and the cap
+    // still holds at 3, displacing salary and availability.
+    expect(reasons).toEqual([
+      "Matches 1 of your skills: Canva",
+      "Your headline matches this role",
+      "Fully remote",
+    ]);
+    expect(reasons.length).toBeLessThanOrEqual(3);
+  });
+});
+
+describe("recommendationSignals", () => {
+  const fullSeeker: RecommendationSeekerInput = {
+    skills: ["Bookkeeping", "QuickBooks"],
+    headline: "Senior Bookkeeper",
+    location: "Manila, Philippines",
+    desiredSalaryMin: 30000,
+    desiredSalaryMax: 50000,
+    availability: "Full-time",
+  };
+
+  const emptySeeker: RecommendationSeekerInput = {
+    skills: [],
+    headline: null,
+    location: null,
+    desiredSalaryMin: null,
+    desiredSalaryMax: null,
+    availability: null,
+  };
+
+  it("marks all five signals present for a fully-populated profile", () => {
+    const signals = recommendationSignals(fullSeeker);
+    expect(signals.every((s) => s.present)).toBe(true);
+    expect(signals.map((s) => s.key)).toEqual(["skills", "headline", "location", "salary", "availability"]);
+  });
+
+  it("marks all five signals absent for an empty profile", () => {
+    const signals = recommendationSignals(emptySeeker);
+    expect(signals.every((s) => !s.present)).toBe(true);
+    expect(signals).toHaveLength(5);
+  });
+
+  it("orders signals by descending weight, skills first and availability last", () => {
+    const signals = recommendationSignals(fullSeeker);
+    expect(signals.map((s) => s.weight)).toEqual([
+      RECOMMENDATION_WEIGHTS.skills,
+      RECOMMENDATION_WEIGHTS.headline,
+      RECOMMENDATION_WEIGHTS.location,
+      RECOMMENDATION_WEIGHTS.salary,
+      RECOMMENDATION_WEIGHTS.availability,
+    ]);
+    expect(signals[0].key).toBe("skills");
+    expect(signals[signals.length - 1].key).toBe("availability");
+  });
+
+  it("counts whitespace-only or 1-character skill entries as absent, matching usableNormalizedSkills", () => {
+    const signals = recommendationSignals({ ...emptySeeker, skills: ["  ", "a"] });
+    const skillsSignal = signals.find((s) => s.key === "skills");
+    expect(skillsSignal?.present).toBe(false);
   });
 });

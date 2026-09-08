@@ -10,7 +10,7 @@ import {
   Clock,
   Star,
 } from "lucide-react";
-import { formatPesoRange } from "@/lib/format";
+import { formatSalaryRange } from "@/lib/format";
 import { skillName } from "@/lib/seeker/profile-format";
 import { useEmployerShell } from "@/components/employer/EmployerShellContext";
 import CandidateEasyAiPanel from "./CandidateEasyAiPanel";
@@ -49,7 +49,7 @@ export default function CandidateOverviewTab({ application, onRating }: Props) {
   const skills = seeker.skills ?? [];
   const educationEntries = seeker.education ?? [];
   const languages = seeker.languages ?? [];
-  const salary = formatPesoRange(seeker.desiredSalaryMin, seeker.desiredSalaryMax);
+  const salary = formatSalaryRange(seeker.desiredSalaryMin, seeker.desiredSalaryMax);
   const primarySkill = skills[0] ? skillName(skills[0]) : "—";
   const education = educationEntries[0]?.trim() || "—";
   const languagesLabel = languages.length > 0 ? languages.join(", ") : "—";

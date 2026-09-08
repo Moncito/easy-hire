@@ -86,11 +86,11 @@ describe("buildJobPostingJsonLd", () => {
       expect(jsonLd.baseSalary?.value.unitText).toBe("YEAR");
     });
 
-    it("uses PHP as the currency", () => {
+    it("uses USD as the currency — job salaries are entered in USD", () => {
       const jsonLd = buildJobPostingJsonLd(
         makeJob({ salaryMin: 25000, salaryMax: 40000 } as Partial<PublicJobForJsonLd>)
       );
-      expect(jsonLd.baseSalary?.currency).toBe("PHP");
+      expect(jsonLd.baseSalary?.currency).toBe("USD");
     });
 
     it("is omitted entirely when both salaryMin and salaryMax are null", () => {

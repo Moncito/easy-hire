@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { ChevronDown, FileText, Plus, Upload, X } from "lucide-react";
-import { formatPesoRange } from "@/lib/format";
+import { formatSalaryRange } from "@/lib/format";
 import { updateSeekerProfile } from "@/lib/client/profile";
 import { uploadPhoto, uploadResume } from "@/lib/client/uploads";
 import SeekerEmployerPreview from "@/components/seeker/SeekerEmployerPreview";
@@ -1068,7 +1068,7 @@ export default function SeekerProfileEditor({
               </div>
               {(form.desiredSalaryMin || form.desiredSalaryMax) && (
                 <p className="mt-3 font-data text-sm text-ink/60">
-                  {formatPesoRange(form.desiredSalaryMin, form.desiredSalaryMax)}
+                  {formatSalaryRange(form.desiredSalaryMin, form.desiredSalaryMax)}
                 </p>
               )}
             </div>

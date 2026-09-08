@@ -144,6 +144,7 @@ model SeekerProfile {
   savedInLists    SavedTalentListItem[]
   reviewsReceived Review[]
   identityDocuments SeekerIdentityDocument[]
+  savedJobFolders SavedJobFolder[]
 
   @@index([searchVector], type: Gin)
   @@index([idVerificationStatus])
@@ -703,9 +704,50 @@ model SavedJob {
   // Relations
   seeker SeekerProfile @relation(fields: [seekerId], references: [id], onDelete: Cascade)
   job    Job           @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  folderItems SavedJobFolderItem[]
 
   @@unique([seekerId, jobId])
   @@map("saved_jobs")
+}
+
+// ============================================================================
+// SEEKER — SAVED JOB FOLDERS (Phase E2 seeker plan; mirrors the employer-side
+// SavedTalentList / SavedTalentListItem shape, but free for every seeker —
+// no plan gate).
+// ============================================================================
+
+model SavedJobFolder {
+  id        String   @id @default(cuid())
+  seekerId  String   @map("seeker_id")
+  name      String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  seeker SeekerProfile        @relation(fields: [seekerId], references: [id], onDelete: Cascade)
+  items  SavedJobFolderItem[]
+
+  @@unique([seekerId, name])
+  @@index([seekerId])
+  @@map("saved_job_folders")
+}
+
+// Deliberately references SavedJob, not Job: a folder organizes things the
+// seeker has already saved, so un-saving a job should remove it from every
+// folder automatically via the cascade on savedJobId — rather than leaving a
+// folder entry pointing at a job that's no longer on the shortlist.
+model SavedJobFolderItem {
+  id         String   @id @default(cuid())
+  folderId   String   @map("folder_id")
+  savedJobId String   @map("saved_job_id")
+  addedAt    DateTime @default(now()) @map("added_at")
+
+  folder   SavedJobFolder @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  savedJob SavedJob       @relation(fields: [savedJobId], references: [id], onDelete: Cascade)
+
+  @@unique([folderId, savedJobId])
+  @@index([folderId])
+  @@index([savedJobId])
+  @@map("saved_job_folder_items")
 }
 
 model JobAlert {
