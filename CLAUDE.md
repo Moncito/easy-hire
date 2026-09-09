@@ -12,7 +12,7 @@ EasyHire VA Solutions is a two-sided recruitment marketplace connecting Virtual 
 - Prisma ORM + PostgreSQL (hosted on Supabase)
 - NextAuth.js for auth with role-based access: seeker / employer / admin
 - Resend for email notifications
-- Stripe for payments (job posting fees / employer subscriptions)
+- Payments: PayMongo (PH employers) + Paddle (overseas, merchant of record) for job posting fees / employer subscriptions, behind a `PaymentProvider` interface in `lib/billing/providers/`. **Not Stripe** — Stripe is invite-only for PH entities, settles PHP only, and blocks Stripe Billing. Existing `lib/billing/stripe-billing.ts` is legacy, to be replaced (see `docs/ADMIN-CONSOLE-PLAN.md` §6.3a)
 - Supabase Storage for resumes and company logos
 
 ## Architecture Rules
