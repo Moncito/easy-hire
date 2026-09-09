@@ -4,6 +4,7 @@ import { ApiError } from "@/lib/api-error";
 import { getAiModel, isAiConfigured, AI_NOT_CONFIGURED_MESSAGE } from "@/lib/ai/provider";
 import { checkAiRateLimit } from "@/lib/ai/rate-limit";
 import { logAiUsage, type AiFeature } from "@/lib/ai/usage";
+import { recordEvent } from "@/lib/admin/events";
 
 export type AiObjectResult<T> = {
   configured: boolean;
@@ -68,6 +69,14 @@ export async function generateAiObject<T>(input: {
       metadata: input.metadata ?? null,
     });
 
+    recordEvent({
+      eventType: "AI_FEATURE_USED",
+      actorType: "EMPLOYER",
+      entityType: "COMPANY",
+      entityId: input.companyId,
+      metadata: { feature: input.feature },
+    });
+
     return { configured: true, data: result.object as T };
   } catch (error) {
     console.error(`[ai:${input.feature}] generateObject failed:`, error);
@@ -105,6 +114,14 @@ export async function generateAiText(input: {
       feature: input.feature,
       tokens: result.usage?.totalTokens ?? null,
       metadata: input.metadata ?? null,
+    });
+
+    recordEvent({
+      eventType: "AI_FEATURE_USED",
+      actorType: "EMPLOYER",
+      entityType: "COMPANY",
+      entityId: input.companyId,
+      metadata: { feature: input.feature },
     });
 
     return { configured: true, text: result.text };

@@ -44,6 +44,9 @@ model User {
   reviewsAuthored    Review[]
   adminProfile       AdminProfile?
 
+  // Sprint 10b follow-up — nightly rollup counts signups per day
+  // (lib/admin/rollups.ts); no supporting index on this column before.
+  @@index([createdAt])
   @@map("users")
 }
 
@@ -242,6 +245,9 @@ model Company {
   @@index([verifiedStatus])
   // Admin trust queue sorts by trust_score.
   @@index([trustScore])
+  // Sprint 10b follow-up — nightly rollup counts new companies per day
+  // (lib/admin/rollups.ts); no supporting index on this column before.
+  @@index([createdAt])
   @@map("companies")
 }
 
@@ -347,6 +353,19 @@ model Job {
   status                JobStatus                @default(DRAFT)
   targetHireCount       Int                      @default(1) @map("target_hire_count")
   publishedAt           DateTime?                @map("published_at")
+  // Sprint 10b follow-up (build-plan.md "Sprint 10b — approved (admin console
+  // Phase 0 follow-up, 2026-09-10)") — stamped every time this job enters
+  // PENDING_REVIEW: job create-and-submit and ACTIVE-job edit-and-resubmit
+  // both go through lib/jobs/crud.ts, which sets this alongside `status`.
+  // Deliberately the OPPOSITE stamp-once precedent from `Application.hiredAt`
+  // / `firstEmployerResponseAt` above (see their comments): those never
+  // overwrite once set, but a job re-entering PENDING_REVIEW after a
+  // rejection starts a NEW review clock, so this column RESTAMPS on every
+  // DRAFT/PENDING_REVIEW -> PENDING_REVIEW transition. Null for every job
+  // that predates this column and for jobs that have never been submitted —
+  // lib/admin/rollups.ts's admin-review-latency metric reads null as "not
+  // computable for this job," never as zero.
+  pendingReviewAt       DateTime?                @map("pending_review_at")
   reviewRejectionReason String?                  @map("review_rejection_reason")
   featuredUntil         DateTime?                @map("featured_until")
   createdAt             DateTime                 @default(now()) @map("created_at")
@@ -378,6 +397,9 @@ model Job {
   @@index([category])
   @@index([publishedAt])
   @@index([expiresAt])
+  // Sprint 10b follow-up — nightly rollup counts jobs created per day
+  // (lib/admin/rollups.ts); no supporting index on this column before.
+  @@index([createdAt])
   // Matches the public job board's default listing query (lib/jobs/public-listing.ts:
   // activeJobWhere()/buildOrderBy() default sort): WHERE status = 'ACTIVE' ORDER BY
   // featuredUntil DESC NULLS LAST, createdAt DESC, id DESC. `status` leads because it's
@@ -485,6 +507,12 @@ model Application {
   // row (the grace-period/qualifying decision runs in computeResponseMetrics,
   // in JS, not in SQL) so indexing it wouldn't help this query's WHERE clause.
   @@index([jobId, appliedAt])
+  // Sprint 10b follow-up — nightly rollup counts applications submitted
+  // (appliedAt) and hires (hiredAt) per day (lib/admin/rollups.ts). Every
+  // existing index on this model is led by jobId, so a same-day date-range
+  // count on either column was a sequential scan before these.
+  @@index([appliedAt])
+  @@index([hiredAt])
   @@map("applications")
 }
 

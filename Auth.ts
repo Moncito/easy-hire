@@ -7,6 +7,7 @@ import { ensureSeekerProfile } from "@/lib/seekers";
 import { normalizeEmail } from "@/lib/email-address";
 import { checkRateLimit, clientKeyFromRequest } from "@/lib/rate-limit";
 import { resolveGoogleAccountLinkingAction } from "@/lib/auth/google-account-linking";
+import { recordUserLoggedIn, recordUserLoggedOut, recordUserLoginFailed } from "@/lib/auth/auth-events";
 import { authConfig } from "./auth.config";
 
 // Brute-force / credential-stuffing guard for the Credentials provider.
@@ -56,6 +57,31 @@ async function resolveDbUser(email?: string | null, userId?: string | null) {
 export const { handlers, signIn, signOut, auth } = NextAuth({
   ...authConfig,
   session: { strategy: "jwt" },
+  events: {
+    // Fires after a successful sign-in for every provider (Credentials and
+    // Google alike) — see lib/auth/auth-events.ts for why this goes through
+    // a /lib helper instead of calling recordEvent directly from here.
+    async signIn({ user }) {
+      if (user.id) {
+        recordUserLoggedIn(user.id, user.role);
+      }
+    },
+    // JWT sessions — the message carries `token`, not `session`. The token's
+    // custom fields don't resolve to the augmented JWT type in this position
+    // (types/next-auth.d.ts declares them, but the signOut event message is a
+    // `{ session } | { token }` union that widens them), so narrow with typeof
+    // rather than casting — that also correctly handles a token genuinely
+    // missing these fields at runtime instead of asserting them present.
+    async signOut(message) {
+      if ("token" in message && message.token) {
+        const { id, role } = message.token;
+        recordUserLoggedOut(
+          typeof id === "string" ? id : undefined,
+          typeof role === "string" ? role : undefined
+        );
+      }
+    },
+  },
   callbacks: {
     async jwt({ token, user }) {
       const ROLE_REFRESH_MS = 15 * 60 * 1000;
@@ -248,6 +274,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           console.warn(
             `[auth] credentials login blocked by rate limit (${!emailResult.allowed ? "email" : "ip"})`
           );
+          recordUserLoginFailed();
           throw new LoginRateLimited();
         }
 
@@ -256,6 +283,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         });
 
         if (!user || !user.passwordHash) {
+          recordUserLoginFailed();
           return null;
         }
 
@@ -265,6 +293,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         );
 
         if (!isValid) {
+          recordUserLoginFailed(user.id, user.role);
           return null;
         }
 

@@ -9,6 +9,7 @@ import {
   type CreateJobAlertInput,
   type UpdateJobAlertInput,
 } from "@/lib/validations/job-alert";
+import { recordEvent } from "@/lib/admin/events";
 
 const JOB_ALERTS_REVALIDATE_SECONDS = 30;
 
@@ -66,6 +67,15 @@ export async function createJobAlert(userId: string, raw: unknown) {
     },
   });
   invalidateSeekerJobAlerts(userId);
+
+  recordEvent({
+    eventType: "ALERT_CREATED",
+    actorType: "SEEKER",
+    userId,
+    entityType: "JOB_ALERT",
+    entityId: alert.id,
+    metadata: { frequency: alert.frequency },
+  });
 
   return {
     id: alert.id,

@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/lib/api-error";
 import { isEmployerPro } from "@/lib/billing/subscriptions";
+import { recordEvent } from "@/lib/admin/events";
 
 /**
  * CSV export contains seeker PII (name + email) by design — it's an
@@ -119,6 +120,15 @@ export async function logApplicantsExport(input: {
       kind: "applicants_csv",
       meta: { jobId: input.jobId ?? null, rowCount: input.rowCount },
     },
+  });
+
+  recordEvent({
+    eventType: "TALENT_EXPORTED",
+    actorType: "EMPLOYER",
+    userId: input.userId,
+    entityType: "COMPANY",
+    entityId: input.companyId,
+    metadata: { jobId: input.jobId ?? null, rowCount: input.rowCount },
   });
 }
 

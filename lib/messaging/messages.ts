@@ -11,11 +11,17 @@ import { requireEmployerCompany } from "@/lib/employer-auth";
 import { requireSeekerProfile } from "@/lib/auth/seeker-guards";
 import { requireVerifiedEmail } from "@/lib/auth/credentials-recovery";
 import { companyMemberRoleLabel } from "@/lib/collaborative-hiring";
+import { recordEvent, type ActorType } from "@/lib/admin/events";
 import {
   conversationCreateSchema,
   messageCreateSchema,
   type ConversationCreate,
 } from "@/lib/validations/message";
+
+/** `role` on this module's functions is `"EMPLOYER" | "SEEKER"` in practice (see assertConversationAccess), narrowed here for recordEvent's actorType. */
+function actorTypeForMessagingRole(role: string): ActorType {
+  return role === "EMPLOYER" ? "EMPLOYER" : "SEEKER";
+}
 
 export type { ConversationListItem } from "@/lib/conversation-inbox";
 
@@ -282,6 +288,10 @@ async function upsertConversation(args: UpsertConversationArgs) {
     where: { companyId_seekerId: { companyId, seekerId } },
     include: conversationInclude,
   });
+  // Only true when *this* call is the one that inserted the row — not when
+  // the catch branch below recovers from a concurrent creator having won
+  // the race (that conversation already existed before this call).
+  let wasCreated = false;
 
   if (!conversation) {
     try {
@@ -289,6 +299,7 @@ async function upsertConversation(args: UpsertConversationArgs) {
         data: { companyId, seekerId, jobId },
         include: conversationInclude,
       });
+      wasCreated = true;
     } catch (error) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -313,6 +324,16 @@ async function upsertConversation(args: UpsertConversationArgs) {
       where: { id: conversation.id },
       data: { jobId },
       include: conversationInclude,
+    });
+  }
+
+  if (wasCreated) {
+    recordEvent({
+      eventType: "CONVERSATION_STARTED",
+      actorType: actorTypeForMessagingRole(senderRole),
+      userId: senderUserId,
+      entityType: "CONVERSATION",
+      entityId: conversation.id,
     });
   }
 
@@ -501,6 +522,18 @@ export async function sendMessage(
   }
 
   invalidateInboxForConversation(conversation);
+
+  // Highest-frequency event in this pipeline — plain fire-and-forget is the
+  // correct approach for this phase (see docs/ADMIN-CONSOLE-PLAN.md §7.2);
+  // batching is a later optimization, not built here. No message body in
+  // metadata, per the PII rule.
+  recordEvent({
+    eventType: "MESSAGE_SENT",
+    actorType: actorTypeForMessagingRole(role),
+    userId,
+    entityType: "CONVERSATION",
+    entityId: conversationId,
+  });
 
   return {
     id: message.id,

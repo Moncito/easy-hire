@@ -7,6 +7,8 @@ import { normalizeEmail } from "@/lib/email-address";
 import { passwordSchema } from "@/lib/validations/sign-up";
 import { sendEmailVerificationEmail, sendPasswordResetEmail, sendWelcomeVerificationEmail } from "@/lib/shared/email";
 import { recomputeVerificationScoreForUser } from "@/lib/seeker/identity-verification";
+import { recordEvent } from "@/lib/admin/events";
+import { actorTypeForRole } from "@/lib/auth/auth-events";
 
 export const PASSWORD_RESET_TTL_MS = 60 * 60 * 1000; // 1 hour
 export const EMAIL_VERIFY_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
@@ -72,7 +74,7 @@ export async function requestPasswordReset(email: string): Promise<void> {
   const normalized = normalizeEmail(email);
   const user = await prisma.user.findUnique({
     where: { email: normalized },
-    select: { id: true, email: true, passwordHash: true },
+    select: { id: true, email: true, passwordHash: true, role: true },
   });
 
   if (!user || !user.passwordHash) {
@@ -93,6 +95,14 @@ export async function requestPasswordReset(email: string): Promise<void> {
     });
   });
 
+  // Recorded after the transaction commits — an event write must never
+  // extend the token-invalidation lock above.
+  recordEvent({
+    eventType: "PASSWORD_RESET_REQUESTED",
+    actorType: actorTypeForRole(user.role),
+    userId: user.id,
+  });
+
   await sendPasswordResetEmail({ to: user.email, token });
 }
 
@@ -102,7 +112,7 @@ export async function resetPassword(rawToken: string, newPassword: string): Prom
   // Hashed outside the transaction — bcrypt is CPU-bound and shouldn't hold a DB transaction open.
   const passwordHash = await bcrypt.hash(parsedPassword, 10);
 
-  await prisma.$transaction(async (tx) => {
+  const { userId, role } = await prisma.$transaction(async (tx) => {
     const record = await tx.verificationToken.findUnique({ where: { tokenHash } });
     assertTokenUsable(record, "PASSWORD_RESET");
 
@@ -118,13 +128,22 @@ export async function resetPassword(rawToken: string, newPassword: string): Prom
       throw new ApiError(INVALID_OR_EXPIRED_MESSAGE, 400);
     }
 
-    await tx.user.update({ where: { id: record.userId }, data: { passwordHash } });
+    const updatedUser = await tx.user.update({ where: { id: record.userId }, data: { passwordHash } });
 
     // Invalidate any other outstanding reset tokens for this user.
     await tx.verificationToken.updateMany({
       where: { userId: record.userId, purpose: "PASSWORD_RESET", consumedAt: null },
       data: { consumedAt: new Date() },
     });
+
+    return { userId: updatedUser.id, role: updatedUser.role };
+  });
+
+  // Recorded after the transaction commits — see the rule in lib/admin/events.ts.
+  recordEvent({
+    eventType: "PASSWORD_CHANGED",
+    actorType: actorTypeForRole(role),
+    userId,
   });
 }
 
@@ -209,9 +228,19 @@ export async function verifyEmail(rawToken: string): Promise<{ userId: string }>
       throw new ApiError(INVALID_OR_EXPIRED_MESSAGE, 400);
     }
 
-    await tx.user.update({ where: { id: record.userId }, data: { emailVerifiedAt: new Date() } });
+    const updatedUser = await tx.user.update({
+      where: { id: record.userId },
+      data: { emailVerifiedAt: new Date() },
+    });
 
-    return { userId: record.userId };
+    return { userId: record.userId, role: updatedUser.role };
+  });
+
+  // Recorded after the transaction commits — see the rule in lib/admin/events.ts.
+  recordEvent({
+    eventType: "EMAIL_VERIFIED",
+    actorType: actorTypeForRole(result.role),
+    userId: result.userId,
   });
 
   // Email verification feeds the "email" factor of the verification score
@@ -221,5 +250,5 @@ export async function verifyEmail(rawToken: string): Promise<{ userId: string }>
     console.error("[credentials-recovery] verification score recompute failed:", err)
   );
 
-  return result;
+  return { userId: result.userId };
 }

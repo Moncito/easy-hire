@@ -5,6 +5,7 @@ import { VERIFICATION_DOC_BUCKET, assertOwnedObjectPath, resolveSignedUrl } from
 import { invalidateSeekerProfile } from "@/lib/seeker/seekers";
 import { getSeekerProfileCompletion, type SeekerProfileCompletionInput } from "@/lib/seeker/profile-completion";
 import { computeVerificationScore, MAX_IDENTITY_DOCUMENTS } from "@/lib/seeker/verification-score";
+import { recordEvent } from "@/lib/admin/events";
 import type { SeekerIdentityDocument } from "@prisma/client";
 
 /** Signs a seeker identity document's `fileUrl` for display (private bucket, short TTL) — mirrors signVerificationDocument in lib/employer/verification.ts. */
@@ -153,6 +154,15 @@ export async function createIdentityDocument(userId: string, raw: unknown) {
       console.error("[identity-verification] score recompute after resubmit failed:", err)
     );
   }
+
+  recordEvent({
+    eventType: "ID_DOC_UPLOADED",
+    actorType: "SEEKER",
+    userId,
+    entityType: "SEEKER_PROFILE",
+    entityId: profile.id,
+    metadata: { docType: input.docType },
+  });
 
   return signIdentityDocument(document);
 }

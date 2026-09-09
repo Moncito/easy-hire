@@ -16,6 +16,7 @@ import { companyQueueTag } from "@/lib/collaborative-hiring-cache-tags";
 import { reviveDates } from "@/lib/cache-utils";
 import { sendCollaborativeHiringInvitation } from "@/lib/email";
 import { normalizeEmail } from "@/lib/email-address";
+import { recordEvent } from "@/lib/admin/events";
 
 const QUEUE_OVERVIEW_REVALIDATE_SECONDS = 15;
 
@@ -170,6 +171,16 @@ export async function inviteCompanyMember(
 
   // A mail provider failure must not leak a token or create another invitation.
   await sendCollaborativeHiringInvitation({ to: email, companyName: company.companyName, role: input.role, token });
+
+  recordEvent({
+    eventType: "MEMBER_INVITED",
+    actorType: "EMPLOYER",
+    userId: actorUserId,
+    entityType: "COMPANY",
+    entityId: companyId,
+    metadata: { role: input.role },
+  });
+
   return invitation;
 }
 

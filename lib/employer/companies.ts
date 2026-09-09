@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { companyInputToData, companyUpdateSchema } from "@/lib/validations/company";
 import { VERIFICATION_DOC_BUCKET, resolveSignedUrl } from "@/lib/storage";
+import { recordEvent } from "@/lib/admin/events";
 
 /** Creates a draft company when an employer user has no row (partial signup / Google). */
 export async function ensureEmployerCompany(
@@ -17,12 +18,20 @@ export async function ensureEmployerCompany(
   }
 
   try {
-    return await prisma.company.create({
+    const created = await prisma.company.create({
       data: {
         userId,
         companyName: defaults.companyName?.trim() || "",
       },
     });
+    recordEvent({
+      eventType: "COMPANY_CREATED",
+      actorType: "EMPLOYER",
+      userId,
+      entityType: "COMPANY",
+      entityId: created.id,
+    });
+    return created;
   } catch (error) {
     if (
       error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -37,10 +46,20 @@ export async function ensureEmployerCompany(
 export async function updateCompany(userId: string, raw: unknown) {
   const input = companyUpdateSchema.parse(raw);
 
-  return prisma.company.update({
+  const updated = await prisma.company.update({
     where: { userId },
     data: companyInputToData(input),
   });
+
+  recordEvent({
+    eventType: "COMPANY_UPDATED",
+    actorType: "EMPLOYER",
+    userId,
+    entityType: "COMPANY",
+    entityId: updated.id,
+  });
+
+  return updated;
 }
 
 export async function getEmployerCompanyProfile(companyId: string) {

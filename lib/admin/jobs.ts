@@ -6,6 +6,8 @@ import { invalidateEmployerWorkspace } from "@/lib/employer-cache";
 import { invalidatePublicJob, invalidatePublicJobsList } from "@/lib/jobs/public-cache";
 import { invalidatePublicCompany } from "@/lib/public-companies";
 import { sendJobApprovedEmail, sendJobRejectedEmail } from "@/lib/shared/email";
+import { buildAdminActionOperation } from "@/lib/admin/audit";
+import { recordEvent } from "@/lib/admin/events";
 
 const JOB_LISTING_DAYS = 90;
 
@@ -27,7 +29,7 @@ export async function listPendingJobs() {
   });
 }
 
-export async function reviewJob(jobId: string, raw: unknown) {
+export async function reviewJob(adminUserId: string, jobId: string, raw: unknown) {
   const input = adminJobReviewSchema.parse(raw);
 
   const job = await prisma.job.findUnique({
@@ -80,12 +82,28 @@ export async function reviewJob(jobId: string, raw: unknown) {
           message: `Your job "${job.title}" is now live on the public job board.`,
         },
       }),
+      buildAdminActionOperation({
+        adminUserId,
+        action: "JOB_APPROVE",
+        targetType: "JOB",
+        targetId: jobId,
+        before: { status: "PENDING_REVIEW" },
+        after: { status: "ACTIVE" },
+      }),
     ]);
 
     invalidateEmployerWorkspace(job.companyId);
     invalidatePublicJobsList();
     invalidatePublicJob(jobId);
     invalidatePublicCompany(job.companyId);
+
+    recordEvent({
+      eventType: "JOB_PUBLISHED",
+      actorType: "ADMIN",
+      userId: adminUserId,
+      entityType: "JOB",
+      entityId: jobId,
+    });
 
     void sendJobApprovedEmail({
       to: job.company.user.email,
@@ -112,6 +130,15 @@ export async function reviewJob(jobId: string, raw: unknown) {
         type: "JOB_REJECTED",
         message: `Your job "${job.title}" was not approved: ${reason}`,
       },
+    }),
+    buildAdminActionOperation({
+      adminUserId,
+      action: "JOB_REJECT",
+      targetType: "JOB",
+      targetId: jobId,
+      note: reason,
+      before: { status: "PENDING_REVIEW" },
+      after: { status: "DRAFT" },
     }),
   ]);
 

@@ -4,6 +4,7 @@ import { ApiError } from "@/lib/api-error";
 import { hasCollaborativePermission, requireCompanyMembership } from "@/lib/collaborative-hiring";
 import { signResumeUrl } from "@/lib/seeker/resume-urls";
 import { isFirstEmployerResponseTransition } from "@/lib/employer/response-metrics";
+import { recordEvent } from "@/lib/admin/events";
 import type { z } from "zod";
 import type { collaborativePipelineSchema, collaborativeScorecardSchema } from "@/lib/validations/collaborative-review";
 
@@ -168,6 +169,28 @@ export async function updateCollaborativePipeline(companyId: string, actorUserId
     }),
     prisma.applicationActivity.create({ data: { applicationId, type: "STAGE_CHANGE", body: `${application.status} → ${input.status}`, actorMemberId: membership.id } }),
   ]);
+
+  // Recorded after the $transaction array commits — see the rule in lib/admin/events.ts.
+  recordEvent({
+    eventType: "APPLICATION_STATUS_CHANGED",
+    actorType: "EMPLOYER",
+    userId: actorUserId,
+    entityType: "APPLICATION",
+    entityId: application.id,
+    metadata: { from: application.status, to: input.status },
+  });
+
+  if (input.status === "HIRED" && application.status !== "HIRED") {
+    recordEvent({
+      eventType: "CANDIDATE_HIRED",
+      actorType: "EMPLOYER",
+      userId: actorUserId,
+      entityType: "APPLICATION",
+      entityId: application.id,
+      metadata: { jobId },
+    });
+  }
+
   return updated;
 }
 

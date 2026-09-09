@@ -17,7 +17,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const body = (await parseJsonBody(req)) as { action?: string; enabled?: boolean };
     const updated = body?.action === "set_collaborative_hiring"
       ? await setCollaborativeHiringEnabled(id, body.enabled === true)
-      : await reviewCompany(id, body);
+      : await reviewCompany(session.user.id, id, body);
     return NextResponse.json(updated);
   } catch (error) {
     return errorResponse(error);

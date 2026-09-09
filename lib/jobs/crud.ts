@@ -11,6 +11,7 @@ import { invalidateEmployerWorkspace } from "@/lib/employer-cache";
 import { canCreateOrActivateJob } from "@/lib/billing/entitlements";
 import { invalidatePublicJob, invalidatePublicJobsList } from "@/lib/jobs/public-cache";
 import { invalidatePublicCompany } from "@/lib/public-companies";
+import { recordEvent } from "@/lib/admin/events";
 
 const SUBMITTABLE_STATUSES: JobStatus[] = ["DRAFT", "PENDING_REVIEW"];
 
@@ -52,6 +53,18 @@ export async function createJob(companyId: string, raw: unknown) {
   invalidateEmployerWorkspace(companyId);
   invalidatePublicJobsList();
   invalidatePublicCompany(companyId);
+
+  // No userId is available here (only companyId) in either call site
+  // (app/api/jobs/route.ts and the collaborative-hiring wrapper) — the
+  // entityId is enough to attribute this to the job/company.
+  recordEvent({
+    eventType: "JOB_CREATED",
+    actorType: "EMPLOYER",
+    entityType: "JOB",
+    entityId: job.id,
+    metadata: { companyId },
+  });
+
   return job;
 }
 
@@ -64,9 +77,11 @@ export async function updateJob(
   const input = jobInputSchema.parse(raw);
   let newStatus = existingStatus;
 
+  let entersPendingReview = false;
   if (existingStatus === "ACTIVE") {
     const autoPublish = companyId ? await canAutoPublishJob(companyId) : false;
     newStatus = autoPublish ? "ACTIVE" : "PENDING_REVIEW";
+    entersPendingReview = !autoPublish;
   }
 
   const updated = await prisma.$transaction(async (tx) => {
@@ -77,6 +92,12 @@ export async function updateJob(
       data: {
         ...jobInputToData(input),
         status: newStatus,
+        // Edit-and-resubmit: an ACTIVE job edited by an employer without
+        // auto-publish drops back to PENDING_REVIEW here, so this is a
+        // second PENDING_REVIEW entry point alongside submitJobForReview
+        // below — restamp for the same "new review clock" reason documented
+        // on Job.pendingReviewAt in prisma/schema.prisma.
+        ...(entersPendingReview ? { pendingReviewAt: new Date() } : {}),
         screeningQuestions: {
           create: screeningQuestionsCreateData(input.screeningQuestions),
         },
@@ -115,6 +136,19 @@ export async function updateJobStatus(
   invalidatePublicJobsList();
   invalidatePublicJob(jobId);
   if (resolvedCompanyId) invalidatePublicCompany(resolvedCompanyId);
+
+  // The employer-facing PATCH route only ever targets CLOSED (see
+  // lib/jobs/status.ts's EMPLOYER_ALLOWED map — ACTIVE is never a target
+  // here), so this is the one JOB_CLOSED call site.
+  if (status === "CLOSED" && currentStatus !== "CLOSED") {
+    recordEvent({
+      eventType: "JOB_CLOSED",
+      actorType: "EMPLOYER",
+      entityType: "JOB",
+      entityId: jobId,
+    });
+  }
+
   return updated;
 }
 
@@ -170,6 +204,12 @@ export async function submitJobForReview(
         data: {
           status: "PENDING_REVIEW",
           reviewRejectionReason: null,
+          // Restamp on every entry into PENDING_REVIEW, including a
+          // resubmit after rejection (job.status can already be
+          // PENDING_REVIEW here per SUBMITTABLE_STATUSES) — see the "new
+          // review clock" reasoning on Job.pendingReviewAt in
+          // prisma/schema.prisma.
+          pendingReviewAt: new Date(),
         },
       });
 
@@ -177,6 +217,25 @@ export async function submitJobForReview(
   invalidatePublicJobsList();
   invalidatePublicJob(job.id);
   invalidatePublicCompany(companyId);
+
+  recordEvent({
+    eventType: "JOB_SUBMITTED",
+    actorType: "EMPLOYER",
+    userId,
+    entityType: "JOB",
+    entityId: job.id,
+  });
+
+  if (autoPublish) {
+    recordEvent({
+      eventType: "JOB_PUBLISHED",
+      actorType: "EMPLOYER",
+      userId,
+      entityType: "JOB",
+      entityId: job.id,
+    });
+  }
+
   return updated;
 }
 

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/lib/api-error";
 import { ensureSeekerProfile } from "@/lib/seekers";
 import { seekerSavedJobsTag } from "@/lib/seeker/cache-tags";
+import { recordEvent } from "@/lib/admin/events";
 
 const SAVED_JOBS_REVALIDATE_SECONDS = 30;
 
@@ -105,6 +106,16 @@ export async function saveJob(userId: string, jobId: string) {
     update: {},
   });
   invalidateSeekerSavedJobs(userId);
+
+  if (!alreadySaved) {
+    recordEvent({
+      eventType: "JOB_SAVED",
+      actorType: "SEEKER",
+      userId,
+      entityType: "JOB",
+      entityId: jobId,
+    });
+  }
 
   return { ok: true, saved: true };
 }

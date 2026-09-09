@@ -3,6 +3,7 @@ import { ApiError } from "@/lib/api-error";
 import { adminSeekerVerificationReviewSchema } from "@/lib/validations/admin";
 import { VERIFICATION_DOC_BUCKET, resolveSignedUrl } from "@/lib/storage";
 import { recomputeVerificationScore } from "@/lib/seeker/identity-verification";
+import { buildAdminActionOperation } from "@/lib/admin/audit";
 
 const PENDING_SEEKER_VERIFICATIONS_LIMIT = 100;
 
@@ -37,7 +38,7 @@ export async function listPendingSeekerVerifications() {
   );
 }
 
-export async function reviewSeekerVerification(seekerProfileId: string, raw: unknown) {
+export async function reviewSeekerVerification(adminUserId: string, seekerProfileId: string, raw: unknown) {
   const input = adminSeekerVerificationReviewSchema.parse(raw);
 
   const profile = await prisma.seekerProfile.findUnique({
@@ -70,9 +71,18 @@ export async function reviewSeekerVerification(seekerProfileId: string, raw: unk
           message: `Your identity is verified. This raises your verification score and is visible to employers.`,
         },
       }),
+      buildAdminActionOperation({
+        adminUserId,
+        action: "SEEKER_VERIFICATION_APPROVE",
+        targetType: "SEEKER_PROFILE",
+        targetId: seekerProfileId,
+        before: { idVerificationStatus: "PENDING" },
+        after: { idVerificationStatus: "APPROVED" },
+      }),
     ]);
 
     await recomputeVerificationScore(seekerProfileId);
+
     return updated;
   }
 
@@ -90,8 +100,18 @@ export async function reviewSeekerVerification(seekerProfileId: string, raw: unk
         message: `Your identity verification was not approved: ${reason}`,
       },
     }),
+    buildAdminActionOperation({
+      adminUserId,
+      action: "SEEKER_VERIFICATION_REJECT",
+      targetType: "SEEKER_PROFILE",
+      targetId: seekerProfileId,
+      note: reason,
+      before: { idVerificationStatus: "PENDING" },
+      after: { idVerificationStatus: "REJECTED" },
+    }),
   ]);
 
   await recomputeVerificationScore(seekerProfileId);
+
   return updated;
 }

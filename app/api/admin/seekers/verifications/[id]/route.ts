@@ -15,7 +15,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     await requireAdmin(session.user.id);
     const { id } = await params;
     const body = await parseJsonBody(req);
-    const updated = await reviewSeekerVerification(id, body);
+    const updated = await reviewSeekerVerification(session.user.id, id, body);
     return NextResponse.json(updated);
   } catch (error) {
     return errorResponse(error);

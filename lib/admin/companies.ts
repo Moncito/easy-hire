@@ -4,6 +4,7 @@ import { adminCompanyReviewSchema } from "@/lib/validations/admin";
 import { invalidateCollaborativeHiringEnabled } from "@/lib/collaborative-hiring";
 import { VERIFICATION_DOC_BUCKET, resolveSignedUrl } from "@/lib/storage";
 import { sendCompanyRejectedEmail, sendCompanyVerifiedEmail } from "@/lib/shared/email";
+import { buildAdminActionOperation } from "@/lib/admin/audit";
 
 export async function listPendingCompanies() {
   const companies = await prisma.company.findMany({
@@ -57,7 +58,7 @@ export async function setCollaborativeHiringEnabled(companyId: string, enabled: 
   return company;
 }
 
-export async function reviewCompany(companyId: string, raw: unknown) {
+export async function reviewCompany(adminUserId: string, companyId: string, raw: unknown) {
   const input = adminCompanyReviewSchema.parse(raw);
 
   const company = await prisma.company.findUnique({
@@ -88,6 +89,14 @@ export async function reviewCompany(companyId: string, raw: unknown) {
           type: "COMPANY_APPROVED",
           message: `Your company "${company.companyName}" is verified. Approved job listings are now visible on the public board.`,
         },
+      }),
+      buildAdminActionOperation({
+        adminUserId,
+        action: "COMPANY_APPROVE",
+        targetType: "COMPANY",
+        targetId: companyId,
+        before: { verifiedStatus: "PENDING" },
+        after: { verifiedStatus: "APPROVED" },
       }),
     ]);
 
@@ -122,6 +131,15 @@ export async function reviewCompany(companyId: string, raw: unknown) {
         type: "COMPANY_REJECTED",
         message: `Your company "${company.companyName}" was not verified: ${reason}`,
       },
+    }),
+    buildAdminActionOperation({
+      adminUserId,
+      action: "COMPANY_REJECT",
+      targetType: "COMPANY",
+      targetId: companyId,
+      note: reason,
+      before: { verifiedStatus: "PENDING" },
+      after: { verifiedStatus: "REJECTED" },
     }),
   ]);
 
