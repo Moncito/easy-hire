@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Building2, ChevronDown, Layers, LogOut } from "lucide-react";
+import { LayoutDashboard, Building2, ChevronDown, Layers, LogOut, Users, Briefcase } from "lucide-react";
 import { useSignOut } from "@/components/ui/useSignOut";
 
 // The unified moderation queues (docs/ADMIN-CONSOLE-PLAN.md §3/§4.2). The
@@ -105,6 +105,32 @@ export default function AdminSidebar() {
         >
           <Building2 className="h-4.5 w-4.5" strokeWidth={2} />
           Company access
+        </Link>
+
+        {/* Directory group (docs/ADMIN-CONSOLE-PLAN.md §3, Phase 2): all
+            users/jobs, any role/status, distinct from the moderation queues
+            above. No standalone "Companies" directory link yet — reach a
+            company via a user's 360 record, the job directory, or ⌘K. */}
+        <p className="mt-3 px-3 text-[10px] font-bold uppercase tracking-wider text-ink/35">Directory</p>
+        <Link
+          href="/admin/users"
+          className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all ${
+            pathname === "/admin/users" || pathname.startsWith("/admin/users/")
+              ? "bg-navy/8 text-navy"
+              : "text-ink/65 hover:bg-ink/4 hover:text-ink"
+          }`}
+        >
+          <Users className="h-4.5 w-4.5" strokeWidth={2} />
+          Users
+        </Link>
+        <Link
+          href="/admin/jobs/directory"
+          className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all ${
+            pathname === "/admin/jobs/directory" ? "bg-navy/8 text-navy" : "text-ink/65 hover:bg-ink/4 hover:text-ink"
+          }`}
+        >
+          <Briefcase className="h-4.5 w-4.5" strokeWidth={2} />
+          Jobs
         </Link>
       </nav>
 

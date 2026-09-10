@@ -4,7 +4,9 @@ import { adminCompanyReviewSchema } from "@/lib/validations/admin";
 import { invalidateCollaborativeHiringEnabled } from "@/lib/collaborative-hiring";
 import { VERIFICATION_DOC_BUCKET, resolveSignedUrl } from "@/lib/storage";
 import { sendCompanyRejectedEmail, sendCompanyVerifiedEmail } from "@/lib/shared/email";
-import { buildAdminActionOperation } from "@/lib/admin/audit";
+import { buildAdminActionOperation, recordPiiRead } from "@/lib/admin/audit";
+import { getCompanyPlan, type SubscriptionPlan } from "@/lib/billing/subscriptions";
+import type { CompanyMemberRole, CompanyMemberStatus, VerificationStatus } from "@prisma/client";
 
 export async function listPendingCompanies() {
   const companies = await prisma.company.findMany({
@@ -151,4 +153,147 @@ export async function reviewCompany(adminUserId: string, companyId: string, raw:
   }).catch((err) => console.error("[admin/companies] rejected email failed:", err));
 
   return updated;
+}
+
+// ============================================================================
+// COMPANY DETAIL — GET /api/admin/companies/[id] (docs/ADMIN-CONSOLE-PLAN.md
+// §4.3 / §3: "plan, spend, jobs, members, risk"). A single-target PII read,
+// same category as lib/admin/users.ts's getUserRecord — writes
+// COMPANY_RECORD_VIEWED via recordPiiRead (a read, not a decision; see that
+// helper's doc comment in lib/admin/audit.ts).
+//
+// Every count/aggregate below is scoped to exactly ONE company id — no
+// per-row query over jobs/members/AI events, matching §10's "counts, not
+// unbounded lists" and the no-N+1 rule.
+// ============================================================================
+
+export type CompanyDetailMember = {
+  id: string;
+  userId: string;
+  email: string;
+  role: CompanyMemberRole;
+  status: CompanyMemberStatus;
+  joinedAt: Date;
+};
+
+export type CompanyDetail = {
+  companyId: string;
+  companyName: string;
+  email: string;
+  industry: string | null;
+  website: string | null;
+  verifiedStatus: VerificationStatus;
+  verificationRejectionReason: string | null;
+  createdAt: Date;
+  trustScore: number | null;
+  trustScoreUpdatedAt: Date | null;
+  plan: SubscriptionPlan;
+  jobCounts: { active: number; pendingReview: number; closed: number; draft: number; total: number };
+  members: CompanyDetailMember[];
+  responseRate: number | null;
+  medianResponseMinutes: number | null;
+  responseSampleSize: number | null;
+  aiSpend: { totalCostMicroCents: number; callCount: number };
+  riskSignals: {
+    reportsAgainstCount: number;
+    /** `AdminAuditLog` JOB_REJECT rows in the trailing 90 days for this company's jobs — same window/definition as `TRUST_WEIGHTS.employer.jobRejections` in lib/admin/trust.ts, read here rather than recomputed. */
+    jobRejections90dCount: number;
+  };
+};
+
+type JobRejectionCountRow = { rejections: number };
+
+export async function getCompanyDetail(adminUserId: string, companyId: string): Promise<CompanyDetail> {
+  const company = await prisma.company.findUnique({
+    where: { id: companyId },
+    select: {
+      id: true,
+      companyName: true,
+      industry: true,
+      website: true,
+      verifiedStatus: true,
+      verificationRejectionReason: true,
+      createdAt: true,
+      trustScore: true,
+      trustScoreUpdatedAt: true,
+      responseRate: true,
+      medianResponseMinutes: true,
+      responseSampleSize: true,
+      user: { select: { email: true } },
+      members: {
+        where: { status: "ACTIVE" },
+        select: { id: true, userId: true, role: true, status: true, joinedAt: true, user: { select: { email: true } } },
+        orderBy: { joinedAt: "asc" },
+      },
+    },
+  });
+
+  if (!company) {
+    throw new ApiError("Company not found", 404);
+  }
+
+  const [plan, statusGroups, aiAgg, reportsAgainstCount, jobRejectionRows] = await Promise.all([
+    getCompanyPlan(companyId),
+    prisma.job.groupBy({ by: ["status"], where: { companyId }, _count: { _all: true } }),
+    prisma.aiUsageEvent.aggregate({ where: { companyId }, _sum: { costMicroCents: true }, _count: { _all: true } }),
+    prisma.abuseReport.count({ where: { targetType: "COMPANY", targetId: companyId } }),
+    // Joins through Job (AdminAuditLog.targetId is a job id, not a company
+    // id — see lib/admin/jobs.ts's reviewJob) — same shape as the raw query
+    // lib/admin/trust.ts's recomputeEmployerTrustScoresBatch runs in bulk
+    // across many companies, scoped here to just this one.
+    prisma.$queryRaw<JobRejectionCountRow[]>`
+      SELECT COUNT(*)::int AS rejections
+      FROM admin_audit_logs aal
+      JOIN jobs j ON j.id = aal.target_id
+      WHERE aal.action = 'JOB_REJECT'
+        AND aal.target_type = 'JOB'
+        AND aal.created_at >= now() - interval '90 days'
+        AND j.company_id = ${companyId}
+    `,
+  ]);
+
+  const countByStatus = new Map<string, number>(statusGroups.map((r) => [r.status, r._count._all]));
+  const jobCounts = {
+    active: countByStatus.get("ACTIVE") ?? 0,
+    pendingReview: countByStatus.get("PENDING_REVIEW") ?? 0,
+    closed: countByStatus.get("CLOSED") ?? 0,
+    draft: countByStatus.get("DRAFT") ?? 0,
+    total: statusGroups.reduce((sum, r) => sum + r._count._all, 0),
+  };
+
+  recordPiiRead(adminUserId, "COMPANY_RECORD_VIEWED", "COMPANY", companyId);
+
+  return {
+    companyId: company.id,
+    companyName: company.companyName,
+    email: company.user.email,
+    industry: company.industry,
+    website: company.website,
+    verifiedStatus: company.verifiedStatus,
+    verificationRejectionReason: company.verificationRejectionReason,
+    createdAt: company.createdAt,
+    trustScore: company.trustScore,
+    trustScoreUpdatedAt: company.trustScoreUpdatedAt,
+    plan,
+    jobCounts,
+    members: company.members.map((m) => ({
+      id: m.id,
+      userId: m.userId,
+      email: m.user.email,
+      role: m.role,
+      status: m.status,
+      joinedAt: m.joinedAt,
+    })),
+    responseRate: company.responseRate,
+    medianResponseMinutes: company.medianResponseMinutes,
+    responseSampleSize: company.responseSampleSize,
+    aiSpend: {
+      totalCostMicroCents: aiAgg._sum.costMicroCents ?? 0,
+      callCount: aiAgg._count._all,
+    },
+    riskSignals: {
+      reportsAgainstCount,
+      jobRejections90dCount: jobRejectionRows[0]?.rejections ?? 0,
+    },
+  };
 }

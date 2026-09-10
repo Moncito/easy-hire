@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { Prisma } from "@prisma/client";
+import { Prisma, type JobStatus, type SalaryPeriod } from "@prisma/client";
 import { ApiError } from "@/lib/api-error";
 import { adminJobReviewSchema } from "@/lib/validations/admin";
 import { invalidateEmployerWorkspace } from "@/lib/employer-cache";
@@ -8,6 +8,7 @@ import { invalidatePublicCompany } from "@/lib/public-companies";
 import { sendJobApprovedEmail, sendJobRejectedEmail } from "@/lib/shared/email";
 import { buildAdminActionOperation } from "@/lib/admin/audit";
 import { recordEvent } from "@/lib/admin/events";
+import type { QueueCursor } from "@/lib/admin/queues";
 
 const JOB_LISTING_DAYS = 90;
 
@@ -153,4 +154,117 @@ export async function reviewJob(adminUserId: string, jobId: string, raw: unknown
   }).catch((err) => console.error("[admin/jobs] rejected email failed:", err));
 
   return updated;
+}
+
+// ============================================================================
+// JOB DIRECTORY — GET /api/admin/jobs/directory (docs/ADMIN-CONSOLE-PLAN.md
+// §3: "/admin/jobs — all jobs, any status"). Deliberately distinct from
+// `listQueue({ kind: "JOB" })` in lib/admin/queues.ts, which only ever
+// surfaces the moderation subset (PENDING_REVIEW / ACTIVE / rejected-DRAFT)
+// for risk-ranked review. This is a plain, cursor-paginated, all-status
+// browse — no ranking, no severity signals, so it's a much simpler query.
+//
+// Cursor reuses `QueueCursor`/`encodeQueueCursor`/`decodeQueueCursor` from
+// lib/admin/queues.ts as-is (docs/ADMIN-CONSOLE-PLAN.md §10: "follow the
+// established cursor pattern rather than inventing a second one") — the
+// shape is identical, (updatedAt, id), just walked in the opposite direction
+// (newest-updated first, since this is a browse screen, not a work queue
+// that wants oldest-first for SLA purposes).
+// ============================================================================
+
+export type JobDirectoryItem = {
+  id: string;
+  title: string;
+  companyId: string;
+  companyName: string;
+  category: string;
+  status: JobStatus;
+  salaryMin: number | null;
+  salaryMax: number | null;
+  salaryPeriod: SalaryPeriod;
+  updatedAt: Date;
+  publishedAt: Date | null;
+};
+
+export type JobDirectoryListResult = { items: JobDirectoryItem[]; nextCursor: QueueCursor | null };
+
+const DEFAULT_JOB_DIRECTORY_LIMIT = 25;
+const MAX_JOB_DIRECTORY_LIMIT = 100;
+
+export async function listJobDirectory(params: {
+  status?: JobStatus;
+  search?: string;
+  cursor?: QueueCursor;
+  limit?: number;
+}): Promise<JobDirectoryListResult> {
+  const limit = Math.min(Math.max(params.limit ?? DEFAULT_JOB_DIRECTORY_LIMIT, 1), MAX_JOB_DIRECTORY_LIMIT);
+
+  // Each condition group is its own array slot, combined with `AND` — never
+  // two separate `{ OR: [...] }` object-spreads into one literal, which
+  // silently drops all but the last on key collision (see the identical note
+  // in lib/admin/users.ts's listUserDirectory).
+  const and: Prisma.JobWhereInput[] = [];
+
+  if (params.status) {
+    and.push({ status: params.status });
+  }
+
+  if (params.search) {
+    and.push({
+      OR: [
+        { title: { contains: params.search, mode: "insensitive" } },
+        { category: { contains: params.search, mode: "insensitive" } },
+        { company: { companyName: { contains: params.search, mode: "insensitive" } } },
+      ],
+    });
+  }
+
+  if (params.cursor) {
+    and.push({
+      OR: [
+        { updatedAt: { lt: params.cursor.updatedAt } },
+        { updatedAt: params.cursor.updatedAt, id: { lt: params.cursor.id } },
+      ],
+    });
+  }
+
+  const rows = await prisma.job.findMany({
+    where: and.length > 0 ? { AND: and } : undefined,
+    orderBy: [{ updatedAt: "desc" }, { id: "desc" }],
+    take: limit + 1,
+    select: {
+      id: true,
+      title: true,
+      companyId: true,
+      category: true,
+      status: true,
+      salaryMin: true,
+      salaryMax: true,
+      salaryPeriod: true,
+      updatedAt: true,
+      publishedAt: true,
+      company: { select: { companyName: true } },
+    },
+  });
+
+  const hasMore = rows.length > limit;
+  const page = hasMore ? rows.slice(0, limit) : rows;
+  const last = page[page.length - 1];
+  const nextCursor = hasMore && last ? { updatedAt: last.updatedAt, id: last.id } : null;
+
+  const items: JobDirectoryItem[] = page.map((row) => ({
+    id: row.id,
+    title: row.title,
+    companyId: row.companyId,
+    companyName: row.company.companyName,
+    category: row.category,
+    status: row.status,
+    salaryMin: row.salaryMin,
+    salaryMax: row.salaryMax,
+    salaryPeriod: row.salaryPeriod,
+    updatedAt: row.updatedAt,
+    publishedAt: row.publishedAt,
+  }));
+
+  return { items, nextCursor };
 }

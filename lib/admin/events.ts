@@ -174,19 +174,57 @@ const DEFAULT_EVENT_LIST_LIMIT = 50;
 const MAX_EVENT_LIST_LIMIT = 200;
 
 /**
+ * Opaque cursor codec for `EventCursor` — same base64url-JSON pattern as
+ * `encodeQueueCursor`/`decodeQueueCursor` in lib/admin/queues.ts, just keyed
+ * on `createdAt` instead of `updatedAt` (this table has no `updatedAt`; it is
+ * append-only). Added for the Phase 2 activity-timeline route
+ * (app/api/admin/users/[id]/activity/route.ts) — `listEventsForUser`'s own
+ * cursor SHAPE is unchanged, this only gives a route handler a way to
+ * serialize/deserialize it across the wire.
+ */
+export function encodeEventCursor(cursor: EventCursor): string {
+  return Buffer.from(JSON.stringify({ createdAt: cursor.createdAt.toISOString(), id: cursor.id }), "utf8").toString(
+    "base64url"
+  );
+}
+
+export function decodeEventCursor(raw: string): EventCursor | null {
+  try {
+    const parsed = JSON.parse(Buffer.from(raw, "base64url").toString("utf8"));
+    if (typeof parsed?.createdAt !== "string" || typeof parsed?.id !== "string") return null;
+    const createdAt = new Date(parsed.createdAt);
+    if (Number.isNaN(createdAt.getTime())) return null;
+    return { createdAt, id: parsed.id };
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Cursor-paginated on (createdAt, id) — never OFFSET, per §7 of the plan.
  * `cursor` is the `nextCursor` of the previous page (the last row's
  * createdAt/id), not a row offset.
+ *
+ * `eventType` (docs/ADMIN-CONSOLE-PLAN.md §4.3: the activity timeline is
+ * "filterable by type") is optional and additive — every existing caller
+ * (there are none yet outside this module, but the shape is deliberately
+ * unchanged) that omits it keeps seeing every event type for the user,
+ * exactly as before.
  */
 export async function listEventsForUser(
   userId: string,
-  { cursor, limit = DEFAULT_EVENT_LIST_LIMIT }: { cursor?: EventCursor; limit?: number } = {}
+  {
+    cursor,
+    limit = DEFAULT_EVENT_LIST_LIMIT,
+    eventType,
+  }: { cursor?: EventCursor; limit?: number; eventType?: PlatformEventType } = {}
 ) {
   const boundedLimit = Math.min(Math.max(limit, 1), MAX_EVENT_LIST_LIMIT);
 
   const events = await prisma.platformEvent.findMany({
     where: {
       userId,
+      ...(eventType ? { eventType } : {}),
       ...(cursor
         ? {
             OR: [

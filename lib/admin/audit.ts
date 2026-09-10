@@ -1,4 +1,5 @@
 import type { AdminAuditLog, Prisma } from "@prisma/client";
+import { after } from "next/server";
 import { prisma } from "@/lib/prisma";
 
 /**
@@ -19,7 +20,21 @@ export type AdminAuditAction =
   | "REVIEW_HIDE"
   | "ID_DOCUMENT_VIEWED"
   | "IMPERSONATE_START"
-  | "IMPERSONATE_END";
+  | "IMPERSONATE_END"
+  // Phase 2 (docs/ADMIN-CONSOLE-PLAN.md §4.3) — the 360-degree record and
+  // company detail are single-target PII reads, same category as
+  // ID_DOCUMENT_VIEWED above (a read, not a decision) — see
+  // lib/admin/users.ts's recordPiiRead for why these use the same `after()`
+  // reliability contract as ID_DOCUMENT_VIEWED rather than the awaited
+  // recordAdminAction contract every decision below uses.
+  | "USER_RECORD_VIEWED"
+  | "COMPANY_RECORD_VIEWED"
+  // Phase 2 support actions (lib/admin/users.ts's performUserSupportAction) —
+  // genuine decisions (a state change or a triggered side effect), so these
+  // use the awaited recordAdminAction contract, like every action above.
+  | "USER_PASSWORD_RESET_TRIGGERED"
+  | "USER_VERIFICATION_RESEND_TRIGGERED"
+  | "USER_DELETED_BY_ADMIN";
 
 export type RecordAdminActionInput = {
   adminUserId: string;
@@ -90,6 +105,35 @@ export function buildAdminActionOperation(
   client: Prisma.TransactionClient | typeof prisma = prisma
 ): Prisma.PrismaPromise<AdminAuditLog> {
   return client.adminAuditLog.create({ data: adminAuditLogCreateData(input) });
+}
+
+/**
+ * Shared PII-read audit helper — same reliability contract as the original
+ * `recordDocumentViewed` in lib/admin/queue-detail.ts (which still owns its
+ * own private copy for `ID_DOCUMENT_VIEWED`, unchanged): `after()` so the
+ * write happens post-response without blocking the read it's attached to,
+ * with a bare-promise fallback for a caller with no request scope (a script
+ * or a test). Promoted here, rather than living in lib/admin/users.ts alone,
+ * because Phase 2 needs the exact same contract from two different modules —
+ * `getUserRecord` (lib/admin/users.ts, `USER_RECORD_VIEWED`) and
+ * `getCompanyDetail` (lib/admin/companies.ts, `COMPANY_RECORD_VIEWED`) — and
+ * `lib/admin/audit.ts` is the module both already depend on.
+ *
+ * Use this for READS only. A decision (a state transition) must still go
+ * through the awaited `recordAdminAction`/`buildAdminActionOperation` above,
+ * per their own doc comments.
+ */
+export function recordPiiRead(adminUserId: string, action: AdminAuditAction, targetType: string, targetId: string): void {
+  const write = () =>
+    recordAdminAction({ adminUserId, action, targetType, targetId }).catch((error) => {
+      console.error(`[admin/audit] failed to record ${action} for ${targetType}:${targetId}:`, error);
+    });
+
+  try {
+    after(write);
+  } catch {
+    void write();
+  }
 }
 
 // ============================================================================

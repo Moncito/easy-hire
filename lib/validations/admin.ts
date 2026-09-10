@@ -4,6 +4,7 @@ import {
   JOB_POST_REASON_CODE_SET,
   SEEKER_ID_REASON_CODE_SET,
 } from "@/lib/admin/reason-codes";
+import { PLATFORM_EVENT_TYPES } from "@/lib/admin/events";
 
 /**
  * Admin decision schemas — docs/ADMIN-CONSOLE-PLAN.md §4.2: "Decision
@@ -236,3 +237,78 @@ export const adminBulkQueueReviewSchema = z
   });
 
 export type AdminBulkQueueReviewInput = z.infer<typeof adminBulkQueueReviewSchema>;
+
+// ============================================================================
+// Phase 2 — Directory & 360-degree record (docs/ADMIN-CONSOLE-PLAN.md §4.3,
+// §3). lib/admin/users.ts, lib/admin/companies.ts, lib/admin/jobs.ts.
+// ============================================================================
+
+export const ADMIN_USER_ROLES = ["SEEKER", "EMPLOYER", "ADMIN"] as const;
+export const ADMIN_USER_VERIFIED_FILTERS = ["VERIFIED", "UNVERIFIED"] as const;
+
+/** GET /api/admin/users — the directory list. Cursor is opaque; decoding/validating its contents is lib/admin/users.ts's job, same convention as adminQueueListQuerySchema above. */
+export const adminUserDirectoryQuerySchema = z.object({
+  role: z.enum(ADMIN_USER_ROLES).optional(),
+  verified: z.enum(ADMIN_USER_VERIFIED_FILTERS).optional(),
+  search: z.string().trim().min(1).max(200).optional(),
+  cursor: z.string().min(1).max(500).optional(),
+  limit: z.coerce.number().int().min(1).max(100).optional(),
+});
+
+export type AdminUserDirectoryQuery = z.infer<typeof adminUserDirectoryQuerySchema>;
+
+/** Shared `[id]` param shape for GET /api/admin/users/[id], its /activity and /actions sub-routes. */
+export const adminUserDetailParamsSchema = z.object({
+  id: z.string().min(1, "id is required"),
+});
+
+export type AdminUserDetailParams = z.infer<typeof adminUserDetailParamsSchema>;
+
+/**
+ * GET /api/admin/users/[id]/activity — the activity timeline. `eventType`
+ * reuses the exact §7.1 whitelist from lib/admin/events.ts rather than a new
+ * spelling of the same vocabulary (§4.3: "filterable by type").
+ */
+export const adminUserActivityQuerySchema = z.object({
+  eventType: z.enum(PLATFORM_EVENT_TYPES).optional(),
+  cursor: z.string().min(1).max(500).optional(),
+  limit: z.coerce.number().int().min(1).max(200).optional(),
+});
+
+export type AdminUserActivityQuery = z.infer<typeof adminUserActivityQuerySchema>;
+
+/**
+ * POST /api/admin/users/[id]/actions — support actions (§4.3, minus
+ * suspend/restore/impersonate — see lib/admin/users.ts's module doc comment
+ * for why those are out of scope here). `note` is an optional free-text
+ * attribution carried onto the `admin_audit_logs` row (e.g. a support ticket
+ * reference), same field name/shape as the existing `note` on
+ * `RecordAdminActionInput` in lib/admin/audit.ts.
+ */
+export const ADMIN_USER_SUPPORT_ACTIONS = ["password_reset", "resend_verification", "delete"] as const;
+
+export const adminUserActionSchema = z.object({
+  action: z.enum(ADMIN_USER_SUPPORT_ACTIONS),
+  note: z.string().max(500).optional(),
+});
+
+export type AdminUserActionInput = z.infer<typeof adminUserActionSchema>;
+
+/** GET /api/admin/companies/[id] (detail) — reuses the same `{ id }` shape as adminUserDetailParamsSchema, kept as its own named export so the companies route doesn't reach into the users vocabulary for an unrelated resource. */
+export const adminCompanyDetailParamsSchema = z.object({
+  id: z.string().min(1, "id is required"),
+});
+
+export type AdminCompanyDetailParams = z.infer<typeof adminCompanyDetailParamsSchema>;
+
+/** GET /api/admin/jobs/directory — all-status job directory (distinct from the risk-ranked moderation queue at GET /api/admin/queues?kind=JOB, which only ever shows PENDING_REVIEW/ACTIVE/rejected-DRAFT). `status` spans every `JobStatus` value, including CLOSED and never-submitted DRAFT, neither of which the moderation queue ever surfaces. */
+export const ADMIN_JOB_DIRECTORY_STATUSES = ["DRAFT", "PENDING_REVIEW", "ACTIVE", "CLOSED"] as const;
+
+export const adminJobDirectoryQuerySchema = z.object({
+  status: z.enum(ADMIN_JOB_DIRECTORY_STATUSES).optional(),
+  search: z.string().trim().min(1).max(200).optional(),
+  cursor: z.string().min(1).max(500).optional(),
+  limit: z.coerce.number().int().min(1).max(100).optional(),
+});
+
+export type AdminJobDirectoryQuery = z.infer<typeof adminJobDirectoryQuerySchema>;

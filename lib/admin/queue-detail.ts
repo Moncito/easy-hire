@@ -7,11 +7,10 @@ import type {
   ReviewDirection,
   ReviewStatus,
 } from "@prisma/client";
-import { after } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/lib/api-error";
 import type { QueueKind } from "@/lib/admin/queues";
-import { recordAdminAction, listAuditLog, type AdminAuditAction } from "@/lib/admin/audit";
+import { recordPiiRead, listAuditLog, type AdminAuditAction } from "@/lib/admin/audit";
 import { VERIFICATION_DOC_BUCKET, resolveSignedUrl } from "@/lib/storage";
 
 /**
@@ -194,50 +193,17 @@ async function fetchPriorDecisions(targetType: string, targetId: string): Promis
 }
 
 /**
- * Records `ID_DOCUMENT_VIEWED` for a privacy-sensitive document read
- * (§8.3 of the plan) without blocking the GET it's attached to, and without
- * letting a failed logging write fail that GET.
+ * Records `ID_DOCUMENT_VIEWED` for a privacy-sensitive document read (§8.3).
  *
- * This is a narrow, deliberate exception to `recordAdminAction`'s own doc
- * comment in lib/admin/audit.ts, which asks every OTHER call site to await
- * it and never swallow the error ("an admin decision that cannot be audited
- * must not silently proceed"). That rule protects DECISIONS — state
- * transitions a reviewer takes. Viewing a document changes no state: a
- * dropped audit row here means "we can't prove someone looked," not "we
- * silently approved/rejected something unaudited." This is also the read
- * path behind the side-by-side pane, opened on every single queue item, so
- * blocking it on a logging write would be the wrong trade.
- *
- * NOT a bare floating promise. `recordEvent` in lib/admin/events.ts uses
- * `void promise.catch(...)`, but that pattern is only safe when losing the
- * row is acceptable: on a serverless host the instance can freeze the
- * moment the response is sent, and work still pending is simply dropped.
- * For an access log over identity documents, "usually written" is not good
- * enough — a compliance read either gets logged or it doesn't. `after()`
- * is Next's supported hook for exactly this (post-response work in a route
- * handler) and it still runs when the response errors, so the row lands on
- * the failure path too.
- *
- * The try/catch guards the `after()` call itself, not the write: `after()`
- * throws outside a request scope, and this module must stay callable from a
- * script or a test that has no request context.
+ * This used to be a local copy of the `after()`-based fire-and-forget helper.
+ * Phase 2 needed the identical behaviour for `USER_RECORD_VIEWED` and
+ * `COMPANY_RECORD_VIEWED`, so the helper now lives once in lib/admin/audit.ts
+ * as `recordPiiRead` — see its doc comment for why a PII READ deliberately
+ * does not follow `recordAdminAction`'s awaited contract, and why it uses
+ * `after()` rather than a bare floating promise.
  */
 function recordDocumentViewed(adminUserId: string, targetType: string, targetId: string): void {
-  const write = () =>
-    recordAdminAction({
-      adminUserId,
-      action: "ID_DOCUMENT_VIEWED",
-      targetType,
-      targetId,
-    }).catch((error) => {
-      console.error(`[admin/queue-detail] failed to record ID_DOCUMENT_VIEWED for ${targetType}:${targetId}:`, error);
-    });
-
-  try {
-    after(write);
-  } catch {
-    void write();
-  }
+  recordPiiRead(adminUserId, "ID_DOCUMENT_VIEWED", targetType, targetId);
 }
 
 // ============================================================================
