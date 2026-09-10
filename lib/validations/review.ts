@@ -49,10 +49,31 @@ export type ReviewDisputeInput = z.infer<typeof reviewDisputeSchema>;
  * of 500 matches `adminCompanyReviewSchema`/`adminJobReviewSchema`'s `reason`
  * field (lib/validations/admin.ts) — the existing bound for an admin's
  * internal rationale text.
+ *
+ * `reasonCode` is OPTIONAL and, unlike the company/job/seeker review
+ * schemas in lib/validations/admin.ts, is NOT validated against a
+ * controlled vocabulary — no reason-code list was commissioned for review
+ * moderation in this phase (see lib/admin/reason-codes.ts's header comment).
+ * It is still threaded into `admin_audit_logs.reason_code` as a free-form
+ * string so the column isn't left unused, and a vocabulary can be added
+ * later without a schema change on either side. Only valid alongside
+ * `action: "hide"` — "restore" is the approval-equivalent here and takes no
+ * reason code, mirroring the approve/reject split in lib/validations/admin.ts.
  */
-export const adminReviewResolveSchema = z.object({
-  action: z.enum(["restore", "hide"]),
-  note: z.string().trim().max(500, "Note is too long (500 characters maximum).").optional(),
-});
+export const adminReviewResolveSchema = z
+  .object({
+    action: z.enum(["restore", "hide"]),
+    note: z.string().trim().max(500, "Note is too long (500 characters maximum).").optional(),
+    reasonCode: z.string().trim().max(64, "Reason code is too long.").optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.action === "restore" && data.reasonCode !== undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["reasonCode"],
+        message: "Restoring a review does not take a reason code.",
+      });
+    }
+  });
 
 export type AdminReviewResolveInput = z.infer<typeof adminReviewResolveSchema>;

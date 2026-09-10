@@ -105,6 +105,7 @@ export async function reviewSeekerVerification(adminUserId: string, seekerProfil
       action: "SEEKER_VERIFICATION_REJECT",
       targetType: "SEEKER_PROFILE",
       targetId: seekerProfileId,
+      reasonCode: input.reasonCode,
       note: reason,
       before: { idVerificationStatus: "PENDING" },
       after: { idVerificationStatus: "REJECTED" },

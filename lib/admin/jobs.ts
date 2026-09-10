@@ -136,6 +136,7 @@ export async function reviewJob(adminUserId: string, jobId: string, raw: unknown
       action: "JOB_REJECT",
       targetType: "JOB",
       targetId: jobId,
+      reasonCode: input.reasonCode,
       note: reason,
       before: { status: "PENDING_REVIEW" },
       after: { status: "DRAFT" },

@@ -137,6 +137,7 @@ export async function reviewCompany(adminUserId: string, companyId: string, raw:
       action: "COMPANY_REJECT",
       targetType: "COMPANY",
       targetId: companyId,
+      reasonCode: input.reasonCode,
       note: reason,
       before: { verifiedStatus: "PENDING" },
       after: { verifiedStatus: "REJECTED" },

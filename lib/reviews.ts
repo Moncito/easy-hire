@@ -361,6 +361,7 @@ export async function resolveDisputedReview(adminUserId: string, reviewId: strin
         action: nextStatus === "PUBLISHED" ? "REVIEW_DISPUTE_RESOLVE" : "REVIEW_HIDE",
         targetType: "REVIEW",
         targetId: reviewId,
+        reasonCode: input.reasonCode,
         note: input.note?.trim() || undefined,
         before: { status: "DISPUTED" },
         after: { status: nextStatus },
