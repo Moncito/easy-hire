@@ -5,10 +5,6 @@ import { requireAdmin } from "@/lib/admin-auth";
 import { adminQueueStatsQuerySchema } from "@/lib/validations/admin";
 import { getQueueHealth, getDecisionStats } from "@/lib/admin/queues";
 
-/** Default decision-stats lookback when `since` isn't given. */
-const DEFAULT_STATS_WINDOW_DAYS = 7;
-const DEFAULT_STATS_WINDOW_MS = DEFAULT_STATS_WINDOW_DAYS * 24 * 60 * 60 * 1000;
-
 /**
  * GET /api/admin/queues/stats?since=2026-09-01T00:00:00Z — queue health
  * (depth, oldest-item age, SLA breach count, per queue) plus decision stats
@@ -29,9 +25,7 @@ export async function GET(req: Request) {
     const query = adminQueueStatsQuerySchema.parse({
       since: url.searchParams.get("since") ?? undefined,
     });
-    const since = query.since ?? new Date(Date.now() - DEFAULT_STATS_WINDOW_MS);
-
-    const [health, decisions] = await Promise.all([getQueueHealth(), getDecisionStats({ since })]);
+    const [health, decisions] = await Promise.all([getQueueHealth(), getDecisionStats({ since: query.since })]);
 
     return NextResponse.json({ health, decisions });
   } catch (error) {

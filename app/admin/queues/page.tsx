@@ -2,8 +2,9 @@ import { auth } from "@/Auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { AlertTriangle, ArrowRight, Clock, Layers } from "lucide-react";
-import { getQueueHealth, type QueueHealth, type QueueKind } from "@/lib/admin/queues";
+import { getQueueHealth, getDecisionStats, type QueueHealth, type QueueKind } from "@/lib/admin/queues";
 import { QUEUE_KIND_LABEL, QUEUE_SEGMENT_BY_KIND } from "./_lib/kind-map";
+import DecisionQualityPanel from "@/components/admin/queue/DecisionQualityPanel";
 
 const KIND_ORDER: QueueKind[] = ["COMPANY", "SEEKER", "JOB", "REVIEW"];
 
@@ -20,7 +21,13 @@ export default async function AdminQueuesIndexPage() {
     redirect("/login");
   }
 
-  const health = await getQueueHealth();
+  // No `since` argument: getDecisionStats owns the default window
+  // (DEFAULT_DECISION_STATS_WINDOW_DAYS in lib/admin/queues.ts) and reports
+  // back which window it used as `stats.since`, which is what the panel
+  // renders as its label. Computing the cutoff here instead would both
+  // duplicate that constant and read the clock during render, which
+  // react-hooks/purity rejects — server component or not.
+  const [health, decisionStats] = await Promise.all([getQueueHealth(), getDecisionStats()]);
   const byKind = new Map<QueueKind, QueueHealth>(health.map((h) => [h.kind, h]));
 
   return (
@@ -82,6 +89,8 @@ export default async function AdminQueuesIndexPage() {
           );
         })}
       </div>
+
+      <DecisionQualityPanel stats={decisionStats} />
     </div>
   );
 }

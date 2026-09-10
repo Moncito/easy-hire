@@ -3,30 +3,17 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  LayoutDashboard,
-  Briefcase,
-  Building2,
-  ChevronDown,
-  Flag,
-  Layers,
-  LogOut,
-  ShieldCheck,
-} from "lucide-react";
+import { LayoutDashboard, Building2, ChevronDown, Layers, LogOut } from "lucide-react";
 import { useSignOut } from "@/components/ui/useSignOut";
 
-const navItems = [
-  { label: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
-  { label: "Company verifications", href: "/admin/companies", icon: Building2 },
-  { label: "Seeker verifications", href: "/admin/seekers/verifications", icon: ShieldCheck },
-  { label: "Job approvals", href: "/admin/jobs", icon: Briefcase },
-  { label: "Review disputes", href: "/admin/reviews", icon: Flag },
-];
-
-// New unified moderation queues (docs/ADMIN-CONSOLE-PLAN.md §3/§4.2) — the
-// old per-kind links above stay exactly as they are until the shell is
-// verified in a browser (see the plan's Phase 1 breakdown: "Old routes
-// redirect ... Deliberately last"). Both nav groups are live at once.
+// The unified moderation queues (docs/ADMIN-CONSOLE-PLAN.md §3/§4.2). The
+// old per-kind links this sidebar used to carry are gone: /admin/jobs,
+// /admin/seekers/verifications and /admin/reviews now redirect straight
+// here, so listing them separately would have been two links to one screen.
+//
+// /admin/companies is the exception and keeps its own entry below — the
+// verification queue moved out of it, but its collaborative-hiring access
+// tool did not move anywhere, so that path still leads somewhere distinct.
 const queueItems = [
   { label: "Companies", href: "/admin/queues/companies" },
   { label: "Seekers", href: "/admin/queues/seekers" },
@@ -110,25 +97,15 @@ export default function AdminSidebar() {
           )}
         </div>
 
-        <p className="mt-3 px-3 text-[10px] font-semibold uppercase tracking-wider text-ink/30">Legacy queue pages</p>
-        {navItems
-          .filter((item) => item.href !== "/admin/dashboard")
-          .map((item) => {
-            const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all ${
-                  isActive ? "bg-navy/8 text-navy" : "text-ink/65 hover:bg-ink/4 hover:text-ink"
-                }`}
-              >
-                <Icon className="h-4.5 w-4.5" strokeWidth={2} />
-                {item.label}
-              </Link>
-            );
-          })}
+        <Link
+          href="/admin/companies"
+          className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all ${
+            pathname === "/admin/companies" ? "bg-navy/8 text-navy" : "text-ink/65 hover:bg-ink/4 hover:text-ink"
+          }`}
+        >
+          <Building2 className="h-4.5 w-4.5" strokeWidth={2} />
+          Company access
+        </Link>
       </nav>
 
       <div className="shrink-0 border-t border-ink/5 px-4 py-4">

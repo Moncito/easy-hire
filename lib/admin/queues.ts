@@ -384,6 +384,23 @@ async function batchSeekerApplicationCounts(seekerProfileIds: string[]): Promise
   return new Map(rows.map((r) => [r.seekerId, r._count._all]));
 }
 
+/**
+ * Email per admin user id, for `getDecisionStats`'s `byAdmin` table. `User`
+ * carries no display-name column (see `model User` in schema.prisma — just
+ * `email`), so email is the only identifying detail available. An id with
+ * no matching row (admin account deleted; `admin_audit_logs` is NOT
+ * cascade-deleted, see its own schema comment) is simply absent from the
+ * returned map — callers fall back to `null`, never a thrown error.
+ */
+async function batchAdminEmails(adminUserIds: string[]): Promise<Map<string, string>> {
+  if (adminUserIds.length === 0) return new Map();
+  const rows = await prisma.user.findMany({
+    where: { id: { in: adminUserIds } },
+    select: { id: true, email: true },
+  });
+  return new Map(rows.map((r) => [r.id, r.email]));
+}
+
 type CategorySalaryStatsRow = {
   category: string;
   salary_period: SalaryPeriod;
@@ -1101,6 +1118,15 @@ type OverturnByAdminRow = { admin_user_id: string; overturns: number };
 
 export type AdminDecisionStat = {
   adminUserId: string;
+  /**
+   * Nullable, not just optional: the `User` row backing an audit log's
+   * `adminUserId` can be gone by the time this renders (admin accounts are
+   * deletable; `admin_audit_logs` deliberately is NOT cascade-deleted, so
+   * the accountability trail outlives the account). Render as "unknown
+   * admin" — never throw, and never drop the row, since dropping it would
+   * understate the overturn totals below.
+   */
+  adminEmail: string | null;
   total: number;
   approvals: number;
   rejections: number;
@@ -1121,7 +1147,16 @@ export type DecisionStats = {
   };
 };
 
-export async function getDecisionStats({ since }: { since: Date }): Promise<DecisionStats> {
+/** Default decision-stats lookback when `since` isn't given — the single source of truth (was previously duplicated per-caller; see the call sites in app/api/admin/queues/stats/route.ts and app/admin/queues/page.tsx). */
+export const DEFAULT_DECISION_STATS_WINDOW_DAYS = 7;
+
+export async function getDecisionStats(input?: { since?: Date }): Promise<DecisionStats> {
+  // Computed here, not at the call site, so every caller (including RSCs,
+  // where reading the clock during render trips react-hooks/purity) gets an
+  // identical default without touching Date.now() themselves.
+  const since =
+    input?.since ?? new Date(Date.now() - DEFAULT_DECISION_STATS_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+
   const [byAdminAction, overturnRows] = await Promise.all([
     prisma.adminAuditLog.groupBy({
       by: ["adminUserId", "action"] as const,
@@ -1169,10 +1204,16 @@ export async function getDecisionStats({ since }: { since: Date }): Promise<Deci
 
   const overturnsByAdmin = new Map(overturnRows.map((r) => [r.admin_user_id, r.overturns]));
 
+  // One batched lookup across every distinct admin id in the window — same
+  // local pattern as batchPriorDecisionCounts/batchCompanyLiveJobCounts/
+  // batchSeekerApplicationCounts above, never a query per admin.
+  const adminEmails = await batchAdminEmails(Array.from(perAdmin.keys()));
+
   const byAdmin: AdminDecisionStat[] = Array.from(perAdmin.entries()).map(([adminUserId, counts]) => {
     const overturnCount = overturnsByAdmin.get(adminUserId) ?? 0;
     return {
       adminUserId,
+      adminEmail: adminEmails.get(adminUserId) ?? null,
       total: counts.approvals + counts.rejections,
       approvals: counts.approvals,
       rejections: counts.rejections,
