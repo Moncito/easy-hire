@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
+import { APP_URL } from "@/lib/shared/app-url";
 
-const BASE = process.env.NEXTAUTH_URL ?? process.env.APP_URL ?? "https://easyhire.ph";
+const BASE = APP_URL;
 
 export default function robots(): MetadataRoute.Robots {
   return {

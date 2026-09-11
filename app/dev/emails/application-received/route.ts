@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { renderApplicationReceivedEmail } from "@/lib/shared/email-layout";
+import { APP_URL } from "@/lib/shared/app-url";
 
 /**
  * Local preview of the application-received email. 404s in production.
@@ -10,7 +11,7 @@ export function GET() {
     return new NextResponse("Not found", { status: 404 });
   }
 
-  const appUrl = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
+  const appUrl = APP_URL;
   const html = renderApplicationReceivedEmail({
     preview: "Your application to The Black Saint Directory was received.",
     applicantFirstName: "Moncito",

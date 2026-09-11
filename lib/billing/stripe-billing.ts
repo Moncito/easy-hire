@@ -4,7 +4,7 @@ import { invalidateCollaborativeHiringEnabled } from "@/lib/collaborative-hiring
 
 const STRIPE_SECRET = process.env.STRIPE_SECRET_KEY;
 const PRO_PRICE_ID = process.env.STRIPE_PRO_PRICE_ID;
-const APP_URL = process.env.NEXTAUTH_URL ?? process.env.APP_URL ?? "http://localhost:3000";
+import { APP_URL } from "@/lib/shared/app-url";
 
 let cachedClient: Stripe | null | undefined;
 
