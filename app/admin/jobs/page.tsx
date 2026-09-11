@@ -1,25 +1,20 @@
-import { auth } from "@/Auth";
 import { redirect } from "next/navigation";
-import { listPendingJobs } from "@/lib/admin/jobs";
-import JobReviewQueue from "@/components/admin/JobReviewQueue";
 
-export default async function AdminJobsPage() {
-  const session = await auth();
-  if (!session?.user || session.user.role !== "ADMIN") {
-    redirect("/login");
-  }
-
-  const jobs = await listPendingJobs();
-
-  return (
-    <div className="mx-auto max-w-5xl">
-      <div className="mb-8">
-        <h1 className="font-display text-3xl font-bold tracking-tight text-ink">Job approvals</h1>
-        <p className="mt-2 text-sm text-ink/55">
-          Review employer job postings before they go live on the public board.
-        </p>
-      </div>
-      <JobReviewQueue initialJobs={JSON.parse(JSON.stringify(jobs))} />
-    </div>
-  );
+/**
+ * Legacy path. The job approval queue now lives in the unified, risk-ranked
+ * shell at /admin/queues/jobs (Phase 1, docs/ADMIN-CONSOLE-PLAN.md §3: "the
+ * queue versions live under /admin/queues/* and the old paths redirect. No
+ * dead links, no broken bookmarks").
+ *
+ * A temporary redirect, not a permanent one: a 308 gets cached by the
+ * browser and would be awkward to walk back if this path is ever reused.
+ * §3 does not reassign /admin/jobs to anything else until Phase 2, where it
+ * becomes the all-status job directory — at which point this file is
+ * replaced by that page rather than by a different redirect.
+ *
+ * No auth check here on purpose — the redirect target runs its own, and
+ * duplicating it would just be a second place to get it wrong.
+ */
+export default function AdminJobsPage() {
+  redirect("/admin/queues/jobs");
 }

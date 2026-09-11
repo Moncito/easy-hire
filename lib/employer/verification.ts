@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/lib/api-error";
 import { verificationDocumentCreateSchema } from "@/lib/validations/verification";
 import { VERIFICATION_DOC_BUCKET, assertOwnedObjectPath, resolveSignedUrl } from "@/lib/storage";
+import { recordEvent } from "@/lib/admin/events";
 import type { VerificationDocument } from "@prisma/client";
 
 export const MAX_VERIFICATION_DOCUMENTS = 5;
@@ -78,6 +79,19 @@ export async function createVerificationDocument(companyId: string, raw: unknown
       : []),
   ]);
 
+  // Every document upload is a resubmission of evidence for review — there
+  // is no separate "verification doc uploaded" event in the §7.1 vocabulary
+  // for employers (unlike the seeker side's ID_DOC_UPLOADED), so each upload
+  // maps to VERIFICATION_SUBMITTED.
+  recordEvent({
+    eventType: "VERIFICATION_SUBMITTED",
+    actorType: "EMPLOYER",
+    userId: company.userId,
+    entityType: "COMPANY",
+    entityId: companyId,
+    metadata: { docType: input.docType },
+  });
+
   return signVerificationDocument(document);
 }
 
@@ -127,8 +141,18 @@ export async function requestVerificationReview(companyId: string) {
     );
   }
 
-  return prisma.company.update({
+  const updated = await prisma.company.update({
     where: { id: companyId },
     data: { verifiedStatus: "PENDING", verificationRejectionReason: null },
   });
+
+  recordEvent({
+    eventType: "VERIFICATION_SUBMITTED",
+    actorType: "EMPLOYER",
+    userId: company.userId,
+    entityType: "COMPANY",
+    entityId: companyId,
+  });
+
+  return updated;
 }

@@ -11,6 +11,8 @@ import {
   reviewDisputeSchema,
   adminReviewResolveSchema,
 } from "@/lib/validations/review";
+import { buildAdminActionOperation } from "@/lib/admin/audit";
+import { recordEvent } from "@/lib/admin/events";
 
 /**
  * TWO-WAY REVIEWS — business logic.
@@ -240,6 +242,15 @@ export async function submitReview(userId: string, raw: unknown) {
     invalidateSeekerReviews(application.seekerId);
   }
 
+  recordEvent({
+    eventType: "REVIEW_SUBMITTED",
+    actorType: role === "SEEKER" ? "SEEKER" : "EMPLOYER",
+    userId,
+    entityType: "REVIEW",
+    entityId: review.id,
+    metadata: { direction },
+  });
+
   return review;
 }
 
@@ -297,6 +308,17 @@ export async function disputeReview(userId: string, reviewId: string, raw: unkno
   if (review.subjectCompanyId) invalidateCompanyReviews(review.subjectCompanyId);
   if (review.subjectSeekerId) invalidateSeekerReviews(review.subjectSeekerId);
 
+  // The subject of a SEEKER_TO_COMPANY review is the company (an employer
+  // disputes it); the subject of a COMPANY_TO_SEEKER review is the seeker —
+  // same mapping `isReviewSubjectUser` above just authorized against.
+  recordEvent({
+    eventType: "REVIEW_DISPUTED",
+    actorType: review.direction === "SEEKER_TO_COMPANY" ? "EMPLOYER" : "SEEKER",
+    userId,
+    entityType: "REVIEW",
+    entityId: reviewId,
+  });
+
   return prisma.review.findUniqueOrThrow({ where: { id: reviewId } });
 }
 
@@ -314,14 +336,39 @@ export async function resolveDisputedReview(adminUserId: string, reviewId: strin
 
   const nextStatus: ReviewStatus = input.action === "restore" ? "PUBLISHED" : "HIDDEN";
 
-  const updated = await prisma.review.updateMany({
-    where: { id: reviewId, status: "DISPUTED" },
-    data: {
-      status: nextStatus,
-      resolvedAt: new Date(),
-      resolvedByUserId: adminUserId,
-      resolutionNote: input.note?.trim() || null,
-    },
+  // Interactive (not array-form) transaction on purpose: the `updateMany`
+  // below is conditional (guards the same double-click/already-resolved
+  // race `disputeReview` guards above) and must NOT produce an audit row
+  // when it matches zero rows — the array form would run the audit insert
+  // unconditionally regardless of the update's result. Still short: one
+  // conditional update, one conditional insert, nothing else.
+  const updated = await prisma.$transaction(async (tx) => {
+    const result = await tx.review.updateMany({
+      where: { id: reviewId, status: "DISPUTED" },
+      data: {
+        status: nextStatus,
+        resolvedAt: new Date(),
+        resolvedByUserId: adminUserId,
+        resolutionNote: input.note?.trim() || null,
+      },
+    });
+    if (result.count === 0) {
+      return result;
+    }
+    await buildAdminActionOperation(
+      {
+        adminUserId,
+        action: nextStatus === "PUBLISHED" ? "REVIEW_DISPUTE_RESOLVE" : "REVIEW_HIDE",
+        targetType: "REVIEW",
+        targetId: reviewId,
+        reasonCode: input.reasonCode,
+        note: input.note?.trim() || undefined,
+        before: { status: "DISPUTED" },
+        after: { status: nextStatus },
+      },
+      tx
+    );
+    return result;
   });
   if (updated.count === 0) {
     throw new ApiError("Only a disputed review can be resolved.", 400);

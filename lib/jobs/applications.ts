@@ -14,6 +14,7 @@ import { invalidateSeekerApplications } from "@/lib/seeker/cache";
 import { hydrateResumeFields } from "@/lib/seeker/resume-urls";
 import { recomputeVerificationScore } from "@/lib/seeker/identity-verification";
 import { isFirstEmployerResponseTransition } from "@/lib/employer/response-metrics";
+import { recordEvent } from "@/lib/admin/events";
 
 const candidateSeekerSelect = {
   id: true,
@@ -151,6 +152,16 @@ export async function createApplication(seekerUserId: string, raw: unknown) {
 
     invalidateEmployerWorkspace(job.companyId);
     invalidateSeekerApplications(seekerUserId);
+
+    recordEvent({
+      eventType: "JOB_APPLIED",
+      actorType: "SEEKER",
+      userId: seekerUserId,
+      entityType: "APPLICATION",
+      entityId: application.id,
+      metadata: { jobId: job.id },
+    });
+
     return application;
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
@@ -204,6 +215,15 @@ export async function withdrawApplication(seekerUserId: string, applicationId: s
   );
   invalidateEmployerWorkspace(application.job.company.id);
   invalidateSeekerApplications(seekerUserId);
+
+  recordEvent({
+    eventType: "APPLICATION_WITHDRAWN",
+    actorType: "SEEKER",
+    userId: seekerUserId,
+    entityType: "APPLICATION",
+    entityId: application.id,
+    metadata: { jobId: application.job.id },
+  });
 
   return { ok: true as const, jobId: application.job.id };
 }
@@ -301,6 +321,31 @@ export async function updateApplication(applicationId: string, raw: unknown) {
 
   invalidateEmployerWorkspace(existing.job.company.id);
   invalidateSeekerApplications(existing.seeker.user.id);
+
+  // No employer userId reaches this function (see app/api/applications/[id]/route.ts,
+  // which authorizes the caller via requireEmployerApplication but doesn't
+  // thread session.user.id through) — actorType alone still identifies this
+  // as an employer-side transition; the application id is enough to locate it.
+  if (data.status !== undefined && data.status !== existing.status) {
+    recordEvent({
+      eventType: "APPLICATION_STATUS_CHANGED",
+      actorType: "EMPLOYER",
+      entityType: "APPLICATION",
+      entityId: existing.id,
+      metadata: { from: existing.status, to: data.status },
+    });
+
+    if (becameHired) {
+      recordEvent({
+        eventType: "CANDIDATE_HIRED",
+        actorType: "EMPLOYER",
+        entityType: "APPLICATION",
+        entityId: existing.id,
+        metadata: { jobId: existing.job.id },
+      });
+    }
+  }
+
   return {
     ...updated,
     seeker: await normalizeCandidateSeeker(updated.seeker),

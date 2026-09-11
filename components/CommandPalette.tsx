@@ -76,7 +76,25 @@ export default function CommandPalette() {
   const workspaceCompanyId = hiringCompanyId(pathname);
   const isWorkspace = workspaceCompanyId !== null;
 
-  const hideFloatingTrigger = pathname.includes("/messages") || pathname.startsWith("/employer") || isWorkspace;
+  /**
+   * The admin console has its OWN ⌘K palette
+   * (components/admin/CommandPalette.tsx, mounted in app/admin/layout.tsx),
+   * which searches users/companies/jobs as an operator rather than as a
+   * seeker or employer. This component is mounted globally in
+   * app/layout.tsx, so without this guard BOTH palettes mount on every
+   * /admin page and BOTH bind ⌘K — one keypress opened two `aria-modal`
+   * dialogs with duelling focus traps, the admin one (z-[100]) simply
+   * covering this one (z-50).
+   *
+   * Suppressed entirely on /admin, not merely hidden: the key listener below
+   * must not fire either. `shortcutsForRole` has no ADMIN branch anyway, so
+   * an admin got "Browse jobs"/"Browse companies" — public pages, useless
+   * from inside the console.
+   */
+  const isAdminRoute = pathname === "/admin" || pathname.startsWith("/admin/");
+
+  const hideFloatingTrigger =
+    isAdminRoute || pathname.includes("/messages") || pathname.startsWith("/employer") || isWorkspace;
 
   const shortcuts = isWorkspace ? shortcutsForWorkspace(workspaceCompanyId) : shortcutsForRole(role);
 
@@ -90,6 +108,10 @@ export default function CommandPalette() {
   }, []);
 
   useEffect(() => {
+    // Leave ⌘K to the admin console's own palette on /admin — see the
+    // isAdminRoute comment above.
+    if (isAdminRoute) return;
+
     function onKeyDown(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
@@ -100,7 +122,7 @@ export default function CommandPalette() {
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [close]);
+  }, [close, isAdminRoute]);
 
   useEffect(() => {
     if (open) {
@@ -196,6 +218,11 @@ export default function CommandPalette() {
       if (target) go(target.href);
     }
   }
+
+  // Renders nothing at all inside the admin console, open or not — navigating
+  // into /admin with this palette already open must not leave a second modal
+  // stacked under the admin one.
+  if (isAdminRoute) return null;
 
   if (!open) {
     if (hideFloatingTrigger) return null;

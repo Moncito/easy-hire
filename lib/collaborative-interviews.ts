@@ -4,6 +4,7 @@ import { ApiError } from "@/lib/api-error";
 import { hasCollaborativePermission, requireCompanyMembership } from "@/lib/collaborative-hiring";
 import { notifyInterviewCancelled, notifyInterviewRescheduled, notifyInterviewScheduled } from "@/lib/email";
 import { invalidateSeekerInterviews } from "@/lib/seeker/cache";
+import { recordEvent } from "@/lib/admin/events";
 
 type InterviewLifecycleRecord = {
   applicationId: string;
@@ -216,6 +217,18 @@ export async function scheduleInterview(companyId: string, userId: string, jobId
   notifyScheduled(interview).catch((err) =>
     console.error("[collaborative-interviews] failed to notify candidate of scheduled interview:", err)
   );
+
+  // `format` is not enum-constrained at the schema/validation level (see
+  // scheduleInterview's `input` type — a plain client-supplied string, not a
+  // zod enum), so it's left out of metadata per the "ids and enums only"
+  // rule rather than risk recording free-form client text.
+  recordEvent({
+    eventType: "INTERVIEW_SCHEDULED",
+    actorType: "EMPLOYER",
+    userId,
+    entityType: "APPLICATION",
+    entityId: applicationId,
+  });
 
   return interview;
 }

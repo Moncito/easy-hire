@@ -42,7 +42,11 @@ model User {
   companyMemberships CompanyMember[]
   verificationTokens VerificationToken[]
   reviewsAuthored    Review[]
+  adminProfile       AdminProfile?
 
+  // Sprint 10b follow-up — nightly rollup counts signups per day
+  // (lib/admin/rollups.ts); no supporting index on this column before.
+  @@index([createdAt])
   @@map("users")
 }
 
@@ -126,6 +130,14 @@ model SeekerProfile {
   idVerificationRejectionReason  String?             @map("id_verification_rejection_reason")
   verificationScore              Int                 @default(0) @map("verification_score")
   verificationScoreUpdatedAt     DateTime?           @map("verification_score_updated_at")
+  // Admin console Phase 0 (build-plan.md Sprint 10) — continuous trust scoring,
+  // recomputed nightly. `trustSignals` stores the component breakdown so a low
+  // score is explainable — an unexplainable risk score is one nobody acts on.
+  // Deliberately separate from `verificationScore` above, which measures
+  // identity confidence only; trust folds in behavioral/abuse signals too.
+  trustScore                     Int?                @map("trust_score")
+  trustScoreUpdatedAt            DateTime?           @map("trust_score_updated_at")
+  trustSignals                   Json?               @map("trust_signals")
   // SQL-only generated column (GENERATED ALWAYS AS ... STORED), created by
   // prisma/migrations/20260728210000_sprint5_messaging_talent. Prisma has no schema-level
   // concept of a STORED generated column, so this is declared as an Unsupported column
@@ -148,6 +160,8 @@ model SeekerProfile {
 
   @@index([searchVector], type: Gin)
   @@index([idVerificationStatus])
+  // Admin trust queue sorts by trust_score.
+  @@index([trustScore])
   @@map("seeker_profiles")
 }
 
@@ -221,7 +235,19 @@ model Company {
   responseSampleSize       Int?      @map("response_sample_size")
   responseMetricsUpdatedAt DateTime? @map("response_metrics_updated_at")
 
+  // Admin console Phase 0 (build-plan.md Sprint 10) — continuous trust scoring,
+  // recomputed nightly. `trustSignals` stores the component breakdown so a low
+  // score is explainable — an unexplainable risk score is one nobody acts on.
+  trustScore            Int?      @map("trust_score")
+  trustScoreUpdatedAt   DateTime? @map("trust_score_updated_at")
+  trustSignals          Json?     @map("trust_signals")
+
   @@index([verifiedStatus])
+  // Admin trust queue sorts by trust_score.
+  @@index([trustScore])
+  // Sprint 10b follow-up — nightly rollup counts new companies per day
+  // (lib/admin/rollups.ts); no supporting index on this column before.
+  @@index([createdAt])
   @@map("companies")
 }
 
@@ -327,6 +353,19 @@ model Job {
   status                JobStatus                @default(DRAFT)
   targetHireCount       Int                      @default(1) @map("target_hire_count")
   publishedAt           DateTime?                @map("published_at")
+  // Sprint 10b follow-up (build-plan.md "Sprint 10b — approved (admin console
+  // Phase 0 follow-up, 2026-09-10)") — stamped every time this job enters
+  // PENDING_REVIEW: job create-and-submit and ACTIVE-job edit-and-resubmit
+  // both go through lib/jobs/crud.ts, which sets this alongside `status`.
+  // Deliberately the OPPOSITE stamp-once precedent from `Application.hiredAt`
+  // / `firstEmployerResponseAt` above (see their comments): those never
+  // overwrite once set, but a job re-entering PENDING_REVIEW after a
+  // rejection starts a NEW review clock, so this column RESTAMPS on every
+  // DRAFT/PENDING_REVIEW -> PENDING_REVIEW transition. Null for every job
+  // that predates this column and for jobs that have never been submitted —
+  // lib/admin/rollups.ts's admin-review-latency metric reads null as "not
+  // computable for this job," never as zero.
+  pendingReviewAt       DateTime?                @map("pending_review_at")
   reviewRejectionReason String?                  @map("review_rejection_reason")
   featuredUntil         DateTime?                @map("featured_until")
   createdAt             DateTime                 @default(now()) @map("created_at")
@@ -358,6 +397,9 @@ model Job {
   @@index([category])
   @@index([publishedAt])
   @@index([expiresAt])
+  // Sprint 10b follow-up — nightly rollup counts jobs created per day
+  // (lib/admin/rollups.ts); no supporting index on this column before.
+  @@index([createdAt])
   // Matches the public job board's default listing query (lib/jobs/public-listing.ts:
   // activeJobWhere()/buildOrderBy() default sort): WHERE status = 'ACTIVE' ORDER BY
   // featuredUntil DESC NULLS LAST, createdAt DESC, id DESC. `status` leads because it's
@@ -465,6 +507,12 @@ model Application {
   // row (the grace-period/qualifying decision runs in computeResponseMetrics,
   // in JS, not in SQL) so indexing it wouldn't help this query's WHERE clause.
   @@index([jobId, appliedAt])
+  // Sprint 10b follow-up — nightly rollup counts applications submitted
+  // (appliedAt) and hires (hiredAt) per day (lib/admin/rollups.ts). Every
+  // existing index on this model is led by jobId, so a same-day date-range
+  // count on either column was a sequential scan before these.
+  @@index([appliedAt])
+  @@index([hiredAt])
   @@map("applications")
 }
 
@@ -906,6 +954,17 @@ model AiUsageEvent {
   tokens    Int?
   metadata  Json?
   createdAt DateTime @default(now()) @map("created_at")
+  // Admin console Phase 0 (build-plan.md Sprint 10) — cost must be priced at
+  // call time. Input, output and cached tokens are billed at different rates,
+  // so a single `tokens` integer above can't be repriced later and hides
+  // cache savings. All five nullable: existing rows predate these columns and
+  // can never be backfilled, because the rate card in effect when they were
+  // written is gone by the time anyone looks.
+  costMicroCents Int?    @map("cost_micro_cents")
+  model          String?
+  inputTokens    Int?    @map("input_tokens")
+  outputTokens   Int?    @map("output_tokens")
+  cachedTokens   Int?    @map("cached_tokens")
 
   // Relations
   company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
@@ -1068,4 +1127,212 @@ model Review {
   @@index([subjectCompanyId, status])
   @@index([subjectSeekerId, status])
   @@map("reviews")
+}
+
+// ============================================================================
+// ADMIN CONSOLE PHASE 0 (build-plan.md Sprint 10, approved 2026-09-09) —
+// activity stream, audit trail, cost tracking, platform analytics,
+// trust/abuse queue, and admin RBAC. See docs/ADMIN-CONSOLE-PLAN.md
+// §6.1–6.7 for the design intent behind each table below.
+// ============================================================================
+
+/// Every user movement — activity timeline, funnels, trust signal inputs.
+/// Only whitelisted event types get written here (no page views; `JobView`
+/// already covers that) — this table outgrows every other table combined at
+/// scale, so writes are fire-and-forget and never sit in a user-facing
+/// request's critical path.
+///
+/// Range-partitioned by `createdAt`, monthly, so 90-day-old data can be
+/// rolled up into `PlatformEventDailyRollup` and its partition detached and
+/// dropped cheaply, instead of a slow DELETE against a huge table. Postgres
+/// requires the partition key to be part of every unique/primary key on a
+/// partitioned table, which is why the id below is `@@id([id, createdAt])`
+/// instead of a plain single-column `@id` — `id` alone is still
+/// effectively-unique, this is a Postgres constraint, not a modeling choice.
+///
+/// Prisma has no partitioning DSL at all (same precedent as `Job.searchVector`
+/// and `SeekerProfile.searchVector` elsewhere in this file, where a SQL-only
+/// database feature needs a matching hand-authored migration): this model
+/// only describes the row shape. The actual `PARTITION BY RANGE (created_at)`
+/// clause, the monthly partitions, and the DEFAULT catch-all partition live
+/// entirely in prisma/migrations/20260909120000_admin_console_phase0 and must
+/// never be reverse-engineered from this Prisma model — there is nothing here
+/// for `prisma migrate diff` to compare against, and it would try to drop the
+/// partitioning if asked.
+///
+/// `userId` deliberately has NO foreign key to `users`. This is an
+/// append-only analytics/history table, not live state: a user deleting
+/// their account must not cascade away their own event history (that history
+/// is exactly what a fraud investigation after account deletion would need),
+/// and lib/account/account-deletion.ts anonymizes rows in place rather than
+/// hard-deleting the user id, so `userId` here stays valid regardless.
+model PlatformEvent {
+  // No field-level `@id`: the primary key is the composite `@@id([id, createdAt])`
+  // below, because Postgres requires the partition key in every unique constraint
+  // on a partitioned table. `id` alone is still globally unique via cuid().
+  id         String   @default(cuid())
+  userId     String?  @map("user_id") // null for anonymous/system events
+  actorType  String   @map("actor_type") // SEEKER | EMPLOYER | ADMIN | SYSTEM
+  eventType  String   @map("event_type") // controlled vocabulary, see ADMIN-CONSOLE-PLAN.md §7.1
+  entityType String?  @map("entity_type") // JOB | APPLICATION | COMPANY | ...
+  entityId   String?  @map("entity_id")
+  metadata   Json? // ids and enums only — never PII, same precedent as ExportAuditLog.meta
+  ipHash     String?  @map("ip_hash") // hashed, never raw IP
+  userAgent  String?  @map("user_agent")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@id([id, createdAt])
+  @@index([userId, createdAt])
+  @@index([eventType, createdAt])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@map("platform_events")
+}
+
+/// 90-day hot-retention rollup for `PlatformEvent`. Older monthly partitions
+/// roll up into one row per day here and then detach — admin activity charts
+/// read this table, never the raw partitioned one.
+model PlatformEventDailyRollup {
+  id        String   @id @default(cuid())
+  date      DateTime @unique @db.Date
+  metrics   Json
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("platform_event_daily_rollups")
+}
+
+/// Every admin action — approvals, rejections, impersonation, etc. A
+/// separate table from `PlatformEvent` on purpose: different retention
+/// (indefinite, vs. 90-day hot / rolled-up), different access rules, and
+/// different legal weight — mixing them means either over-retaining user PII
+/// or under-retaining compliance evidence.
+///
+/// `adminUserId` is a plain id, not an FK relation to `users` — same
+/// precedent as `Review.resolvedByUserId` elsewhere in this file: an audit
+/// row must never be able to cascade-delete just because the admin account
+/// that produced it was later removed. The audit trail has to outlive the
+/// admin.
+model AdminAuditLog {
+  id          String   @id @default(cuid())
+  adminUserId String   @map("admin_user_id")
+  action      String // COMPANY_APPROVE | JOB_REJECT | IMPERSONATE_START | ...
+  targetType  String   @map("target_type")
+  targetId    String   @map("target_id")
+  reasonCode  String?  @map("reason_code") // controlled vocabulary
+  note        String?
+  before      Json?
+  after       Json?
+  ipHash      String?  @map("ip_hash")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([adminUserId, createdAt])
+  @@index([targetType, targetId])
+  @@index([action, createdAt])
+  @@map("admin_audit_logs")
+}
+
+/// Fixed vendor costs — Supabase, Vercel, Upstash, Resend, Anthropic base
+/// fees, etc. — entered manually once per month (or per plan change), per
+/// docs/ADMIN-CONSOLE-PLAN.md §4.5. This deliberately holds only the manual
+/// half of the cost picture: AI spend (`AiUsageEvent.costMicroCents`) and
+/// payment-rail fees (the future `transactions` ledger, Phase 6) are
+/// *derived* from their own event/ledger data, never entered here — mixing
+/// manual and derived costs in one table would make it impossible to tell
+/// which number to trust when they disagree.
+///
+/// `enteredBy` is a plain id, not an FK relation to `users` — same
+/// reasoning as `AdminAuditLog.adminUserId` above: this is a record of who
+/// entered a figure, and it must survive that admin's account being removed.
+model VendorCost {
+  id          String   @id @default(cuid())
+  vendor      String // SUPABASE | VERCEL | UPSTASH | RESEND | ANTHROPIC | ... — open vocabulary, vendors change
+  periodMonth DateTime @map("period_month") @db.Date // first day of the month the bill covers
+  amountCents Int      @map("amount_cents")
+  currency    String   @default("usd")
+  note        String?
+  enteredBy   String   @map("entered_by")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  // One row per vendor per month — re-entering a month is an update, not a duplicate.
+  @@unique([vendor, periodMonth])
+  @@map("vendor_costs")
+}
+
+/// Platform-wide daily metrics (signups, jobs, applications, fill rate, MRR,
+/// cost...). `AnalyticsDailyRollup` elsewhere in this file requires a
+/// `companyId` and is the employer-facing per-company table — it must not be
+/// repurposed for platform totals. This is its deliberately separate
+/// sibling: one row per day, every admin chart reads this table, never the
+/// live tables.
+model PlatformDailyRollup {
+  id        String   @id @default(cuid())
+  date      DateTime @unique @db.Date
+  metrics   Json
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("platform_daily_rollups")
+}
+
+/// User-submitted abuse reports queue (fake job, harassment, scam messages,
+/// impersonation, etc.). `reporterUserId` and `resolvedByUserId` are plain
+/// ids, not FK relations — same reasoning as `AdminAuditLog.adminUserId` and
+/// `Review.resolvedByUserId` above: a report is a historical record of what
+/// was reported and who resolved it, and it must survive either party's
+/// account being removed rather than cascade-deleting or leaving a dangling
+/// required relation.
+model AbuseReport {
+  id               String    @id @default(cuid())
+  reporterUserId   String    @map("reporter_user_id")
+  targetType       String    @map("target_type") // USER | JOB | COMPANY | MESSAGE | REVIEW
+  targetId         String    @map("target_id")
+  reason           String // controlled vocabulary
+  detail           String?
+  status           String    @default("OPEN") // OPEN | ACTIONED | DISMISSED
+  severity         Int       @default(1)
+  resolvedByUserId String?   @map("resolved_by_user_id")
+  resolvedAt       DateTime? @map("resolved_at")
+  createdAt        DateTime  @default(now()) @map("created_at")
+
+  @@index([status, severity, createdAt])
+  @@index([targetType, targetId])
+  @@map("abuse_reports")
+}
+
+/// Admin RBAC. `Role.ADMIN` on `User` stays the flat gate into `/admin`;
+/// `AdminProfile.level` gates what's visible/actionable inside it (e.g. only
+/// SUPER_ADMIN can impersonate, see revenue, or see raw ID documents). This
+/// mirrors the existing `CompanyMember` pattern — "a user with a role scoped
+/// to something" — rather than adding a second role enum on `User` directly.
+///
+/// Unlike the plain-id precedent set by `AdminAuditLog`/`AbuseReport` above,
+/// `userId` here IS a real foreign key with `ON DELETE CASCADE`, and is
+/// `@unique` (1:1 with `User`). Those other tables are history that must
+/// outlive the actor; this table is live authorization state, not history —
+/// if the underlying user is gone, the admin profile granting them access
+/// should go with it.
+model AdminProfile {
+  id          String     @id @default(cuid())
+  userId      String     @unique @map("user_id")
+  level       AdminLevel
+  permissions String[]   @default([])
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("admin_profiles")
+}
+
+/// Closed vocabulary, unlike the open `String` vocabularies used for
+/// `PlatformEvent.eventType`, `AdminAuditLog.action`, `AbuseReport.reason`,
+/// etc. above (those grow often enough that a migration per new value isn't
+/// worth it). `AdminLevel` gates authorization directly, so it stays a real
+/// enum that the database enforces.
+enum AdminLevel {
+  SUPPORT
+  MODERATOR
+  FINANCE
+  SUPER_ADMIN
 }

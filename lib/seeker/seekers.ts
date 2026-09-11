@@ -9,6 +9,7 @@ import { recomputeVerificationScore } from "@/lib/seeker/identity-verification";
 import { invalidatePublicSeeker } from "@/lib/seeker/public-seekers";
 import { RESUME_BUCKET, assertOwnedObjectPath } from "@/lib/shared/storage";
 import { parseResume, formatResume } from "@/lib/seeker/profile-format";
+import { recordEvent } from "@/lib/admin/events";
 
 const SEEKER_PROFILE_REVALIDATE_SECONDS = 30;
 
@@ -52,6 +53,13 @@ export async function ensureSeekerProfile(
       },
     });
     invalidateSeekerProfile(userId);
+    recordEvent({
+      eventType: "PROFILE_CREATED",
+      actorType: "SEEKER",
+      userId,
+      entityType: "SEEKER_PROFILE",
+      entityId: created.id,
+    });
     return created;
   } catch (error) {
     if (
@@ -130,6 +138,40 @@ export async function updateSeekerProfile(userId: string, raw: unknown) {
   void recomputeVerificationScore(updated.id).catch((err) =>
     console.error("[seekers] verification score recompute failed:", err)
   );
+
+  // A new entry appended to `resumes` is treated as an upload (this is the
+  // only write path a resume upload goes through — see
+  // app/api/upload/resume/route.ts, which stores the file then calls this
+  // function with the appended array).
+  if (input.resumes !== undefined && input.resumes.length > existing.resumes.length) {
+    recordEvent({
+      eventType: "RESUME_UPLOADED",
+      actorType: "SEEKER",
+      userId,
+      entityType: "SEEKER_PROFILE",
+      entityId: updated.id,
+    });
+  }
+
+  if (existing.visibility !== updated.visibility) {
+    recordEvent({
+      eventType: "PROFILE_VISIBILITY_CHANGED",
+      actorType: "SEEKER",
+      userId,
+      entityType: "SEEKER_PROFILE",
+      entityId: updated.id,
+      metadata: { from: existing.visibility, to: updated.visibility },
+    });
+  }
+
+  recordEvent({
+    eventType: "PROFILE_UPDATED",
+    actorType: "SEEKER",
+    userId,
+    entityType: "SEEKER_PROFILE",
+    entityId: updated.id,
+  });
+
   return updated;
 }
 

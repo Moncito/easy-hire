@@ -114,9 +114,43 @@ function anonymizedEmail(userId: string) {
   return `deleted-${userId}-${Date.now()}@${DELETED_EMAIL_DOMAIN}`;
 }
 
+/**
+ * The user deleting their own account. Always re-authenticates.
+ *
+ * This is the only entry point a user-facing route may call. It cannot be
+ * talked out of the re-auth check: there is no flag on
+ * `AccountDeletionCredentials` that disables it, deliberately — a boolean
+ * like `adminOverride` riding along on a credentials object is one careless
+ * spread away from turning an irreversible RA 10173 erasure into an
+ * unauthenticated one. The admin path is a separate exported function below
+ * with a name that says what it does at the call site.
+ */
 export async function deleteUserAccount(
   userId: string,
   credentials: AccountDeletionCredentials
+): Promise<AccountDeletionResult> {
+  return performAccountDeletion(userId, credentials);
+}
+
+/**
+ * An admin deleting someone else's account, as a support action (§4.3 of
+ * docs/ADMIN-CONSOLE-PLAN.md). Skips re-authentication because an admin can
+ * never supply the target's password or confirmation phrase.
+ *
+ * Authorisation is the CALLER's responsibility and is not checked here —
+ * `performUserSupportAction` in lib/admin/users.ts is the only caller, and it
+ * runs behind `requireAdmin` and writes a `USER_DELETED_BY_ADMIN` audit row.
+ * Never call this from a route handler directly, and never from any path
+ * that has not already established the actor is an admin.
+ */
+export async function deleteUserAccountAsAdmin(targetUserId: string): Promise<AccountDeletionResult> {
+  return performAccountDeletion(targetUserId, null);
+}
+
+/** `credentials: null` means re-auth has been deliberately skipped by an authorised admin path — see `deleteUserAccountAsAdmin`. */
+async function performAccountDeletion(
+  userId: string,
+  credentials: AccountDeletionCredentials | null
 ): Promise<AccountDeletionResult> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
@@ -126,7 +160,9 @@ export async function deleteUserAccount(
     throw new ApiError("User not found", 404);
   }
 
-  await assertReauthenticated(user, credentials);
+  if (credentials !== null) {
+    await assertReauthenticated(user, credentials);
+  }
 
   // Plain reads, gathered before the transaction — storage deletion happens
   // after commit (see below), so these paths just need to be captured now
