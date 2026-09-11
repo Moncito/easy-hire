@@ -1,6 +1,5 @@
-import { auth } from "@/Auth";
-import { redirect } from "next/navigation";
 import Link from "next/link";
+import { requireAdminPagePermission } from "@/lib/auth/admin-session";
 import { ArrowRight } from "lucide-react";
 import { listCompaniesForCollaborativeHiring } from "@/lib/admin/companies";
 import CollaborativeHiringAccess from "@/components/admin/CollaborativeHiringAccess";
@@ -22,10 +21,15 @@ import CollaborativeHiringAccess from "@/components/admin/CollaborativeHiringAcc
  * /admin/system/flags, §3's SYSTEM group, in Phase 5).
  */
 export default async function AdminCompaniesPage() {
-  const session = await auth();
-  if (!session?.user || session.user.role !== "ADMIN") {
-    redirect("/login");
-  }
+  // `queue.decide` — the same permission gating this page's own mutation,
+  // PATCH /api/admin/companies/[id] (`set_collaborative_hiring`). The toggle
+  // would 403 for a SUPPORT or FINANCE admin anyway; matching the gate here
+  // means they don't get a screen full of controls that refuse them.
+  //
+  // The 8-permission vocabulary has no entry for per-company feature access
+  // specifically. Reusing `queue.decide` rather than inventing a ninth is
+  // deliberate — revisit if this tool moves to /admin/system/flags (§3).
+  await requireAdminPagePermission("queue.decide");
 
   const collaborativeCompanies = await listCompaniesForCollaborativeHiring();
 

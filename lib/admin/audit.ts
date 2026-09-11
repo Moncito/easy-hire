@@ -34,7 +34,14 @@ export type AdminAuditAction =
   // use the awaited recordAdminAction contract, like every action above.
   | "USER_PASSWORD_RESET_TRIGGERED"
   | "USER_VERIFICATION_RESEND_TRIGGERED"
-  | "USER_DELETED_BY_ADMIN";
+  | "USER_DELETED_BY_ADMIN"
+  // Admin RBAC (docs/ADMIN-CONSOLE-PLAN.md §6.7/§8.1, lib/admin/permissions.ts)
+  // — admin-team CRUD. All three are decisions (a state change), so they use
+  // the awaited recordAdminAction/buildAdminActionOperation contract, never
+  // recordPiiRead's fire-and-forget one.
+  | "ADMIN_TEAM_PROFILE_CREATED"
+  | "ADMIN_TEAM_LEVEL_CHANGED"
+  | "ADMIN_TEAM_PROFILE_REVOKED";
 
 export type RecordAdminActionInput = {
   adminUserId: string;

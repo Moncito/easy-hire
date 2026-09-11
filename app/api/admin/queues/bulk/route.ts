@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/Auth";
 import { errorResponse } from "@/lib/api-error";
-import { requireAdmin } from "@/lib/admin-auth";
+import { requireAdminWithPermission } from "@/lib/admin-auth";
 import { adminBulkQueueReviewSchema } from "@/lib/validations/admin";
 import { bulkReviewQueueItems } from "@/lib/admin/bulk";
 
@@ -27,7 +27,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    await requireAdmin(session.user.id);
+    await requireAdminWithPermission(session.user.id, "queue.decide");
 
     const body = adminBulkQueueReviewSchema.parse(await req.json());
 

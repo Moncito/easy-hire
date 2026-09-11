@@ -4,10 +4,14 @@ import { adminSeekerVerificationReviewSchema } from "@/lib/validations/admin";
 import { VERIFICATION_DOC_BUCKET, resolveSignedUrl } from "@/lib/storage";
 import { recomputeVerificationScore } from "@/lib/seeker/identity-verification";
 import { buildAdminActionOperation } from "@/lib/admin/audit";
+import { requireAdminPermission } from "@/lib/admin/permissions";
 
 const PENDING_SEEKER_VERIFICATIONS_LIMIT = 100;
 
-export async function listPendingSeekerVerifications() {
+/** Gated on `document.view` — same reasoning as listPendingCompanies in lib/admin/companies.ts: this list embeds every pending seeker's signed ID-document URLs directly. */
+export async function listPendingSeekerVerifications(adminUserId: string) {
+  await requireAdminPermission(adminUserId, "document.view");
+
   const profiles = await prisma.seekerProfile.findMany({
     where: { idVerificationStatus: "PENDING" },
     orderBy: { updatedAt: "asc" },
@@ -39,6 +43,10 @@ export async function listPendingSeekerVerifications() {
 }
 
 export async function reviewSeekerVerification(adminUserId: string, seekerProfileId: string, raw: unknown) {
+  // Gated here, not only at the route (§8.1) — also the dispatch target for
+  // lib/admin/bulk.ts's bulkReviewQueueItems.
+  await requireAdminPermission(adminUserId, "queue.decide");
+
   const input = adminSeekerVerificationReviewSchema.parse(raw);
 
   const profile = await prisma.seekerProfile.findUnique({

@@ -5,10 +5,20 @@ import { invalidateCollaborativeHiringEnabled } from "@/lib/collaborative-hiring
 import { VERIFICATION_DOC_BUCKET, resolveSignedUrl } from "@/lib/storage";
 import { sendCompanyRejectedEmail, sendCompanyVerifiedEmail } from "@/lib/shared/email";
 import { buildAdminActionOperation, recordPiiRead } from "@/lib/admin/audit";
+import { requireAdminPermission } from "@/lib/admin/permissions";
 import { getCompanyPlan, type SubscriptionPlan } from "@/lib/billing/subscriptions";
 import type { CompanyMemberRole, CompanyMemberStatus, VerificationStatus } from "@prisma/client";
 
-export async function listPendingCompanies() {
+/**
+ * Gated on `document.view` (docs/ADMIN-CONSOLE-PLAN.md §6.7/§8.1) because
+ * this list embeds every pending company's signed verification-document
+ * URLs directly in the payload — same PII-exposure shape as
+ * `getQueueItemDetail` in lib/admin/queue-detail.ts, which checks the same
+ * permission for the identical reason.
+ */
+export async function listPendingCompanies(adminUserId: string) {
+  await requireAdminPermission(adminUserId, "document.view");
+
   const companies = await prisma.company.findMany({
     where: { verifiedStatus: "PENDING" },
     orderBy: { updatedAt: "asc" },
@@ -61,6 +71,11 @@ export async function setCollaborativeHiringEnabled(companyId: string, enabled: 
 }
 
 export async function reviewCompany(adminUserId: string, companyId: string, raw: unknown) {
+  // Gated at the /lib layer, not only the route (§8.1) — this is the one
+  // function both the single-item PATCH route AND lib/admin/bulk.ts's
+  // bulkReviewQueueItems dispatch into, so gating here covers both callers.
+  await requireAdminPermission(adminUserId, "queue.decide");
+
   const input = adminCompanyReviewSchema.parse(raw);
 
   const company = await prisma.company.findUnique({
@@ -204,6 +219,8 @@ export type CompanyDetail = {
 type JobRejectionCountRow = { rejections: number };
 
 export async function getCompanyDetail(adminUserId: string, companyId: string): Promise<CompanyDetail> {
+  await requireAdminPermission(adminUserId, "user.read");
+
   const company = await prisma.company.findUnique({
     where: { id: companyId },
     select: {

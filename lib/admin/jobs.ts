@@ -8,11 +8,14 @@ import { invalidatePublicCompany } from "@/lib/public-companies";
 import { sendJobApprovedEmail, sendJobRejectedEmail } from "@/lib/shared/email";
 import { buildAdminActionOperation } from "@/lib/admin/audit";
 import { recordEvent } from "@/lib/admin/events";
+import { requireAdminPermission } from "@/lib/admin/permissions";
 import type { QueueCursor } from "@/lib/admin/queues";
 
 const JOB_LISTING_DAYS = 90;
 
-export async function listPendingJobs() {
+export async function listPendingJobs(adminUserId: string) {
+  await requireAdminPermission(adminUserId, "queue.decide");
+
   return prisma.job.findMany({
     where: { status: "PENDING_REVIEW" },
     orderBy: { updatedAt: "asc" },
@@ -31,6 +34,10 @@ export async function listPendingJobs() {
 }
 
 export async function reviewJob(adminUserId: string, jobId: string, raw: unknown) {
+  // Gated here, not only at the route (§8.1) — reviewJob is also the
+  // dispatch target for lib/admin/bulk.ts's bulkReviewQueueItems.
+  await requireAdminPermission(adminUserId, "queue.decide");
+
   const input = adminJobReviewSchema.parse(raw);
 
   const job = await prisma.job.findUnique({
@@ -191,6 +198,19 @@ export type JobDirectoryListResult = { items: JobDirectoryItem[]; nextCursor: Qu
 const DEFAULT_JOB_DIRECTORY_LIMIT = 25;
 const MAX_JOB_DIRECTORY_LIMIT = 100;
 
+/**
+ * NOT gated with an `adminUserId` parameter here, unlike most other
+ * lib/admin/* reads in this module — `app/admin/jobs/directory/page.tsx`
+ * (a Server Component, out of scope for this backend task per CLAUDE.md's
+ * subagent split) calls this directly with no admin id in hand beyond what
+ * `requireAdminPageContext` already checked (Role.ADMIN only). Adding a
+ * required permission check here would break that call site's build.
+ * `GET /api/admin/jobs/directory` (the route also backed by this function)
+ * IS gated with `requireAdminWithPermission(..., "queue.decide")` — see
+ * app/api/admin/jobs/directory/route.ts. Threading the finer-grained
+ * permission into the RSC page's initial render is follow-up UI work, not
+ * a backend change; flagged in this task's handoff report.
+ */
 export async function listJobDirectory(params: {
   status?: JobStatus;
   search?: string;

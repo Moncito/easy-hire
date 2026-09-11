@@ -312,3 +312,52 @@ export const adminJobDirectoryQuerySchema = z.object({
 });
 
 export type AdminJobDirectoryQuery = z.infer<typeof adminJobDirectoryQuerySchema>;
+
+// ============================================================================
+// Admin team management — POST/GET /api/admin/team, PATCH/DELETE
+// /api/admin/team/[id] (docs/ADMIN-CONSOLE-PLAN.md §6.7/§8.1,
+// lib/admin/permissions.ts). Gated on `team.manage` (SUPER_ADMIN only) at
+// the /lib layer — see lib/admin/permissions.ts's requireAdminPermission
+// calls in createOrAssignAdminProfile/updateAdminProfile/revokeAdminProfile.
+// ============================================================================
+
+/**
+ * Mirrors the Prisma `AdminLevel` enum's OWN declared values/order
+ * (SUPPORT, MODERATOR, FINANCE, SUPER_ADMIN — prisma/schema.prisma) rather
+ * than importing it as a `z.nativeEnum`, matching the existing convention of
+ * `ADMIN_QUEUE_KINDS` mirroring `QueueKind` above: Zod schemas in this file
+ * are kept independent of Prisma-generated runtime values, so this array
+ * must be kept in sync by hand if the enum ever changes.
+ */
+export const ADMIN_LEVELS = ["SUPPORT", "MODERATOR", "FINANCE", "SUPER_ADMIN"] as const;
+
+/** Same whitelist-length cap philosophy as `MAX_BULK_QUEUE_IDS` above — an admin never holds anywhere near this many additive grants; this is a sanity bound on the wire payload, not a real limit. Unrecognized permission strings are rejected by lib/admin/permissions.ts's isAdminPermission check, not here — this schema only bounds shape. */
+const MAX_ADMIN_PERMISSIONS_PER_REQUEST = 20;
+
+/** POST /api/admin/team — create/assign an `AdminProfile` for an existing `Role.ADMIN` user. `permissions` is the ADDITIVE per-user grant on top of `level`'s defaults (see lib/admin/permissions.ts's LEVEL_PERMISSIONS) — omit it (or send `[]`) for level-defaults-only. */
+export const adminTeamCreateSchema = z.object({
+  userId: z.string().min(1, "userId is required"),
+  level: z.enum(ADMIN_LEVELS),
+  permissions: z.array(z.string().min(1)).max(MAX_ADMIN_PERMISSIONS_PER_REQUEST).optional(),
+});
+
+export type AdminTeamCreateInput = z.infer<typeof adminTeamCreateSchema>;
+
+/** PATCH /api/admin/team/[id] — update level and/or permissions on an existing profile. At least one of the two must be present; a same-shape no-op PATCH is rejected here rather than silently succeeding. */
+export const adminTeamUpdateSchema = z
+  .object({
+    level: z.enum(ADMIN_LEVELS).optional(),
+    permissions: z.array(z.string().min(1)).max(MAX_ADMIN_PERMISSIONS_PER_REQUEST).optional(),
+  })
+  .refine((data) => data.level !== undefined || data.permissions !== undefined, {
+    message: "Provide at least a level or permissions to update.",
+  });
+
+export type AdminTeamUpdateInput = z.infer<typeof adminTeamUpdateSchema>;
+
+/** Shared `[id]` param shape for PATCH/DELETE /api/admin/team/[id] — `id` is the TARGET USER's id (same convention as adminUserDetailParamsSchema), not the AdminProfile row's own id. */
+export const adminTeamDetailParamsSchema = z.object({
+  id: z.string().min(1, "id is required"),
+});
+
+export type AdminTeamDetailParams = z.infer<typeof adminTeamDetailParamsSchema>;

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/Auth";
 import { errorResponse } from "@/lib/api-error";
-import { requireAdmin } from "@/lib/admin-auth";
+import { requireAdminWithPermission } from "@/lib/admin-auth";
 import { listPendingCompanies } from "@/lib/admin/companies";
 
 export async function GET() {
@@ -11,8 +11,8 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    await requireAdmin(session.user.id);
-    const companies = await listPendingCompanies();
+    await requireAdminWithPermission(session.user.id, "document.view");
+    const companies = await listPendingCompanies(session.user.id);
     return NextResponse.json(companies);
   } catch (error) {
     return errorResponse(error);

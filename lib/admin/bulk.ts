@@ -5,6 +5,7 @@ import { reviewCompany } from "@/lib/admin/companies";
 import { reviewJob } from "@/lib/admin/jobs";
 import { reviewSeekerVerification } from "@/lib/admin/seekers";
 import { resolveDisputedReview } from "@/lib/reviews";
+import { requireAdminPermission } from "@/lib/admin/permissions";
 
 /**
  * BULK MODERATION ORCHESTRATION — docs/ADMIN-CONSOLE-PLAN.md §4.2 "Bulk
@@ -110,6 +111,13 @@ function dispatchDecision(params: {
  */
 export async function bulkReviewQueueItems(input: BulkReviewQueueItemsInput): Promise<BulkReviewQueueResult> {
   const { adminUserId, kind, action, reason, note, reasonCode } = input;
+
+  // Gated up front, not only via each dispatched decision's own internal
+  // check (§8.1 defence-in-depth) — this avoids doing per-item work at all
+  // for an admin who lacks queue.decide, and each of the four decision
+  // functions still re-checks it independently since they are also called
+  // directly by the single-item PATCH routes.
+  await requireAdminPermission(adminUserId, "queue.decide");
 
   // Dedupe up front — a repeated id must resolve to exactly one decision
   // (and one audit row), not one per occurrence in the request body.

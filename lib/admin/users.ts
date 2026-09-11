@@ -6,6 +6,7 @@ import { getSeekerProfileCompletion } from "@/lib/seeker/profile-completion";
 import { requestPasswordReset, requestEmailVerification } from "@/lib/auth/credentials-recovery";
 import { deleteUserAccountAsAdmin, type AccountDeletionResult } from "@/lib/account/account-deletion";
 import { recordAdminAction, recordPiiRead } from "@/lib/admin/audit";
+import { requireAdminPermission } from "@/lib/admin/permissions";
 import type { TrustComputation } from "@/lib/admin/trust";
 import { adminUserActionSchema } from "@/lib/validations/admin";
 
@@ -90,6 +91,15 @@ export const MAX_USER_DIRECTORY_LIMIT = 100;
 
 export type UserDirectoryListResult = { items: UserDirectoryItem[]; nextCursor: UserDirectoryCursor | null };
 
+/**
+ * NOT gated with an `adminUserId` parameter here — `app/admin/users/page.tsx`
+ * (a Server Component, out of scope for this backend task) calls this
+ * directly with no admin id beyond what `requireAdminPageContext` already
+ * checked. `GET /api/admin/users` (the route also backed by this function)
+ * IS gated with `requireAdminWithPermission(..., "user.read")` — see
+ * app/api/admin/users/route.ts. Same judgment call, and same reasoning, as
+ * lib/admin/jobs.ts's listJobDirectory doc comment.
+ */
 export async function listUserDirectory(params: {
   role?: Role;
   verified?: UserDirectoryVerifiedFilter;
@@ -383,6 +393,8 @@ async function buildEmployerSection(companyId: string): Promise<EmployerRecordSe
  * shares with `ID_DOCUMENT_VIEWED`).
  */
 export async function getUserRecord(adminUserId: string, targetUserId: string): Promise<UserRecord> {
+  await requireAdminPermission(adminUserId, "user.read");
+
   const user = await prisma.user.findUnique({
     where: { id: targetUserId },
     select: {
@@ -490,6 +502,8 @@ export async function performUserSupportAction(
   }
 
   if (input.action === "password_reset") {
+    await requireAdminPermission(adminUserId, "user.support");
+
     // Reuses lib/auth/credentials-recovery.ts's own token issuance — never
     // reimplemented here. Always resolves regardless of whether the account
     // has a password (no-op for Google-only accounts), matching that
@@ -506,6 +520,8 @@ export async function performUserSupportAction(
   }
 
   if (input.action === "resend_verification") {
+    await requireAdminPermission(adminUserId, "user.support");
+
     await requestEmailVerification(targetUserId);
     await recordAdminAction({
       adminUserId,
@@ -523,11 +539,18 @@ export async function performUserSupportAction(
     };
   }
 
-  // "delete" — reuses the existing anonymisation path in
-  // lib/account/account-deletion.ts, never duplicated here. This is the
-  // admin-only entry point, which skips the re-auth check an admin could
-  // never satisfy; authorisation is this function's job, and it has already
-  // run behind requireAdmin. The audit row is written immediately below.
+  // "delete" — the irreversible RA 10173 anonymisation path.
+  // docs/ADMIN-CONSOLE-PLAN.md §6.7/§8.1's own worked example: gated on
+  // `user.delete`, SUPER_ADMIN only, checked HERE rather than only at the
+  // route — the route guard is defence in depth, not the only thing
+  // standing between a support admin and an irreversible delete.
+  await requireAdminPermission(adminUserId, "user.delete");
+
+  // Reuses the existing anonymisation path in lib/account/account-deletion.ts,
+  // never duplicated here. This is the admin-only entry point, which skips
+  // the re-auth check an admin could never satisfy; authorisation is this
+  // function's job (the permission check above, plus requireAdmin already
+  // run at the route). The audit row is written immediately below.
   const result = await deleteUserAccountAsAdmin(targetUserId);
   await recordAdminAction({
     adminUserId,
