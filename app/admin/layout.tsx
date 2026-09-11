@@ -7,9 +7,16 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const ctx = await requireAdminLayoutContext();
   if (!ctx) redirect("/login");
 
+  // `ctx.access.permissions` is a `ReadonlySet<AdminPermission>` server-side —
+  // Sets don't survive a Server -> Client Component prop boundary (RSC
+  // serialization has no `Set` type), so it's converted to a plain array
+  // here, once, rather than inside the client component. AdminSidebar stays
+  // free of any `/lib` import — see that file's comment for why.
+  const sidebarAccess = { level: ctx.access.level, permissions: Array.from(ctx.access.permissions) };
+
   return (
     <div className="flex h-screen overflow-hidden bg-mist">
-      <AdminSidebar />
+      <AdminSidebar access={sidebarAccess} />
       <div className="flex min-w-0 flex-1 flex-col pl-64">
         <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center justify-between border-b border-ink/5 bg-white/95 px-8 shadow-xs backdrop-blur-sm">
           <span className="text-xs font-semibold uppercase tracking-wider text-ink/40">Admin Console</span>
