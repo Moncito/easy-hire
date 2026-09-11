@@ -150,17 +150,28 @@ export default function CommandPalette() {
     // whose cleanup aborts the in-flight request for us.
   }, []);
 
-  // Global ⌘K / Ctrl+K toggle — registered once, works from any admin page.
+  // Global ⌘K / Ctrl+K toggle — works from any admin page.
+  //
+  // Closing goes through `closePalette`, NOT a bare `setOpen(false)`. A plain
+  // toggle hides the overlay but leaves `query`, `debouncedQuery`, `result`
+  // and `selection` behind, so the next ⌘K reopens onto the previous search
+  // instead of an empty box — which is exactly how every other close path
+  // (the X button, the backdrop, Escape) already behaves. One close path,
+  // one behaviour.
+  //
+  // This depends on `open`, so the listener re-registers on toggle. That is
+  // cheap and is the price of not duplicating the reset logic here.
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
-        setOpen((v) => !v);
+        if (open) closePalette();
+        else setOpen(true);
       }
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, []);
+  }, [open, closePalette]);
 
   // Focus management + focus trap while open, same pattern as
   // components/admin/queue/BulkBar.tsx's TypedConfirmDialog.
