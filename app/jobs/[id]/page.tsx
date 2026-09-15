@@ -9,6 +9,8 @@ import JobViewTracker from "@/components/jobs/JobViewTracker";
 import JobsNavBand from "@/components/jobs/JobsNavBand";
 import { listSavedJobIds } from "@/lib/saved-jobs";
 import { auth } from "@/Auth";
+import ReportButton from "@/components/ReportButton";
+import { ABUSE_REPORT_REASONS_BY_TARGET_TYPE } from "@/lib/admin/abuse-reports";
 import { ensureSeekerProfile } from "@/lib/seekers";
 import { getSeekerProfileCompletion } from "@/lib/seeker/profile-completion";
 import { buildJobPostingJsonLd } from "@/lib/seo/job-posting-jsonld";
@@ -109,13 +111,24 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
       />
 
       <div className="mx-auto w-full max-w-6xl px-4 pb-20 pt-4 sm:px-6 sm:pt-6 lg:px-8">
-        <Link
-          href="/jobs"
-          className="inline-flex cursor-pointer items-center gap-1.5 text-sm font-semibold text-ink/50 transition hover:text-ink"
-        >
-          <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-          Back to jobs
-        </Link>
+        <div className="flex items-center justify-between gap-3">
+          <Link
+            href="/jobs"
+            className="inline-flex cursor-pointer items-center gap-1.5 text-sm font-semibold text-ink/50 transition hover:text-ink"
+          >
+            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+            Back to jobs
+          </Link>
+          {session?.user && (
+            <ReportButton
+              targetType="JOB"
+              targetId={job.id}
+              reasons={ABUSE_REPORT_REASONS_BY_TARGET_TYPE.JOB}
+              variant="icon"
+              label="Report this job posting"
+            />
+          )}
+        </div>
 
         <div className="mt-8 grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1fr)_280px] lg:gap-14 xl:grid-cols-[minmax(0,1fr)_300px]">
           <div className="min-w-0">

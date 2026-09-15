@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Building2, ChevronDown, Layers, LogOut, Users, Briefcase, ShieldCheck, Activity, Flag } from "lucide-react";
+import { LayoutDashboard, Building2, ChevronDown, Layers, LogOut, Users, Briefcase, ShieldCheck, ShieldAlert, ScrollText, Activity, Flag } from "lucide-react";
 import { useSignOut } from "@/components/ui/useSignOut";
 
 // The unified moderation queues (docs/ADMIN-CONSOLE-PLAN.md §3/§4.2). The
@@ -56,6 +56,7 @@ export default function AdminSidebar({ access }: AdminSidebarProps) {
   const canReadUsers = can("user.read");
   const canManageTeam = can("team.manage");
   const canReadSystem = can("system.read");
+  const canReadAudit = can("audit.read");
 
   return (
     <aside className="fixed left-0 top-0 z-40 flex h-screen w-64 flex-col border-r border-ink/10 bg-white">
@@ -170,6 +171,36 @@ export default function AdminSidebar({ access }: AdminSidebarProps) {
           >
             <Briefcase className="h-4.5 w-4.5" strokeWidth={2} />
             Jobs
+          </Link>
+        )}
+
+        {/* Trust group (docs/ADMIN-CONSOLE-PLAN.md §3/§4.8/§4.9, Phase 4):
+            risk-ranked trust scores and the immutable admin audit log. Two
+            separate permissions (`user.read` for trust, `audit.read` for the
+            audit log) — an admin can hold either without the other. */}
+        {(canReadUsers || canReadAudit) && (
+          <p className="mt-3 px-3 text-[10px] font-bold uppercase tracking-wider text-ink/35">Trust</p>
+        )}
+        {canReadUsers && (
+          <Link
+            href="/admin/trust"
+            className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all ${
+              pathname === "/admin/trust" ? "bg-navy/8 text-navy" : "text-ink/65 hover:bg-ink/4 hover:text-ink"
+            }`}
+          >
+            <ShieldAlert className="h-4.5 w-4.5" strokeWidth={2} />
+            Trust scores
+          </Link>
+        )}
+        {canReadAudit && (
+          <Link
+            href="/admin/audit"
+            className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all ${
+              pathname === "/admin/audit" ? "bg-navy/8 text-navy" : "text-ink/65 hover:bg-ink/4 hover:text-ink"
+            }`}
+          >
+            <ScrollText className="h-4.5 w-4.5" strokeWidth={2} />
+            Audit log
           </Link>
         )}
 

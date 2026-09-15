@@ -20,6 +20,8 @@ import {
 import ReviewSummary from "@/components/reviews/ReviewSummary";
 import ReviewList from "@/components/reviews/ReviewList";
 import ResponseMetricsBadge from "@/components/companies/ResponseMetricsBadge";
+import ReportButton from "@/components/ReportButton";
+import { ABUSE_REPORT_REASONS_BY_TARGET_TYPE } from "@/lib/admin/abuse-reports";
 
 export async function generateMetadata({
   params,
@@ -138,26 +140,37 @@ export default async function CompanyPage({
           padding: "0 1.5rem 4rem",
         }}
       >
-        <Link
-          href="/jobs"
-          className="cursor-pointer"
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: "0.375rem",
-            background: "transparent",
-            border: "none",
-            cursor: "pointer",
-            padding: "1.5rem 0",
-            fontSize: "0.85rem",
-            fontWeight: 500,
-            color: "#6F6E69",
-            letterSpacing: "0.01em",
-            textDecoration: "none",
-          }}
-        >
-          ← Back to jobs
-        </Link>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.75rem" }}>
+          <Link
+            href="/jobs"
+            className="cursor-pointer"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "0.375rem",
+              background: "transparent",
+              border: "none",
+              cursor: "pointer",
+              padding: "1.5rem 0",
+              fontSize: "0.85rem",
+              fontWeight: 500,
+              color: "#6F6E69",
+              letterSpacing: "0.01em",
+              textDecoration: "none",
+            }}
+          >
+            ← Back to jobs
+          </Link>
+          {session?.user && (
+            <ReportButton
+              targetType="COMPANY"
+              targetId={company.id}
+              reasons={ABUSE_REPORT_REASONS_BY_TARGET_TYPE.COMPANY}
+              variant="icon"
+              label="Report this company"
+            />
+          )}
+        </div>
 
         <div
           style={{
@@ -408,6 +421,8 @@ export default async function CompanyPage({
               page={reviewsPage}
               totalPages={reviewsTotalPages}
               baseHref={`/companies/${id}`}
+              viewerUserId={session?.user?.id ?? null}
+              reportReasons={ABUSE_REPORT_REASONS_BY_TARGET_TYPE.REVIEW}
             />
           </div>
         </section>

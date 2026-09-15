@@ -17,6 +17,8 @@ import {
 import ReviewSummary from "@/components/reviews/ReviewSummary";
 import ReviewList from "@/components/reviews/ReviewList";
 import VerificationBadge from "@/components/seeker/VerificationBadge";
+import ReportButton from "@/components/ReportButton";
+import { ABUSE_REPORT_REASONS_BY_TARGET_TYPE } from "@/lib/admin/abuse-reports";
 
 // getPublicSeeker only resolves profiles with visibility: "PUBLIC" (see
 // lib/seeker/public-seekers.ts) and throws otherwise. The catch block below
@@ -125,12 +127,23 @@ export default async function PublicSeekerPage({
       />
 
       <div className="mx-auto max-w-[1240px] px-4 pb-16 sm:px-6">
-        <Link
-          href={backHref}
-          className="inline-flex cursor-pointer items-center gap-1.5 bg-transparent py-6 text-[0.85rem] font-medium tracking-[0.01em] text-ink/45 no-underline"
-        >
-          ← {backLabel}
-        </Link>
+        <div className="flex items-center justify-between py-6">
+          <Link
+            href={backHref}
+            className="inline-flex cursor-pointer items-center gap-1.5 bg-transparent text-[0.85rem] font-medium tracking-[0.01em] text-ink/45 no-underline"
+          >
+            ← {backLabel}
+          </Link>
+          {session?.user && session.user.id !== seeker.userId && (
+            <ReportButton
+              targetType="USER"
+              targetId={seeker.userId}
+              reasons={ABUSE_REPORT_REASONS_BY_TARGET_TYPE.USER}
+              variant="icon"
+              label="Report this profile"
+            />
+          )}
+        </div>
 
         <div className="relative h-36 w-full overflow-hidden rounded-t-2xl bg-[linear-gradient(118deg,var(--color-ink)_0%,var(--color-navy)_32%,var(--color-teal)_68%,var(--color-marigold)_100%)] sm:h-48">
           <div
@@ -233,6 +246,8 @@ export default async function PublicSeekerPage({
               page={reviewsPage}
               totalPages={reviewsTotalPages}
               baseHref={`/seekers/${id}`}
+              viewerUserId={session?.user?.id ?? null}
+              reportReasons={ABUSE_REPORT_REASONS_BY_TARGET_TYPE.REVIEW}
             />
           </div>
         </section>

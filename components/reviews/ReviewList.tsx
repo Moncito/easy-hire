@@ -1,7 +1,9 @@
 import Link from "next/link";
 import StarRating from "@/components/reviews/StarRating";
 import DisputeReviewButton from "@/components/reviews/DisputeReviewButton";
+import ReportButton from "@/components/ReportButton";
 import type { listPublishedReviewsForCompany } from "@/lib/reviews";
+import type { AbuseReasonEntry } from "@/lib/admin/abuse-reports";
 
 /** Row shape as returned by listPublishedReviewsForCompany/listPublishedReviewsForSeeker — both use the same PUBLIC_REVIEW_SELECT in lib/reviews.ts. */
 export type PublicReviewRow = Awaited<ReturnType<typeof listPublishedReviewsForCompany>>[number];
@@ -14,6 +16,10 @@ type Props = {
   totalPages?: number;
   /** Page path (no query string) used to build the `?reviewsPage=` prev/next links, e.g. `/companies/abc123`. Pagination controls are omitted without it. */
   baseHref?: string;
+  /** Signed-in viewer's user id — gates the "Report" control below (guests can't file a report). */
+  viewerUserId?: string | null;
+  /** `ABUSE_REPORT_REASONS_BY_TARGET_TYPE.REVIEW`, passed down from a Server Component (see components/ReportButton.tsx's header comment for why). Omitted/empty hides the control. */
+  reportReasons?: readonly AbuseReasonEntry[];
 };
 
 function formatRevealedDate(date: Date | string | null): string {
@@ -40,6 +46,8 @@ export default function ReviewList({
   page = 1,
   totalPages = 1,
   baseHref,
+  viewerUserId = null,
+  reportReasons = [],
 }: Props) {
   if (reviews.length === 0) {
     return (
@@ -105,7 +113,19 @@ export default function ReviewList({
                 </div>
 
                 <div className="flex shrink-0 flex-col items-end gap-1">
-                  <StarRating value={review.rating} size="sm" accent={accent} />
+                  <div className="flex items-center gap-1.5">
+                    <StarRating value={review.rating} size="sm" accent={accent} />
+                    {viewerUserId && reportReasons.length > 0 && (
+                      <ReportButton
+                        targetType="REVIEW"
+                        targetId={review.id}
+                        reasons={reportReasons}
+                        variant="icon"
+                        size="sm"
+                        label="Report this review"
+                      />
+                    )}
+                  </div>
                   <p className="font-data text-[11px] text-ink/35">{formatRevealedDate(review.revealedAt)}</p>
                 </div>
               </div>
