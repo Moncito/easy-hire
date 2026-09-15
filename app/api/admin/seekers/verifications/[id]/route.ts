@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/Auth";
 import { errorResponse } from "@/lib/api-error";
 import { parseJsonBody } from "@/lib/parse-json-body";
-import { requireAdmin } from "@/lib/admin-auth";
+import { requireAdminWithPermission } from "@/lib/admin-auth";
 import { reviewSeekerVerification } from "@/lib/admin/seekers";
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -12,7 +12,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    await requireAdmin(session.user.id);
+    await requireAdminWithPermission(session.user.id, "queue.decide");
     const { id } = await params;
     const body = await parseJsonBody(req);
     const updated = await reviewSeekerVerification(session.user.id, id, body);

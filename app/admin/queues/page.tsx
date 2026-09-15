@@ -1,6 +1,5 @@
-import { auth } from "@/Auth";
-import { redirect } from "next/navigation";
 import Link from "next/link";
+import { requireAdminPagePermission } from "@/lib/auth/admin-session";
 import { AlertTriangle, ArrowRight, Clock, Layers } from "lucide-react";
 import { getQueueHealth, getDecisionStats, type QueueHealth, type QueueKind } from "@/lib/admin/queues";
 import { QUEUE_KIND_LABEL, QUEUE_SEGMENT_BY_KIND } from "./_lib/kind-map";
@@ -16,10 +15,12 @@ const KIND_DESCRIPTION: Record<QueueKind, string> = {
 };
 
 export default async function AdminQueuesIndexPage() {
-  const session = await auth();
-  if (!session?.user || session.user.role !== "ADMIN") {
-    redirect("/login");
-  }
+  // `queue.decide`, not a bare admin check. This page server-renders
+  // `getDecisionStats()`, which carries other admins' emails and their
+  // per-admin overturn rates — reviewer performance data. Gating only
+  // GET /api/admin/queues/stats would have left this page handing it to any
+  // SUPPORT or FINANCE admin who navigated here (§8.1).
+  await requireAdminPagePermission("queue.decide");
 
   // No `since` argument: getDecisionStats owns the default window
   // (DEFAULT_DECISION_STATS_WINDOW_DAYS in lib/admin/queues.ts) and reports

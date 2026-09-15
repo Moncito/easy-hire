@@ -11,6 +11,7 @@ import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/lib/api-error";
 import type { QueueKind } from "@/lib/admin/queues";
 import { recordPiiRead, listAuditLog, type AdminAuditAction } from "@/lib/admin/audit";
+import { requireAdminPermission } from "@/lib/admin/permissions";
 import { VERIFICATION_DOC_BUCKET, resolveSignedUrl } from "@/lib/storage";
 
 /**
@@ -454,6 +455,13 @@ export async function getQueueItemDetail(input: {
   id: string;
 }): Promise<QueueItemDetail> {
   const { adminUserId, kind, id } = input;
+
+  // Gated on `document.view` (docs/ADMIN-CONSOLE-PLAN.md §6.7/§8.1's own
+  // worked example) — every kind funnels through this one entry point, and
+  // JOB/REVIEW's `documents` array happens to always be empty, but the
+  // permission check stays uniform across all four kinds rather than
+  // branching on which ones currently have a document model.
+  await requireAdminPermission(adminUserId, "document.view");
 
   switch (kind) {
     case "COMPANY":

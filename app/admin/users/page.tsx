@@ -1,4 +1,4 @@
-import { requireAdminPageContext } from "@/lib/auth/admin-session";
+import { requireAdminPagePermission } from "@/lib/auth/admin-session";
 import { listUserDirectory, encodeUserDirectoryCursor, DEFAULT_USER_DIRECTORY_LIMIT } from "@/lib/admin/users";
 import UserDirectory from "@/components/admin/directory/UserDirectory";
 
@@ -12,7 +12,10 @@ import UserDirectory from "@/components/admin/directory/UserDirectory";
  * admin page in this codebase already uses (see app/admin/queues/[kind]/page.tsx).
  */
 export default async function AdminUsersPage() {
-  await requireAdminPageContext();
+  // `user.read` — matches GET /api/admin/users. Every level except a
+  // profile-less post-bootstrap admin holds it, but the page must assert it
+  // rather than inherit a bare admin check (§8.1).
+  await requireAdminPagePermission("user.read");
 
   const { items, nextCursor } = await listUserDirectory({ limit: DEFAULT_USER_DIRECTORY_LIMIT });
 

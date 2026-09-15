@@ -1,5 +1,5 @@
-import { auth } from "@/Auth";
-import { redirect, notFound } from "next/navigation";
+import { notFound } from "next/navigation";
+import { requireAdminPagePermission } from "@/lib/auth/admin-session";
 import { listQueue, encodeQueueCursor, type QueueKind } from "@/lib/admin/queues";
 import {
   COMPANY_VERIFICATION_REASON_CODES,
@@ -40,10 +40,10 @@ const KIND_COPY: Record<QueueKind, { title: string; description: string }> = {
 };
 
 export default async function AdminQueueKindPage({ params }: { params: Promise<{ kind: string }> }) {
-  const session = await auth();
-  if (!session?.user || session.user.role !== "ADMIN") {
-    redirect("/login");
-  }
+  // `queue.decide` — this page server-renders `listQueue` for its first
+  // paint, so a bare admin check would serve moderation queues to SUPPORT and
+  // FINANCE admins that GET /api/admin/queues already refuses them (§8.1).
+  await requireAdminPagePermission("queue.decide");
 
   const { kind: segment } = await params;
   const kind = QUEUE_KIND_BY_SEGMENT[segment];

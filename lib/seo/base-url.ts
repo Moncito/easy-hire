@@ -4,10 +4,17 @@
  * URL. `app/sitemap.ts` used to inline this expression directly — pulled out
  * here so both the sitemap and the structured-data builders stay in sync.
  */
-const RAW_BASE = process.env.NEXTAUTH_URL ?? process.env.APP_URL ?? "https://easyhire.ph";
-
-/** Strip a trailing slash so callers can safely do `${BASE_URL}/path` without producing `//path`. */
-export const BASE_URL = RAW_BASE.replace(/\/+$/, "");
+/**
+ * Re-exported from lib/shared/app-url.ts, which is now the single resolver
+ * for this app's own base URL. It already strips trailing slashes and
+ * guarantees a scheme, so `${BASE_URL}/path` stays safe.
+ *
+ * This used to fall back to a hardcoded `https://easyhire.ph` — a domain the
+ * project did not own — which meant an unconfigured production deploy pointed
+ * robots.txt, the sitemap and every JSON-LD block at someone else's address.
+ */
+export { APP_URL as BASE_URL } from "@/lib/shared/app-url";
+import { APP_URL as BASE_URL } from "@/lib/shared/app-url";
 
 /**
  * Resolves a possibly-relative value (a bare storage object path, a

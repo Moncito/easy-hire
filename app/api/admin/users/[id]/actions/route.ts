@@ -23,6 +23,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Base admin check only — the actual permission required here depends
+    // on `body.action` (user.support for password_reset/resend_verification,
+    // user.delete — SUPER_ADMIN only — for delete), which isn't known until
+    // the body is parsed. That per-branch check lives in
+    // lib/admin/users.ts's performUserSupportAction (§8.1: the /lib layer is
+    // the real gate here, not this route).
     await requireAdmin(session.user.id);
 
     const { id } = adminUserDetailParamsSchema.parse(await params);

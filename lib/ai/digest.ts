@@ -5,8 +5,9 @@ import { escapeHtml } from "@/lib/escape-html";
 import { isEmployerPro } from "@/lib/billing/subscriptions";
 import { generateHiringInsights } from "@/lib/ai/features/insights";
 import { getEmployerAnalytics } from "@/lib/employer-analytics";
+import { APP_URL } from "@/lib/shared/app-url";
 
-const appUrl = process.env.NEXTAUTH_URL ?? process.env.APP_URL ?? "http://localhost:3000";
+const appUrl = APP_URL;
 
 /**
  * Sends one Pro company its weekly Easy AI hiring digest. No-ops quietly

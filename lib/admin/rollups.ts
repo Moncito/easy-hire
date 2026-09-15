@@ -17,6 +17,20 @@ function truncateToUtcDate(date: Date): Date {
   return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
 }
 
+/**
+ * True when `date` is the current UTC day or the one before it — the only two
+ * days for which a "how many are pending right now" count is a fair
+ * description. The nightly cron runs for yesterday, so it stays inside this
+ * window; a backfill of older dates does not.
+ */
+export function isTodayOrYesterdayUtc(date: Date): boolean {
+  const today = truncateToUtcDate(new Date());
+  const yesterday = new Date(today);
+  yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+  const target = truncateToUtcDate(date).getTime();
+  return target === today.getTime() || target === yesterday.getTime();
+}
+
 /** [start, end) for the single UTC day containing `date`. */
 function dayRange(date: Date): { start: Date; end: Date } {
   const start = truncateToUtcDate(date);
@@ -95,11 +109,28 @@ export type PlatformDailyRollupMetrics = {
     sampleSize: number;
     windowDays: number;
   };
+  /**
+   * Moderation backlog — a POINT-IN-TIME SNAPSHOT, not a historical figure,
+   * and `null` for any date it cannot honestly describe.
+   *
+   * The three counts underneath are `WHERE status = PENDING` with no date
+   * filter, because there is no way to reconstruct "how many things were
+   * pending on 12 August" — a row that was pending then and approved since
+   * leaves no trace of when it stopped being pending. The count is only
+   * meaningful when it is taken on the day it describes.
+   *
+   * That is fine for the nightly cron, which runs for yesterday. It is wrong
+   * for a backfill: computing 90 historical days would stamp TODAY's backlog
+   * onto all of them and draw a perfectly flat line that is pure fiction —
+   * worse than no data, because it looks real. So `computePlatformDailyRollupMetrics`
+   * returns `null` here for any date older than yesterday, and the charts
+   * render a gap rather than a fabricated value.
+   */
   queueDepths: {
     jobsPendingReview: number;
     companiesPending: number;
     seekerVerificationsPending: number;
-  };
+  } | null;
   /**
    * Admin review latency (build-plan.md's own metrics table, "Employer churn
    * risk") — median hours between a job's `Job.pendingReviewAt` and its
@@ -269,6 +300,7 @@ async function computeAdminReviewLatencyMetrics(
  */
 export async function computePlatformDailyRollupMetrics(date: Date): Promise<PlatformDailyRollupMetrics> {
   const { start, end } = dayRange(date);
+  const snapshotIsHonest = isTodayOrYesterdayUtc(start);
 
   const [
     signupsByRoleRaw,
@@ -293,9 +325,16 @@ export async function computePlatformDailyRollupMetrics(date: Date): Promise<Pla
     prisma.application.count({ where: { hiredAt: { gte: start, lt: end } } }),
     prisma.company.count({ where: { createdAt: { gte: start, lt: end } } }),
     prisma.adminAuditLog.count({ where: { action: "COMPANY_APPROVE", createdAt: { gte: start, lt: end } } }),
-    prisma.job.count({ where: { status: "PENDING_REVIEW" } }),
-    prisma.company.count({ where: { verifiedStatus: "PENDING" } }),
-    prisma.seekerProfile.count({ where: { idVerificationStatus: "PENDING" } }),
+    // See the `queueDepths` doc comment on PlatformDailyRollupMetrics. These
+    // describe NOW, so they are only honest on the day they describe.
+    // Derived from the date rather than taken as a caller flag — a flag is
+    // something a future backfill can forget to pass, and that failure mode
+    // is silent fabricated history rather than a loud error.
+    snapshotIsHonest ? prisma.job.count({ where: { status: "PENDING_REVIEW" } }) : Promise.resolve(null),
+    snapshotIsHonest ? prisma.company.count({ where: { verifiedStatus: "PENDING" } }) : Promise.resolve(null),
+    snapshotIsHonest
+      ? prisma.seekerProfile.count({ where: { idVerificationStatus: "PENDING" } })
+      : Promise.resolve(null),
     computeLiquidityMetrics(date),
     computeAdminReviewLatencyMetrics(date),
   ]);
@@ -311,7 +350,10 @@ export async function computePlatformDailyRollupMetrics(date: Date): Promise<Pla
     companies: { created: companiesCreated, verified: companiesVerified },
     fillRate: liquidity.fillRate,
     medianTimeToFirstApplicantHours: liquidity.medianTimeToFirstApplicantHours,
-    queueDepths: { jobsPendingReview, companiesPending, seekerVerificationsPending },
+    queueDepths:
+      jobsPendingReview !== null && companiesPending !== null && seekerVerificationsPending !== null
+        ? { jobsPendingReview, companiesPending, seekerVerificationsPending }
+        : null,
     adminReviewLatencyHours,
   };
 }

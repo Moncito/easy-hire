@@ -1,3 +1,4 @@
+import { APP_URL } from "@/lib/shared/app-url";
 /** EasyHire transactional email tokens — inline-only, Gmail/Outlook safe. */
 export const EMAIL = {
   navy: "#17365D",
@@ -11,7 +12,7 @@ export const EMAIL = {
   card: "#F7F8FA",
 } as const;
 
-const appUrl = process.env.NEXTAUTH_URL ?? process.env.APP_URL ?? "http://localhost:3000";
+const appUrl = APP_URL;
 
 const FONT = "Arial,Helvetica,sans-serif";
 

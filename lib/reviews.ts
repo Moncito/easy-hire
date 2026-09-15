@@ -13,6 +13,7 @@ import {
 } from "@/lib/validations/review";
 import { buildAdminActionOperation } from "@/lib/admin/audit";
 import { recordEvent } from "@/lib/admin/events";
+import { requireAdminPermission } from "@/lib/admin/permissions";
 
 /**
  * TWO-WAY REVIEWS — business logic.
@@ -324,6 +325,10 @@ export async function disputeReview(userId: string, reviewId: string, raw: unkno
 
 /** Admin resolution of a DISPUTED review: back to PUBLISHED, or HIDDEN (kept for audit, off public reads). */
 export async function resolveDisputedReview(adminUserId: string, reviewId: string, raw: unknown) {
+  // Gated here, not only at the route (§8.1) — also the dispatch target for
+  // lib/admin/bulk.ts's bulkReviewQueueItems (REVIEW kind).
+  await requireAdminPermission(adminUserId, "queue.decide");
+
   const input = adminReviewResolveSchema.parse(raw);
 
   const review = await prisma.review.findUnique({
@@ -795,7 +800,9 @@ export async function subjectReviewIdsForViewer(userId: string, reviewIds: strin
 const DISPUTED_REVIEWS_PAGE_SIZE = REVIEWS_PAGE_SIZE;
 
 /** All DISPUTED reviews, newest dispute first — paired with PATCH /api/admin/reviews/[id] (resolveDisputedReview). */
-export async function listDisputedReviews(page = 1) {
+export async function listDisputedReviews(adminUserId: string, page = 1) {
+  await requireAdminPermission(adminUserId, "queue.decide");
+
   const skip = Math.max(0, (page - 1) * DISPUTED_REVIEWS_PAGE_SIZE);
   return prisma.review.findMany({
     where: { status: "DISPUTED" },

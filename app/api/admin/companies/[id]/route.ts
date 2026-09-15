@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/Auth";
 import { errorResponse } from "@/lib/api-error";
 import { parseJsonBody } from "@/lib/parse-json-body";
-import { requireAdmin } from "@/lib/admin-auth";
+import { requireAdminWithPermission } from "@/lib/admin-auth";
 import { adminCompanyDetailParamsSchema } from "@/lib/validations/admin";
 import { reviewCompany, setCollaborativeHiringEnabled, getCompanyDetail } from "@/lib/admin/companies";
 
@@ -21,7 +21,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    await requireAdmin(session.user.id);
+    await requireAdminWithPermission(session.user.id, "user.read");
 
     const { id } = adminCompanyDetailParamsSchema.parse(await params);
 
@@ -40,7 +40,14 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    await requireAdmin(session.user.id);
+    // Both branches below (the review decision and the collaborative-hiring
+    // toggle) are gated on `queue.decide` — the company-management
+    // capability tied to the same reviewer permission, not just the review
+    // branch. There is no dedicated permission for the toggle in the
+    // minimum vocabulary (docs/ADMIN-CONSOLE-PLAN.md's task spec), and it
+    // was already admin-only before this change, so this does not loosen
+    // anything currently reachable.
+    await requireAdminWithPermission(session.user.id, "queue.decide");
     const { id } = await params;
     const body = (await parseJsonBody(req)) as { action?: string; enabled?: boolean };
     const updated = body?.action === "set_collaborative_hiring"

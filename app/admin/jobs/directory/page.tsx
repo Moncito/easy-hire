@@ -1,4 +1,4 @@
-import { requireAdminPageContext } from "@/lib/auth/admin-session";
+import { requireAdminPagePermission } from "@/lib/auth/admin-session";
 import { listJobDirectory } from "@/lib/admin/jobs";
 import { encodeQueueCursor } from "@/lib/admin/queues";
 import JobDirectory from "@/components/admin/directory/JobDirectory";
@@ -21,7 +21,9 @@ export default async function AdminJobsDirectoryPage({
 }: {
   searchParams: Promise<{ search?: string }>;
 }) {
-  await requireAdminPageContext();
+  // `queue.decide` — matches the permission on GET /api/admin/jobs/directory,
+  // so the server-rendered first paint can't serve what the API refuses (§8.1).
+  await requireAdminPagePermission("queue.decide");
   const { search } = await searchParams;
 
   const { items, nextCursor } = await listJobDirectory({ search: search || undefined, limit: 25 });

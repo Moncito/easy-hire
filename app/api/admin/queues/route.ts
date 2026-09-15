@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/Auth";
 import { errorResponse } from "@/lib/api-error";
-import { requireAdmin } from "@/lib/admin-auth";
+import { requireAdminWithPermission } from "@/lib/admin-auth";
 import { adminQueueListQuerySchema } from "@/lib/validations/admin";
 import { listQueue, decodeQueueCursor, encodeQueueCursor } from "@/lib/admin/queues";
 
@@ -23,7 +23,7 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    await requireAdmin(session.user.id);
+    await requireAdminWithPermission(session.user.id, "queue.decide");
 
     const url = new URL(req.url);
     const query = adminQueueListQuerySchema.parse({

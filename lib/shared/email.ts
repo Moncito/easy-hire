@@ -7,10 +7,11 @@ import { emailDetailRow, renderApplicationReceivedEmail, renderEmailLayout } fro
 import { generateInterviewIcs } from "@/lib/shared/calendar-invite";
 import { formatInterviewWhenUtc, interviewFormatLabel } from "@/lib/shared/interview-format";
 import { notificationHref, type NotificationRecipientRole } from "@/lib/shared/notifications";
+import { APP_URL } from "@/lib/shared/app-url";
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 const fromAddress = process.env.EMAIL_FROM ?? "EasyHire <onboarding@resend.dev>";
-const appUrl = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
+const appUrl = APP_URL;
 
 export type EmailAttachment = {
   filename: string;
