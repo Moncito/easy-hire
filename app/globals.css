@@ -125,6 +125,16 @@
        Sidebar, EmployerRouteProgress) falls back to today's exact layout
        when it's unset, which is the overwhelmingly common case. */
     --eh-impersonation-h: 0px;
+    /* Current width of the admin sidebar (components/admin/AdminSidebar.tsx),
+       published at runtime the same way --eh-impersonation-h is — set via
+       document.documentElement.style.setProperty whenever the collapse state
+       changes, no ResizeObserver needed here since the two widths are fixed
+       design values (16rem expanded, 4rem collapsed), not something that
+       needs runtime measurement. Defaults to 16rem (expanded) so a
+       fresh/JS-disabled visitor gets full width, matching today's layout
+       before the client component ever mounts. Read by app/admin/layout.tsx's
+       content column instead of a static Tailwind pl-64. */
+    --eh-sidebar-w: 16rem;
   }
 
   body{

@@ -17,7 +17,13 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   return (
     <div className="flex h-screen overflow-hidden bg-mist">
       <AdminSidebar access={sidebarAccess} />
-      <div className="flex min-w-0 flex-1 flex-col pl-64">
+      {/* `paddingLeft` reads `--eh-sidebar-w` (app/globals.css), published by
+          AdminSidebar itself as it collapses/expands — same CSS-var bridge
+          ImpersonationBanner.tsx uses for its own height, since this Server
+          Component can't hold the client-only collapse state directly.
+          Defaults to 16rem (the CSS var's own default), matching the sidebar's
+          static `w-64` before this component ever existed. */}
+      <div className="flex min-w-0 flex-1 flex-col transition-[padding-left] duration-200 ease-out" style={{ paddingLeft: "var(--eh-sidebar-w, 16rem)" }}>
         <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center justify-between border-b border-ink/5 bg-white/95 px-8 shadow-xs backdrop-blur-sm">
           <span className="text-xs font-semibold uppercase tracking-wider text-ink/40">Admin Console</span>
           <kbd className="hidden items-center gap-1 rounded-lg border border-ink/10 bg-mist px-2 py-1 font-data text-[11px] text-ink/40 sm:inline-flex">
