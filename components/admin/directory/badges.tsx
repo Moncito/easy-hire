@@ -1,5 +1,5 @@
 import { Briefcase, CheckCircle2, CircleDashed, ShieldCheck, User, XCircle } from "lucide-react";
-import type { Role, VerificationStatus } from "./types";
+import type { Role, SubscriptionPlan, VerificationStatus } from "./types";
 
 /**
  * Role/verification pills used across the directory + 360 record.
@@ -23,6 +23,27 @@ export function RoleBadge({ role }: { role: Role }) {
     <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ${s.className}`}>
       <Icon className="h-3 w-3 shrink-0" aria-hidden="true" />
       {s.label}
+    </span>
+  );
+}
+
+/**
+ * Was defined byte-for-byte identically in `CompanyDetailView.tsx` and
+ * `RoleDetailSection.tsx` (docs/ADMIN-UI-UPGRADE.md §2.4) — moved here
+ * alongside `RoleBadge`, the other account-attribute badge it conceptually
+ * sits next to. `SubscriptionPlan` is an exhaustive two-value union
+ * ("FREE" | "PRO"), so — same as `ROLE_STYLE` above — no runtime fallback
+ * is needed for an unrecognized key.
+ */
+const PLAN_STYLE: Record<SubscriptionPlan, string> = {
+  PRO: "bg-teal/10 text-teal ring-1 ring-inset ring-teal/30",
+  FREE: "bg-ink/6 text-ink/55 ring-1 ring-inset ring-ink/10",
+};
+
+export function PlanBadge({ plan }: { plan: SubscriptionPlan }) {
+  return (
+    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold ${PLAN_STYLE[plan]}`}>
+      {plan}
     </span>
   );
 }

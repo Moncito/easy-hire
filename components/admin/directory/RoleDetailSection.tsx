@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { AlertTriangle, ArrowRight, ShieldCheck } from "lucide-react";
-import { VerificationStatusBadge, formatMicroCentsUsd, titleCaseFromConstant } from "./badges";
+import { PlanBadge, VerificationStatusBadge, formatMicroCentsUsd, titleCaseFromConstant } from "./badges";
 import { StatTileCompact } from "@/components/admin/statTiles";
 import type { SerializedUserRecord } from "./types";
 
@@ -12,11 +12,6 @@ import type { SerializedUserRecord } from "./types";
  * fault, not a normal state, so it renders as a genuine Ember warning per
  * `CLAUDE.md`'s "Ember only for genuine breaches/warnings" rule).
  */
-
-const PLAN_STYLE: Record<string, string> = {
-  PRO: "bg-teal/10 text-teal ring-1 ring-inset ring-teal/30",
-  FREE: "bg-ink/6 text-ink/55 ring-1 ring-inset ring-ink/10",
-};
 
 export default function RoleDetailSection({ roleDetail }: { roleDetail: SerializedUserRecord["roleDetail"] }) {
   if (roleDetail.kind === "ADMIN") {
@@ -95,11 +90,7 @@ export default function RoleDetailSection({ roleDetail }: { roleDetail: Serializ
           </Link>
         </div>
         <div className="flex items-center gap-3">
-          <span
-            className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold ${PLAN_STYLE[roleDetail.plan] ?? PLAN_STYLE.FREE}`}
-          >
-            {roleDetail.plan}
-          </span>
+          <PlanBadge plan={roleDetail.plan} />
           <VerificationStatusBadge status={roleDetail.verifiedStatus} />
         </div>
       </div>

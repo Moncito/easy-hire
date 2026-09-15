@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ArrowRight, Globe, Mail } from "lucide-react";
 import DataTable, { type DataTableColumn } from "./DataTable";
 import TrustPanel from "./TrustPanel";
-import { VerificationStatusBadge, formatDate, formatMicroCentsUsd, titleCaseFromConstant } from "./badges";
+import { PlanBadge, VerificationStatusBadge, formatDate, formatMicroCentsUsd, titleCaseFromConstant } from "./badges";
 import { StatTileCompact } from "@/components/admin/statTiles";
 import type { SerializedCompanyDetail, SerializedCompanyDetailMember } from "./types";
 
@@ -15,11 +15,6 @@ import type { SerializedCompanyDetail, SerializedCompanyDetailMember } from "./t
  * nothing paginated (§10: every count here is a `count`/`groupBy`/`aggregate`,
  * never a list).
  */
-
-const PLAN_STYLE: Record<string, string> = {
-  PRO: "bg-teal/10 text-teal ring-1 ring-inset ring-teal/30",
-  FREE: "bg-ink/6 text-ink/55 ring-1 ring-inset ring-ink/10",
-};
 
 const MEMBER_STATUS_STYLE: Record<string, string> = {
   ACTIVE: "text-teal",
@@ -63,11 +58,7 @@ export default function CompanyDetailView({ detail }: { detail: SerializedCompan
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="truncate font-display text-2xl font-bold tracking-tight text-ink">{detail.companyName}</h1>
-              <span
-                className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold ${PLAN_STYLE[detail.plan] ?? PLAN_STYLE.FREE}`}
-              >
-                {detail.plan}
-              </span>
+              <PlanBadge plan={detail.plan} />
               <VerificationStatusBadge status={detail.verifiedStatus} />
             </div>
             <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-ink/50">
