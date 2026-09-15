@@ -58,6 +58,22 @@ export const ADMIN_PERMISSIONS = [
   "system.manage",
   /** Starting an impersonation session (§8.2). SUPER_ADMIN only — see SUPER_ADMIN_ONLY_PERMISSIONS below. Nothing uses this yet — impersonation is a separate, not-yet-built feature — so this is defined now, exactly as `revenue.read` was, purely so the gate exists before the feature does. */
   "impersonate",
+  /**
+   * Reading the admin audit log (`lib/admin/audit.ts`'s `listAuditLog`,
+   * GET /api/admin/audit) — Phase 4, docs/ADMIN-CONSOLE-PLAN.md §4.9/§8.1.
+   * Deliberately NOT in `SUPER_ADMIN_ONLY_PERMISSIONS` below — that floor is
+   * reserved for the two genuinely irreversible/self-escalating capabilities
+   * (`user.delete`, `team.manage`) plus `impersonate` (role-gated by explicit
+   * spec, §8.2). This one is an ordinary permission that simply starts
+   * granted to nobody but SUPER_ADMIN by default (see LEVEL_PERMISSIONS
+   * below): the audit log exposes every admin's actions, including other
+   * admins' identities and decision patterns — the same reviewer-performance
+   * leak §8.1 already flags on `/admin/queues`, just against the whole admin
+   * team instead of one reviewer. An operator who wants a MODERATOR (or
+   * anyone else) to see it makes that an explicit additive grant via
+   * `AdminProfile.permissions`, same mechanism as any other permission.
+   */
+  "audit.read",
 ] as const;
 
 export type AdminPermission = (typeof ADMIN_PERMISSIONS)[number];

@@ -3,6 +3,7 @@ import {
   COMPANY_VERIFICATION_REASON_CODE_SET,
   JOB_POST_REASON_CODE_SET,
   SEEKER_ID_REASON_CODE_SET,
+  ABUSE_REPORT_RESOLUTION_REASON_CODE_SET,
 } from "@/lib/admin/reason-codes";
 import { PLATFORM_EVENT_TYPES } from "@/lib/admin/events";
 
@@ -79,11 +80,49 @@ export const adminSeekerVerificationReviewSchema = z
 
 export type AdminSeekerVerificationReviewInput = z.infer<typeof adminSeekerVerificationReviewSchema>;
 
+/**
+ * Admin resolution of an OPEN abuse report — Phase 4 (Trust & Safety),
+ * lib/admin/abuse-reports.ts's `resolveAbuseReport`. `status` is this
+ * schema's action-equivalent field: "ACTIONED" (the report was upheld — the
+ * approve-equivalent, no reason code) or "DISMISSED" (the reject-equivalent
+ * — mandatory reason code, mirroring adminCompanyReviewSchema/
+ * adminJobReviewSchema/adminSeekerVerificationReviewSchema's reject branch,
+ * validated against `ABUSE_REPORT_RESOLUTION_REASON_CODE_SET`). Lives here
+ * (not lib/validations/reports.ts, where the REPORTER-facing filing schema
+ * lives) for the same reason `adminCompanyReviewSchema` etc. live here
+ * rather than beside the seeker/job/company submission schemas — this is an
+ * ADMIN decision schema, not a public-submission one.
+ */
+export const adminAbuseReportResolveSchema = z
+  .object({
+    status: z.enum(["ACTIONED", "DISMISSED"]),
+    reasonCode: z.string().trim().max(64).optional(),
+    note: z.string().trim().max(500, "Note is too long (500 characters maximum).").optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.status === "ACTIONED") {
+      if (data.reasonCode !== undefined) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["reasonCode"], message: "Actioning a report does not take a reason code." });
+      }
+      return;
+    }
+    if (!data.reasonCode || !ABUSE_REPORT_RESOLUTION_REASON_CODE_SET.has(data.reasonCode)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["reasonCode"],
+        message: "A valid reason code is required to dismiss a report.",
+      });
+    }
+  });
+
+export type AdminAbuseReportResolveInput = z.infer<typeof adminAbuseReportResolveSchema>;
+
 // ============================================================================
 // Queue read endpoints (lib/admin/queues.ts) — app/api/admin/queues/*
 // ============================================================================
 
-export const ADMIN_QUEUE_KINDS = ["COMPANY", "SEEKER", "JOB", "REVIEW"] as const;
+/** Phase 4 adds "REPORT" as the fifth queue kind (lib/admin/abuse-reports.ts's AbuseReport, threaded through lib/admin/queues.ts's `QueueKind`) — one unified queue shell across all five, no special case. */
+export const ADMIN_QUEUE_KINDS = ["COMPANY", "SEEKER", "JOB", "REVIEW", "REPORT"] as const;
 export const ADMIN_QUEUE_STATUSES = ["PENDING", "APPROVED", "REJECTED"] as const;
 
 /**
@@ -136,8 +175,11 @@ export type AdminQueueDetailParams = z.infer<typeof adminQueueDetailParamsSchema
 // boundary before lib/admin/bulk.ts ever runs.
 //
 // `action` spans two distinct vocabularies depending on `kind`:
-// COMPANY/JOB/SEEKER use approve/reject (mirroring adminCompanyReviewSchema/
-// adminJobReviewSchema/adminSeekerVerificationReviewSchema above); REVIEW
+// COMPANY/JOB/SEEKER/REPORT use approve/reject (mirroring
+// adminCompanyReviewSchema/adminJobReviewSchema/
+// adminSeekerVerificationReviewSchema above, and — for REPORT —
+// adminAbuseReportResolveSchema's ACTIONED/DISMISSED, which
+// lib/admin/bulk.ts's orchestration layer maps approve/reject onto); REVIEW
 // uses restore/hide (mirroring adminReviewResolveSchema in
 // lib/validations/review.ts). Both vocabularies are accepted on one flat
 // wire shape (the client always sends a single JSON body regardless of
@@ -146,12 +188,12 @@ export type AdminQueueDetailParams = z.infer<typeof adminQueueDetailParamsSchema
 // explicitly at the mapping boundary" means here: the boundary is this
 // superRefine, not a loosened shared enum.
 //
-// `reason` (COMPANY/JOB/SEEKER) and `note` (REVIEW) are both accepted on the
-// same shape for the same reason — lib/admin/bulk.ts's orchestration layer
-// picks the one that matches `kind` when calling into the four existing
-// decision functions, which is where these field names originate
+// `reason` (COMPANY/JOB/SEEKER) and `note` (REVIEW/REPORT) are both accepted
+// on the same shape for the same reason — lib/admin/bulk.ts's orchestration
+// layer picks the one that matches `kind` when calling into the five
+// existing decision functions, which is where these field names originate
 // (reviewCompany/reviewJob/reviewSeekerVerification read `reason`;
-// resolveDisputedReview reads `note`).
+// resolveDisputedReview/resolveAbuseReport read `note`).
 // ============================================================================
 
 export const ADMIN_BULK_QUEUE_ACTIONS = ["approve", "reject", "restore", "hide"] as const;
@@ -160,10 +202,11 @@ export type AdminBulkQueueAction = (typeof ADMIN_BULK_QUEUE_ACTIONS)[number];
 /** Matches the task spec's cap exactly — a bulk call is where unbounded admin queries go to die (docs/ADMIN-CONSOLE-PLAN.md §10). */
 export const MAX_BULK_QUEUE_IDS = 50;
 
-const BULK_REASON_CODE_SETS: Record<"COMPANY" | "JOB" | "SEEKER", ReadonlySet<string>> = {
+const BULK_REASON_CODE_SETS: Record<"COMPANY" | "JOB" | "SEEKER" | "REPORT", ReadonlySet<string>> = {
   COMPANY: COMPANY_VERIFICATION_REASON_CODE_SET,
   JOB: JOB_POST_REASON_CODE_SET,
   SEEKER: SEEKER_ID_REASON_CODE_SET,
+  REPORT: ABUSE_REPORT_RESOLUTION_REASON_CODE_SET,
 };
 
 export const adminBulkQueueReviewSchema = z
@@ -226,7 +269,7 @@ export const adminBulkQueueReviewSchema = z
       return;
     }
 
-    const codeSet = BULK_REASON_CODE_SETS[data.kind as "COMPANY" | "JOB" | "SEEKER"];
+    const codeSet = BULK_REASON_CODE_SETS[data.kind as "COMPANY" | "JOB" | "SEEKER" | "REPORT"];
     if (!codeSet.has(data.reasonCode)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -456,3 +499,59 @@ export const impersonationEndSchema = z.object({
 });
 
 export type ImpersonationEndInput = z.infer<typeof impersonationEndSchema>;
+
+// ============================================================================
+// Audit log read — GET /api/admin/audit (lib/admin/audit.ts's
+// listAuditLogForAdmin), docs/ADMIN-CONSOLE-PLAN.md §4.9. Gated on
+// `audit.read` at the /lib layer.
+// ============================================================================
+
+/**
+ * `action` is bounded as a plain string here, NOT `z.enum(ADMIN_AUDIT_ACTIONS)`
+ * — importing that constant from lib/admin/audit.ts into this file would
+ * create an import cycle (this file -> audit.ts -> lib/admin/permissions.ts
+ * -> this file, since permissions.ts already imports `adminTeamCreateSchema`/
+ * `adminTeamUpdateSchema` from here). `listAuditLogForAdmin` validates it
+ * against the real vocabulary itself, at the one call site that owns it —
+ * see that function's doc comment. Same reasoning as `targetType`/`targetId`
+ * below, which have never been enum-bounded either: this is a read-only
+ * filter, so an unrecognized value simply matches zero rows rather than
+ * being a security concern the way an unvalidated write input would be —
+ * `action` gets the extra `/lib`-layer whitelist check anyway because a
+ * silently-ignored typo in a filter is a worse debugging experience than a
+ * loud 400.
+ */
+export const adminAuditLogQuerySchema = z
+  .object({
+    adminUserId: z.string().min(1).max(200).optional(),
+    targetType: z.string().trim().min(1).max(100).optional(),
+    targetId: z.string().min(1).max(200).optional(),
+    action: z.string().trim().min(1).max(100).optional(),
+    since: z.coerce.date().optional(),
+    until: z.coerce.date().optional(),
+    cursor: z.string().min(1).max(500).optional(),
+    limit: z.coerce.number().int().min(1).max(200).optional(),
+  })
+  .refine((data) => !data.since || !data.until || data.since <= data.until, {
+    message: "`since` must be on or before `until`.",
+    path: ["since"],
+  });
+
+export type AdminAuditLogQuery = z.infer<typeof adminAuditLogQuerySchema>;
+
+// ============================================================================
+// Trust directory read — GET /api/admin/trust (lib/admin/trust-directory.ts),
+// docs/ADMIN-CONSOLE-PLAN.md §4.8. Gated on `user.read` at the /lib layer.
+// This reads the trust scores lib/admin/trust.ts already computes nightly —
+// no scoring logic lives in this schema or its route.
+// ============================================================================
+
+export const ADMIN_TRUST_DIRECTORY_TARGET_TYPES = ["SEEKER", "COMPANY"] as const;
+
+export const adminTrustDirectoryQuerySchema = z.object({
+  type: z.enum(ADMIN_TRUST_DIRECTORY_TARGET_TYPES),
+  cursor: z.string().min(1).max(500).optional(),
+  limit: z.coerce.number().int().min(1).max(100).optional(),
+});
+
+export type AdminTrustDirectoryQuery = z.infer<typeof adminTrustDirectoryQuerySchema>;

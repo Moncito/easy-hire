@@ -13,6 +13,12 @@ import type { QueueKind } from "@/lib/admin/queues";
 import { recordPiiRead, listAuditLog, type AdminAuditAction } from "@/lib/admin/audit";
 import { requireAdminPermission } from "@/lib/admin/permissions";
 import { VERIFICATION_DOC_BUCKET, resolveSignedUrl } from "@/lib/storage";
+import {
+  getAbuseReportDetail,
+  ABUSE_REPORT_REASONS_BY_TARGET_TYPE,
+  type AbuseReportStatus,
+  type AbuseTargetType,
+} from "@/lib/admin/abuse-reports";
 
 /**
  * PER-ITEM QUEUE DETAIL — docs/ADMIN-CONSOLE-PLAN.md §4.2: "Side-by-side
@@ -40,12 +46,13 @@ import { VERIFICATION_DOC_BUCKET, resolveSignedUrl } from "@/lib/storage";
 /** Prior-decision history is for context, not a full audit browser — bounded, same precedent as every other admin list in this codebase. */
 const PRIOR_DECISIONS_TAKE = 10;
 
-/** Matches the `targetType` strings the four decision functions already write via buildAdminActionOperation (lib/admin/{companies,jobs,seekers}.ts, lib/reviews.ts) — reused here, not reinvented. */
+/** Matches the `targetType` strings the five decision functions already write via buildAdminActionOperation (lib/admin/{companies,jobs,seekers,abuse-reports}.ts, lib/reviews.ts) — reused here, not reinvented. */
 const TARGET_TYPE_BY_KIND: Record<QueueKind, string> = {
   COMPANY: "COMPANY",
   JOB: "JOB",
   SEEKER: "SEEKER_PROFILE",
   REVIEW: "REVIEW",
+  REPORT: "ABUSE_REPORT",
 };
 
 // ============================================================================
@@ -151,11 +158,42 @@ export type ReviewQueueItemDetail = {
   priorDecisions: QueueItemPriorDecision[];
 };
 
+export type ReportQueueItemDetail = {
+  kind: "REPORT";
+  reportId: string;
+  reporterUserId: string;
+  reporterEmail: string | null;
+  targetType: AbuseTargetType;
+  targetId: string;
+  reason: string;
+  reasonLabel: string;
+  detail: string | null;
+  status: AbuseReportStatus;
+  severity: number;
+  resolvedByUserId: string | null;
+  resolvedAt: Date | null;
+  createdAt: Date;
+  distinctReporterCount: number;
+  /** Other reports (any status) filed against this exact target — bounded, most-recent-first. Distinct from `priorDecisions` below, which is admin ACTIONS on this specific report row, not other reporters' complaints about the same target. */
+  otherReportsForTarget: {
+    id: string;
+    reporterUserId: string;
+    reason: string;
+    status: AbuseReportStatus;
+    severity: number;
+    createdAt: Date;
+  }[];
+  /** Always empty — reports carry no document model. Present for the same one-shape reason as JobQueueItemDetail.documents/ReviewQueueItemDetail.documents. */
+  documents: QueueItemDocument[];
+  priorDecisions: QueueItemPriorDecision[];
+};
+
 export type QueueItemDetail =
   | CompanyQueueItemDetail
   | SeekerQueueItemDetail
   | JobQueueItemDetail
-  | ReviewQueueItemDetail;
+  | ReviewQueueItemDetail
+  | ReportQueueItemDetail;
 
 // ============================================================================
 // Shared helpers
@@ -445,6 +483,50 @@ async function getReviewQueueItemDetail(reviewId: string): Promise<ReviewQueueIt
 }
 
 // ============================================================================
+// REPORT — no document model exists for this kind; `documents` is always [].
+// Delegates to lib/admin/abuse-reports.ts's `getAbuseReportDetail` for the
+// raw record + reporter email + other-reports-for-target aggregation, then
+// reshapes it into this module's shared `QueueItemDetail` union — same
+// "one fetch, then shape" split every other kind here uses.
+// ============================================================================
+
+async function getReportQueueItemDetail(reportId: string): Promise<ReportQueueItemDetail> {
+  const report = await getAbuseReportDetail(reportId);
+  const reasonLabel =
+    ABUSE_REPORT_REASONS_BY_TARGET_TYPE[report.targetType].find((e) => e.code === report.reason)?.label ?? report.reason;
+
+  const priorDecisions = await fetchPriorDecisions(TARGET_TYPE_BY_KIND.REPORT, reportId);
+
+  return {
+    kind: "REPORT",
+    reportId: report.id,
+    reporterUserId: report.reporterUserId,
+    reporterEmail: report.reporterEmail,
+    targetType: report.targetType,
+    targetId: report.targetId,
+    reason: report.reason,
+    reasonLabel,
+    detail: report.detail,
+    status: report.status,
+    severity: report.severity,
+    resolvedByUserId: report.resolvedByUserId,
+    resolvedAt: report.resolvedAt,
+    createdAt: report.createdAt,
+    distinctReporterCount: report.distinctReporterCount,
+    otherReportsForTarget: report.otherReportsForTarget.map((r) => ({
+      id: r.id,
+      reporterUserId: r.reporterUserId,
+      reason: r.reason,
+      status: r.status,
+      severity: r.severity,
+      createdAt: r.createdAt,
+    })),
+    documents: [],
+    priorDecisions,
+  };
+}
+
+// ============================================================================
 // Public entry point — dispatches to the kind-specific fetcher above. Mirrors
 // listQueue's own dispatch switch in lib/admin/queues.ts.
 // ============================================================================
@@ -458,8 +540,8 @@ export async function getQueueItemDetail(input: {
 
   // Gated on `document.view` (docs/ADMIN-CONSOLE-PLAN.md §6.7/§8.1's own
   // worked example) — every kind funnels through this one entry point, and
-  // JOB/REVIEW's `documents` array happens to always be empty, but the
-  // permission check stays uniform across all four kinds rather than
+  // JOB/REVIEW/REPORT's `documents` array happens to always be empty, but
+  // the permission check stays uniform across all five kinds rather than
   // branching on which ones currently have a document model.
   await requireAdminPermission(adminUserId, "document.view");
 
@@ -472,5 +554,7 @@ export async function getQueueItemDetail(input: {
       return getJobQueueItemDetail(id);
     case "REVIEW":
       return getReviewQueueItemDetail(id);
+    case "REPORT":
+      return getReportQueueItemDetail(id);
   }
 }

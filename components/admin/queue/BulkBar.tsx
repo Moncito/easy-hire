@@ -38,13 +38,19 @@ const APPROVE_LABEL: Record<QueueKind, string> = {
   JOB: "Approve",
   SEEKER: "Approve",
   REVIEW: "Restore",
+  REPORT: "Action",
 };
 
+// For REPORT the risky half is inverted relative to the other kinds: acting
+// on a genuine report is the safe call, and DISMISSING one is the decision
+// that can leave a real abuser in place. The mandatory-reason-code friction
+// on this side is therefore exactly where it should be.
 const REJECT_LABEL: Record<QueueKind, string> = {
   COMPANY: "Reject",
   JOB: "Reject",
   SEEKER: "Reject",
   REVIEW: "Hide",
+  REPORT: "Dismiss",
 };
 
 function TypedConfirmDialog({

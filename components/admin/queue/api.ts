@@ -57,7 +57,16 @@ export async function fetchQueueItemDetail(kind: QueueKind, id: string): Promise
   return res.json();
 }
 
-const SINGLE_DECISION_ENDPOINT: Record<QueueKind, (id: string) => string> = {
+/**
+ * REPORT is deliberately absent, and the type says so rather than the map
+ * carrying a fake URL. Abuse reports have no single-item PATCH route: the
+ * bulk endpoint already resolves them, so `resolveAbuseReport` is reached
+ * with a one-element `ids` array instead of a fifth near-duplicate route
+ * (see lib/admin/bulk.ts's REPORT branch). `submitSingleDecision` below
+ * handles that fork explicitly — an `Exclude` here means adding a sixth kind
+ * still fails to compile until someone decides which side it belongs on.
+ */
+const SINGLE_DECISION_ENDPOINT: Record<Exclude<QueueKind, "REPORT">, (id: string) => string> = {
   COMPANY: (id) => `/api/admin/companies/${id}`,
   JOB: (id) => `/api/admin/jobs/${id}`,
   SEEKER: (id) => `/api/admin/seekers/verifications/${id}`,
@@ -77,6 +86,30 @@ export async function submitSingleDecision(
   id: string,
   body: Record<string, unknown>
 ): Promise<SingleDecisionResult> {
+  // REPORT has no single-item route — see SINGLE_DECISION_ENDPOINT above.
+  // Routed through the bulk endpoint with one id so the caller keeps one
+  // uniform "decide this item" entry point and doesn't grow a fifth branch
+  // of its own.
+  if (kind === "REPORT") {
+    const result = await submitBulkDecision({
+      kind,
+      ids: [id],
+      action: body.action as AdminBulkQueueAction,
+      reason: body.reason as string | undefined,
+      note: body.note as string | undefined,
+      reasonCode: body.reasonCode as string | undefined,
+    });
+    if (!result.ok) return { ok: false, error: result.error };
+    // Bulk reports per-item outcomes rather than throwing, so a one-element
+    // batch that "succeeded" at the HTTP level can still carry one failure —
+    // unwrap it, or this would silently report a refused decision as saved.
+    const item = result.result.results[0];
+    if (item && !item.ok) {
+      return { ok: false, error: item.error };
+    }
+    return { ok: true };
+  }
+
   const res = await fetch(SINGLE_DECISION_ENDPOINT[kind](id), {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },

@@ -46,13 +46,17 @@ const APPROVE_LABEL: Record<QueueKind, string> = {
   JOB: "Approve job",
   SEEKER: "Approve verification",
   REVIEW: "Restore review",
+  REPORT: "Action report",
 };
 
+// See BulkBar's note: for REPORT, "reject" means DISMISSED — the half of the
+// decision that needs to be explainable later.
 const REJECT_LABEL: Record<QueueKind, string> = {
   COMPANY: "Reject",
   JOB: "Reject",
   SEEKER: "Reject",
   REVIEW: "Hide review",
+  REPORT: "Dismiss report",
 };
 
 const DecisionForm = forwardRef<DecisionFormHandle, DecisionFormProps>(function DecisionForm(

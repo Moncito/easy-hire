@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { requireAdminPagePermission } from "@/lib/auth/admin-session";
 import { listQueue, encodeQueueCursor, type QueueKind } from "@/lib/admin/queues";
 import {
+  ABUSE_REPORT_RESOLUTION_REASON_CODES,
   COMPANY_VERIFICATION_REASON_CODES,
   JOB_POST_REASON_CODES,
   SEEKER_ID_REASON_CODES,
@@ -18,6 +19,12 @@ const REASON_CODES_BY_KIND: Record<QueueKind, ReasonCodeOption[]> = {
   // (lib/admin/reason-codes.ts's header comment) — DecisionForm/BulkBar
   // render a free-text reason-code field for this kind instead.
   REVIEW: [],
+  // Unlike REVIEW, abuse-report resolution DOES have a commissioned
+  // vocabulary (lib/admin/reason-codes.ts) — it is the dismiss-reason set.
+  // Dismissing a report is the consequential half of this queue: actioning a
+  // real one is self-evident, while waving one away is the decision that
+  // needs to be explainable later.
+  REPORT: [...ABUSE_REPORT_RESOLUTION_REASON_CODES],
 };
 
 const KIND_COPY: Record<QueueKind, { title: string; description: string }> = {
@@ -36,6 +43,10 @@ const KIND_COPY: Record<QueueKind, { title: string; description: string }> = {
   REVIEW: {
     title: "Review disputes",
     description: "Restore what should stay public, hide what shouldn't.",
+  },
+  REPORT: {
+    title: "Abuse reports",
+    description: "Reports filed by users against a job, company, account, message or review.",
   },
 };
 

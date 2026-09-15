@@ -1,6 +1,13 @@
 import type { Prisma, VerificationStatus, ReviewDirection, SalaryPeriod } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import type { AdminAuditAction } from "@/lib/admin/audit";
+import {
+  listAbuseReports,
+  ABUSE_REPORT_REASONS_BY_TARGET_TYPE,
+  type AbuseReportRow,
+  type AbuseReportStatus,
+  type AbuseTargetType,
+} from "@/lib/admin/abuse-reports";
 
 /**
  * SHARED RISK-RANKED QUEUE MODEL — docs/ADMIN-CONSOLE-PLAN.md §4.2, Phase 1.
@@ -96,7 +103,15 @@ import type { AdminAuditAction } from "@/lib/admin/audit";
 // structure lib/admin/trust.ts uses for TRUST_WEIGHTS.
 // ============================================================================
 
-export const QUEUE_RANKING_VERSION = 1;
+/**
+ * Bumped 1 -> 2 for Phase 4 (Trust & Safety): adds the REPORT kind's own
+ * severity signals (`reportSeverity`, `multipleReporters`) to this same
+ * shared weights object — see `QUEUE_RANKING.severity.report` below. Every
+ * OTHER kind's signals/thresholds are unchanged; this version bump exists
+ * purely so a `rankScore`/`severitySignals` payload computed before this
+ * change is identifiable as having been computed under a different formula.
+ */
+export const QUEUE_RANKING_VERSION = 2;
 
 export const QUEUE_RANKING = {
   /** SLA banding off `ageHours` (§4.2): GREEN under 12h, AMBER 12–24h, RED 24h+. */
@@ -125,6 +140,8 @@ export const QUEUE_RANKING = {
     lowTrustScore: { threshold: 40, weight: 2 },
     /** JOB only. Gated on a minimum sample of comparable ACTIVE jobs in the same (category, salaryPeriod) — same minimum-sample precedent as RESPONSE_METRICS_MIN_SAMPLE in lib/employer/response-metrics.ts. Flags a job whose salary midpoint is more than `stdDevMultiplier` population-stddevs from the category+period mean. */
     salaryOutlier: { minCategorySample: 5, stdDevMultiplier: 2, weight: 3 },
+    /** REPORT only (Phase 4). Two REPORT-specific inputs, per docs/ADMIN-CONSOLE-PLAN.md §11 Phase 4: the report's own controlled-vocabulary severity (1-5, see lib/admin/abuse-reports.ts) scaled by `severityPerPoint`, and each ADDITIONAL distinct reporter against the exact same target (beyond the first) scaled by `additionalReporterWeight` — independent corroboration from unrelated reporters is a stronger signal than any single report's own severity. `lowTrustScore` above is reused unchanged for REPORT's third input (the target's own trustScore); report AGE is already covered by the shared `ageFactor`, not a fourth signal here. */
+    report: { severityPerPoint: 2, additionalReporterWeight: 3 },
   },
 
   /** Job/company statuses counted as "live" for the reach definitions above. */
@@ -201,7 +218,7 @@ function emailDomain(email: string): string {
 // Shared shapes
 // ============================================================================
 
-export type QueueKind = "COMPANY" | "SEEKER" | "JOB" | "REVIEW";
+export type QueueKind = "COMPANY" | "SEEKER" | "JOB" | "REVIEW" | "REPORT";
 
 export type QueueStatus = "PENDING" | "APPROVED" | "REJECTED";
 
@@ -256,6 +273,22 @@ export type ReviewQueuePayload = {
   status: string;
 };
 
+export type ReportQueuePayload = {
+  reportId: string;
+  reporterUserId: string;
+  /** `null` when the reporter's `User` row is somehow gone — same "never throw, just render unknown" precedent as `AdminDecisionStat.adminEmail`. */
+  reporterEmail: string | null;
+  targetType: AbuseTargetType;
+  targetId: string;
+  reason: string;
+  reasonLabel: string;
+  detail: string | null;
+  status: AbuseReportStatus;
+  severity: number;
+  /** Distinct reporters who have EVER filed against this exact target — see lib/admin/abuse-reports.ts's `distinctReporterCount` doc comment for why this isn't OPEN-only. */
+  distinctReporterCount: number;
+};
+
 export type QueueItem = {
   id: string;
   kind: QueueKind;
@@ -270,7 +303,7 @@ export type QueueItem = {
   rankScore: number;
   isAppeal: boolean;
   status: QueueStatus;
-  payload: CompanyQueuePayload | SeekerQueuePayload | JobQueuePayload | ReviewQueuePayload;
+  payload: CompanyQueuePayload | SeekerQueuePayload | JobQueuePayload | ReviewQueuePayload | ReportQueuePayload;
 };
 
 /** Cursor is always (updatedAt, id) — see the module doc comment's PAGINATION section for why every kind shares this one pair. */
@@ -1013,6 +1046,288 @@ async function listReviewQueue(params: QueueListParams): Promise<QueueListResult
 }
 
 // ============================================================================
+// REPORT (Phase 4 — Trust & Safety). Backed by `AbuseReport`
+// (lib/admin/abuse-reports.ts), threaded through this shared queue shell the
+// same way the other four kinds are: `listAbuseReports` supplies the raw,
+// cursor-paginated page (same "one fetch, then batch signals across that
+// page" split every kind above uses); this function computes severity/reach
+// and re-sorts.
+//
+// REACH for REPORT reuses the SAME reach definitions the other kinds already
+// established — "how many users does deciding this report touch" resolves
+// to whichever existing reach metric applies to the reported TARGET:
+//   - COMPANY target -> the company's own live job count (batchCompanyLiveJobCounts)
+//   - JOB target     -> the job's employer's live job count (batchCompanyLiveJobCounts)
+//   - USER target    -> the seeker's application count OR the employer's live
+//                        job count, whichever relation that User actually has
+//                        (batchSeekerApplicationCounts / batchCompanyLiveJobCounts)
+//   - REVIEW target  -> mirrors listReviewQueue's own subject-based reach
+//   - MESSAGE target -> the message's SENDER's reach, resolved the same way
+//                        as a USER target (a message has no reach of its own)
+// No new reach concept is introduced — this is reuse, not a parallel system.
+// ============================================================================
+
+function reportQueueStatus(status: AbuseReportStatus): QueueStatus {
+  if (status === "ACTIONED") return "APPROVED";
+  if (status === "DISMISSED") return "REJECTED";
+  return "PENDING";
+}
+
+type TargetSignal = { trustScore: number | null; reach: number };
+
+/** COMPANY target -> the company's own trustScore + live job count. */
+async function batchCompanyTargetSignals(companyIds: string[]): Promise<Map<string, TargetSignal>> {
+  if (companyIds.length === 0) return new Map();
+  const [companies, liveJobCounts] = await Promise.all([
+    prisma.company.findMany({ where: { id: { in: companyIds } }, select: { id: true, trustScore: true } }),
+    batchCompanyLiveJobCounts(companyIds),
+  ]);
+  return new Map(companies.map((c) => [c.id, { trustScore: c.trustScore, reach: liveJobCounts.get(c.id) ?? 0 }]));
+}
+
+/** JOB target -> the job's EMPLOYER's trustScore + live job count (same "a job decision carries the same ripple as a company decision for that employer" reasoning as the JOB kind's own reach above). */
+async function batchJobTargetSignals(jobIds: string[]): Promise<Map<string, TargetSignal>> {
+  if (jobIds.length === 0) return new Map();
+  const jobs = await prisma.job.findMany({ where: { id: { in: jobIds } }, select: { id: true, companyId: true } });
+  const companyIds = Array.from(new Set(jobs.map((j) => j.companyId)));
+  const companySignals = await batchCompanyTargetSignals(companyIds);
+  const map = new Map<string, TargetSignal>();
+  for (const job of jobs) {
+    map.set(job.id, companySignals.get(job.companyId) ?? { trustScore: null, reach: 0 });
+  }
+  return map;
+}
+
+/** USER target -> whichever side that User actually is: a seeker (trustScore + application count) or an employer/company owner (trustScore + live job count). Neither (e.g. an ADMIN account) resolves to the neutral `{ trustScore: null, reach: 0 }`. */
+async function batchUserTargetSignals(userIds: string[]): Promise<Map<string, TargetSignal>> {
+  if (userIds.length === 0) return new Map();
+  const [seekerProfiles, companies] = await Promise.all([
+    prisma.seekerProfile.findMany({ where: { userId: { in: userIds } }, select: { userId: true, id: true, trustScore: true } }),
+    prisma.company.findMany({ where: { userId: { in: userIds } }, select: { userId: true, id: true, trustScore: true } }),
+  ]);
+  const [applicationCounts, liveJobCounts] = await Promise.all([
+    batchSeekerApplicationCounts(seekerProfiles.map((s) => s.id)),
+    batchCompanyLiveJobCounts(companies.map((c) => c.id)),
+  ]);
+  const map = new Map<string, TargetSignal>();
+  for (const s of seekerProfiles) {
+    map.set(s.userId, { trustScore: s.trustScore, reach: applicationCounts.get(s.id) ?? 0 });
+  }
+  for (const c of companies) {
+    map.set(c.userId, { trustScore: c.trustScore, reach: liveJobCounts.get(c.id) ?? 0 });
+  }
+  return map;
+}
+
+/** MESSAGE target -> the message's SENDER's signal, resolved via batchUserTargetSignals (a message carries no trustScore/reach of its own). */
+async function batchMessageTargetSignals(messageIds: string[]): Promise<Map<string, TargetSignal>> {
+  if (messageIds.length === 0) return new Map();
+  const messages = await prisma.message.findMany({ where: { id: { in: messageIds } }, select: { id: true, senderUserId: true } });
+  const senderSignals = await batchUserTargetSignals(Array.from(new Set(messages.map((m) => m.senderUserId))));
+  const map = new Map<string, TargetSignal>();
+  for (const m of messages) {
+    map.set(m.id, senderSignals.get(m.senderUserId) ?? { trustScore: null, reach: 0 });
+  }
+  return map;
+}
+
+/** REVIEW target -> mirrors listReviewQueue's own subject-based reach/trust above (whichever side is the review's SUBJECT). */
+async function batchReviewTargetSignals(reviewIds: string[]): Promise<Map<string, TargetSignal>> {
+  if (reviewIds.length === 0) return new Map();
+  const reviews = await prisma.review.findMany({
+    where: { id: { in: reviewIds } },
+    select: { id: true, subjectCompanyId: true, subjectSeekerId: true },
+  });
+  const companyIds = reviews.map((r) => r.subjectCompanyId).filter((id): id is string => id !== null);
+  const seekerIds = reviews.map((r) => r.subjectSeekerId).filter((id): id is string => id !== null);
+  const [companySignals, seekerApplicationCounts, seekers] = await Promise.all([
+    batchCompanyTargetSignals(companyIds),
+    batchSeekerApplicationCounts(seekerIds),
+    prisma.seekerProfile.findMany({ where: { id: { in: seekerIds } }, select: { id: true, trustScore: true } }),
+  ]);
+  const seekerTrustById = new Map(seekers.map((s) => [s.id, s.trustScore]));
+
+  const map = new Map<string, TargetSignal>();
+  for (const r of reviews) {
+    if (r.subjectCompanyId) {
+      map.set(r.id, companySignals.get(r.subjectCompanyId) ?? { trustScore: null, reach: 0 });
+    } else if (r.subjectSeekerId) {
+      map.set(r.id, {
+        trustScore: seekerTrustById.get(r.subjectSeekerId) ?? null,
+        reach: seekerApplicationCounts.get(r.subjectSeekerId) ?? 0,
+      });
+    } else {
+      map.set(r.id, { trustScore: null, reach: 0 });
+    }
+  }
+  return map;
+}
+
+/** Groups the fetched page's (targetType, targetId) pairs and dispatches to exactly one batched lookup per targetType present — never per-item, and never more than the five possible groups regardless of page size. */
+async function batchReportTargetSignals(reports: AbuseReportRow[]): Promise<Map<string, TargetSignal>> {
+  const idsByType: Record<AbuseTargetType, string[]> = { USER: [], JOB: [], COMPANY: [], MESSAGE: [], REVIEW: [] };
+  for (const r of reports) {
+    idsByType[r.targetType].push(r.targetId);
+  }
+
+  const [userSignals, jobSignals, companySignals, messageSignals, reviewSignals] = await Promise.all([
+    batchUserTargetSignals(idsByType.USER),
+    batchJobTargetSignals(idsByType.JOB),
+    batchCompanyTargetSignals(idsByType.COMPANY),
+    batchMessageTargetSignals(idsByType.MESSAGE),
+    batchReviewTargetSignals(idsByType.REVIEW),
+  ]);
+
+  const combined = new Map<string, TargetSignal>();
+  const merge = (targetType: AbuseTargetType, signals: Map<string, TargetSignal>) => {
+    for (const [targetId, signal] of signals) {
+      combined.set(`${targetType}::${targetId}`, signal);
+    }
+  };
+  merge("USER", userSignals);
+  merge("JOB", jobSignals);
+  merge("COMPANY", companySignals);
+  merge("MESSAGE", messageSignals);
+  merge("REVIEW", reviewSignals);
+  return combined;
+}
+
+type DistinctReporterCountRow = { target_type: string; target_id: string; reporters: number };
+
+/**
+ * Distinct reporters EVER filed (any status) against each (targetType,
+ * targetId) pair on the fetched page — one raw query across every pair,
+ * never per item. Counts every status, not just OPEN — see
+ * lib/admin/abuse-reports.ts's `AbuseReportDetail.distinctReporterCount` doc
+ * comment for why a dismissed-but-recurring complaint still counts.
+ */
+async function batchReportDistinctReporterCounts(reports: AbuseReportRow[]): Promise<Map<string, number>> {
+  if (reports.length === 0) return new Map();
+  const targetTypes = reports.map((r) => r.targetType);
+  const targetIds = reports.map((r) => r.targetId);
+
+  const rows = await prisma.$queryRaw<DistinctReporterCountRow[]>`
+    SELECT ar.target_type AS target_type, ar.target_id AS target_id, COUNT(DISTINCT ar.reporter_user_id)::int AS reporters
+    FROM abuse_reports ar
+    JOIN (SELECT unnest(${targetTypes}::text[]) AS target_type, unnest(${targetIds}::text[]) AS target_id) t
+      ON ar.target_type = t.target_type AND ar.target_id = t.target_id
+    GROUP BY ar.target_type, ar.target_id
+  `;
+
+  return new Map(rows.map((r) => [`${r.target_type}::${r.target_id}`, r.reporters]));
+}
+
+/**
+ * Pure — DB-free, unit-testable in isolation (same precedent as every other
+ * `compute*`/`build*` function in this file). Builds the REPORT kind's three
+ * severity signals from already-resolved inputs: the report's own
+ * controlled-vocabulary severity, how many distinct reporters have ever
+ * filed against this exact target, and the target's own trustScore
+ * (reusing the shared `lowTrustScore` threshold/weight — no new weight for
+ * this one, since it's the identical signal every other kind already has).
+ */
+export function buildReportSeveritySignals(input: {
+  reportSeverity: number;
+  distinctReporterCount: number;
+  targetTrustScore: number | null;
+}): QueueSeveritySignal[] {
+  const signals: QueueSeveritySignal[] = [];
+
+  signals.push({
+    key: "reportSeverity",
+    contribution: input.reportSeverity * QUEUE_RANKING.severity.report.severityPerPoint,
+    detail: { reportSeverity: input.reportSeverity },
+  });
+
+  if (input.distinctReporterCount > 1) {
+    signals.push({
+      key: "multipleReporters",
+      contribution: (input.distinctReporterCount - 1) * QUEUE_RANKING.severity.report.additionalReporterWeight,
+      detail: { distinctReporterCount: input.distinctReporterCount },
+    });
+  }
+
+  if (input.targetTrustScore !== null && input.targetTrustScore < QUEUE_RANKING.severity.lowTrustScore.threshold) {
+    signals.push({
+      key: "lowTrustScore",
+      contribution: QUEUE_RANKING.severity.lowTrustScore.weight,
+      detail: { trustScore: input.targetTrustScore },
+    });
+  }
+
+  return signals;
+}
+
+async function listReportQueue(params: QueueListParams): Promise<QueueListResult> {
+  const { status, search, cursor, limit } = params;
+
+  const { reports, nextCursor } = await listAbuseReports({
+    status,
+    search,
+    cursor,
+    limit,
+  });
+
+  const [targetSignals, reporterCounts, reporterEmails] = await Promise.all([
+    batchReportTargetSignals(reports),
+    batchReportDistinctReporterCounts(reports),
+    batchAdminEmails(Array.from(new Set(reports.map((r) => r.reporterUserId)))),
+  ]);
+
+  const now = new Date();
+  const items: QueueItem[] = reports.map((row) => {
+    const ageHours = computeAgeHours(row.createdAt, now);
+    const key = `${row.targetType}::${row.targetId}`;
+    const targetSignal = targetSignals.get(key) ?? { trustScore: null, reach: 0 };
+    const distinctReporterCount = reporterCounts.get(key) ?? 1;
+
+    const signals = buildReportSeveritySignals({
+      reportSeverity: row.severity,
+      distinctReporterCount,
+      targetTrustScore: targetSignal.trustScore,
+    });
+    const severity = buildSeverity(signals);
+    const reasonLabel = ABUSE_REPORT_REASONS_BY_TARGET_TYPE[row.targetType].find((e) => e.code === row.reason)?.label ?? row.reason;
+
+    return {
+      id: row.id,
+      kind: "REPORT",
+      title: reasonLabel,
+      subtitle: `${row.targetType} target • ${row.targetId}`,
+      submittedAt: row.createdAt,
+      ageHours,
+      slaBand: computeSlaBand(ageHours),
+      severity,
+      severitySignals: signals,
+      reach: targetSignal.reach,
+      rankScore: computeRankScore(severity, ageHours, targetSignal.reach),
+      // Not applicable to REPORT — there is no "prior rejection of this
+      // exact target" concept analogous to the other four kinds' appeal
+      // flow; a report is either the first complaint against a target or
+      // one of several independent ones (see `multipleReporters` above).
+      isAppeal: false,
+      status: reportQueueStatus(row.status),
+      payload: {
+        reportId: row.id,
+        reporterUserId: row.reporterUserId,
+        reporterEmail: reporterEmails.get(row.reporterUserId) ?? null,
+        targetType: row.targetType,
+        targetId: row.targetId,
+        reason: row.reason,
+        reasonLabel,
+        detail: row.detail,
+        status: row.status,
+        severity: row.severity,
+        distinctReporterCount,
+      } satisfies ReportQueuePayload,
+    };
+  });
+
+  items.sort((a, b) => b.rankScore - a.rankScore);
+  return { items, nextCursor };
+}
+
+// ============================================================================
 // Public entry point — dispatches to the kind-specific fetcher above.
 // ============================================================================
 
@@ -1035,14 +1350,17 @@ export async function listQueue(input: {
       return listJobQueue(params);
     case "REVIEW":
       return listReviewQueue(params);
+    case "REPORT":
+      return listReportQueue(params);
   }
 }
 
 // ============================================================================
 // getQueueHealth — depth, oldest-item age, SLA breach count, per queue.
-// 8 total aggregate queries (2 per kind: one for depth+oldest, one for the
-// breach count) — bounded and constant regardless of table size, never a
-// scan of the full pending set into the app.
+// 10 total aggregate queries (2 per kind, across five kinds now that REPORT
+// is included: one for depth+oldest, one for the breach count) — bounded and
+// constant regardless of table size, never a scan of the full pending set
+// into the app.
 // ============================================================================
 
 export type QueueHealth = {
@@ -1056,7 +1374,7 @@ export async function getQueueHealth(): Promise<QueueHealth[]> {
   const now = new Date();
   const redCutoff = new Date(now.getTime() - QUEUE_RANKING.sla.amberUnderHours * 60 * 60 * 1000);
 
-  const [companyAgg, seekerAgg, jobAgg, reviewAgg] = await Promise.all([
+  const [companyAgg, seekerAgg, jobAgg, reviewAgg, reportAgg] = await Promise.all([
     prisma.company.aggregate({ where: { verifiedStatus: "PENDING" }, _count: { _all: true }, _min: { updatedAt: true } }),
     prisma.seekerProfile.aggregate({
       where: { idVerificationStatus: "PENDING" },
@@ -1065,13 +1383,21 @@ export async function getQueueHealth(): Promise<QueueHealth[]> {
     }),
     prisma.job.aggregate({ where: { status: "PENDING_REVIEW" }, _count: { _all: true }, _min: { updatedAt: true } }),
     prisma.review.aggregate({ where: { status: "DISPUTED" }, _count: { _all: true }, _min: { updatedAt: true } }),
+    // REPORT: "PENDING" here means AbuseReport.status === "OPEN". No
+    // `updatedAt` column exists on AbuseReport (see
+    // lib/admin/abuse-reports.ts's listAbuseReports doc comment) — its
+    // "oldest" anchor is `createdAt` instead, so this one aggregate is kept
+    // structurally separate from the four above rather than forced through
+    // the same `_min: { updatedAt }` shape.
+    prisma.abuseReport.aggregate({ where: { status: "OPEN" }, _count: { _all: true }, _min: { createdAt: true } }),
   ]);
 
-  const [companyBreaches, seekerBreaches, jobBreaches, reviewBreaches] = await Promise.all([
+  const [companyBreaches, seekerBreaches, jobBreaches, reviewBreaches, reportBreaches] = await Promise.all([
     prisma.company.count({ where: { verifiedStatus: "PENDING", updatedAt: { lte: redCutoff } } }),
     prisma.seekerProfile.count({ where: { idVerificationStatus: "PENDING", updatedAt: { lte: redCutoff } } }),
     prisma.job.count({ where: { status: "PENDING_REVIEW", updatedAt: { lte: redCutoff } } }),
     prisma.review.count({ where: { status: "DISPUTED", updatedAt: { lte: redCutoff } } }),
+    prisma.abuseReport.count({ where: { status: "OPEN", createdAt: { lte: redCutoff } } }),
   ]);
 
   const toHealth = (
@@ -1090,6 +1416,12 @@ export async function getQueueHealth(): Promise<QueueHealth[]> {
     toHealth("SEEKER", seekerAgg, seekerBreaches),
     toHealth("JOB", jobAgg, jobBreaches),
     toHealth("REVIEW", reviewAgg, reviewBreaches),
+    {
+      kind: "REPORT",
+      depth: reportAgg._count._all,
+      oldestAgeHours: reportAgg._min.createdAt ? computeAgeHours(reportAgg._min.createdAt, now) : null,
+      slaBreaches: reportBreaches,
+    },
   ];
 }
 

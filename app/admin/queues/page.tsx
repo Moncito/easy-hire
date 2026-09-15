@@ -5,13 +5,14 @@ import { getQueueHealth, getDecisionStats, type QueueHealth, type QueueKind } fr
 import { QUEUE_KIND_LABEL, QUEUE_SEGMENT_BY_KIND } from "./_lib/kind-map";
 import DecisionQualityPanel from "@/components/admin/queue/DecisionQualityPanel";
 
-const KIND_ORDER: QueueKind[] = ["COMPANY", "SEEKER", "JOB", "REVIEW"];
+const KIND_ORDER: QueueKind[] = ["COMPANY", "SEEKER", "JOB", "REVIEW", "REPORT"];
 
 const KIND_DESCRIPTION: Record<QueueKind, string> = {
   COMPANY: "Employer identity verification",
   SEEKER: "VA identity verification",
   JOB: "Job posting approval",
   REVIEW: "Disputed review resolution",
+  REPORT: "User-submitted abuse reports",
 };
 
 export default async function AdminQueuesIndexPage() {
