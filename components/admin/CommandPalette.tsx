@@ -43,6 +43,9 @@ type PaletteItem = {
 const DEBOUNCE_MS = 200;
 const MIN_QUERY_LENGTH = 2;
 
+/** Shared event name — imported by components/admin/AdminHeader.tsx's search trigger rather than re-typed as a string on both sides. */
+export const OPEN_EVENT_NAME = "admin-command-palette:open";
+
 function buildCompanyItems(companies: SerializedCompanyDirectoryItem[]): PaletteItem[] {
   return companies.slice(0, 5).map((c) => ({
     id: `company-${c.id}`,
@@ -161,6 +164,24 @@ export default function CommandPalette() {
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [open, closePalette]);
+
+  // Second, decoupled way to open this same palette — the header's clickable
+  // search trigger (components/admin/AdminHeader.tsx) dispatches this custom
+  // window event on click rather than the two components sharing React
+  // state: they're independent siblings under app/admin/layout.tsx (a
+  // Server Component, so it can't hold client-only "is the palette open"
+  // state itself), and a custom event is the lightest way for one client
+  // component to command another without lifting state into a shared
+  // context neither otherwise needs. Open-only (never toggles closed) —
+  // clicking a search box conventionally opens search, it doesn't act as an
+  // on/off switch the way the ⌘K shortcut does.
+  useEffect(() => {
+    function onOpenRequest() {
+      setOpen(true);
+    }
+    window.addEventListener(OPEN_EVENT_NAME, onOpenRequest);
+    return () => window.removeEventListener(OPEN_EVENT_NAME, onOpenRequest);
+  }, []);
 
   // Focus management + focus trap while open, same pattern as
   // components/admin/queue/BulkBar.tsx's TypedConfirmDialog.

@@ -21,6 +21,7 @@ import {
   PanelLeftOpen,
 } from "lucide-react";
 import { useSignOut } from "@/components/ui/useSignOut";
+import { ADMIN_QUEUE_NAV_ITEMS as queueItems } from "./adminQueueNav";
 import type { QueueKind } from "@/lib/admin/queues";
 
 /**
@@ -44,6 +45,17 @@ import type { QueueKind } from "@/lib/admin/queues";
  *     real SLA breach (`slaBreaches > 0`, the same RED-band threshold
  *     `SlaBadge.tsx` already uses) — a plain backlog count is informational,
  *     not a warning, so it stays a neutral navy pill until it actually is one.
+ *
+ * Dark theme (app/globals.css's `admin-dark:` custom variant, toggled by
+ * AdminHeader.tsx) is layered on afterward — see `navLinkClass`/
+ * `subNavLinkClass` below for why the ACTIVE state uses a neutral light
+ * highlight in dark mode instead of navy: `bg-navy/8 text-navy` on the
+ * already-dark `#1B1F26` surface is close to invisible (a dark fill on a
+ * dark background), so dark mode substitutes a plain light highlight for
+ * "this is the current page" rather than trying to force the light-mode
+ * navy treatment to also work on dark. The semantic icon colors
+ * (navy/teal/marigold) stay full-strength in both themes — they're larger,
+ * higher-contrast strokes that read fine on a dark surface unmodified.
  */
 
 // The unified moderation queues (docs/ADMIN-CONSOLE-PLAN.md §3/§4.2). The
@@ -51,23 +63,15 @@ import type { QueueKind } from "@/lib/admin/queues";
 // /admin/seekers/verifications and /admin/reviews now redirect straight
 // here, so listing them separately would have been two links to one screen.
 //
-// REPORT was missing from this list entirely until now — Phase 4 added it as
-// the queue system's fifth kind (lib/admin/queues.ts's QueueKind,
-// app/admin/queues/[kind]/page.tsx's own kind maps all already cover it),
-// but this specific array was never updated to match. Fixed here as part of
-// wiring the badge system, since a badge system that silently skips one
-// whole queue kind would be actively misleading.
+// The kind/label/href list itself lives in ./adminQueueNav.ts, shared with
+// AdminHeader.tsx's pending-items notification panel — REPORT was missing
+// from this list entirely until it was added there (Phase 4's fifth queue
+// kind never made it into this specific array), and a shared module is what
+// keeps that from happening a second time in two places.
 //
 // /admin/companies is the exception and keeps its own entry below — the
 // verification queue moved out of it, but its collaborative-hiring access
 // tool did not move anywhere, so that path still leads somewhere distinct.
-const queueItems: { kind: QueueKind; label: string; href: string }[] = [
-  { kind: "COMPANY", label: "Companies", href: "/admin/queues/companies" },
-  { kind: "SEEKER", label: "Seekers", href: "/admin/queues/seekers" },
-  { kind: "JOB", label: "Jobs", href: "/admin/queues/jobs" },
-  { kind: "REVIEW", label: "Reviews", href: "/admin/queues/reviews" },
-  { kind: "REPORT", label: "Reports", href: "/admin/queues/reports" },
-];
 
 /**
  * Semantic icon color per nav item — Teal for employer/company-side content,
@@ -75,9 +79,9 @@ const queueItems: { kind: QueueKind; label: string; href: string }[] = [
  * or mixed (both sides participate, or it's platform-wide). Applied to the
  * icon element directly (overrides the inherited `currentColor` the way any
  * Tailwind text-color class does), independent of the active/inactive pill
- * styling below, which stays navy-on-active the way it always has — the icon
- * carries "what kind of thing is this", the pill carries "is this the
- * current page".
+ * styling below, which stays navy-on-active in light mode the way it always
+ * has — the icon carries "what kind of thing is this", the pill carries "is
+ * this the current page".
  */
 const ICON_COLOR = {
   navy: "text-navy",
@@ -109,6 +113,26 @@ const SIDEBAR_WIDTH_COLLAPSED = "4rem";
 const QUEUE_HEALTH_POLL_MS = 60_000;
 
 /**
+ * Full-row nav link styling (Dashboard, Company access, Users, Jobs, Trust
+ * scores, Audit log, Health, Feature flags, Admin team, and the Queues
+ * group header) — every one of those shares this exact active/inactive
+ * shape, so it lives in one function instead of the same ternary retyped
+ * nine times over.
+ */
+function navLinkClass(active: boolean): string {
+  return active
+    ? "bg-navy/8 text-navy admin-dark:bg-white/10 admin-dark:text-mist"
+    : "text-ink/65 hover:bg-ink/4 hover:text-ink admin-dark:text-mist/65 admin-dark:hover:bg-white/8 admin-dark:hover:text-mist";
+}
+
+/** Same shape as `navLinkClass`, one step down in size/weight — the queue sub-items and the "Overview" link nested under the Queues group. */
+function subNavLinkClass(active: boolean): string {
+  return active
+    ? "bg-navy/8 text-navy admin-dark:bg-white/10 admin-dark:text-mist"
+    : "text-ink/55 hover:bg-ink/4 hover:text-ink admin-dark:text-mist/55 admin-dark:hover:bg-white/8 admin-dark:hover:text-mist";
+}
+
+/**
  * Deliberately plain primitives, not `ResolvedAdminAccess` — this file must
  * not import `/lib` (a client component would be pulling in server-only code
  * paths, and `ResolvedAdminAccess.permissions` is a `Set`, which doesn't
@@ -136,10 +160,18 @@ export type AdminSidebarProps = {
   access: AdminSidebarAccess;
 };
 
-/** Small pending-count pill — navy by default, Ember only on a real SLA breach. Renders nothing at depth 0: an empty queue is not something to badge. */
+/**
+ * Small pending-count pill — navy by default, Ember only on a real SLA
+ * breach. Renders nothing at depth 0: an empty queue is not something to
+ * badge. The navy tone is bumped up in dark mode (`/10`→`/25` fill,
+ * `text-navy`→`text-mist`) for the same reason the active nav state is —
+ * a faint dark-navy fill and dark-navy text both lose to a dark surface.
+ * Ember needs no dark-mode adjustment: it's already a solid, high-contrast
+ * fill in light mode and stays exactly as legible on dark.
+ */
 function CountBadge({ depth, breached, collapsed }: { depth: number; breached: boolean; collapsed: boolean }) {
   if (depth <= 0) return null;
-  const tone = breached ? "bg-ember text-white" : "bg-navy/10 text-navy";
+  const tone = breached ? "bg-ember text-white" : "bg-navy/10 text-navy admin-dark:bg-navy/30 admin-dark:text-mist";
   if (collapsed) {
     return (
       <span
@@ -277,7 +309,7 @@ export default function AdminSidebar({ access }: AdminSidebarProps) {
 
   return (
     <aside
-      className={`fixed left-0 top-0 z-40 flex h-screen flex-col border-r border-ink/10 bg-white transition-[width] duration-200 ease-out ${
+      className={`fixed left-0 top-0 z-40 flex h-screen flex-col border-r border-ink/10 bg-white transition-[width] duration-200 ease-out admin-dark:border-white/10 admin-dark:bg-admin-dark-surface ${
         collapsed ? "w-16" : "w-64"
       }`}
     >
@@ -293,10 +325,17 @@ export default function AdminSidebar({ access }: AdminSidebarProps) {
           </div>
           {!collapsed && (
             <div className="min-w-0">
-              <span className="block truncate font-display text-lg font-bold tracking-tight text-ink">
+              <span className="block truncate font-display text-lg font-bold tracking-tight text-ink admin-dark:text-mist">
                 EasyHire
               </span>
-              <span className="block text-[10px] font-semibold uppercase tracking-wider text-navy/60">Admin</span>
+              {/* Navy-as-text (not as an icon or a pill fill) is what doesn't
+                  survive the switch to a dark surface — a dark accent colour
+                  used as small text on an already-dark background loses
+                  contrast, unlike navy used as an icon stroke or a badge
+                  fill, both of which stay legible unchanged. */}
+              <span className="block text-[10px] font-semibold uppercase tracking-wider text-navy/60 admin-dark:text-mist/45">
+                Admin
+              </span>
             </div>
           )}
         </Link>
@@ -305,7 +344,7 @@ export default function AdminSidebar({ access }: AdminSidebarProps) {
           onClick={() => setCollapsed((v) => !v)}
           aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          className="shrink-0 rounded-lg p-1.5 text-ink/35 hover:bg-ink/5 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy"
+          className="shrink-0 rounded-lg p-1.5 text-ink/35 hover:bg-ink/5 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy admin-dark:text-mist/40 admin-dark:hover:bg-white/8 admin-dark:hover:text-mist"
         >
           {collapsed ? (
             <PanelLeftOpen className="h-4 w-4" strokeWidth={2} aria-hidden="true" />
@@ -321,7 +360,7 @@ export default function AdminSidebar({ access }: AdminSidebarProps) {
           title="Dashboard"
           className={`flex items-center gap-3 rounded-xl py-2.5 text-sm font-medium transition-all ${
             collapsed ? "w-11 justify-center px-0" : "w-full px-3"
-          } ${pathname === "/admin/dashboard" ? "bg-navy/8 text-navy" : "text-ink/65 hover:bg-ink/4 hover:text-ink"}`}
+          } ${navLinkClass(pathname === "/admin/dashboard")}`}
         >
           <LayoutDashboard className={`h-4.5 w-4.5 shrink-0 ${ICON_COLOR.navy}`} strokeWidth={2} />
           {!collapsed && "Dashboard"}
@@ -338,9 +377,7 @@ export default function AdminSidebar({ access }: AdminSidebarProps) {
               <Link
                 href="/admin/queues"
                 title={`Queues${totalQueueDepth > 0 ? ` — ${totalQueueDepth} pending` : ""}`}
-                className={`relative flex h-11 w-11 items-center justify-center rounded-xl transition-all ${
-                  queuesActive ? "bg-navy/8 text-navy" : "text-ink/65 hover:bg-ink/4 hover:text-ink"
-                }`}
+                className={`relative flex h-11 w-11 items-center justify-center rounded-xl transition-all ${navLinkClass(queuesActive)}`}
               >
                 <Layers className={`h-4.5 w-4.5 shrink-0 ${ICON_COLOR.navy}`} strokeWidth={2} />
                 <CountBadge depth={totalQueueDepth} breached={anyQueueBreach} collapsed />
@@ -351,25 +388,21 @@ export default function AdminSidebar({ access }: AdminSidebarProps) {
                   type="button"
                   onClick={() => setQueuesOpen((v) => !v)}
                   aria-expanded={queuesOpen}
-                  className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all ${
-                    queuesActive ? "bg-navy/8 text-navy" : "text-ink/65 hover:bg-ink/4 hover:text-ink"
-                  }`}
+                  className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all ${navLinkClass(queuesActive)}`}
                 >
                   <Layers className={`h-4.5 w-4.5 shrink-0 ${ICON_COLOR.navy}`} strokeWidth={2} />
                   <span className="flex-1 text-left">Queues</span>
                   <CountBadge depth={totalQueueDepth} breached={anyQueueBreach} collapsed={false} />
                   <ChevronDown
-                    className={`h-3.5 w-3.5 shrink-0 text-ink/40 transition-transform ${queuesOpen ? "rotate-180" : ""}`}
+                    className={`h-3.5 w-3.5 shrink-0 text-ink/40 transition-transform admin-dark:text-mist/35 ${queuesOpen ? "rotate-180" : ""}`}
                     aria-hidden="true"
                   />
                 </button>
                 {queuesOpen && (
-                  <div className="ml-4 mt-1 flex flex-col gap-1 border-l border-ink/10 pl-3">
+                  <div className="ml-4 mt-1 flex flex-col gap-1 border-l border-ink/10 pl-3 admin-dark:border-white/10">
                     <Link
                       href="/admin/queues"
-                      className={`rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-all ${
-                        pathname === "/admin/queues" ? "bg-navy/8 text-navy" : "text-ink/55 hover:bg-ink/4 hover:text-ink"
-                      }`}
+                      className={`rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-all ${subNavLinkClass(pathname === "/admin/queues")}`}
                     >
                       Overview
                     </Link>
@@ -381,9 +414,7 @@ export default function AdminSidebar({ access }: AdminSidebarProps) {
                         <Link
                           key={item.href}
                           href={item.href}
-                          className={`flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-all ${
-                            isActive ? "bg-navy/8 text-navy" : "text-ink/55 hover:bg-ink/4 hover:text-ink"
-                          }`}
+                          className={`flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-all ${subNavLinkClass(isActive)}`}
                         >
                           <Icon className={`h-3.5 w-3.5 shrink-0 ${QUEUE_ICON_COLOR[item.kind]}`} strokeWidth={2} aria-hidden="true" />
                           <span className="flex-1">{item.label}</span>
@@ -404,7 +435,7 @@ export default function AdminSidebar({ access }: AdminSidebarProps) {
             title="Company access"
             className={`flex items-center gap-3 rounded-xl py-2.5 text-sm font-medium transition-all ${
               collapsed ? "w-11 justify-center px-0" : "w-full px-3"
-            } ${pathname === "/admin/companies" ? "bg-navy/8 text-navy" : "text-ink/65 hover:bg-ink/4 hover:text-ink"}`}
+            } ${navLinkClass(pathname === "/admin/companies")}`}
           >
             <Building2 className={`h-4.5 w-4.5 shrink-0 ${ICON_COLOR.teal}`} strokeWidth={2} />
             {!collapsed && "Company access"}
@@ -416,7 +447,11 @@ export default function AdminSidebar({ access }: AdminSidebarProps) {
             above. No standalone "Companies" directory link yet — reach a
             company via a user's 360 record, the job directory, or ⌘K. */}
         {(canReadUsers || canDecideQueues) && (
-          <p className={`mt-3 text-[10px] font-bold uppercase tracking-wider text-ink/35 ${collapsed ? "w-11 border-t border-ink/10 pt-3 text-center" : "px-3"}`}>
+          <p
+            className={`mt-3 text-[10px] font-bold uppercase tracking-wider text-ink/35 admin-dark:text-mist/30 ${
+              collapsed ? "w-11 border-t border-ink/10 pt-3 text-center admin-dark:border-white/10" : "px-3"
+            }`}
+          >
             {collapsed ? "" : "Directory"}
           </p>
         )}
@@ -426,11 +461,7 @@ export default function AdminSidebar({ access }: AdminSidebarProps) {
             title="Users"
             className={`flex items-center gap-3 rounded-xl py-2.5 text-sm font-medium transition-all ${
               collapsed ? "w-11 justify-center px-0" : "w-full px-3"
-            } ${
-              pathname === "/admin/users" || pathname.startsWith("/admin/users/")
-                ? "bg-navy/8 text-navy"
-                : "text-ink/65 hover:bg-ink/4 hover:text-ink"
-            }`}
+            } ${navLinkClass(pathname === "/admin/users" || pathname.startsWith("/admin/users/"))}`}
           >
             <Users className={`h-4.5 w-4.5 shrink-0 ${ICON_COLOR.navy}`} strokeWidth={2} />
             {!collapsed && "Users"}
@@ -442,7 +473,7 @@ export default function AdminSidebar({ access }: AdminSidebarProps) {
             title="Jobs"
             className={`flex items-center gap-3 rounded-xl py-2.5 text-sm font-medium transition-all ${
               collapsed ? "w-11 justify-center px-0" : "w-full px-3"
-            } ${pathname === "/admin/jobs/directory" ? "bg-navy/8 text-navy" : "text-ink/65 hover:bg-ink/4 hover:text-ink"}`}
+            } ${navLinkClass(pathname === "/admin/jobs/directory")}`}
           >
             <Briefcase className={`h-4.5 w-4.5 shrink-0 ${ICON_COLOR.teal}`} strokeWidth={2} />
             {!collapsed && "Jobs"}
@@ -454,7 +485,11 @@ export default function AdminSidebar({ access }: AdminSidebarProps) {
             separate permissions (`user.read` for trust, `audit.read` for the
             audit log) — an admin can hold either without the other. */}
         {(canReadUsers || canReadAudit) && (
-          <p className={`mt-3 text-[10px] font-bold uppercase tracking-wider text-ink/35 ${collapsed ? "w-11 border-t border-ink/10 pt-3 text-center" : "px-3"}`}>
+          <p
+            className={`mt-3 text-[10px] font-bold uppercase tracking-wider text-ink/35 admin-dark:text-mist/30 ${
+              collapsed ? "w-11 border-t border-ink/10 pt-3 text-center admin-dark:border-white/10" : "px-3"
+            }`}
+          >
             {collapsed ? "" : "Trust"}
           </p>
         )}
@@ -464,7 +499,7 @@ export default function AdminSidebar({ access }: AdminSidebarProps) {
             title="Trust scores"
             className={`flex items-center gap-3 rounded-xl py-2.5 text-sm font-medium transition-all ${
               collapsed ? "w-11 justify-center px-0" : "w-full px-3"
-            } ${pathname === "/admin/trust" ? "bg-navy/8 text-navy" : "text-ink/65 hover:bg-ink/4 hover:text-ink"}`}
+            } ${navLinkClass(pathname === "/admin/trust")}`}
           >
             <ShieldAlert className={`h-4.5 w-4.5 shrink-0 ${ICON_COLOR.navy}`} strokeWidth={2} />
             {!collapsed && "Trust scores"}
@@ -476,7 +511,7 @@ export default function AdminSidebar({ access }: AdminSidebarProps) {
             title="Audit log"
             className={`flex items-center gap-3 rounded-xl py-2.5 text-sm font-medium transition-all ${
               collapsed ? "w-11 justify-center px-0" : "w-full px-3"
-            } ${pathname === "/admin/audit" ? "bg-navy/8 text-navy" : "text-ink/65 hover:bg-ink/4 hover:text-ink"}`}
+            } ${navLinkClass(pathname === "/admin/audit")}`}
           >
             <ScrollText className={`h-4.5 w-4.5 shrink-0 ${ICON_COLOR.navy}`} strokeWidth={2} />
             {!collapsed && "Audit log"}
@@ -485,7 +520,11 @@ export default function AdminSidebar({ access }: AdminSidebarProps) {
 
         {(canReadSystem || canManageTeam) && (
           <>
-            <p className={`mt-3 text-[10px] font-bold uppercase tracking-wider text-ink/35 ${collapsed ? "w-11 border-t border-ink/10 pt-3 text-center" : "px-3"}`}>
+            <p
+              className={`mt-3 text-[10px] font-bold uppercase tracking-wider text-ink/35 admin-dark:text-mist/30 ${
+                collapsed ? "w-11 border-t border-ink/10 pt-3 text-center admin-dark:border-white/10" : "px-3"
+              }`}
+            >
               {collapsed ? "" : "System"}
             </p>
             {canReadSystem && (
@@ -494,7 +533,7 @@ export default function AdminSidebar({ access }: AdminSidebarProps) {
                 title="Health"
                 className={`flex items-center gap-3 rounded-xl py-2.5 text-sm font-medium transition-all ${
                   collapsed ? "w-11 justify-center px-0" : "w-full px-3"
-                } ${pathname === "/admin/system" ? "bg-navy/8 text-navy" : "text-ink/65 hover:bg-ink/4 hover:text-ink"}`}
+                } ${navLinkClass(pathname === "/admin/system")}`}
               >
                 <Activity className={`h-4.5 w-4.5 shrink-0 ${ICON_COLOR.navy}`} strokeWidth={2} />
                 {!collapsed && "Health"}
@@ -506,7 +545,7 @@ export default function AdminSidebar({ access }: AdminSidebarProps) {
                 title="Feature flags"
                 className={`flex items-center gap-3 rounded-xl py-2.5 text-sm font-medium transition-all ${
                   collapsed ? "w-11 justify-center px-0" : "w-full px-3"
-                } ${pathname === "/admin/system/flags" ? "bg-navy/8 text-navy" : "text-ink/65 hover:bg-ink/4 hover:text-ink"}`}
+                } ${navLinkClass(pathname === "/admin/system/flags")}`}
               >
                 <Flag className={`h-4.5 w-4.5 shrink-0 ${ICON_COLOR.navy}`} strokeWidth={2} />
                 {!collapsed && "Feature flags"}
@@ -518,7 +557,7 @@ export default function AdminSidebar({ access }: AdminSidebarProps) {
                 title="Admin team"
                 className={`flex items-center gap-3 rounded-xl py-2.5 text-sm font-medium transition-all ${
                   collapsed ? "w-11 justify-center px-0" : "w-full px-3"
-                } ${pathname === "/admin/system/team" ? "bg-navy/8 text-navy" : "text-ink/65 hover:bg-ink/4 hover:text-ink"}`}
+                } ${navLinkClass(pathname === "/admin/system/team")}`}
               >
                 <ShieldCheck className={`h-4.5 w-4.5 shrink-0 ${ICON_COLOR.navy}`} strokeWidth={2} />
                 {!collapsed && "Admin team"}
@@ -528,12 +567,12 @@ export default function AdminSidebar({ access }: AdminSidebarProps) {
         )}
       </nav>
 
-      <div className={`shrink-0 border-t border-ink/5 py-4 ${collapsed ? "px-2" : "px-4"}`}>
+      <div className={`shrink-0 border-t border-ink/5 py-4 admin-dark:border-white/8 ${collapsed ? "px-2" : "px-4"}`}>
         <button
           type="button"
           onClick={signOut}
           title="Log out"
-          className={`flex items-center gap-3 rounded-xl py-2.5 text-sm font-medium text-ink/60 hover:bg-ember/5 hover:text-ember ${
+          className={`flex items-center gap-3 rounded-xl py-2.5 text-sm font-medium text-ink/60 hover:bg-ember/5 hover:text-ember admin-dark:text-mist/55 admin-dark:hover:bg-ember/15 ${
             collapsed ? "w-11 justify-center px-0" : "w-full px-3"
           }`}
         >

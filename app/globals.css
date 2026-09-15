@@ -1,5 +1,17 @@
 @import "tailwindcss";
 
+/* `admin-dark:` — a Tailwind v4 custom variant scoped to `/admin` only,
+   conditioned on `[data-admin-theme="dark"]` set on `document.documentElement`
+   by components/admin/AdminHeader.tsx's theme toggle. Named `admin-dark`
+   rather than reusing Tailwind's own `dark:` variant on purpose: this app
+   has no site-wide dark mode (no `darkMode` strategy configured, zero `dark:`
+   usage anywhere outside /admin), and this variant must never accidentally
+   apply to seeker/employer/public pages that happen to render inside an
+   unrelated dark-themed ancestor somewhere. Matches selector to descendants
+   only via `[data-admin-theme="dark"] *` plus the attribute host element
+   itself via the `:where(...)`. */
+@custom-variant admin-dark (&:where([data-admin-theme="dark"], [data-admin-theme="dark"] *));
+
 @theme {
   --color-mist: #F5F6F4;
   --color-ink: #20242B;
@@ -7,6 +19,16 @@
   --color-marigold: #F2A93B;
   --color-teal: #1F8073;
   --color-ember: #D9553A;
+
+  /* Admin console dark theme — two new surfaces only. Text/borders/hovers
+     reuse the EXISTING `mist` token and plain white/black opacity utilities
+     (`admin-dark:text-mist/65`, `admin-dark:border-white/10`, etc.) rather
+     than a full second palette — the brand accents (navy/teal/marigold)
+     read fine unchanged on a dark background, which is why only the two
+     neutral surfaces need their own values. Scoped to `/admin` only — no
+     other part of the app declares or uses these. */
+  --color-admin-dark-bg: #14171C;
+  --color-admin-dark-surface: #1B1F26;
 
   --font-display: var(--font-space-grotesk), sans-serif;
   --font-body: var(--font-inter), sans-serif;
