@@ -129,7 +129,10 @@ export default function ImpersonationBanner({ targetDisplayName, expiresAt }: Im
         setEndError("Could not end the session. Please try again.");
         return;
       }
-      router.push("/admin");
+      // `/admin` itself has no page — `/admin/dashboard` is the real Home
+      // today (docs/ADMIN-UI-UPGRADE.md §1). Repoint here if/when a real
+      // `/admin` route lands.
+      router.push("/admin/dashboard");
     } catch {
       setEnding(false);
       setEndError("Could not end the session — check your connection and try again.");
@@ -185,7 +188,7 @@ export default function ImpersonationBanner({ targetDisplayName, expiresAt }: Im
 
       {expired ? (
         <Link
-          href="/admin"
+          href="/admin/dashboard"
           className="shrink-0 rounded-full border border-white/40 bg-white/10 px-3 py-1 text-xs font-semibold text-white transition hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-ember"
         >
           Return to admin console
