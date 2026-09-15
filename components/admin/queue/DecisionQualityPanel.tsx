@@ -1,5 +1,6 @@
 import { AlertTriangle, Gauge, Scale } from "lucide-react";
 import type { AdminDecisionStat, DecisionStats } from "@/lib/admin/queues";
+import { StatTile } from "@/components/admin/statTiles";
 
 /**
  * Reviewer quality panel — docs/ADMIN-CONSOLE-PLAN.md §4.2: "an
@@ -58,15 +59,6 @@ function BreachTag({ label }: { label: string }) {
   );
 }
 
-function StatChip({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-xl border border-ink/5 bg-mist/60 px-4 py-3">
-      <p className="text-[10px] font-semibold uppercase tracking-wider text-ink/45">{label}</p>
-      <p className="mt-1 font-data text-xl font-bold text-ink">{value}</p>
-    </div>
-  );
-}
-
 export default function DecisionQualityPanel({ stats }: { stats: DecisionStats }) {
   const { byAdmin, byAction, overturns } = stats;
   const windowLabel = formatWindow(stats.since);
@@ -99,9 +91,9 @@ export default function DecisionQualityPanel({ stats }: { stats: DecisionStats }
       ) : (
         <>
           <div className="mt-5 grid gap-3 sm:grid-cols-3">
-            <StatChip label="Total decisions" value={String(totalDecisions)} />
-            <StatChip label="Reject decisions" value={String(overturns.totalRejectDecisions)} />
-            <StatChip label="Overall overturn rate" value={formatRate(overturns.overturnRate)} />
+            <StatTile label="Total decisions" value={totalDecisions} />
+            <StatTile label="Reject decisions" value={overturns.totalRejectDecisions} />
+            <StatTile label="Overall overturn rate" value={formatRate(overturns.overturnRate)} />
           </div>
 
           {byAction.length > 0 && (

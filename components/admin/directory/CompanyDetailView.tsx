@@ -3,6 +3,7 @@ import { ArrowRight, Globe, Mail } from "lucide-react";
 import DataTable, { type DataTableColumn } from "./DataTable";
 import TrustPanel from "./TrustPanel";
 import { VerificationStatusBadge, formatDate, formatMicroCentsUsd, titleCaseFromConstant } from "./badges";
+import { StatTileCompact } from "@/components/admin/statTiles";
 import type { SerializedCompanyDetail, SerializedCompanyDetailMember } from "./types";
 
 /**
@@ -14,15 +15,6 @@ import type { SerializedCompanyDetail, SerializedCompanyDetailMember } from "./t
  * nothing paginated (§10: every count here is a `count`/`groupBy`/`aggregate`,
  * never a list).
  */
-
-function StatTile({ label, value }: { label: string; value: React.ReactNode }) {
-  return (
-    <div className="rounded-xl bg-mist/60 px-3 py-2.5">
-      <p className="text-[10px] font-bold uppercase tracking-wider text-ink/40">{label}</p>
-      <p className="mt-0.5 font-data text-lg font-semibold text-ink">{value}</p>
-    </div>
-  );
-}
 
 const PLAN_STYLE: Record<string, string> = {
   PRO: "bg-teal/10 text-teal ring-1 ring-inset ring-teal/30",
@@ -136,26 +128,26 @@ export default function CompanyDetailView({ detail }: { detail: SerializedCompan
           </Link>
         </div>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
-          <StatTile label="Total" value={detail.jobCounts.total} />
-          <StatTile label="Active" value={detail.jobCounts.active} />
-          <StatTile label="Pending review" value={detail.jobCounts.pendingReview} />
-          <StatTile label="Closed" value={detail.jobCounts.closed} />
-          <StatTile label="Draft" value={detail.jobCounts.draft} />
+          <StatTileCompact label="Total" value={detail.jobCounts.total} />
+          <StatTileCompact label="Active" value={detail.jobCounts.active} />
+          <StatTileCompact label="Pending review" value={detail.jobCounts.pendingReview} />
+          <StatTileCompact label="Closed" value={detail.jobCounts.closed} />
+          <StatTileCompact label="Draft" value={detail.jobCounts.draft} />
         </div>
       </section>
 
       <section className="rounded-2xl border border-ink/5 bg-white p-5">
         <h2 className="mb-3 font-display text-lg font-bold text-ink">Performance & spend</h2>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-          <StatTile
+          <StatTileCompact
             label="Response rate"
             value={detail.responseRate !== null && detail.responseSampleSize ? `${detail.responseRate}%` : "—"}
           />
-          <StatTile
+          <StatTileCompact
             label="Median response"
             value={detail.medianResponseMinutes !== null ? `${Math.round(detail.medianResponseMinutes)}m` : "—"}
           />
-          <StatTile
+          <StatTileCompact
             label="AI spend"
             value={
               detail.aiSpend.callCount > 0

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { AlertTriangle, ArrowRight, ShieldCheck } from "lucide-react";
 import { VerificationStatusBadge, formatMicroCentsUsd, titleCaseFromConstant } from "./badges";
+import { StatTileCompact } from "@/components/admin/statTiles";
 import type { SerializedUserRecord } from "./types";
 
 /**
@@ -11,15 +12,6 @@ import type { SerializedUserRecord } from "./types";
  * fault, not a normal state, so it renders as a genuine Ember warning per
  * `CLAUDE.md`'s "Ember only for genuine breaches/warnings" rule).
  */
-
-function StatTile({ label, value }: { label: string; value: React.ReactNode }) {
-  return (
-    <div className="rounded-xl bg-mist/60 px-3 py-2.5">
-      <p className="text-[10px] font-bold uppercase tracking-wider text-ink/40">{label}</p>
-      <p className="mt-0.5 font-data text-lg font-semibold text-ink">{value}</p>
-    </div>
-  );
-}
 
 const PLAN_STYLE: Record<string, string> = {
   PRO: "bg-teal/10 text-teal ring-1 ring-inset ring-teal/30",
@@ -66,10 +58,10 @@ export default function RoleDetailSection({ roleDetail }: { roleDetail: Serializ
           Seeker profile
         </h2>
         <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <StatTile label="Profile complete" value={`${roleDetail.profileCompletionPercent}%`} />
-          <StatTile label="Applications" value={roleDetail.totalApplications} />
-          <StatTile label="Saved jobs" value={roleDetail.savedJobsCount} />
-          <StatTile label="Job alerts" value={roleDetail.jobAlertsCount} />
+          <StatTileCompact label="Profile complete" value={`${roleDetail.profileCompletionPercent}%`} />
+          <StatTileCompact label="Applications" value={roleDetail.totalApplications} />
+          <StatTileCompact label="Saved jobs" value={roleDetail.savedJobsCount} />
+          <StatTileCompact label="Job alerts" value={roleDetail.jobAlertsCount} />
         </div>
         <div className="mt-4">
           <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-ink/40">Applications by outcome</p>
@@ -113,22 +105,22 @@ export default function RoleDetailSection({ roleDetail }: { roleDetail: Serializ
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatTile label="Jobs posted" value={roleDetail.jobsPosted} />
-        <StatTile label="Approved" value={roleDetail.jobsApproved} />
-        <StatTile label="Rejected" value={roleDetail.jobsRejected} />
-        <StatTile label="Pending review" value={roleDetail.jobsPendingReview} />
-        <StatTile label="Applications received" value={roleDetail.applicationsReceived} />
-        <StatTile
+        <StatTileCompact label="Jobs posted" value={roleDetail.jobsPosted} />
+        <StatTileCompact label="Approved" value={roleDetail.jobsApproved} />
+        <StatTileCompact label="Rejected" value={roleDetail.jobsRejected} />
+        <StatTileCompact label="Pending review" value={roleDetail.jobsPendingReview} />
+        <StatTileCompact label="Applications received" value={roleDetail.applicationsReceived} />
+        <StatTileCompact
           label="Response rate"
           value={
             roleDetail.responseRate !== null && roleDetail.responseSampleSize ? `${roleDetail.responseRate}%` : "—"
           }
         />
-        <StatTile
+        <StatTileCompact
           label="Median response"
           value={roleDetail.medianResponseMinutes !== null ? `${Math.round(roleDetail.medianResponseMinutes)}m` : "—"}
         />
-        <StatTile
+        <StatTileCompact
           label="AI spend"
           value={
             roleDetail.aiSpend.callCount > 0

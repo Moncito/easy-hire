@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { RefreshCcw, ShieldAlert, ShieldCheck } from "lucide-react";
 import DataTable, { type DataTableColumn } from "@/components/admin/directory/DataTable";
 import { TrustScoreValue, formatDateTime } from "@/components/admin/directory/badges";
+import { StatTile } from "@/components/admin/statTiles";
 import TrustComponentChips from "./TrustComponentChips";
 import { fetchTrustDirectoryPage } from "./api";
 import type { SerializedTrustDirectoryRow, TrustDirectoryTargetType } from "./types";
@@ -35,16 +36,6 @@ export type TrustDirectoryProps = {
   initialNeverScoredCount: number;
   initialBelowThresholdCount: number;
 };
-
-function StatTile({ label, value, tone = "default" }: { label: string; value: number; tone?: "default" | "muted" | "warn" }) {
-  const toneClass = tone === "warn" ? "text-ember" : tone === "muted" ? "text-ink/45" : "text-ink";
-  return (
-    <div className="rounded-xl border border-ink/5 bg-mist/60 px-4 py-3">
-      <p className="text-[10px] font-semibold uppercase tracking-wider text-ink/45">{label}</p>
-      <p className={`mt-1 font-data text-xl font-bold ${toneClass}`}>{value}</p>
-    </div>
-  );
-}
 
 export default function TrustDirectory({
   initialTargetType,
