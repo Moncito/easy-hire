@@ -487,7 +487,7 @@ export default function ReviewQueue({
         decisionPending={decisionPendingId !== null}
       />
 
-      <ShortcutSheet open={shortcutSheetOpen} onClose={() => setShortcutSheetOpen(false)} />
+      {shortcutSheetOpen && <ShortcutSheet onClose={() => setShortcutSheetOpen(false)} />}
 
       <p className="text-center text-[11px] text-ink/35">
         {allChecked && items.length > 0 ? "All items on this page selected. " : ""}

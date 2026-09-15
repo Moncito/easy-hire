@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { AlertTriangle, Check, Loader2, X } from "lucide-react";
 import type { QueueKind, ReasonCodeOption } from "./types";
 import type { BulkReviewQueueResult } from "@/lib/admin/bulk";
+import { useDialogFocusTrap } from "@/components/admin/useDialogFocusTrap";
 
 /**
  * Bulk toolbar + typed-confirmation dialog — docs/ADMIN-CONSOLE-PLAN.md
@@ -74,49 +75,12 @@ function TypedConfirmDialog({
   const [localError, setLocalError] = useState<string | null>(null);
 
   const dialogRef = useRef<HTMLDivElement>(null);
-  const firstFieldRef = useRef<HTMLInputElement | HTMLSelectElement>(null);
   const cancelRef = useRef<HTMLButtonElement>(null);
-  const triggerElementRef = useRef<Element | null>(null);
 
   const confirmed = typedCount.trim() === String(count);
   const reasonReady = isReview ? true : !!reasonCode;
 
-  useEffect(() => {
-    triggerElementRef.current = document.activeElement;
-    firstFieldRef.current?.focus();
-
-    function onKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        onCancel();
-        return;
-      }
-      if (e.key === "Tab" && dialogRef.current) {
-        const focusable = dialogRef.current.querySelectorAll<HTMLElement>(
-          'button, input, select, textarea, [tabindex]:not([tabindex="-1"])'
-        );
-        if (focusable.length === 0) return;
-        const first = focusable[0];
-        const last = focusable[focusable.length - 1];
-        if (e.shiftKey && document.activeElement === first) {
-          e.preventDefault();
-          last.focus();
-        } else if (!e.shiftKey && document.activeElement === last) {
-          e.preventDefault();
-          first.focus();
-        }
-      }
-    }
-
-    document.addEventListener("keydown", onKeyDown, true);
-    return () => {
-      document.removeEventListener("keydown", onKeyDown, true);
-      if (triggerElementRef.current instanceof HTMLElement) {
-        triggerElementRef.current.focus();
-      }
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  useDialogFocusTrap(dialogRef, onCancel);
 
   async function handleConfirm() {
     if (!confirmed || !reasonReady || submitting) return;
@@ -160,7 +124,6 @@ function TypedConfirmDialog({
               Reason code <span className="text-ember">*</span> <span className="font-normal text-ink/40">(max 64 characters)</span>
             </label>
             <input
-              ref={firstFieldRef as React.RefObject<HTMLInputElement>}
               id="bulk-reason-free"
               type="text"
               maxLength={64}
@@ -175,7 +138,6 @@ function TypedConfirmDialog({
               Reason code <span className="text-ember">*</span>
             </label>
             <select
-              ref={firstFieldRef as React.RefObject<HTMLSelectElement>}
               id="bulk-reason-select"
               value={reasonCode}
               onChange={(e) => setReasonCode(e.target.value)}

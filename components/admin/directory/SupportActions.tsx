@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, CheckCircle2, Eye, Info, KeyRound, Loader2, MailCheck, Trash2 } from "lucide-react";
 import { submitUserSupportAction, startImpersonationSession } from "./api";
@@ -43,47 +43,10 @@ type DeleteDialogProps = {
 function DeleteConfirmDialog({ email, submitting, error, onCancel, onConfirm }: DeleteDialogProps) {
   const [typedEmail, setTypedEmail] = useState("");
   const dialogRef = useRef<HTMLDivElement>(null);
-  const firstFieldRef = useRef<HTMLInputElement>(null);
-  const triggerElementRef = useRef<Element | null>(null);
 
   const confirmed = typedEmail.trim().toLowerCase() === email.toLowerCase();
 
-  useEffect(() => {
-    triggerElementRef.current = document.activeElement;
-    firstFieldRef.current?.focus();
-
-    function onKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        onCancel();
-        return;
-      }
-      if (e.key === "Tab" && dialogRef.current) {
-        const focusable = dialogRef.current.querySelectorAll<HTMLElement>(
-          'button, input, select, textarea, [tabindex]:not([tabindex="-1"])'
-        );
-        if (focusable.length === 0) return;
-        const first = focusable[0];
-        const last = focusable[focusable.length - 1];
-        if (e.shiftKey && document.activeElement === first) {
-          e.preventDefault();
-          last.focus();
-        } else if (!e.shiftKey && document.activeElement === last) {
-          e.preventDefault();
-          first.focus();
-        }
-      }
-    }
-
-    document.addEventListener("keydown", onKeyDown, true);
-    return () => {
-      document.removeEventListener("keydown", onKeyDown, true);
-      if (triggerElementRef.current instanceof HTMLElement) {
-        triggerElementRef.current.focus();
-      }
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  useDialogFocusTrap(dialogRef, onCancel);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 px-4" onClick={onCancel}>
@@ -115,7 +78,6 @@ function DeleteConfirmDialog({ email, submitting, error, onCancel, onConfirm }: 
           Type <span className="font-data font-bold text-ink">{email}</span> to confirm
         </label>
         <input
-          ref={firstFieldRef}
           id="delete-typed-email"
           type="text"
           autoComplete="off"

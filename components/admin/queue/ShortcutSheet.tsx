@@ -1,12 +1,21 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
 import { X } from "lucide-react";
+import { useDialogFocusTrap } from "@/components/admin/useDialogFocusTrap";
 
 /**
  * The `?` shortcut overlay (docs/ADMIN-CONSOLE-PLAN.md §4.2: "`?` shortcut
  * sheet"). A lightweight modal: focus moves in on open, Escape and the
  * labelled close button both dismiss, focus returns to whatever triggered it.
+ *
+ * Conditionally mounted by the parent (`{shortcutSheetOpen && <ShortcutSheet ... />}`
+ * in `ReviewQueue.tsx`), same convention as every other dialog in this tree —
+ * mounting IS opening, so `useDialogFocusTrap`'s mount-once effect fires
+ * correctly on every open, not just the first. This used to stay always-mounted
+ * with an internal `open` prop instead, which needed its own hand-rolled
+ * focus-trap effect (re-running on the `open`/`onClose` deps rather than on
+ * mount) to work at all — docs/ADMIN-UI-UPGRADE.md §2.1.
  */
 
 const SHORTCUTS: { keys: string; description: string }[] = [
@@ -18,40 +27,9 @@ const SHORTCUTS: { keys: string; description: string }[] = [
   { keys: "Escape", description: "Close this sheet or any open dialog" },
 ];
 
-export default function ShortcutSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
+export default function ShortcutSheet({ onClose }: { onClose: () => void }) {
   const dialogRef = useRef<HTMLDivElement>(null);
-  const closeButtonRef = useRef<HTMLButtonElement>(null);
-  const triggerElementRef = useRef<Element | null>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    triggerElementRef.current = document.activeElement;
-    closeButtonRef.current?.focus();
-
-    function onKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        onClose();
-        return;
-      }
-      if (e.key === "Tab") {
-        // Only one focusable element (the close button) — keep focus pinned
-        // inside the dialog instead of letting Tab escape to the page.
-        e.preventDefault();
-        closeButtonRef.current?.focus();
-      }
-    }
-
-    document.addEventListener("keydown", onKeyDown, true);
-    return () => {
-      document.removeEventListener("keydown", onKeyDown, true);
-      if (triggerElementRef.current instanceof HTMLElement) {
-        triggerElementRef.current.focus();
-      }
-    };
-  }, [open, onClose]);
-
-  if (!open) return null;
+  useDialogFocusTrap(dialogRef, onClose);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 px-4" onClick={onClose}>
@@ -68,7 +46,6 @@ export default function ShortcutSheet({ open, onClose }: { open: boolean; onClos
             Keyboard shortcuts
           </h2>
           <button
-            ref={closeButtonRef}
             type="button"
             onClick={onClose}
             aria-label="Close keyboard shortcuts"

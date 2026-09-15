@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { Loader2, ShieldAlert, X } from "lucide-react";
 import { ADMIN_PERMISSION_ORDER, PERMISSION_META } from "./permissionMeta";
 import { ADMIN_LEVELS, type AdminLevel, type AdminPermission } from "./types";
+import { useDialogFocusTrap } from "@/components/admin/useDialogFocusTrap";
 
 /**
  * Assign a fresh `AdminProfile` to a `Role.ADMIN` user who doesn't have one
@@ -47,44 +48,7 @@ export default function CreateAdminProfileForm({
   onSubmit,
 }: CreateAdminProfileFormProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const triggerElement = document.activeElement;
-    const focusable = dialogRef.current?.querySelectorAll<HTMLElement>(
-      'button, input, select, textarea, [tabindex]:not([tabindex="-1"])'
-    );
-    focusable?.[0]?.focus();
-
-    function onKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        onClose();
-        return;
-      }
-      if (e.key === "Tab" && dialogRef.current) {
-        const items = dialogRef.current.querySelectorAll<HTMLElement>(
-          'button, input, select, textarea, [tabindex]:not([tabindex="-1"])'
-        );
-        if (items.length === 0) return;
-        const first = items[0];
-        const last = items[items.length - 1];
-        if (e.shiftKey && document.activeElement === first) {
-          e.preventDefault();
-          last.focus();
-        } else if (!e.shiftKey && document.activeElement === last) {
-          e.preventDefault();
-          first.focus();
-        }
-      }
-    }
-
-    document.addEventListener("keydown", onKeyDown, true);
-    return () => {
-      document.removeEventListener("keydown", onKeyDown, true);
-      if (triggerElement instanceof HTMLElement) triggerElement.focus();
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  useDialogFocusTrap(dialogRef, onClose);
 
   const [userId, setUserId] = useState(initialUserId ?? eligibleUsers[0]?.userId ?? "");
   const isSelfTarget = userId === viewerUserId;
