@@ -7,7 +7,7 @@ import { sendCompanyRejectedEmail, sendCompanyVerifiedEmail } from "@/lib/shared
 import { buildAdminActionOperation, recordPiiRead } from "@/lib/admin/audit";
 import { requireAdminPermission } from "@/lib/admin/permissions";
 import { getCompanyPlan, type SubscriptionPlan } from "@/lib/billing/subscriptions";
-import type { CompanyMemberRole, CompanyMemberStatus, VerificationStatus } from "@prisma/client";
+import type { CompanyMemberRole, CompanyMemberStatus, Prisma, VerificationStatus } from "@prisma/client";
 
 /**
  * Gated on `document.view` (docs/ADMIN-CONSOLE-PLAN.md §6.7/§8.1) because
@@ -49,6 +49,128 @@ export async function listPendingCompanies(adminUserId: string) {
       ),
     }))
   );
+}
+
+// ============================================================================
+// COMPANY DIRECTORY — search-by-name/email, cursor-paginated. Closes the gap
+// components/admin/CommandPalette.tsx's own doc comment flags: until now
+// there was no company search endpoint, so ⌘K derived its "Companies"
+// results from job-search hits — a company with zero jobs was reachable
+// only via its owner's user record. Same shape as `listUserDirectory`
+// (lib/admin/users.ts) and `listJobDirectory` (lib/admin/jobs.ts): opaque
+// base64url (createdAt, id) cursor, search across the two fields an operator
+// would actually type, bounded page size.
+//
+// Gated WITH an `adminUserId` param, unlike `listUserDirectory`/
+// `listJobDirectory` above — those two are deliberately ungated because a
+// real Server Component (app/admin/users/page.tsx,
+// app/admin/jobs/directory/page.tsx) already calls them directly with no
+// admin id in hand, and gating there would have broken that build. No
+// company-directory PAGE exists yet — only the API route below, consumed by
+// the command palette — so this one follows the plainer §8.1 default every
+// other read in this module already uses (`getCompanyDetail`,
+// `listPendingCompanies`): gate at the /lib layer, the real enforcement
+// point, not only at the route.
+// ============================================================================
+
+export type CompanyDirectoryItem = {
+  id: string;
+  companyName: string;
+  /** The owning `User.email` — companies have no email of their own. */
+  email: string;
+  verifiedStatus: VerificationStatus;
+  trustScore: number | null;
+  createdAt: Date;
+};
+
+/** Cursor is (createdAt, id), descending — same codec shape as `UserDirectoryCursor`/`JobQueuePayload`'s cursor, just scoped to `Company`. */
+export type CompanyDirectoryCursor = { createdAt: Date; id: string };
+
+export function encodeCompanyDirectoryCursor(cursor: CompanyDirectoryCursor): string {
+  return Buffer.from(JSON.stringify({ createdAt: cursor.createdAt.toISOString(), id: cursor.id }), "utf8").toString(
+    "base64url"
+  );
+}
+
+export function decodeCompanyDirectoryCursor(raw: string): CompanyDirectoryCursor | null {
+  try {
+    const parsed = JSON.parse(Buffer.from(raw, "base64url").toString("utf8"));
+    if (typeof parsed?.createdAt !== "string" || typeof parsed?.id !== "string") return null;
+    const createdAt = new Date(parsed.createdAt);
+    if (Number.isNaN(createdAt.getTime())) return null;
+    return { createdAt, id: parsed.id };
+  } catch {
+    return null;
+  }
+}
+
+export const DEFAULT_COMPANY_DIRECTORY_LIMIT = 25;
+export const MAX_COMPANY_DIRECTORY_LIMIT = 100;
+
+export type CompanyDirectoryListResult = { items: CompanyDirectoryItem[]; nextCursor: CompanyDirectoryCursor | null };
+
+/** Gated on `user.read` — same permission `getCompanyDetail` already requires to open the record this search result links to, so a search hit never points at a screen the caller is about to be refused. */
+export async function listCompanyDirectory(
+  adminUserId: string,
+  params: { search?: string; cursor?: CompanyDirectoryCursor; limit?: number }
+): Promise<CompanyDirectoryListResult> {
+  await requireAdminPermission(adminUserId, "user.read");
+
+  const limit = Math.min(Math.max(params.limit ?? DEFAULT_COMPANY_DIRECTORY_LIMIT, 1), MAX_COMPANY_DIRECTORY_LIMIT);
+
+  // Each condition group in its own array slot, AND-combined — not spread
+  // into one literal, which would silently drop all but the last `OR` on key
+  // collision. Same discipline `listUserDirectory` documents for the
+  // identical reason.
+  const and: Prisma.CompanyWhereInput[] = [];
+
+  if (params.search) {
+    and.push({
+      OR: [
+        { companyName: { contains: params.search, mode: "insensitive" } },
+        { user: { email: { contains: params.search, mode: "insensitive" } } },
+      ],
+    });
+  }
+
+  if (params.cursor) {
+    and.push({
+      OR: [
+        { createdAt: { lt: params.cursor.createdAt } },
+        { createdAt: params.cursor.createdAt, id: { lt: params.cursor.id } },
+      ],
+    });
+  }
+
+  const rows = await prisma.company.findMany({
+    where: and.length > 0 ? { AND: and } : undefined,
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    take: limit + 1,
+    select: {
+      id: true,
+      companyName: true,
+      verifiedStatus: true,
+      trustScore: true,
+      createdAt: true,
+      user: { select: { email: true } },
+    },
+  });
+
+  const hasMore = rows.length > limit;
+  const page = hasMore ? rows.slice(0, limit) : rows;
+  const last = page[page.length - 1];
+
+  return {
+    items: page.map((c) => ({
+      id: c.id,
+      companyName: c.companyName,
+      email: c.user.email,
+      verifiedStatus: c.verifiedStatus,
+      trustScore: c.trustScore,
+      createdAt: c.createdAt,
+    })),
+    nextCursor: hasMore && last ? { createdAt: last.createdAt, id: last.id } : null,
+  };
 }
 
 export async function listCompaniesForCollaborativeHiring() {

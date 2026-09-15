@@ -15,6 +15,7 @@ import type {
   JobStatus,
   SerializedUserDirectoryItem,
   SerializedJobDirectoryItem,
+  SerializedCompanyDirectoryItem,
   SerializedPlatformEvent,
   UserDirectoryVerifiedFilter,
   PlatformEventType,
@@ -24,6 +25,7 @@ import type {
 
 export type UserDirectoryApiResponse = { items: SerializedUserDirectoryItem[]; nextCursor: string | null };
 export type JobDirectoryApiResponse = { items: SerializedJobDirectoryItem[]; nextCursor: string | null };
+export type CompanyDirectoryApiResponse = { items: SerializedCompanyDirectoryItem[]; nextCursor: string | null };
 export type ActivityApiResponse = { events: SerializedPlatformEvent[]; nextCursor: string | null };
 
 async function readErrorMessage(res: Response, fallback: string): Promise<string> {
@@ -73,6 +75,22 @@ export async function fetchJobDirectoryPage(
   const res = await fetch(`/api/admin/jobs/directory?${qs.toString()}`, { cache: "no-store", signal });
   if (!res.ok) {
     throw new Error(await readErrorMessage(res, "Failed to load the job directory."));
+  }
+  return res.json();
+}
+
+export async function fetchCompanyDirectoryPage(
+  params: { search?: string; cursor?: string | null; limit?: number },
+  signal?: AbortSignal
+): Promise<CompanyDirectoryApiResponse> {
+  const qs = new URLSearchParams();
+  if (params.search) qs.set("search", params.search);
+  if (params.cursor) qs.set("cursor", params.cursor);
+  qs.set("limit", String(params.limit ?? 25));
+
+  const res = await fetch(`/api/admin/companies/directory?${qs.toString()}`, { cache: "no-store", signal });
+  if (!res.ok) {
+    throw new Error(await readErrorMessage(res, "Failed to load the company directory."));
   }
   return res.json();
 }

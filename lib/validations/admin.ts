@@ -555,3 +555,19 @@ export const adminTrustDirectoryQuerySchema = z.object({
 });
 
 export type AdminTrustDirectoryQuery = z.infer<typeof adminTrustDirectoryQuerySchema>;
+
+// ============================================================================
+// Company directory — GET /api/admin/companies/directory
+// (lib/admin/companies.ts's listCompanyDirectory), docs/ADMIN-CONSOLE-PLAN.md
+// §5's ⌘K jump-to. Same shape as adminUserDirectoryQuerySchema above; the
+// cursor is opaque here too — decoding/validating it is the /lib module's
+// job, not this schema's.
+// ============================================================================
+
+export const adminCompanyDirectoryQuerySchema = z.object({
+  search: z.string().trim().min(1).max(200).optional(),
+  cursor: z.string().min(1).max(500).optional(),
+  limit: z.coerce.number().int().min(1).max(100).optional(),
+});
+
+export type AdminCompanyDirectoryQuery = z.infer<typeof adminCompanyDirectoryQuerySchema>;

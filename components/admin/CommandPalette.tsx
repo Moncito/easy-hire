@@ -3,30 +3,23 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Briefcase, Building2, Command, Loader2, Search, User as UserIcon, X } from "lucide-react";
-import { fetchUserDirectoryPage, fetchJobDirectoryPage } from "@/components/admin/directory/api";
+import { fetchUserDirectoryPage, fetchJobDirectoryPage, fetchCompanyDirectoryPage } from "@/components/admin/directory/api";
 import { RoleBadge } from "@/components/admin/directory/badges";
-import type { SerializedJobDirectoryItem, SerializedUserDirectoryItem } from "@/components/admin/directory/types";
+import type {
+  SerializedJobDirectoryItem,
+  SerializedUserDirectoryItem,
+  SerializedCompanyDirectoryItem,
+} from "@/components/admin/directory/types";
 
 /**
  * ⌘K / Ctrl+K jump-to — docs/ADMIN-CONSOLE-PLAN.md §5: "the single
  * highest-value ergonomic addition." Mounted once in app/admin/layout.tsx so
  * it works on every admin page.
  *
- * BACKEND GAP, reported rather than worked around by touching /lib or
- * /app/api (outside this agent's territory): there is no company
- * search-by-name/id endpoint. `lib/admin/companies.ts` only exposes
- * `listPendingCompanies` (PENDING-only, no search) and
- * `listCompaniesForCollaborativeHiring` (capped at 100, no search) — neither
- * is a searchable directory, and `Company.id` is never present on
- * `UserDirectoryItem` (an EMPLOYER row there carries only the owning
- * `User.id`), so a company can't be reached from a user-directory search
- * result either. This palette's "Companies" section is therefore DERIVED
- * from job-directory search results (`JobDirectoryItem.companyId` +
- * `companyName`, deduplicated) — it only surfaces companies that have
- * posted at least one job in any status. A company with zero jobs is
- * findable only via its EMPLOYER user's 360 record. The real fix is a
- * `listCompanyDirectory`/company-search `/lib` function and API route —
- * flagged for the backend agent, not built here.
+ * Companies are searched directly via `GET /api/admin/companies/directory`
+ * (lib/admin/companies.ts's `listCompanyDirectory`) — a real search-by-name/
+ * owner-email endpoint, not derived from job results. A company with zero
+ * jobs is therefore findable here too, not only via its owner's 360 record.
  *
  * There is also no per-job detail page in this phase, so Job results route
  * to the job directory pre-filtered to that job's title, not a specific row.
@@ -50,19 +43,14 @@ type PaletteItem = {
 const DEBOUNCE_MS = 200;
 const MIN_QUERY_LENGTH = 2;
 
-function buildCompanyItems(jobs: SerializedJobDirectoryItem[]): PaletteItem[] {
-  const seen = new Map<string, PaletteItem>();
-  for (const job of jobs) {
-    if (seen.has(job.companyId)) continue;
-    seen.set(job.companyId, {
-      id: `company-${job.companyId}`,
-      kind: "company",
-      label: job.companyName,
-      sublabel: "Company",
-      href: `/admin/companies/${job.companyId}`,
-    });
-  }
-  return Array.from(seen.values()).slice(0, 5);
+function buildCompanyItems(companies: SerializedCompanyDirectoryItem[]): PaletteItem[] {
+  return companies.slice(0, 5).map((c) => ({
+    id: `company-${c.id}`,
+    kind: "company",
+    label: c.companyName,
+    sublabel: c.email,
+    href: `/admin/companies/${c.id}`,
+  }));
 }
 
 function buildUserItems(users: SerializedUserDirectoryItem[]): PaletteItem[] {
@@ -102,6 +90,7 @@ export default function CommandPalette() {
     forQuery: string;
     users: SerializedUserDirectoryItem[];
     jobs: SerializedJobDirectoryItem[];
+    companies: SerializedCompanyDirectoryItem[];
   } | null>(null);
   const [error, setError] = useState<{ forQuery: string; message: string } | null>(null);
   // The highlighted row is tagged with the query it belongs to instead of
@@ -123,7 +112,7 @@ export default function CommandPalette() {
 
   const items: PaletteItem[] = useMemo(() => {
     if (!fresh) return [];
-    return [...buildUserItems(fresh.users), ...buildCompanyItems(fresh.jobs), ...buildJobItems(fresh.jobs)];
+    return [...buildUserItems(fresh.users), ...buildCompanyItems(fresh.companies), ...buildJobItems(fresh.jobs)];
   }, [fresh]);
 
   const activeIndex =
@@ -235,9 +224,10 @@ export default function CommandPalette() {
     Promise.all([
       fetchUserDirectoryPage({ search: forQuery, limit: 6 }, controller.signal),
       fetchJobDirectoryPage({ search: forQuery, limit: 10 }, controller.signal),
+      fetchCompanyDirectoryPage({ search: forQuery, limit: 5 }, controller.signal),
     ])
-      .then(([usersRes, jobsRes]) => {
-        setResult({ forQuery, users: usersRes.items, jobs: jobsRes.items });
+      .then(([usersRes, jobsRes, companiesRes]) => {
+        setResult({ forQuery, users: usersRes.items, jobs: jobsRes.items, companies: companiesRes.items });
       })
       .catch((e) => {
         // An aborted request was superseded by a newer keystroke — its result

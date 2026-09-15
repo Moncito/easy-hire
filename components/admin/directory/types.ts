@@ -53,6 +53,16 @@ export type SerializedUserDirectoryItem = {
   trustScore: number | null;
 };
 
+/** Mirrors lib/admin/companies.ts's `CompanyDirectoryItem`. */
+export type SerializedCompanyDirectoryItem = {
+  id: string;
+  companyName: string;
+  email: string;
+  verifiedStatus: VerificationStatus;
+  trustScore: number | null;
+  createdAt: string;
+};
+
 export type { UserDirectoryVerifiedFilter };
 
 // ============================================================================
