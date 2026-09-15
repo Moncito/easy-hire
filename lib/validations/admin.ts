@@ -361,3 +361,98 @@ export const adminTeamDetailParamsSchema = z.object({
 });
 
 export type AdminTeamDetailParams = z.infer<typeof adminTeamDetailParamsSchema>;
+
+// ============================================================================
+// Feature flags — GET/POST /api/admin/feature-flags, PATCH/DELETE
+// /api/admin/feature-flags/[key] (docs/ADMIN-CONSOLE-PLAN.md §4.10,
+// lib/admin/feature-flags.ts). Gated on `system.read` (list) / `system.manage`
+// (create/update/delete) at the /lib layer.
+// ============================================================================
+
+/** Bounds a flag's `key` — per the task spec: lowercase, dots/hyphens/underscores between alphanumeric segments, bounded length. A plain TEXT column at the schema level (see `FeatureFlag.key` in prisma/schema.prisma), so this regex is the only thing standing between "a row" and "a migration" staying true — same reasoning as the queue reason-code vocabularies in lib/admin/reason-codes.ts. */
+export const FEATURE_FLAG_KEY_MAX_LENGTH = 100;
+
+export const featureFlagKeySchema = z
+  .string()
+  .trim()
+  .min(1, "key is required")
+  .max(FEATURE_FLAG_KEY_MAX_LENGTH, `key must be at most ${FEATURE_FLAG_KEY_MAX_LENGTH} characters`)
+  .regex(
+    /^[a-z0-9]+(?:[._-][a-z0-9]+)*$/,
+    "key must be lowercase alphanumeric segments separated by dots, hyphens or underscores (e.g. \"seeker.new-dashboard\")"
+  );
+
+/** `rolloutPercentage` is capped 0–100 inclusive; `null`/omitted means "no percentage gate — governed by `enabled` alone" (see lib/admin/feature-flags.ts's `isFeatureEnabled`). */
+const featureFlagRolloutPercentageSchema = z.number().int().min(0).max(100).nullable();
+
+/** POST /api/admin/feature-flags — create a new flag. `enabled` defaults to `false` (mirrors the Prisma column default) so a freshly-created flag never accidentally goes live before an operator flips it on. */
+export const featureFlagCreateSchema = z.object({
+  key: featureFlagKeySchema,
+  description: z.string().trim().min(1, "description is required").max(500),
+  enabled: z.boolean().optional().default(false),
+  rolloutPercentage: featureFlagRolloutPercentageSchema.optional(),
+});
+
+export type FeatureFlagCreateInput = z.infer<typeof featureFlagCreateSchema>;
+
+/** PATCH /api/admin/feature-flags/[key] — at least one field must be present, same "reject a no-op PATCH" discipline as adminTeamUpdateSchema above. */
+export const featureFlagUpdateSchema = z
+  .object({
+    description: z.string().trim().min(1, "description is required").max(500).optional(),
+    enabled: z.boolean().optional(),
+    rolloutPercentage: featureFlagRolloutPercentageSchema.optional(),
+  })
+  .refine((data) => data.description !== undefined || data.enabled !== undefined || data.rolloutPercentage !== undefined, {
+    message: "Provide at least a description, enabled, or rolloutPercentage to update.",
+  });
+
+export type FeatureFlagUpdateInput = z.infer<typeof featureFlagUpdateSchema>;
+
+/** Shared `[key]` route-param shape for PATCH/DELETE /api/admin/feature-flags/[key] — reuses `featureFlagKeySchema` so a malformed key in the URL is rejected the same way a malformed key in a POST body would be. */
+export const featureFlagKeyParamsSchema = z.object({ key: featureFlagKeySchema });
+
+export type FeatureFlagKeyParams = z.infer<typeof featureFlagKeyParamsSchema>;
+
+// ============================================================================
+// Impersonation — POST/GET/DELETE /api/admin/impersonation
+// (docs/ADMIN-CONSOLE-PLAN.md §8.2, lib/admin/impersonation.ts). Gated on
+// `impersonate` (SUPER_ADMIN only, see SUPER_ADMIN_ONLY_PERMISSIONS in
+// lib/admin/permissions.ts) at the /lib layer.
+// ============================================================================
+
+/** Bounds chosen generously for a real support-ticket id/URL plus a short human note — never meant to be a tight format check, only a sanity cap on the wire payload (same philosophy as MAX_ADMIN_PERMISSIONS_PER_REQUEST above). */
+export const IMPERSONATION_TICKET_REFERENCE_MAX_LENGTH = 200;
+export const IMPERSONATION_REASON_MAX_LENGTH = 1000;
+
+/**
+ * POST /api/admin/impersonation — start a read-only "view as" session.
+ * `ticketReference` and `reason` are §8.2's consent-and-ticket record and
+ * are MANDATORY (non-empty after trim), not optional — unlike the
+ * queue-review schemas above where `reasonCode` stays optional for backward
+ * compatibility, there is no pre-existing impersonation caller to stay
+ * compatible with, so the strict boundary is enforced from day one.
+ */
+export const impersonationStartSchema = z.object({
+  targetUserId: z.string().min(1, "targetUserId is required"),
+  ticketReference: z
+    .string()
+    .trim()
+    .min(1, "ticketReference is required")
+    .max(IMPERSONATION_TICKET_REFERENCE_MAX_LENGTH),
+  reason: z.string().trim().min(1, "reason is required").max(IMPERSONATION_REASON_MAX_LENGTH),
+});
+
+export type ImpersonationStartInput = z.infer<typeof impersonationStartSchema>;
+
+/**
+ * DELETE /api/admin/impersonation — end the caller's own active session
+ * early. `reason` here is an OPTIONAL free-text note about why the session
+ * ended (e.g. "done", "ticket resolved") — distinct from the mandatory
+ * start-time `reason` above, which is the consent/justification for
+ * starting it in the first place.
+ */
+export const impersonationEndSchema = z.object({
+  reason: z.string().trim().max(IMPERSONATION_REASON_MAX_LENGTH).optional(),
+});
+
+export type ImpersonationEndInput = z.infer<typeof impersonationEndSchema>;

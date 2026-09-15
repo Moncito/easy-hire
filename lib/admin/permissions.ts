@@ -52,6 +52,12 @@ export const ADMIN_PERMISSIONS = [
   "revenue.read",
   /** Phase 3 — vendor/AI cost screens. */
   "cost.read",
+  /** The `/admin/system` health screen (docs/ADMIN-CONSOLE-PLAN.md §4.10), and reading feature flags (lib/admin/feature-flags.ts's listFeatureFlags). */
+  "system.read",
+  /** Creating/updating/deleting feature flags (lib/admin/feature-flags.ts's createFeatureFlag/updateFeatureFlag/deleteFeatureFlag). */
+  "system.manage",
+  /** Starting an impersonation session (§8.2). SUPER_ADMIN only — see SUPER_ADMIN_ONLY_PERMISSIONS below. Nothing uses this yet — impersonation is a separate, not-yet-built feature — so this is defined now, exactly as `revenue.read` was, purely so the gate exists before the feature does. */
+  "impersonate",
 ] as const;
 
 export type AdminPermission = (typeof ADMIN_PERMISSIONS)[number];
@@ -65,14 +71,18 @@ export function isAdminPermission(value: string): value is AdminPermission {
 
 /**
  * Permissions that may ONLY ever be held by SUPER_ADMIN, per the task spec
- * ("user.delete — SUPER_ADMIN only", "team.manage — SUPER_ADMIN only"). This
- * is enforced two ways: `LEVEL_PERMISSIONS` never grants either to a
+ * ("user.delete — SUPER_ADMIN only", "team.manage — SUPER_ADMIN only") plus
+ * `impersonate`, added alongside them for the same reason once impersonation
+ * was scoped (§8.2: "Role-gated. SUPER_ADMIN only, and never against another
+ * SUPER_ADMIN.") — added now, ahead of the impersonation feature itself,
+ * exactly as `revenue.read` predates the revenue screen. This is enforced
+ * two ways: `LEVEL_PERMISSIONS` never grants any of the three to a
  * non-SUPER_ADMIN level by default, AND `effectivePermissions` below strips
- * them back out even if they somehow end up in a non-SUPER_ADMIN admin's
+ * them back out even if one somehow ends up in a non-SUPER_ADMIN admin's
  * additive `permissions` array (a defensive floor, not just a UI default —
- * a stray/malicious additive grant must not be able to hand out either one).
+ * a stray/malicious additive grant must not be able to hand out any of them).
  */
-const SUPER_ADMIN_ONLY_PERMISSIONS: ReadonlySet<AdminPermission> = new Set(["user.delete", "team.manage"]);
+const SUPER_ADMIN_ONLY_PERMISSIONS: ReadonlySet<AdminPermission> = new Set(["user.delete", "team.manage", "impersonate"]);
 
 // ============================================================================
 // Level -> default permission set. ONE place, per the task spec ("Read the
@@ -97,7 +107,8 @@ const LEVEL_PERMISSIONS: Record<AdminLevel, readonly AdminPermission[]> = {
   // read access to look up the account behind a billing question. No queue
   // moderation, no ID documents, no team management.
   FINANCE: ["user.read", "revenue.read", "cost.read"],
-  // Everything, including the two SUPER_ADMIN-only permissions.
+  // Everything, including the SUPER_ADMIN-only permissions
+  // (user.delete, team.manage, impersonate).
   SUPER_ADMIN: [...ADMIN_PERMISSIONS],
 };
 

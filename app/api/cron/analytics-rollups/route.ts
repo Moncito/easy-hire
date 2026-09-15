@@ -5,6 +5,7 @@ import { clearExpiredFeaturedJobs } from "@/lib/jobs/featured";
 import { sweepExpiredReviewReveals } from "@/lib/reviews";
 import { requireCronAuth } from "@/lib/cron-auth";
 import { errorResponse } from "@/lib/api-error";
+import { runTrackedCronJob } from "@/lib/admin/cron-runs";
 
 /**
  * Computes yesterday's AnalyticsDailyRollup for every company, recomputes
@@ -17,22 +18,24 @@ import { errorResponse } from "@/lib/api-error";
  * submitted (see lib/reviews.ts sweepExpiredReviewReveals — idempotent, safe
  * to run more than once a day). Intended to run once daily shortly after
  * midnight UTC.
+ *
+ * Wrapped in `runTrackedCronJob` (job name "analytics-rollups", matching
+ * `.github/workflows/cron-analytics-rollups.yml`) so the `/admin/system`
+ * health screen has real run history for this job.
  */
 async function runRollups() {
-  const [rollups, responseMetrics, unfeatured, revealedReviews] = await Promise.all([
-    runDailyRollupsForAllCompanies(),
-    runResponseMetricsForAllCompanies(),
-    clearExpiredFeaturedJobs(),
-    sweepExpiredReviewReveals(),
-  ]);
+  const result = await runTrackedCronJob("analytics-rollups", async () => {
+    const [rollups, responseMetrics, unfeatured, revealedReviews] = await Promise.all([
+      runDailyRollupsForAllCompanies(),
+      runResponseMetricsForAllCompanies(),
+      clearExpiredFeaturedJobs(),
+      sweepExpiredReviewReveals(),
+    ]);
 
-  return NextResponse.json({
-    ok: true,
-    rollups,
-    responseMetrics,
-    unfeaturedJobs: unfeatured,
-    revealedReviews,
+    return { rollups, responseMetrics, unfeaturedJobs: unfeatured, revealedReviews };
   });
+
+  return NextResponse.json({ ok: true, ...result });
 }
 
 /** GET /api/cron/analytics-rollups — invoked by Vercel Cron. */

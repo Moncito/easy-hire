@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Building2, ChevronDown, Layers, LogOut, Users, Briefcase, ShieldCheck } from "lucide-react";
+import { LayoutDashboard, Building2, ChevronDown, Layers, LogOut, Users, Briefcase, ShieldCheck, Activity, Flag } from "lucide-react";
 import { useSignOut } from "@/components/ui/useSignOut";
 
 // The unified moderation queues (docs/ADMIN-CONSOLE-PLAN.md §3/§4.2). The
@@ -55,6 +55,7 @@ export default function AdminSidebar({ access }: AdminSidebarProps) {
   const canDecideQueues = can("queue.decide");
   const canReadUsers = can("user.read");
   const canManageTeam = can("team.manage");
+  const canReadSystem = can("system.read");
 
   return (
     <aside className="fixed left-0 top-0 z-40 flex h-screen w-64 flex-col border-r border-ink/10 bg-white">
@@ -172,18 +173,42 @@ export default function AdminSidebar({ access }: AdminSidebarProps) {
           </Link>
         )}
 
-        {canManageTeam && (
+        {(canReadSystem || canManageTeam) && (
           <>
             <p className="mt-3 px-3 text-[10px] font-bold uppercase tracking-wider text-ink/35">System</p>
-            <Link
-              href="/admin/system/team"
-              className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all ${
-                pathname === "/admin/system/team" ? "bg-navy/8 text-navy" : "text-ink/65 hover:bg-ink/4 hover:text-ink"
-              }`}
-            >
-              <ShieldCheck className="h-4.5 w-4.5" strokeWidth={2} />
-              Admin team
-            </Link>
+            {canReadSystem && (
+              <Link
+                href="/admin/system"
+                className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all ${
+                  pathname === "/admin/system" ? "bg-navy/8 text-navy" : "text-ink/65 hover:bg-ink/4 hover:text-ink"
+                }`}
+              >
+                <Activity className="h-4.5 w-4.5" strokeWidth={2} />
+                Health
+              </Link>
+            )}
+            {canReadSystem && (
+              <Link
+                href="/admin/system/flags"
+                className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all ${
+                  pathname === "/admin/system/flags" ? "bg-navy/8 text-navy" : "text-ink/65 hover:bg-ink/4 hover:text-ink"
+                }`}
+              >
+                <Flag className="h-4.5 w-4.5" strokeWidth={2} />
+                Feature flags
+              </Link>
+            )}
+            {canManageTeam && (
+              <Link
+                href="/admin/system/team"
+                className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all ${
+                  pathname === "/admin/system/team" ? "bg-navy/8 text-navy" : "text-ink/65 hover:bg-ink/4 hover:text-ink"
+                }`}
+              >
+                <ShieldCheck className="h-4.5 w-4.5" strokeWidth={2} />
+                Admin team
+              </Link>
+            )}
           </>
         )}
       </nav>

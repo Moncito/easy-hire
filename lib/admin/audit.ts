@@ -21,6 +21,14 @@ export type AdminAuditAction =
   | "ID_DOCUMENT_VIEWED"
   | "IMPERSONATE_START"
   | "IMPERSONATE_END"
+  // Phase 5 impersonation overlay (docs/ADMIN-CONSOLE-PLAN.md §8.2: "every
+  // action inside the session audited to admin_audit_logs with the
+  // impersonation session id attached"). One row per seeker/employer page
+  // rendered under an active impersonation session — a read, not a
+  // decision, so this goes through the same fire-and-forget `recordPiiRead`
+  // contract as ID_DOCUMENT_VIEWED/USER_RECORD_VIEWED/COMPANY_RECORD_VIEWED
+  // above, always carrying `impersonationSessionId`.
+  | "IMPERSONATED_PAGE_VIEW"
   // Phase 2 (docs/ADMIN-CONSOLE-PLAN.md §4.3) — the 360-degree record and
   // company detail are single-target PII reads, same category as
   // ID_DOCUMENT_VIEWED above (a read, not a decision) — see
@@ -41,7 +49,14 @@ export type AdminAuditAction =
   // recordPiiRead's fire-and-forget one.
   | "ADMIN_TEAM_PROFILE_CREATED"
   | "ADMIN_TEAM_LEVEL_CHANGED"
-  | "ADMIN_TEAM_PROFILE_REVOKED";
+  | "ADMIN_TEAM_PROFILE_REVOKED"
+  // Phase 5 — feature flags (docs/ADMIN-CONSOLE-PLAN.md §4.10,
+  // lib/admin/feature-flags.ts). All three are decisions (a state change to
+  // a flag that can gate real product behaviour), so they use the awaited
+  // recordAdminAction contract, never recordPiiRead's fire-and-forget one.
+  | "FEATURE_FLAG_CREATED"
+  | "FEATURE_FLAG_UPDATED"
+  | "FEATURE_FLAG_DELETED";
 
 export type RecordAdminActionInput = {
   adminUserId: string;
@@ -54,6 +69,15 @@ export type RecordAdminActionInput = {
   before?: Record<string, unknown>;
   after?: Record<string, unknown>;
   ipHash?: string;
+  /**
+   * §8.2: "every action inside the [impersonation] session audited to
+   * admin_audit_logs with the impersonation session id attached." Omitted
+   * (→ `null`) for the common case of an admin acting as themselves — see
+   * `AdminAuditLog.impersonationSessionId`'s own doc comment in
+   * prisma/schema.prisma for why this is a plain nullable column rather
+   * than a required field.
+   */
+  impersonationSessionId?: string;
 };
 
 function adminAuditLogCreateData(input: RecordAdminActionInput): Prisma.AdminAuditLogCreateArgs["data"] {
@@ -67,6 +91,7 @@ function adminAuditLogCreateData(input: RecordAdminActionInput): Prisma.AdminAud
     before: (input.before as Prisma.InputJsonValue | undefined) ?? undefined,
     after: (input.after as Prisma.InputJsonValue | undefined) ?? undefined,
     ipHash: input.ipHash ?? null,
+    impersonationSessionId: input.impersonationSessionId ?? null,
   };
 }
 
@@ -130,9 +155,24 @@ export function buildAdminActionOperation(
  * through the awaited `recordAdminAction`/`buildAdminActionOperation` above,
  * per their own doc comments.
  */
-export function recordPiiRead(adminUserId: string, action: AdminAuditAction, targetType: string, targetId: string): void {
+export function recordPiiRead(
+  adminUserId: string,
+  action: AdminAuditAction,
+  targetType: string,
+  targetId: string,
+  options?: {
+    /** Threaded through to `RecordAdminActionInput.impersonationSessionId` — see `IMPERSONATED_PAGE_VIEW`'s doc comment above for the call sites that pass this. */
+    impersonationSessionId?: string;
+  }
+): void {
   const write = () =>
-    recordAdminAction({ adminUserId, action, targetType, targetId }).catch((error) => {
+    recordAdminAction({
+      adminUserId,
+      action,
+      targetType,
+      targetId,
+      impersonationSessionId: options?.impersonationSessionId,
+    }).catch((error) => {
       console.error(`[admin/audit] failed to record ${action} for ${targetType}:${targetId}:`, error);
     });
 
