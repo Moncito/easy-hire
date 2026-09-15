@@ -30,10 +30,13 @@ export default function UserRecordView({
   record,
   initialEvents,
   initialEventsNextCursor,
+  canImpersonate,
 }: {
   record: SerializedUserRecord;
   initialEvents: SerializedPlatformEvent[];
   initialEventsNextCursor: string | null;
+  /** `hasPermission(ctx.access, "impersonate")`, resolved once by the server component — see SupportActions's own doc comment. */
+  canImpersonate: boolean;
 }) {
   const [deletion, setDeletion] = useState<SerializedAccountDeletionResult | null>(null);
 
@@ -102,6 +105,8 @@ export default function UserRecordView({
           userId={identity.id}
           email={identity.email}
           emailVerified={identity.emailVerifiedAt !== null}
+          targetRole={identity.role}
+          canImpersonate={canImpersonate}
           onDeleted={(result) => setDeletion(result)}
         />
       )}

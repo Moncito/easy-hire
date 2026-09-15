@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { notFound } from "next/navigation";
 import { requireAdminPageContext } from "@/lib/auth/admin-session";
+import { hasPermission } from "@/lib/admin/permissions";
 import { getUserRecord } from "@/lib/admin/users";
 import { listEventsForUser, encodeEventCursor } from "@/lib/admin/events";
 import { ApiError } from "@/lib/api-error";
@@ -15,9 +16,19 @@ import UserRecordView from "@/components/admin/directory/UserRecordView";
  * components for reads") — `getUserRecord` itself records the
  * `USER_RECORD_VIEWED` PII-read audit row, so this page does not duplicate
  * that.
+ *
+ * `canImpersonate` (§8.2, Phase 5) is resolved HERE, once, via the real
+ * `hasPermission(ctx.access, "impersonate")` export and handed to
+ * `UserRecordView` → `SupportActions` as a plain boolean — same pattern as
+ * `app/admin/system/flags/page.tsx`'s `canManage`. Every viewer of this page
+ * (not just SUPER_ADMIN) can reach `/admin/users/[id]` at all via
+ * `requireAdminPageContext` alone; this is the finer-grained gate for the
+ * "View as this user" control specifically.
  */
 export default async function AdminUserRecordPage({ params }: { params: Promise<{ id: string }> }) {
-  const { userId: adminUserId } = await requireAdminPageContext();
+  const ctx = await requireAdminPageContext();
+  const { userId: adminUserId } = ctx;
+  const canImpersonate = hasPermission(ctx.access, "impersonate");
   const { id } = await params;
 
   let record;
@@ -48,6 +59,7 @@ export default async function AdminUserRecordPage({ params }: { params: Promise<
         record={JSON.parse(JSON.stringify(record))}
         initialEvents={JSON.parse(JSON.stringify(events))}
         initialEventsNextCursor={nextCursor ? encodeEventCursor(nextCursor) : null}
+        canImpersonate={canImpersonate}
       />
     </div>
   );

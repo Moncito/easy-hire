@@ -117,6 +117,14 @@
 
   html{
     scroll-behavior:smooth;
+    /* Reserved height of the admin impersonation banner (components/admin/
+       ImpersonationBanner.tsx), published at runtime via
+       document.documentElement.style.setProperty. Defaults to 0px — every
+       fixed/viewport-anchored piece of seeker/employer chrome that reads
+       this var (SeekerPillNav, SeekerWorkspaceSwitcher, EmployerShell,
+       Sidebar, EmployerRouteProgress) falls back to today's exact layout
+       when it's unset, which is the overwhelmingly common case. */
+    --eh-impersonation-h: 0px;
   }
 
   body{

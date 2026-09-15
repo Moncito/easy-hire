@@ -114,3 +114,32 @@ export async function submitUserSupportAction(
   const result = (await res.json()) as SerializedUserSupportActionResult;
   return { ok: true, result };
 }
+
+// ============================================================================
+// Impersonation start — POST /api/admin/impersonation
+// (docs/ADMIN-CONSOLE-PLAN.md §8.2, lib/admin/impersonation.ts,
+// app/api/admin/impersonation/route.ts). Ending an active session is handled
+// entirely by components/admin/ImpersonationBanner.tsx (DELETE, same route)
+// — this file only starts one, from the 360-degree record's support actions.
+// ============================================================================
+
+export type StartImpersonationResult =
+  | { ok: true; sessionId: string; targetUserId: string; expiresAt: string }
+  | { ok: false; error: string };
+
+export async function startImpersonationSession(input: {
+  targetUserId: string;
+  ticketReference: string;
+  reason: string;
+}): Promise<StartImpersonationResult> {
+  const res = await fetch(`/api/admin/impersonation`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) {
+    return { ok: false, error: await readErrorMessage(res, "Could not start the session.") };
+  }
+  const data = (await res.json()) as { sessionId: string; targetUserId: string; expiresAt: string };
+  return { ok: true, ...data };
+}

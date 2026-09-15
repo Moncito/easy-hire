@@ -34,9 +34,14 @@ export default function EmployerRouteProgress() {
 
   return (
     <div
-      className={`employer-route-progress pointer-events-none fixed right-0 top-14 z-[60] h-0.5 bg-teal/10 transition-[left] duration-200 ease-out lg:top-14 ${
+      className={`employer-route-progress pointer-events-none fixed right-0 z-[60] h-0.5 bg-teal/10 transition-[left] duration-200 ease-out ${
         expanded ? "lg:left-52" : "lg:left-[60px]"
       } left-0`}
+      // top-14 (3.5rem) matches Topbar's h-14, shifted down by the same
+      // `--eh-impersonation-h` var as the rest of the employer chrome so
+      // this hairline still sits at the topbar's bottom edge when the
+      // impersonation banner is mounted above it.
+      style={{ top: "calc(3.5rem + var(--eh-impersonation-h, 0px))" }}
       aria-hidden="true"
     >
       <div

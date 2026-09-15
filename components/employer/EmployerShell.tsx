@@ -41,10 +41,23 @@ function EmployerShellInner({
     pathname === "/employer/jobs/new" || !!pathname.match(/\/employer\/jobs\/[^/]+\/edit$/);
   const isCompanyProfile = pathname === "/employer/company-profile";
 
+  // `marginTop`/`height` read `--eh-impersonation-h` (0px unless
+  // ImpersonationBanner is mounted above this component in the layout — see
+  // its module doc comment). Reserving the banner's height this way, rather
+  // than leaving `h-screen` alone, is what keeps the shell's own total
+  // height at exactly 100vh (marginTop + height === 100vh) instead of
+  // overflowing the viewport by the banner's height and clipping whatever's
+  // at the bottom of the sidebar/main column.
+  const impersonationOffsetStyle = {
+    marginTop: "var(--eh-impersonation-h, 0px)",
+    height: "calc(100vh - var(--eh-impersonation-h, 0px))",
+  } as const;
+
   if (isPro) {
     return (
       <div
-        className="employer-workspace employer-pro-workspace flex h-screen overflow-hidden"
+        className="employer-workspace employer-pro-workspace flex overflow-hidden"
+        style={impersonationOffsetStyle}
         data-employer-theme={mounted ? theme : "light"}
         data-employer-plan="pro"
         suppressHydrationWarning
@@ -84,7 +97,8 @@ function EmployerShellInner({
 
   return (
     <div
-      className="employer-workspace flex h-screen overflow-hidden bg-mist"
+      className="employer-workspace flex overflow-hidden bg-mist"
+      style={impersonationOffsetStyle}
       data-employer-theme={mounted ? theme : "light"}
       data-employer-plan="free"
       suppressHydrationWarning

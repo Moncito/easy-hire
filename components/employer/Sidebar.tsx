@@ -121,13 +121,20 @@ export default function Sidebar({
 
   return (
     <aside
-      className={`employer-sidebar fixed left-0 top-0 z-40 hidden h-screen flex-col transition-[width] duration-200 ease-out lg:flex ${
+      className={`employer-sidebar fixed left-0 z-40 hidden flex-col transition-[width] duration-200 ease-out lg:flex ${
         expanded ? "w-52" : "w-[60px]"
       } ${
         isPro
           ? "employer-pro-sidebar border-r"
           : "bg-navy"
       }`}
+      // Offset by the impersonation banner's height (0px, i.e. today's exact
+      // `top-0 h-screen`, unless ImpersonationBanner is mounted — see its
+      // module doc comment). This is a `fixed` element, so unlike the main
+      // shell column it doesn't automatically follow an ancestor's
+      // `marginTop`; it needs its own top+height adjustment to land exactly
+      // below the banner instead of being covered by it.
+      style={{ top: "var(--eh-impersonation-h, 0px)", height: "calc(100vh - var(--eh-impersonation-h, 0px))" }}
     >
       <div
         className={`flex h-14 shrink-0 items-center ${
