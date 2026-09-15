@@ -15,18 +15,9 @@ import type { QueueKind, QueueStatus } from "@/lib/admin/queues";
 import type { AdminBulkQueueAction } from "@/lib/validations/admin";
 import type { BulkReviewQueueResult } from "@/lib/admin/bulk";
 import type { SerializedQueueItem, SerializedQueueItemDetail } from "./types";
+import { readErrorMessage } from "@/components/admin/apiHelpers";
 
 export type QueueListApiResponse = { items: SerializedQueueItem[]; nextCursor: string | null };
-
-async function readErrorMessage(res: Response, fallback: string): Promise<string> {
-  try {
-    const body = await res.json();
-    if (body && typeof body.error === "string") return body.error;
-  } catch {
-    // response wasn't JSON — fall through to the generic message
-  }
-  return fallback;
-}
 
 export async function fetchQueuePage(params: {
   kind: QueueKind;

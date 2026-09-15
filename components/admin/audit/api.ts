@@ -4,16 +4,7 @@
  * here, same rationale as components/admin/directory/api.ts.
  */
 import type { AuditLogApiResponse, AuditLogFilters } from "./types";
-
-async function readErrorMessage(res: Response, fallback: string): Promise<string> {
-  try {
-    const body = await res.json();
-    if (body && typeof body.error === "string") return body.error;
-  } catch {
-    // response wasn't JSON — fall through to the generic message
-  }
-  return fallback;
-}
+import { readErrorMessage } from "@/components/admin/apiHelpers";
 
 export async function fetchAuditLogPage(
   params: AuditLogFilters & { cursor?: string | null; limit?: number },

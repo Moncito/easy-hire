@@ -22,21 +22,12 @@ import type {
   UserSupportAction,
   SerializedUserSupportActionResult,
 } from "./types";
+import { readErrorMessage } from "@/components/admin/apiHelpers";
 
 export type UserDirectoryApiResponse = { items: SerializedUserDirectoryItem[]; nextCursor: string | null };
 export type JobDirectoryApiResponse = { items: SerializedJobDirectoryItem[]; nextCursor: string | null };
 export type CompanyDirectoryApiResponse = { items: SerializedCompanyDirectoryItem[]; nextCursor: string | null };
 export type ActivityApiResponse = { events: SerializedPlatformEvent[]; nextCursor: string | null };
-
-async function readErrorMessage(res: Response, fallback: string): Promise<string> {
-  try {
-    const body = await res.json();
-    if (body && typeof body.error === "string") return body.error;
-  } catch {
-    // response wasn't JSON — fall through to the generic message
-  }
-  return fallback;
-}
 
 export async function fetchUserDirectoryPage(
   params: {
