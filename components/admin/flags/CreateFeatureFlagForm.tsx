@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { Loader2, X } from "lucide-react";
 import { useDialogFocusTrap } from "@/components/admin/useDialogFocusTrap";
+import ModalPortal from "@/components/admin/ui/ModalPortal";
 import { RolloutCell } from "./rolloutDisplay";
 
 /**
@@ -56,7 +57,8 @@ export default function CreateFeatureFlagForm({ onClose, onSubmit }: CreateFeatu
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 px-4" onClick={onClose}>
+    <ModalPortal>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-ink/40 backdrop-blur-sm px-4" onClick={onClose}>
       <div
         ref={dialogRef}
         role="dialog"
@@ -176,5 +178,6 @@ export default function CreateFeatureFlagForm({ onClose, onSubmit }: CreateFeatu
         </div>
       </div>
     </div>
+    </ModalPortal>
   );
 }

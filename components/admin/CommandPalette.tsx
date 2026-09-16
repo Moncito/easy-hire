@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Briefcase, Building2, Command, Loader2, Search, User as UserIcon, X } from "lucide-react";
 import { fetchUserDirectoryPage, fetchJobDirectoryPage, fetchCompanyDirectoryPage } from "@/components/admin/directory/api";
 import { RoleBadge } from "@/components/admin/directory/badges";
+import ModalPortal from "@/components/admin/ui/ModalPortal";
 import type {
   SerializedJobDirectoryItem,
   SerializedUserDirectoryItem,
@@ -75,6 +76,28 @@ function buildJobItems(jobs: SerializedJobDirectoryItem[]): PaletteItem[] {
     sublabel: `${j.companyName} · Job`,
     href: `/admin/jobs/directory?search=${encodeURIComponent(j.title)}`,
   }));
+}
+
+/** Section-header labels for the grouped result list below. `items` is built
+ * user->company->job (see the `useMemo` below) and stays that way — grouping
+ * is purely a render-time concern, detected by comparing each item's `kind`
+ * to the previous item's, so a kind with zero results simply never gets a
+ * header rather than needing to be special-cased here. */
+const KIND_LABELS: Record<PaletteItem["kind"], string> = {
+  user: "Users",
+  company: "Companies",
+  job: "Jobs",
+};
+
+/** The small bordered keyboard-shortcut chip established in
+ * components/admin/queue/DecisionForm.tsx's `r`/`a`/`Enter` hint badges —
+ * reused here for the footer hint bar instead of plain inline text. */
+function Kbd({ children }: { children: React.ReactNode }) {
+  return (
+    <kbd className="inline-flex items-center justify-center rounded border border-ink/15 px-1 py-0.5 font-data text-[10px] leading-none text-ink/50 admin-dark:border-white/15 admin-dark:text-mist/50">
+      {children}
+    </kbd>
+  );
 }
 
 export default function CommandPalette() {
@@ -296,17 +319,18 @@ export default function CommandPalette() {
   const activeItem = items[activeIndex];
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-start justify-center bg-ink/40 px-4 pt-[12vh]" onClick={closePalette}>
+    <ModalPortal>
+    <div className="fixed inset-0 z-[100] flex items-start justify-center bg-ink/40 backdrop-blur-sm px-4 pt-[12vh]" onClick={closePalette}>
       <div
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-label="Jump to a user, company or job"
-        className="w-full max-w-xl overflow-hidden rounded-2xl border border-ink/10 bg-white shadow-2xl"
+        className="w-full max-w-xl overflow-hidden rounded-2xl border border-ink/10 bg-white shadow-2xl admin-dark:border-white/10 admin-dark:bg-admin-dark-surface"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center gap-2 border-b border-ink/10 px-4 py-3">
-          <Search className="h-4 w-4 shrink-0 text-ink/35" aria-hidden="true" />
+        <div className="flex items-center gap-2 border-b border-ink/10 px-4 py-3 admin-dark:border-white/10">
+          <Search className="h-4 w-4 shrink-0 text-ink/35 admin-dark:text-mist/35" aria-hidden="true" />
           <input
             ref={inputRef}
             type="text"
@@ -320,15 +344,15 @@ export default function CommandPalette() {
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={onInputKeyDown}
             placeholder="Jump to a user, company or job…"
-            className="flex-1 border-none bg-transparent text-sm text-ink outline-none placeholder:text-ink/35"
+            className="flex-1 border-none bg-transparent text-sm text-ink outline-none placeholder:text-ink/35 admin-dark:text-mist admin-dark:placeholder:text-mist/35"
           />
-          {loading && <Loader2 className="h-4 w-4 shrink-0 animate-spin text-ink/30" aria-hidden="true" />}
+          {loading && <Loader2 className="h-4 w-4 shrink-0 animate-spin text-ink/30 admin-dark:text-mist/30" aria-hidden="true" />}
           <button
             ref={closeButtonRef}
             type="button"
             onClick={closePalette}
             aria-label="Close command palette"
-            className="shrink-0 rounded-lg p-1 text-ink/40 hover:bg-ink/5 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy"
+            className="shrink-0 rounded-lg p-1 text-ink/40 hover:bg-ink/5 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy admin-dark:text-mist/40 admin-dark:hover:bg-white/8 admin-dark:hover:text-mist"
           >
             <X className="h-4 w-4" aria-hidden="true" />
           </button>
@@ -344,46 +368,82 @@ export default function CommandPalette() {
           {visibleError ? (
             <p className="px-4 py-6 text-center text-sm text-ember">{visibleError}</p>
           ) : debouncedQuery.length < MIN_QUERY_LENGTH ? (
-            <p className="px-4 py-6 text-center text-sm text-ink/40">Type at least 2 characters to search.</p>
+            <p className="px-4 py-6 text-center text-sm text-ink/40 admin-dark:text-mist/40">
+              Type at least 2 characters to search.
+            </p>
           ) : items.length === 0 && !loading ? (
-            <p className="px-4 py-6 text-center text-sm text-ink/40">No matches for &ldquo;{debouncedQuery}&rdquo;.</p>
+            <p className="px-4 py-6 text-center text-sm text-ink/40 admin-dark:text-mist/40">
+              No matches for &ldquo;{debouncedQuery}&rdquo;.
+            </p>
           ) : (
             items.map((item, index) => {
               const Icon = item.kind === "user" ? UserIcon : item.kind === "company" ? Building2 : Briefcase;
               const isActive = index === activeIndex;
+              // Groups are detected off the (already user->company->job
+              // ordered) `items` array itself rather than tracked
+              // separately, so a header renders exactly once, right before
+              // the first item of a new kind — and never for a kind with no
+              // results, since that kind never appears in `items` at all.
+              const showGroupHeader = index === 0 || items[index - 1].kind !== item.kind;
               return (
-                <button
-                  key={item.id}
-                  id={`${listboxId}-${item.id}`}
-                  role="option"
-                  aria-selected={isActive}
-                  type="button"
-                  tabIndex={-1}
-                  onMouseEnter={() => setActiveIndex(index)}
-                  onClick={() => navigateTo(item)}
-                  className={`flex w-full items-center gap-3 px-4 py-2 text-left text-sm transition-colors ${
-                    isActive ? "bg-navy/8" : "hover:bg-ink/[0.03]"
-                  }`}
-                >
-                  <Icon className="h-4 w-4 shrink-0 text-ink/40" aria-hidden="true" />
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate font-medium text-ink">{item.label}</span>
-                    <span className="block truncate text-xs text-ink/45">{item.sublabel}</span>
-                  </span>
-                  {item.meta && <RoleBadge role={item.meta.role} />}
-                </button>
+                <div key={item.id}>
+                  {showGroupHeader && (
+                    <p
+                      role="presentation"
+                      className={`px-4 pb-1 text-[10px] font-semibold uppercase tracking-wider text-ink/45 admin-dark:text-mist/45 ${
+                        index === 0 ? "pt-2" : "pt-3"
+                      }`}
+                    >
+                      {KIND_LABELS[item.kind]}
+                    </p>
+                  )}
+                  <button
+                    id={`${listboxId}-${item.id}`}
+                    role="option"
+                    aria-selected={isActive}
+                    type="button"
+                    tabIndex={-1}
+                    onMouseEnter={() => setActiveIndex(index)}
+                    onClick={() => navigateTo(item)}
+                    className={`flex w-full items-center gap-3 px-4 py-2 text-left text-sm transition-colors ${
+                      isActive ? "bg-navy/8 admin-dark:bg-white/10" : "hover:bg-ink/[0.03] admin-dark:hover:bg-white/5"
+                    }`}
+                  >
+                    <Icon className="h-4 w-4 shrink-0 text-ink/40 admin-dark:text-mist/40" aria-hidden="true" />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate font-medium text-ink admin-dark:text-mist">{item.label}</span>
+                      <span className="block truncate text-xs text-ink/45 admin-dark:text-mist/45">{item.sublabel}</span>
+                    </span>
+                    {item.meta && <RoleBadge role={item.meta.role} />}
+                  </button>
+                </div>
               );
             })
           )}
         </div>
 
-        <div className="flex items-center justify-between gap-2 border-t border-ink/5 px-4 py-2 text-[11px] text-ink/35">
+        <div className="flex items-center justify-between gap-2 border-t border-ink/5 px-4 py-2 text-[11px] text-ink/35 admin-dark:border-white/10 admin-dark:text-mist/35">
           <span className="flex items-center gap-1">
-            <Command className="h-3 w-3" aria-hidden="true" />K to toggle
+            <Kbd>
+              <Command className="h-3 w-3" aria-hidden="true" />
+            </Kbd>
+            <Kbd>K</Kbd>
+            <span className="ml-1">to toggle</span>
           </span>
-          <span>↑↓ to move · Enter to open · Esc to close</span>
+          <span className="flex items-center gap-1">
+            <Kbd>↑</Kbd>
+            <Kbd>↓</Kbd>
+            <span>to move</span>
+            <span className="mx-0.5 text-ink/25 admin-dark:text-mist/25">·</span>
+            <Kbd>Enter</Kbd>
+            <span>to open</span>
+            <span className="mx-0.5 text-ink/25 admin-dark:text-mist/25">·</span>
+            <Kbd>Esc</Kbd>
+            <span>to close</span>
+          </span>
         </div>
       </div>
     </div>
+    </ModalPortal>
   );
 }

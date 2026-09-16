@@ -3,6 +3,7 @@
 import { useRef } from "react";
 import { X } from "lucide-react";
 import { useDialogFocusTrap } from "@/components/admin/useDialogFocusTrap";
+import ModalPortal from "../ui/ModalPortal";
 
 /**
  * The `?` shortcut overlay (docs/ADMIN-CONSOLE-PLAN.md §4.2: "`?` shortcut
@@ -32,7 +33,8 @@ export default function ShortcutSheet({ onClose }: { onClose: () => void }) {
   useDialogFocusTrap(dialogRef, onClose);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 px-4" onClick={onClose}>
+    <ModalPortal>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-ink/40 backdrop-blur-sm px-4" onClick={onClose}>
       {/* Floating dialog surface — same solid admin-dark-surface treatment
           as BulkBar.tsx's TypedConfirmDialog and AdminHeader.tsx's dropdown. */}
       <div
@@ -71,5 +73,6 @@ export default function ShortcutSheet({ onClose }: { onClose: () => void }) {
         <p className="mt-4 text-xs text-ink/40 admin-dark:text-mist/40">Shortcuts are disabled while typing in a text field.</p>
       </div>
     </div>
+    </ModalPortal>
   );
 }

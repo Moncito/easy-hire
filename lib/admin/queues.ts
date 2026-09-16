@@ -1756,10 +1756,14 @@ export async function getDecisionStats(input?: { since?: Date }): Promise<Decisi
 // ============================================================================
 // getQueueKindStats — the four admin-console stat tiles ("Pending review",
 // "SLA breached", "Median time to decision", "Approved this week") for ONE
-// queue kind. Built on top of `getQueueHealth()` (pending/SLA tiles) plus two
-// new derivations: a per-kind decision-count window off `admin_audit_logs`,
-// and a median-time-to-decision metric that is honestly `null` for every kind
-// except JOB.
+// queue kind, plus trend deltas/sparkline for the two tiles that have real
+// history behind them. Built on top of `getQueueHealth()` (pending/SLA
+// tiles, no trend — live snapshots, no history table) plus derivations off
+// `admin_audit_logs`: a per-kind decision-count window (current + prior, for
+// `approvedThisWeekDelta`), a 7-day bucketed trend (`weeklyTrend`), and a
+// median-time-to-decision metric (current + prior, for
+// `medianDecisionHoursDelta`) that is honestly `null` for every kind except
+// JOB.
 // ============================================================================
 
 /**
@@ -1814,22 +1818,57 @@ export type QueueKindStats = {
    * either). Render "Not tracked yet", never a fabricated number.
    */
   medianDecisionHours: number | null;
+  /**
+   * `medianDecisionHours` minus the median for the PRIOR 30-day window
+   * (30-60 days ago). JOB only, mirroring `medianDecisionHours` itself above
+   * — `null` for every non-JOB kind, and also `null` if either the current
+   * or the prior window has no decided jobs to compute a median from (never
+   * diffed against a fabricated baseline).
+   */
+  medianDecisionHoursDelta: number | null;
   approvedThisWeek: number;
   rejectedThisWeek: number;
+  /**
+   * `approvedThisWeek` minus the same positive-action count for the PRIOR
+   * 7-day window (14-7 days ago). Always a number, never `null` — unlike
+   * `medianDecisionHoursDelta`, a decision-count window with zero rows in it
+   * is a legitimate zero, not a "not tracked" case.
+   */
+  approvedThisWeekDelta: number;
+  /**
+   * 7 entries, one per calendar day, oldest first / most recent last, for
+   * the same trailing 7-day window as `approvedThisWeek`/`rejectedThisWeek`
+   * (same `weekAgo` cutoff, same `QUEUE_KIND_DECISION_ACTIONS` pair). `day`
+   * is a local calendar-date string (`YYYY-MM-DD`) — the same server-local
+   * convention `formatSubmittedAt` uses in ReviewPane.tsx, not UTC. Always
+   * exactly 7 entries, zero-filled on days with no decisions, so a sparkline
+   * can index by position instead of looking a day up by key. `Pending
+   * review`/`SLA breached` deliberately have no equivalent field — both are
+   * live snapshots with no history table behind them, so a trend for them
+   * would be fabricated.
+   */
+  weeklyTrend: { day: string; positive: number; negative: number }[];
 };
 
 /**
  * Median hours between `Job.pendingReviewAt` and its JOB_APPROVE/JOB_REJECT
- * decision, for decisions in the trailing `MEDIAN_DECISION_WINDOW_DAYS` days.
- * Same method as `computeAdminReviewLatencyMetrics` (lib/admin/rollups.ts),
- * just widened from "decided on one calendar day" to "decided in the last 30
- * days" for a live stat tile instead of a per-day rollup row. JOB only — see
+ * decision, for decisions in `[since, until)` — `until` defaults to open-ended
+ * (no upper bound) so the original 30-day-trailing caller is unaffected; the
+ * `medianDecisionHoursDelta` tile passes a bounded prior window (30-60 days
+ * ago) through it instead of duplicating this query. Same method as
+ * `computeAdminReviewLatencyMetrics` (lib/admin/rollups.ts), just widened
+ * from "decided on one calendar day" to an arbitrary range for a live stat
+ * tile instead of a per-day rollup row. JOB only — see
  * `QueueKindStats.medianDecisionHours`'s doc comment for why every other kind
  * returns `null` instead of a fallback proxy.
  */
-async function computeMedianJobDecisionHours(since: Date): Promise<number | null> {
+async function computeMedianJobDecisionHours(since: Date, until?: Date): Promise<number | null> {
   const decisions = await prisma.adminAuditLog.findMany({
-    where: { action: { in: ["JOB_APPROVE", "JOB_REJECT"] }, targetType: "JOB", createdAt: { gte: since } },
+    where: {
+      action: { in: ["JOB_APPROVE", "JOB_REJECT"] },
+      targetType: "JOB",
+      createdAt: until ? { gte: since, lt: until } : { gte: since },
+    },
     select: { targetId: true, createdAt: true },
   });
   if (decisions.length === 0) return null;
@@ -1855,16 +1894,27 @@ async function computeMedianJobDecisionHours(since: Date): Promise<number | null
   return median(hours);
 }
 
-/** One `groupBy` for the positive/negative decision counts on one kind's `targetType`, in the trailing window since `since`. */
+/**
+ * One `groupBy` for the positive/negative decision counts on one kind's
+ * `targetType`, in `[since, until)`. `until` defaults to open-ended (no upper
+ * bound) so the original "trailing window since `since`" callers are
+ * unaffected; `approvedThisWeekDelta` passes a bounded prior window
+ * (14-7 days ago) through it instead of a near-duplicate function.
+ */
 async function getWeeklyDecisionCounts(
   targetType: string,
   positiveAction: AdminAuditAction,
   negativeAction: AdminAuditAction,
-  since: Date
+  since: Date,
+  until?: Date
 ): Promise<{ positive: number; negative: number }> {
   const rows = await prisma.adminAuditLog.groupBy({
     by: ["action"],
-    where: { targetType, action: { in: [positiveAction, negativeAction] }, createdAt: { gte: since } },
+    where: {
+      targetType,
+      action: { in: [positiveAction, negativeAction] },
+      createdAt: until ? { gte: since, lt: until } : { gte: since },
+    },
     _count: { _all: true },
   });
 
@@ -1877,24 +1927,92 @@ async function getWeeklyDecisionCounts(
   return { positive, negative };
 }
 
+/** Local calendar-date key (`YYYY-MM-DD`) — same server-local convention `formatSubmittedAt` uses in components/admin/queue/ReviewPane.tsx (not UTC), so a trend bucket lines up with how the rest of the admin console already renders dates. */
+function localDateKey(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+/** The 7 calendar-day keys for `weeklyTrend`, oldest first, ending on `now`'s local calendar day. */
+function buildWeeklyTrendDayKeys(now: Date): string[] {
+  const keys: string[] = [];
+  for (let i = QUEUE_KIND_STATS_WEEK_DAYS - 1; i >= 0; i--) {
+    keys.push(localDateKey(new Date(now.getTime() - i * 24 * 60 * 60 * 1000)));
+  }
+  return keys;
+}
+
 /**
- * The four admin-console stat tiles for one queue kind. Reuses
- * `getQueueHealth()` (already computes depth/oldest-age/SLA-breaches for
- * every kind in two batched aggregates) rather than re-deriving the
- * pending/SLA numbers, and runs it alongside the two NEW per-kind queries
- * (decision counts, median decision hours) in one `Promise.all` so this is
- * three round-trips in parallel, not sequential.
+ * One `findMany` for the positive/negative decision rows on one kind's
+ * `targetType` in the trailing 7-day window, bucketed client-side into 7
+ * calendar-day slots (not 7 separate queries). Every slot is present even
+ * when empty (`positive`/`negative` both 0) — see `QueueKindStats.weeklyTrend`'s
+ * doc comment for why a sparkline consumer can rely on exactly 7 entries.
+ */
+async function getWeeklyTrend(
+  targetType: string,
+  positiveAction: AdminAuditAction,
+  negativeAction: AdminAuditAction,
+  since: Date,
+  now: Date
+): Promise<{ day: string; positive: number; negative: number }[]> {
+  const rows = await prisma.adminAuditLog.findMany({
+    where: { targetType, action: { in: [positiveAction, negativeAction] }, createdAt: { gte: since } },
+    select: { action: true, createdAt: true },
+  });
+
+  const dayKeys = buildWeeklyTrendDayKeys(now);
+  const buckets = new Map(dayKeys.map((day) => [day, { day, positive: 0, negative: 0 }]));
+
+  for (const row of rows) {
+    // `since` is an exact 7*24h cutoff, not calendar-aligned, so a handful of
+    // rows can fall on a calendar day just older than the 7 rendered slots
+    // (e.g. `since` lands at 14:00 on day 0, a row at 09:00 that same day is
+    // still >= since but keyed to a day not in `dayKeys` only if `now` itself
+    // rolled to a new calendar day since `since` was computed) — dropped
+    // rather than force-fit into the wrong slot.
+    const bucket = buckets.get(localDateKey(row.createdAt));
+    if (!bucket) continue;
+    if (row.action === positiveAction) bucket.positive += 1;
+    else if (row.action === negativeAction) bucket.negative += 1;
+  }
+
+  return dayKeys.map((day) => buckets.get(day)!);
+}
+
+/**
+ * The four admin-console stat tiles for one queue kind, plus their trend
+ * deltas/sparkline. Reuses `getQueueHealth()` (already computes
+ * depth/oldest-age/SLA-breaches for every kind in two batched aggregates)
+ * rather than re-deriving the pending/SLA numbers — those two tiles are live
+ * snapshots with no history table, so they get no trend, honestly. Runs it
+ * alongside the per-kind decision-count/median/trend queries (current window,
+ * prior window for each delta, and the 7-day bucketed trend) in one
+ * `Promise.all` so this stays parallel round-trips, not sequential.
  */
 export async function getQueueKindStats(kind: QueueKind): Promise<QueueKindStats> {
   const now = new Date();
   const weekAgo = new Date(now.getTime() - QUEUE_KIND_STATS_WEEK_DAYS * 24 * 60 * 60 * 1000);
+  const twoWeeksAgo = new Date(now.getTime() - 2 * QUEUE_KIND_STATS_WEEK_DAYS * 24 * 60 * 60 * 1000);
   const monthAgo = new Date(now.getTime() - MEDIAN_DECISION_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+  const twoMonthsAgo = new Date(now.getTime() - 2 * MEDIAN_DECISION_WINDOW_DAYS * 24 * 60 * 60 * 1000);
   const decisionActions = QUEUE_KIND_DECISION_ACTIONS[kind];
 
-  const [health, weekly, medianDecisionHours] = await Promise.all([
+  const [health, weekly, priorWeekly, medianDecisionHours, priorMedianDecisionHours, weeklyTrend] = await Promise.all([
     getQueueHealth(),
     getWeeklyDecisionCounts(decisionActions.targetType, decisionActions.positive, decisionActions.negative, weekAgo),
+    // Prior 7-day window (14-7 days ago) for `approvedThisWeekDelta`.
+    getWeeklyDecisionCounts(
+      decisionActions.targetType,
+      decisionActions.positive,
+      decisionActions.negative,
+      twoWeeksAgo,
+      weekAgo
+    ),
     kind === "JOB" ? computeMedianJobDecisionHours(monthAgo) : Promise.resolve(null),
+    // Prior 30-day window (30-60 days ago) for `medianDecisionHoursDelta`, JOB only.
+    kind === "JOB" ? computeMedianJobDecisionHours(twoMonthsAgo, monthAgo) : Promise.resolve(null),
+    getWeeklyTrend(decisionActions.targetType, decisionActions.positive, decisionActions.negative, weekAgo, now),
   ]);
 
   const kindHealth = health.find((h) => h.kind === kind);
@@ -1912,6 +2030,13 @@ export async function getQueueKindStats(kind: QueueKind): Promise<QueueKindStats
       ? Math.max(0, kindHealth.oldestAgeHours - QUEUE_RANKING.sla.amberUnderHours)
       : null;
 
+  // Never diffed against a fabricated baseline — `null` propagates through
+  // if either window has no decided jobs to compute a median from.
+  const medianDecisionHoursDelta =
+    medianDecisionHours !== null && priorMedianDecisionHours !== null
+      ? medianDecisionHours - priorMedianDecisionHours
+      : null;
+
   return {
     pendingCount: kindHealth.depth,
     pendingBreached: slaBreachedCount,
@@ -1919,7 +2044,10 @@ export async function getQueueKindStats(kind: QueueKind): Promise<QueueKindStats
     slaBreachedCount,
     oldestOverHours,
     medianDecisionHours,
+    medianDecisionHoursDelta,
     approvedThisWeek: weekly.positive,
     rejectedThisWeek: weekly.negative,
+    approvedThisWeekDelta: weekly.positive - priorWeekly.positive,
+    weeklyTrend,
   };
 }

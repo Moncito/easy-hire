@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { AlertTriangle, CheckCircle2, Eye, Info, KeyRound, Loader2, MailCheck, Trash2 } from "lucide-react";
 import { submitUserSupportAction, startImpersonationSession } from "./api";
 import { useDialogFocusTrap } from "@/components/admin/useDialogFocusTrap";
+import ModalPortal from "@/components/admin/ui/ModalPortal";
 import { IMPERSONATION_REASON_MAX_LENGTH, IMPERSONATION_TICKET_REFERENCE_MAX_LENGTH } from "@/lib/validations/admin";
 import type { Role, SerializedAccountDeletionResult } from "./types";
 
@@ -49,7 +50,8 @@ function DeleteConfirmDialog({ email, submitting, error, onCancel, onConfirm }: 
   useDialogFocusTrap(dialogRef, onCancel);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 px-4" onClick={onCancel}>
+    <ModalPortal>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-ink/40 backdrop-blur-sm px-4" onClick={onCancel}>
       <div
         ref={dialogRef}
         role="dialog"
@@ -114,6 +116,7 @@ function DeleteConfirmDialog({ email, submitting, error, onCancel, onConfirm }: 
         </div>
       </div>
     </div>
+    </ModalPortal>
   );
 }
 
@@ -144,7 +147,8 @@ function ImpersonationStartDialog({ email, submitting, error, onCancel, onConfir
   const canSubmit = ticketReference.trim().length > 0 && reason.trim().length > 0 && !submitting;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 px-4" onClick={onCancel}>
+    <ModalPortal>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-ink/40 backdrop-blur-sm px-4" onClick={onCancel}>
       <div
         ref={dialogRef}
         role="dialog"
@@ -223,6 +227,7 @@ function ImpersonationStartDialog({ email, submitting, error, onCancel, onConfir
         </div>
       </div>
     </div>
+    </ModalPortal>
   );
 }
 

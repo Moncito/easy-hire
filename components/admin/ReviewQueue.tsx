@@ -324,6 +324,20 @@ export default function ReviewQueue({
       if (bulkConfirmOpen) {
         return; // TypedConfirmDialog owns Escape/Tab while it's open
       }
+      // DecisionForm's reject/hide confirm modal (RejectConfirmModal) owns
+      // Escape/Tab the same way while it's open — its `rejectOpen` is local
+      // to that component (per-item, reset on selection change), so it's
+      // read through the imperative handle rather than lifted here, same
+      // pattern `focusReject`/`commit` already use to cross this boundary.
+      // Enter is the one exception: it's still forwarded to `commit()`,
+      // which is exactly how the modal's own "Confirm reject" button (kbd
+      // hint: Enter) is meant to fire from the keyboard.
+      if (decisionFormRef.current?.isRejectOpen()) {
+        if (e.key === "Enter") {
+          decisionFormRef.current?.commit();
+        }
+        return;
+      }
       if (isTypingTarget(e.target)) {
         return;
       }

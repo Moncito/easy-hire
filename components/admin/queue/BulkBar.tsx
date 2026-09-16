@@ -5,6 +5,8 @@ import { AlertTriangle, Check, Loader2, X } from "lucide-react";
 import type { QueueKind, ReasonCodeOption } from "./types";
 import type { BulkReviewQueueResult } from "@/lib/admin/bulk";
 import { useDialogFocusTrap } from "@/components/admin/useDialogFocusTrap";
+import AdminSelect from "../ui/Select";
+import ModalPortal from "../ui/ModalPortal";
 
 /**
  * Bulk toolbar + typed-confirmation dialog — docs/ADMIN-CONSOLE-PLAN.md
@@ -99,7 +101,8 @@ function TypedConfirmDialog({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 px-4" onClick={onCancel}>
+    <ModalPortal>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-ink/40 backdrop-blur-sm px-4" onClick={onCancel}>
       {/* Floating dialog surface — same solid admin-dark-surface treatment
           as AdminHeader.tsx's dropdown panel and AdminSidebar.tsx's aside,
           not the page-content-card `white/5` treatment: a modal floats over
@@ -141,19 +144,15 @@ function TypedConfirmDialog({
             <label htmlFor="bulk-reason-select" className="mb-1 block text-xs font-semibold text-ink/70 admin-dark:text-mist/70">
               Reason code <span className="text-ember">*</span>
             </label>
-            <select
+            <AdminSelect
               id="bulk-reason-select"
               value={reasonCode}
-              onChange={(e) => setReasonCode(e.target.value)}
-              className="w-full rounded-lg border border-ink/10 bg-white px-3 py-2 text-sm outline-none focus:border-navy focus:ring-2 focus:ring-navy/20 admin-dark:border-white/15 admin-dark:bg-white/5 admin-dark:text-mist"
-            >
-              <option value="">Select a reason…</option>
-              {reasonCodes.map((rc) => (
-                <option key={rc.code} value={rc.code}>
-                  {rc.label}
-                </option>
-              ))}
-            </select>
+              onChange={setReasonCode}
+              options={reasonCodes.map((rc) => ({ value: rc.code, label: rc.label }))}
+              placeholder="Select a reason…"
+              aria-label="Reason code"
+              required
+            />
           </>
         )}
 
@@ -209,6 +208,7 @@ function TypedConfirmDialog({
         </div>
       </div>
     </div>
+    </ModalPortal>
   );
 }
 

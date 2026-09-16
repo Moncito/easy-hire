@@ -5,6 +5,7 @@ import { AlertTriangle, Info, Loader2, Trash2, X } from "lucide-react";
 import { ADMIN_PERMISSION_ORDER, PERMISSION_META } from "./permissionMeta";
 import { ADMIN_LEVELS, type AdminLevel, type AdminPermission, type SerializedAdminTeamRow } from "./types";
 import { useDialogFocusTrap } from "@/components/admin/useDialogFocusTrap";
+import ModalPortal from "@/components/admin/ui/ModalPortal";
 
 /**
  * Edit an existing `AdminProfile` (level + additive permissions) and, from
@@ -52,7 +53,8 @@ function RevokeConfirmDialog({
   const confirmed = typedEmail.trim().toLowerCase() === email.toLowerCase();
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-ink/40 px-4" onClick={onCancel}>
+    <ModalPortal>
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-ink/40 backdrop-blur-sm px-4" onClick={onCancel}>
       <div
         ref={dialogRef}
         role="dialog"
@@ -116,6 +118,7 @@ function RevokeConfirmDialog({
         </div>
       </div>
     </div>
+    </ModalPortal>
   );
 }
 
@@ -165,7 +168,8 @@ export default function AdminProfileEditor({ row, onClose, onSave, onRevoke }: A
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 px-4" onClick={onClose}>
+    <ModalPortal>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-ink/40 backdrop-blur-sm px-4" onClick={onClose}>
       <div
         ref={dialogRef}
         role="dialog"
@@ -329,5 +333,6 @@ export default function AdminProfileEditor({ row, onClose, onSave, onRevoke }: A
         )}
       </div>
     </div>
+    </ModalPortal>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { forwardRef, useState } from "react";
-import { AlertTriangle, CheckCircle2, CircleDashed, ExternalLink, FileText, History, RefreshCw, RotateCcw } from "lucide-react";
+import { AlertTriangle, CheckCircle2, CircleDashed, ExternalLink, FileText, History, RefreshCw, RotateCcw, XCircle } from "lucide-react";
 import DecisionForm, { type DecisionAction, type DecisionFormHandle } from "./DecisionForm";
 import { SeverityChips } from "./SlaBadge";
 import { formatDate } from "../directory/badges";
@@ -200,6 +200,50 @@ function JobLiveBadge({ liveState, expiresAt }: { liveState: SerializedJobLiveSt
     >
       <CircleDashed className="h-3 w-3 shrink-0" aria-hidden="true" />
       Pending review
+    </span>
+  );
+}
+
+/**
+ * COMPANY-only "verifiedStatus" chip — identity-level info about the
+ * company record itself (has this employer's identity ever been verified?),
+ * distinct from the Free/Pro plan and from anything the current queue item
+ * is being reviewed for. Placed beside the header's title/avatar rather than
+ * in the Overview `FieldGrid` (~line 288) for exactly that reason: every
+ * other field there is a per-item detail, this one is closer kin to the
+ * title itself. `verifiedStatus` is only fetched for the COMPANY kind (see
+ * `SerializedCompanyQueueItemDetail` in ./types.ts) — callers must check
+ * `detail.kind === "COMPANY"` before rendering this, same discriminated-union
+ * guard the logo/photo block just below already uses.
+ *
+ * Values are the raw `VerificationStatus` Prisma enum (PENDING/APPROVED/
+ * REJECTED — prisma/schema.prisma), serialized to a plain `string` (see that
+ * field's type in ./types.ts), matched here rather than typed as the enum
+ * itself. Colour/icon mapping mirrors the one `VerificationStatusBadge`
+ * (../directory/badges.tsx) already established for this exact status
+ * elsewhere in the admin console — navy for PENDING, teal for APPROVED,
+ * ember ONLY for REJECTED (CLAUDE.md: Ember reserved for genuine
+ * warnings/rejections) — just re-shaped into this file's rounded-full pill
+ * language (SlaBadge.tsx's `AppealBadge`) instead of badges.tsx's bare
+ * icon+text row, since this sits beside an avatar rather than in a table
+ * cell. An unrecognised value (should not happen, but `string` widens the
+ * type) falls back to the neutral PENDING treatment rather than guessing.
+ */
+function VerifiedStatusChip({ status }: { status: string }) {
+  const style =
+    status === "APPROVED"
+      ? { label: "Verified", icon: CheckCircle2, className: "bg-teal/10 text-teal" }
+      : status === "REJECTED"
+        ? { label: "Verification rejected", icon: XCircle, className: "bg-ember/10 text-ember" }
+        : { label: "Verification pending", icon: CircleDashed, className: "bg-navy/8 text-navy admin-dark:bg-navy/25 admin-dark:text-mist" };
+  const Icon = style.icon;
+  return (
+    <span
+      title={`Company verification status: ${style.label}`}
+      className={`inline-flex shrink-0 items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${style.className}`}
+    >
+      <Icon className="h-3 w-3 shrink-0" aria-hidden="true" />
+      {style.label}
     </span>
   );
 }
@@ -579,10 +623,17 @@ const ReviewPane = forwardRef<DecisionFormHandle, ReviewPaneProps>(function Revi
 
   return (
     <div className="flex h-full max-h-[80vh] min-h-[420px] flex-col overflow-hidden rounded-2xl border border-ink/5 bg-white admin-dark:border-white/10 admin-dark:bg-white/5">
-      {/* Header — avatar/initials chip + title + one-line subtitle. Purely an
-          identicon-style visual anchor: a neutral navy tint, never Ember /
-          Marigold / Teal, since it carries no status meaning of its own. */}
-      <div className="flex shrink-0 items-start gap-3 border-b border-ink/10 p-5 admin-dark:border-white/10">
+      {/* Header — avatar/initials chip + title + one-line subtitle, on a
+          faint tint so it reads as its own card header distinct from both
+          the tab strip below (which has its own separate border) and the
+          scrollable tab content — a background cue, not just the one
+          border line, matching the same "distinct chrome band" treatment
+          DocumentViewer's own per-document header uses just below. The
+          avatar/initials chip itself is purely an identicon-style visual
+          anchor: a neutral navy tint, never Ember / Marigold / Teal, since
+          it carries no status meaning of its own — VerifiedStatusChip right
+          next to the title is where any actual status colour lives. */}
+      <div className="flex shrink-0 items-start gap-3 border-b border-ink/10 bg-mist/50 p-5 admin-dark:border-white/10 admin-dark:bg-white/[0.03]">
         {/* Real logo/photo when the loaded detail carries one — falls back to
             the neutral initials chip while still loading, when the record
             has no image on file, or if the image URL fails to load (signed
@@ -614,7 +665,10 @@ const ReviewPane = forwardRef<DecisionFormHandle, ReviewPaneProps>(function Revi
           </div>
         )}
         <div className="min-w-0">
-          <h2 className="truncate font-display text-lg font-bold text-ink admin-dark:text-mist">{item.title}</h2>
+          <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+            <h2 className="min-w-0 truncate font-display text-lg font-bold text-ink admin-dark:text-mist">{item.title.trim() || "Untitled"}</h2>
+            {detail?.kind === "COMPANY" && <VerifiedStatusChip status={detail.verifiedStatus} />}
+          </div>
           <p className="truncate text-sm text-ink/55 admin-dark:text-mist/55">{headerSubtitle(item, detail)}</p>
         </div>
       </div>
@@ -694,8 +748,43 @@ const ReviewPane = forwardRef<DecisionFormHandle, ReviewPaneProps>(function Revi
           "Reviewing {itemTitle}" line stands in for the one-line label the
           task brief asks for here — the header above already names the
           record once; repeating it a second time immediately above these
-          buttons would just be the same title shown twice in one panel. */}
+          buttons would just be the same title shown twice in one panel.
+
+          Reviewing-admin identity line: deliberately NOT added. Neither this
+          component nor ReviewQueue.tsx (its only caller) currently receives
+          any admin identity prop — the only place that data exists today is
+          app/admin/layout.tsx's `headerIdentity` (email + level), which it
+          fetches server-side via `requireAdminLayoutContext()` and passes
+          only to its sibling `<AdminHeader/>`, not down through `{children}`
+          into this page's component tree. Threading it here would require
+          also editing app/admin/queues/[kind]/page.tsx (fetch the identity
+          there, pass it into `<ReviewQueue/>`, which is outside this phase's
+          stated scope), not just ReviewQueue.tsx/ReviewPane.tsx — so rather
+          than fabricate a name or silently expand scope, this sub-item is
+          skipped. Flagging explicitly per the task brief's own instruction
+          for this exact case. */}
       <div className="shrink-0 border-t border-ink/10 p-5 admin-dark:border-white/10">
+        {/* Risk-signal recap — the same signals already shown on the
+            Overview tab (`SeverityChips`, imported above from SlaBadge.tsx),
+            surfaced again here so a reviewer who has been reading e.g. the
+            Documents or Activity tab still sees why the item is in the queue
+            immediately before deciding, without needing to have scrolled
+            back up. Deliberately just the existing per-signal chips + a
+            plain count — no synthesized "risk score": SerializedQueueItem
+            carries no such aggregate field (see this file's own task brief),
+            and this codebase treats a fabricated number as worse than none.
+            `max={2}` (tighter than the Overview tab's unlimited `max`) plus
+            `flex-wrap` keeps this to a compact line or two at the fixed
+            360px rail width rather than the horizontal overflow this exact
+            file already had to fix in an earlier phase. */}
+        {item.severitySignals.length > 0 && (
+          <div className="mb-3 flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1 text-[11px] font-semibold text-ink/50 admin-dark:text-mist/50">
+            <span className="shrink-0">
+              {item.severitySignals.length} risk signal{item.severitySignals.length === 1 ? "" : "s"} ·
+            </span>
+            <SeverityChips signals={item.severitySignals} max={2} />
+          </div>
+        )}
         <DecisionForm
           ref={ref}
           kind={kind}

@@ -5,6 +5,7 @@ import { Loader2, ShieldAlert, X } from "lucide-react";
 import { ADMIN_PERMISSION_ORDER, PERMISSION_META } from "./permissionMeta";
 import { ADMIN_LEVELS, type AdminLevel, type AdminPermission } from "./types";
 import { useDialogFocusTrap } from "@/components/admin/useDialogFocusTrap";
+import ModalPortal from "@/components/admin/ui/ModalPortal";
 
 /**
  * Assign a fresh `AdminProfile` to a `Role.ADMIN` user who doesn't have one
@@ -86,7 +87,8 @@ export default function CreateAdminProfileForm({
   const targetEmail = eligibleUsers.find((u) => u.userId === userId)?.email ?? "";
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 px-4" onClick={onClose}>
+    <ModalPortal>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-ink/40 backdrop-blur-sm px-4" onClick={onClose}>
       <div
         ref={dialogRef}
         role="dialog"
@@ -259,5 +261,6 @@ export default function CreateAdminProfileForm({
         </div>
       </div>
     </div>
+    </ModalPortal>
   );
 }

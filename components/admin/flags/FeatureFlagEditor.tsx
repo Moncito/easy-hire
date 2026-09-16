@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { AlertTriangle, Loader2, Trash2, X } from "lucide-react";
 import { useDialogFocusTrap } from "@/components/admin/useDialogFocusTrap";
+import ModalPortal from "@/components/admin/ui/ModalPortal";
 import { RolloutCell } from "./rolloutDisplay";
 import type { SerializedFeatureFlag } from "./types";
 
@@ -47,7 +48,8 @@ function DeleteConfirmDialog({
   const confirmed = typedKey.trim() === flagKey;
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-ink/40 px-4" onClick={onCancel}>
+    <ModalPortal>
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-ink/40 backdrop-blur-sm px-4" onClick={onCancel}>
       <div
         ref={dialogRef}
         role="dialog"
@@ -111,6 +113,7 @@ function DeleteConfirmDialog({
         </div>
       </div>
     </div>
+    </ModalPortal>
   );
 }
 
@@ -153,7 +156,8 @@ export default function FeatureFlagEditor({ row, onClose, onSave, onDelete }: Fe
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 px-4" onClick={onClose}>
+    <ModalPortal>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-ink/40 backdrop-blur-sm px-4" onClick={onClose}>
       <div
         ref={dialogRef}
         role="dialog"
@@ -294,5 +298,6 @@ export default function FeatureFlagEditor({ row, onClose, onSave, onDelete }: Fe
         )}
       </div>
     </div>
+    </ModalPortal>
   );
 }
