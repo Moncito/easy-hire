@@ -175,7 +175,14 @@ export async function listCompanyDirectory(
 
 export async function listCompaniesForCollaborativeHiring() {
   return prisma.company.findMany({
-    select: { id: true, companyName: true, collaborativeHiringEnabled: true, user: { select: { email: true } } },
+    select: {
+      id: true,
+      companyName: true,
+      collaborativeHiringEnabled: true,
+      verifiedStatus: true,
+      trustScore: true,
+      user: { select: { email: true } },
+    },
     orderBy: { updatedAt: "desc" },
     take: 100,
   });
