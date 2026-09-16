@@ -131,12 +131,24 @@ export const ADMIN_QUEUE_STATUSES = ["PENDING", "APPROVED", "REJECTED"] as const
  * schema only bounds its length/shape as a string; decoding and validating
  * its contents is the queues module's job, not the route's.
  */
+/**
+ * `filter=breached` — restricts the page to SLA-breached (RED-band) items
+ * only (lib/admin/queues.ts's `listQueue({ breachedOnly })`). The ONLY
+ * recognized value today; an enum (not a bare boolean query param) so a
+ * second named filter can be added later without a breaking rename. Shared
+ * verbatim between the server-rendered `/admin/queues/[kind]?filter=breached`
+ * page and this same GET endpoint (client-side pagination/tab switches
+ * within that filtered view) so both agree on one query-param contract.
+ */
+export const ADMIN_QUEUE_LIST_FILTERS = ["breached"] as const;
+
 export const adminQueueListQuerySchema = z.object({
   kind: z.enum(ADMIN_QUEUE_KINDS),
   status: z.enum(ADMIN_QUEUE_STATUSES).optional(),
   search: z.string().trim().min(1).max(200).optional(),
   cursor: z.string().min(1).max(500).optional(),
   limit: z.coerce.number().int().min(1).max(100).optional(),
+  filter: z.enum(ADMIN_QUEUE_LIST_FILTERS).optional(),
 });
 
 export type AdminQueueListQuery = z.infer<typeof adminQueueListQuerySchema>;

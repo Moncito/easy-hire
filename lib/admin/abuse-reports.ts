@@ -398,6 +398,14 @@ export type ListAbuseReportsParams = {
   search?: string;
   cursor?: QueueCursor;
   limit?: number;
+  /**
+   * When set, restricts the page to reports with `createdAt <= breachedBefore`
+   * — REPORT's own SLA-breach filter (lib/admin/queues.ts's `listQueue`
+   * `breachedOnly` param), passed down as an already-computed cutoff `Date`
+   * rather than a boolean so this module stays free of `QUEUE_RANKING`'s SLA
+   * constants; `listReportQueue` is the only caller and owns that math.
+   */
+  breachedBefore?: Date;
 };
 
 export type AbuseReportListResult = { reports: AbuseReportRow[]; nextCursor: QueueCursor | null };
@@ -435,6 +443,11 @@ export async function listAbuseReports(params: ListAbuseReportsParams): Promise<
           ],
         }
       : {}),
+    // `createdAt` is a distinct top-level key from the `OR` above (added by
+    // `search`/`cursor`), so this ANDs onto it cleanly — no key-collision risk
+    // (see lib/admin/queues.ts's JOB/REVIEW breach filters for the case where
+    // that risk is real and is handled with an `AND: [{ OR: [...] }]` wrap).
+    ...(params.breachedBefore ? { createdAt: { lte: params.breachedBefore } } : {}),
   };
 
   const rows = await prisma.abuseReport.findMany({

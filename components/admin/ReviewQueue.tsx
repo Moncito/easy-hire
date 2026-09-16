@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { HelpCircle, RefreshCcw, Search } from "lucide-react";
+import { AlertTriangle, HelpCircle, RefreshCcw, Search, X } from "lucide-react";
 import QueueList from "./queue/QueueList";
 import ReviewPane from "./queue/ReviewPane";
 import BulkBar from "./queue/BulkBar";
@@ -69,6 +69,7 @@ export type ReviewQueueProps = {
   initialItems: SerializedQueueItem[];
   initialNextCursor: string | null;
   initialStatus?: QueueStatus;
+  initialFilter?: "breached";
   reasonCodes: ReasonCodeOption[];
 };
 
@@ -77,9 +78,11 @@ export default function ReviewQueue({
   initialItems,
   initialNextCursor,
   initialStatus = "PENDING",
+  initialFilter,
   reasonCodes,
 }: ReviewQueueProps) {
   const [status, setStatus] = useState<QueueStatus>(initialStatus);
+  const [filter, setFilter] = useState<"breached" | undefined>(initialFilter);
   const [searchInput, setSearchInput] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
 
@@ -131,6 +134,7 @@ export default function ReviewQueue({
         search: debouncedSearch || undefined,
         cursor: reset ? undefined : nextCursorRef.current,
         limit: 25,
+        filter,
       });
       setItems((prev) => (reset ? res.items : [...prev, ...res.items]));
       setNextCursor(res.nextCursor);
@@ -145,8 +149,9 @@ export default function ReviewQueue({
     }
   }
 
-  // Status tab or search change -> refetch from the top. Skips the very
-  // first render, which already has the server-rendered first page.
+  // Status tab, search, or breach-filter change -> refetch from the top.
+  // Skips the very first render, which already has the server-rendered first
+  // page (including any `initialFilter` it was given).
   useEffect(() => {
     if (!didMountRef.current) {
       didMountRef.current = true;
@@ -154,7 +159,7 @@ export default function ReviewQueue({
     }
     void loadPage(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, debouncedSearch]);
+  }, [status, debouncedSearch, filter]);
 
   // Per-item detail — fetched lazily only for the selected item, never for
   // the whole list (lib/admin/queue-detail.ts's own rationale).
@@ -377,6 +382,22 @@ export default function ReviewQueue({
             </button>
           ))}
         </div>
+
+        {filter === "breached" && (
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-ember/10 pl-2.5 pr-1 py-0.5 text-xs font-semibold text-ember">
+            <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />
+            Showing: SLA-breached only
+            <button
+              type="button"
+              onClick={() => setFilter(undefined)}
+              aria-label="Clear breached-only filter"
+              title="Clear filter"
+              className="rounded-full p-0.5 hover:bg-ember/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ember"
+            >
+              <X className="h-3 w-3" aria-hidden="true" />
+            </button>
+          </span>
+        )}
 
         <div className="flex items-center gap-2">
           <label htmlFor="queue-search" className="sr-only">

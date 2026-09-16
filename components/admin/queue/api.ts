@@ -25,6 +25,7 @@ export async function fetchQueuePage(params: {
   search?: string;
   cursor?: string | null;
   limit?: number;
+  filter?: "breached";
 }): Promise<QueueListApiResponse> {
   const qs = new URLSearchParams();
   qs.set("kind", params.kind);
@@ -32,6 +33,7 @@ export async function fetchQueuePage(params: {
   if (params.search) qs.set("search", params.search);
   if (params.cursor) qs.set("cursor", params.cursor);
   qs.set("limit", String(params.limit ?? 25));
+  if (params.filter) qs.set("filter", params.filter);
 
   const res = await fetch(`/api/admin/queues?${qs.toString()}`, { cache: "no-store" });
   if (!res.ok) {

@@ -342,6 +342,22 @@ export function computeSlaBand(ageHours: number): SlaBand {
   return "RED";
 }
 
+/**
+ * The RED-band cutoff timestamp for `breachedOnly` filtering (§ new
+ * `listQueue({ breachedOnly })` param) — an item is breached iff its
+ * per-item "submitted" timestamp is `<= slaRedCutoff(now)`, exactly
+ * equivalent to `computeSlaBand(computeAgeHours(submittedAt, now)) === "RED"`
+ * but expressed as a `WHERE`-able Date so each kind's list function can push
+ * the filter down to the database instead of fetching a page and discarding
+ * rows in JS. Same formula `getQueueHealth` already uses for its own
+ * `redCutoff` local — pulled out here so both call sites can never drift
+ * apart on the cutoff math itself (they still read different columns per
+ * kind — see each `list*Queue` function's own comment on this).
+ */
+function slaRedCutoff(now: Date): Date {
+  return new Date(now.getTime() - QUEUE_RANKING.sla.amberUnderHours * 60 * 60 * 1000);
+}
+
 function computeAgeFactor(ageHours: number): number {
   return 1 + ageHours * QUEUE_RANKING.rank.ageFactor.perHourGrowth;
 }
@@ -509,6 +525,16 @@ export type QueueListParams = {
   search?: string;
   cursor?: QueueCursor;
   limit: number;
+  /**
+   * When true, restrict the page to items whose SLA band is RED — i.e.
+   * whose per-item age (using the SAME "submitted" field each kind already
+   * ranks/displays by, NOT `getQueueHealth`'s `updatedAt`-only shortcut) is
+   * `>= QUEUE_RANKING.sla.amberUnderHours`. Filtered at the database level
+   * (see `slaRedCutoff`) — it composes with `status`/`search`/`cursor`
+   * exactly like another `WHERE` clause, so pagination through a
+   * breached-only view walks only breached rows, page after page.
+   */
+  breachedOnly?: boolean;
 };
 
 export type QueueListResult = { items: QueueItem[]; nextCursor: QueueCursor | null };
@@ -521,7 +547,8 @@ export const MAX_QUEUE_LIST_LIMIT = 100;
 // ============================================================================
 
 async function listCompanyQueue(params: QueueListParams): Promise<QueueListResult> {
-  const { status, search, cursor, limit } = params;
+  const { status, search, cursor, limit, breachedOnly } = params;
+  const now = new Date();
 
   const where: Prisma.CompanyWhereInput = {
     ...(status ? { verifiedStatus: status } : {}),
@@ -542,6 +569,10 @@ async function listCompanyQueue(params: QueueListParams): Promise<QueueListResul
           ],
         }
       : {}),
+    // COMPANY's own "submitted" field IS `updatedAt` (see the module doc
+    // comment and this row's own `submittedAt: row.updatedAt` below) — no
+    // null-coalesce needed, unlike JOB/REVIEW.
+    ...(breachedOnly ? { updatedAt: { lte: slaRedCutoff(now) } } : {}),
   };
 
   const rows = await prisma.company.findMany({
@@ -567,7 +598,6 @@ async function listCompanyQueue(params: QueueListParams): Promise<QueueListResul
     batchCompanyLiveJobCounts(companyIds),
   ]);
 
-  const now = new Date();
   const items: QueueItem[] = page.map((row) => {
     const ageHours = computeAgeHours(row.updatedAt, now);
     const reach = liveJobCounts.get(row.id) ?? 0;
@@ -625,7 +655,8 @@ async function listCompanyQueue(params: QueueListParams): Promise<QueueListResul
 // ============================================================================
 
 async function listSeekerQueue(params: QueueListParams): Promise<QueueListResult> {
-  const { status, search, cursor, limit } = params;
+  const { status, search, cursor, limit, breachedOnly } = params;
+  const now = new Date();
 
   const where: Prisma.SeekerProfileWhereInput = {
     idVerificationStatus: status ?? { not: null },
@@ -645,6 +676,9 @@ async function listSeekerQueue(params: QueueListParams): Promise<QueueListResult
           ],
         }
       : {}),
+    // SEEKER's own "submitted" field IS `updatedAt` (see this row's own
+    // `submittedAt: row.updatedAt` below) — no null-coalesce needed.
+    ...(breachedOnly ? { updatedAt: { lte: slaRedCutoff(now) } } : {}),
   };
 
   const rows = await prisma.seekerProfile.findMany({
@@ -669,7 +703,6 @@ async function listSeekerQueue(params: QueueListParams): Promise<QueueListResult
     batchSeekerApplicationCounts(seekerIds),
   ]);
 
-  const now = new Date();
   const items: QueueItem[] = page.map((row) => {
     const ageHours = computeAgeHours(row.updatedAt, now);
     const reach = applicationCounts.get(row.id) ?? 0;
@@ -751,7 +784,8 @@ function jobQueueStatus(status: string, reviewRejectionReason: string | null): Q
 }
 
 async function listJobQueue(params: QueueListParams): Promise<QueueListResult> {
-  const { status, search, cursor, limit } = params;
+  const { status, search, cursor, limit, breachedOnly } = params;
+  const now = new Date();
 
   const where: Prisma.JobWhereInput = {
     ...jobQueueStatusWhere(status),
@@ -769,6 +803,26 @@ async function listJobQueue(params: QueueListParams): Promise<QueueListResult> {
           OR: [
             { updatedAt: { gt: cursor.updatedAt } },
             { updatedAt: cursor.updatedAt, id: { gt: cursor.id } },
+          ],
+        }
+      : {}),
+    // JOB's own "submitted" field is `pendingReviewAt ?? updatedAt` (see this
+    // row's own `submittedAt = row.pendingReviewAt ?? row.updatedAt` below,
+    // NOT `getQueueHealth`'s `updatedAt`-only shortcut). Expressed here as a
+    // nested `AND: [{ OR: [...] }]` — a top-level `OR` key already exists
+    // above for `search`/`cursor`; a second top-level `OR` key would silently
+    // overwrite one of those (plain JS object key collision) rather than
+    // combine with it, so this is wrapped in its own `AND` array element
+    // instead, which Prisma always ANDs against every other top-level key.
+    ...(breachedOnly
+      ? {
+          AND: [
+            {
+              OR: [
+                { pendingReviewAt: { lte: slaRedCutoff(now) } },
+                { pendingReviewAt: null, updatedAt: { lte: slaRedCutoff(now) } },
+              ],
+            },
           ],
         }
       : {}),
@@ -807,7 +861,6 @@ async function listJobQueue(params: QueueListParams): Promise<QueueListResult> {
     batchCategorySalaryStats(categories),
   ]);
 
-  const now = new Date();
   const items: QueueItem[] = page.map((row) => {
     // Display age prefers the precise "entered review" stamp when present;
     // the cursor/sort key above always uses `updatedAt` (see module doc
@@ -905,7 +958,8 @@ function reviewQueueStatus(status: string): QueueStatus {
 }
 
 async function listReviewQueue(params: QueueListParams): Promise<QueueListResult> {
-  const { status, search, cursor, limit } = params;
+  const { status, search, cursor, limit, breachedOnly } = params;
+  const now = new Date();
 
   const where: Prisma.ReviewWhereInput = {
     ...reviewQueueStatusWhere(status),
@@ -925,6 +979,22 @@ async function listReviewQueue(params: QueueListParams): Promise<QueueListResult
           OR: [
             { updatedAt: { gt: cursor.updatedAt } },
             { updatedAt: cursor.updatedAt, id: { gt: cursor.id } },
+          ],
+        }
+      : {}),
+    // REVIEW's own "submitted" field is `disputedAt ?? updatedAt` (see this
+    // row's own `submittedAt = row.disputedAt ?? row.updatedAt` below) — same
+    // `AND: [{ OR: [...] }]` wrapping as JOB above, and for the same reason
+    // (a second top-level `OR` key would overwrite the `search`/`cursor` one).
+    ...(breachedOnly
+      ? {
+          AND: [
+            {
+              OR: [
+                { disputedAt: { lte: slaRedCutoff(now) } },
+                { disputedAt: null, updatedAt: { lte: slaRedCutoff(now) } },
+              ],
+            },
           ],
         }
       : {}),
@@ -967,7 +1037,6 @@ async function listReviewQueue(params: QueueListParams): Promise<QueueListResult
     batchSeekerApplicationCounts(seekerIds),
   ]);
 
-  const now = new Date();
   const items: QueueItem[] = page.map((row) => {
     const submittedAt = row.disputedAt ?? row.updatedAt;
     const ageHours = computeAgeHours(submittedAt, now);
@@ -1259,13 +1328,20 @@ export function buildReportSeveritySignals(input: {
 }
 
 async function listReportQueue(params: QueueListParams): Promise<QueueListResult> {
-  const { status, search, cursor, limit } = params;
+  const { status, search, cursor, limit, breachedOnly } = params;
+  const now = new Date();
 
+  // REPORT's own "submitted" field is `createdAt` (see this row's own
+  // `submittedAt: row.createdAt` below and `AbuseReport`'s lack of an
+  // `updatedAt` column, per `listAbuseReports`'s own doc comment) — no
+  // null-coalesce needed, so this is a single `lte` passed straight through
+  // rather than the `AND: [{ OR: [...] }]` shape JOB/REVIEW need.
   const { reports, nextCursor } = await listAbuseReports({
     status,
     search,
     cursor,
     limit,
+    breachedBefore: breachedOnly ? slaRedCutoff(now) : undefined,
   });
 
   const [targetSignals, reporterCounts, reporterEmails] = await Promise.all([
@@ -1274,7 +1350,6 @@ async function listReportQueue(params: QueueListParams): Promise<QueueListResult
     batchAdminEmails(Array.from(new Set(reports.map((r) => r.reporterUserId)))),
   ]);
 
-  const now = new Date();
   const items: QueueItem[] = reports.map((row) => {
     const ageHours = computeAgeHours(row.createdAt, now);
     const key = `${row.targetType}::${row.targetId}`;
@@ -1430,9 +1505,18 @@ export async function listQueue(input: {
   search?: string;
   cursor?: QueueCursor;
   limit?: number;
+  /** See `QueueListParams.breachedOnly`'s doc comment. */
+  breachedOnly?: boolean;
 }): Promise<QueueListResult> {
   const limit = Math.min(Math.max(input.limit ?? DEFAULT_QUEUE_LIST_LIMIT, 1), MAX_QUEUE_LIST_LIMIT);
-  const params: QueueListParams = { kind: input.kind, status: input.status, search: input.search, cursor: input.cursor, limit };
+  const params: QueueListParams = {
+    kind: input.kind,
+    status: input.status,
+    search: input.search,
+    cursor: input.cursor,
+    limit,
+    breachedOnly: input.breachedOnly,
+  };
 
   switch (input.kind) {
     case "COMPANY":
