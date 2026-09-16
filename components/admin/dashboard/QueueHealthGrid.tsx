@@ -40,15 +40,41 @@ export default function QueueHealthGrid({ queueHealth }: { queueHealth: QueueHea
         const depth = health?.depth ?? 0;
         const breaches = health?.slaBreaches ?? 0;
 
+        // A queue with real pending work gets full visual weight (white
+        // card, colored left-edge matching its own icon color) and an empty
+        // queue recedes (mist background, lower-contrast text) — otherwise
+        // all five tiles read identically regardless of whether there's
+        // anything to look at, which buries the one queue that actually
+        // needs attention among four that don't.
+        const hasWork = depth > 0;
+
         return (
           <Link
             key={kind}
             href={nav?.href ?? "/admin/queues"}
-            className="group flex flex-col gap-3 rounded-2xl border border-ink/5 bg-white p-4 shadow-xs transition-shadow hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy admin-dark:border-white/10 admin-dark:bg-white/5"
+            className={`group flex flex-col gap-3 rounded-2xl border p-4 transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy ${
+              hasWork
+                ? `border-ink/5 border-l-[3px] bg-white shadow-xs hover:shadow-sm admin-dark:border-white/10 admin-dark:bg-white/5 ${
+                    iconColor === "text-teal"
+                      ? "border-l-teal admin-dark:border-l-teal"
+                      : iconColor === "text-marigold"
+                        ? "border-l-marigold admin-dark:border-l-marigold"
+                        : "border-l-navy admin-dark:border-l-teal"
+                  }`
+                : "border-ink/5 bg-mist/40 admin-dark:border-white/8 admin-dark:bg-white/[0.02]"
+            }`}
           >
             <div className="flex items-center justify-between gap-2">
-              <span className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-ink/55 admin-dark:text-mist/55">
-                <Icon className={`h-3.5 w-3.5 shrink-0 ${iconColor}`} strokeWidth={2} aria-hidden="true" />
+              <span
+                className={`inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider ${
+                  hasWork ? "text-ink/55 admin-dark:text-mist/55" : "text-ink/35 admin-dark:text-mist/30"
+                }`}
+              >
+                <Icon
+                  className={`h-3.5 w-3.5 shrink-0 ${hasWork ? iconColor : "text-ink/25 admin-dark:text-mist/25"}`}
+                  strokeWidth={2}
+                  aria-hidden="true"
+                />
                 {nav?.label ?? kind}
               </span>
               {breaches > 0 && (
@@ -63,7 +89,13 @@ export default function QueueHealthGrid({ queueHealth }: { queueHealth: QueueHea
             </div>
 
             <div>
-              <p className="font-data text-3xl font-bold text-ink admin-dark:text-mist">{depth}</p>
+              <p
+                className={`font-data text-3xl font-bold ${
+                  hasWork ? "text-ink admin-dark:text-mist" : "text-ink/30 admin-dark:text-mist/30"
+                }`}
+              >
+                {depth}
+              </p>
               <p className="text-xs text-ink/45 admin-dark:text-mist/45">pending</p>
             </div>
 

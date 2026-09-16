@@ -25,11 +25,19 @@ function formatTimestamp(date: Date): string {
 
 export default function RecentOverturnsPanel({ overturns }: { overturns: RecentOverturn[] }) {
   if (overturns.length === 0) {
+    // Kept visually distinct from the dashed "we don't have this data"
+    // language elsewhere on this page (MetricSparklineTile, MoneyBandCard,
+    // TodayDecisionsPanel) — this state means something different. A solid
+    // Teal-tinted note, not gray, is the point: zero overturns is a real,
+    // positive result worth registering at a glance, not an absence to
+    // apologize for.
     return (
-      <p className="flex items-center gap-2 rounded-2xl border border-ink/5 bg-mist/60 px-4 py-6 text-sm text-ink/50 admin-dark:border-white/10 admin-dark:bg-white/5 admin-dark:text-mist/50">
-        <RotateCcw className="h-4 w-4 shrink-0 text-ink/30 admin-dark:text-mist/35" aria-hidden="true" />
-        No overturns recorded — no rejected decision has been reversed on appeal.
-      </p>
+      <div className="flex items-center gap-2.5 rounded-xl border border-teal/15 bg-teal/5 px-4 py-3 admin-dark:border-teal/25 admin-dark:bg-teal/10">
+        <RotateCcw className="h-4 w-4 shrink-0 text-teal" aria-hidden="true" />
+        <p className="text-xs font-medium text-ink/70 admin-dark:text-mist/80">
+          No overturns recorded — no rejected decision has been reversed on appeal.
+        </p>
+      </div>
     );
   }
 

@@ -131,11 +131,15 @@ export default function MetricSparklineTile({
   }`;
 
   return (
-    <div className="rounded-2xl border border-ink/5 bg-white p-4 admin-dark:border-white/10 admin-dark:bg-white/5">
+    // A real, computed value earns a colored left-edge and a bigger numeral
+    // — the null tile above stays deliberately quiet (dashed, muted), so
+    // this needs to visibly outweigh it, not read at the same weight. Navy
+    // (light) / Teal (dark) matches the sparkline's own stroke color family.
+    <div className="rounded-2xl border border-ink/5 border-l-[3px] border-l-navy bg-white p-4 admin-dark:border-white/10 admin-dark:border-l-teal admin-dark:bg-white/5">
       <p className="text-[10px] font-semibold uppercase tracking-wider text-ink/45 admin-dark:text-mist/45">
         {label}
       </p>
-      <p className="mt-1 font-data text-2xl font-bold text-ink admin-dark:text-mist">{formattedValue}</p>
+      <p className="mt-1 font-data text-3xl font-bold text-ink admin-dark:text-mist">{formattedValue}</p>
       {sampleSizeText && <p className="text-xs text-ink/45 admin-dark:text-mist/45">{sampleSizeText}</p>}
 
       {hasEnoughHistory ? (

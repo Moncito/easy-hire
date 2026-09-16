@@ -62,11 +62,17 @@ export default function TodayDecisionsPanel({ stats }: { stats: DecisionStats })
   const totalDecisions = byAdmin.reduce((sum, a) => sum + a.total, 0);
 
   if (byAdmin.length === 0) {
+    // Same dashed "informational, not broken" language as
+    // MetricSparklineTile.tsx's null state and MoneyBandCard.tsx — every
+    // "there's genuinely nothing here" moment on this page should read as
+    // one consistent visual idea, not a fourth ad-hoc empty state.
     return (
-      <p className="flex items-center gap-2 rounded-2xl border border-ink/5 bg-mist/60 px-4 py-6 text-sm text-ink/50 admin-dark:border-white/10 admin-dark:bg-white/5 admin-dark:text-mist/50">
-        <Gauge className="h-4 w-4 shrink-0 text-ink/30 admin-dark:text-mist/35" aria-hidden="true" />
-        No approvals, rejections, or verifications recorded yet today.
-      </p>
+      <div className="flex items-center gap-2.5 rounded-xl border border-dashed border-ink/15 bg-mist/40 px-4 py-3 admin-dark:border-white/15 admin-dark:bg-white/5">
+        <Gauge className="h-4 w-4 shrink-0 text-ink/35 admin-dark:text-mist/40" aria-hidden="true" />
+        <p className="text-xs text-ink/55 admin-dark:text-mist/55">
+          No approvals, rejections, or verifications recorded yet today.
+        </p>
+      </div>
     );
   }
 

@@ -19,7 +19,7 @@
  * docs/ADMIN-UI-UPGRADE.md's "Your suggestions" section.
  */
 
-export type StatTileTone = "default" | "muted" | "warn";
+export type StatTileTone = "default" | "muted" | "warn" | "teal" | "marigold";
 
 export function StatTile({
   label,
@@ -30,12 +30,20 @@ export function StatTile({
   value: React.ReactNode;
   tone?: StatTileTone;
 }) {
+  // "teal"/"marigold" need no `admin-dark:` override — same precedent as the
+  // sidebar's semantic icon colors (AdminSidebar.tsx), which stay
+  // full-strength unchanged in both themes because they're already
+  // high-contrast accent hues, not low-opacity neutral text.
   const toneClass =
     tone === "warn"
       ? "text-ember"
-      : tone === "muted"
-        ? "text-ink/45 admin-dark:text-mist/45"
-        : "text-ink admin-dark:text-mist";
+      : tone === "teal"
+        ? "text-teal"
+        : tone === "marigold"
+          ? "text-marigold"
+          : tone === "muted"
+            ? "text-ink/45 admin-dark:text-mist/45"
+            : "text-ink admin-dark:text-mist";
   return (
     <div className="rounded-xl border border-ink/5 bg-mist/60 px-4 py-3 admin-dark:border-white/10 admin-dark:bg-white/5">
       <p className="text-[10px] font-semibold uppercase tracking-wider text-ink/45 admin-dark:text-mist/45">{label}</p>

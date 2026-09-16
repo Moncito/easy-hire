@@ -89,8 +89,11 @@ export default function MarketplacePulseBand({ pulse }: { pulse: MarketplacePuls
           Active supply / demand
         </h3>
         <div className="grid gap-3 sm:grid-cols-3">
-          <StatTile label="Active seekers" value={activeSupplyDemand.activeSeekers.toLocaleString()} />
-          <StatTile label="Active jobs" value={activeSupplyDemand.activeJobs.toLocaleString()} />
+          {/* Marigold (seeker-side) / Teal (employer-side) — ties this band
+              back to the same semantic color system the sidebar already
+              established, instead of every number defaulting to plain ink. */}
+          <StatTile label="Active seekers" value={activeSupplyDemand.activeSeekers.toLocaleString()} tone="marigold" />
+          <StatTile label="Active jobs" value={activeSupplyDemand.activeJobs.toLocaleString()} tone="teal" />
           <StatTile
             label="Seekers per job"
             value={activeSupplyDemand.ratio === null ? "n/a" : formatRatio(activeSupplyDemand.ratio)}
