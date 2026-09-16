@@ -19,12 +19,18 @@ const SLA_COPY: Record<SlaBand, { label: string; sub: string }> = {
 
 export default function SlaBadge({ slaBand, dense = false }: { slaBand: SlaBand; dense?: boolean }) {
   const copy = SLA_COPY[slaBand];
+  // Ember (RED) is already a solid, high-contrast fill in light mode and
+  // needs no dark-mode adjustment (same note as AdminHeader.tsx's own
+  // pending-count badge). GREEN/AMBER's light-mode tones both lose contrast
+  // on the dark surface (`#1B1F26`) the same way AdminSidebar.tsx's navy
+  // active-state highlight does — swapped for a lighter fill + lighter text
+  // in dark mode for the same reason, not a new color outside the palette.
   const classes =
     slaBand === "RED"
       ? "bg-ember/10 text-ember"
       : slaBand === "AMBER"
-        ? "bg-marigold/15 text-[#8a5a10]"
-        : "bg-navy/8 text-navy";
+        ? "bg-marigold/15 text-[#8a5a10] admin-dark:bg-marigold/25 admin-dark:text-marigold"
+        : "bg-navy/8 text-navy admin-dark:bg-navy/25 admin-dark:text-mist";
   const Icon = slaBand === "RED" ? AlertTriangle : slaBand === "AMBER" ? Clock : CheckCircle2;
 
   return (

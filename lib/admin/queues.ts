@@ -1328,6 +1328,99 @@ async function listReportQueue(params: QueueListParams): Promise<QueueListResult
 }
 
 // ============================================================================
+// getRecentOverturns — a bounded, recent LIST of overturned decisions.
+// docs/ADMIN-CONSOLE-PLAN.md §4.1 Band 3 asks for "recent overturns (a
+// decision reversed on appeal) — the quality signal, not the volume signal",
+// which `getDecisionStats().overturns` cannot answer on its own: that object
+// is an aggregate rate/count, with no per-decision detail. Same self-join
+// definition as `getDecisionStats`'s own `overturnRows` (a REJECT-family
+// action followed by a LATER APPROVE-family action on the identical
+// (targetType, targetId) pair), reusing the same REJECT_ACTIONS/
+// APPROVE_ACTIONS constants — not a second definition of "overturn".
+// ============================================================================
+
+type RecentOverturnRow = {
+  target_type: string;
+  target_id: string;
+  original_admin_user_id: string;
+  original_action: string;
+  original_decided_at: Date;
+  overturn_admin_user_id: string;
+  overturn_action: string;
+  overturned_at: Date;
+};
+
+export type RecentOverturn = {
+  targetType: string;
+  targetId: string;
+  originalAction: AdminAuditAction;
+  /** Nullable — same "admin account can be gone, audit trail outlives it" reasoning as `AdminDecisionStat.adminEmail`. */
+  originalAdminUserId: string;
+  originalAdminEmail: string | null;
+  originalDecidedAt: Date;
+  overturnAction: AdminAuditAction;
+  overturnAdminUserId: string;
+  overturnAdminEmail: string | null;
+  overturnedAt: Date;
+};
+
+/** Default/max bound for `getRecentOverturns` — a Home-dashboard tile, never an unbounded audit scan. */
+export const DEFAULT_RECENT_OVERTURNS_LIMIT = 20;
+const MAX_RECENT_OVERTURNS_LIMIT = 100;
+
+export async function getRecentOverturns(limit = DEFAULT_RECENT_OVERTURNS_LIMIT): Promise<RecentOverturn[]> {
+  const boundedLimit = Math.min(Math.max(limit, 1), MAX_RECENT_OVERTURNS_LIMIT);
+
+  // `DISTINCT ON (target_type, target_id)` collapses a target with more than
+  // one reject/approve cycle down to its MOST RECENT overturn (ordered by the
+  // overturning approval's timestamp, tie-broken by the original rejection's
+  // timestamp) before the outer query re-sorts across targets and caps the
+  // page — never an unbounded cross-target scan.
+  const rows = await prisma.$queryRaw<RecentOverturnRow[]>`
+    WITH overturns AS (
+      SELECT DISTINCT ON (r.target_type, r.target_id)
+             r.target_type AS target_type,
+             r.target_id AS target_id,
+             r.admin_user_id AS original_admin_user_id,
+             r.action AS original_action,
+             r.created_at AS original_decided_at,
+             a.admin_user_id AS overturn_admin_user_id,
+             a.action AS overturn_action,
+             a.created_at AS overturned_at
+      FROM admin_audit_logs r
+      JOIN admin_audit_logs a
+        ON a.target_type = r.target_type
+       AND a.target_id = r.target_id
+       AND a.action = ANY(${APPROVE_ACTIONS})
+       AND a.created_at > r.created_at
+      WHERE r.action = ANY(${REJECT_ACTIONS})
+      ORDER BY r.target_type, r.target_id, a.created_at DESC, r.created_at DESC
+    )
+    SELECT * FROM overturns
+    ORDER BY overturned_at DESC
+    LIMIT ${boundedLimit}
+  `;
+
+  const adminIds = Array.from(
+    new Set(rows.flatMap((r) => [r.original_admin_user_id, r.overturn_admin_user_id]))
+  );
+  const adminEmails = await batchAdminEmails(adminIds);
+
+  return rows.map((row) => ({
+    targetType: row.target_type,
+    targetId: row.target_id,
+    originalAction: row.original_action as AdminAuditAction,
+    originalAdminUserId: row.original_admin_user_id,
+    originalAdminEmail: adminEmails.get(row.original_admin_user_id) ?? null,
+    originalDecidedAt: row.original_decided_at,
+    overturnAction: row.overturn_action as AdminAuditAction,
+    overturnAdminUserId: row.overturn_admin_user_id,
+    overturnAdminEmail: adminEmails.get(row.overturn_admin_user_id) ?? null,
+    overturnedAt: row.overturned_at,
+  }));
+}
+
+// ============================================================================
 // Public entry point — dispatches to the kind-specific fetcher above.
 // ============================================================================
 

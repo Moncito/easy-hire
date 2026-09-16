@@ -16,12 +16,15 @@ import {
   ScrollText,
   Activity,
   Flag,
-  AlertOctagon,
   PanelLeftClose,
   PanelLeftOpen,
 } from "lucide-react";
 import { useSignOut } from "@/components/ui/useSignOut";
-import { ADMIN_QUEUE_NAV_ITEMS as queueItems } from "./adminQueueNav";
+import {
+  ADMIN_QUEUE_NAV_ITEMS as queueItems,
+  QUEUE_ICON_COLOR,
+  QUEUE_KIND_ICON,
+} from "./adminQueueNav";
 import type { QueueKind } from "@/lib/admin/queues";
 
 /**
@@ -88,22 +91,6 @@ const ICON_COLOR = {
   teal: "text-teal",
   marigold: "text-marigold",
 } as const;
-
-const QUEUE_ICON_COLOR: Record<QueueKind, string> = {
-  COMPANY: ICON_COLOR.teal,
-  SEEKER: ICON_COLOR.marigold,
-  JOB: ICON_COLOR.teal,
-  REVIEW: ICON_COLOR.navy,
-  REPORT: ICON_COLOR.navy,
-};
-
-const QUEUE_KIND_ICON: Record<QueueKind, typeof Building2> = {
-  COMPANY: Building2,
-  SEEKER: Users,
-  JOB: Briefcase,
-  REVIEW: ScrollText,
-  REPORT: AlertOctagon,
-};
 
 type QueueHealthEntry = { kind: QueueKind; depth: number; slaBreaches: number };
 

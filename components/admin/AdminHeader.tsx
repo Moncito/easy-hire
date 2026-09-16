@@ -156,27 +156,44 @@ export default function AdminHeader({ identity }: { identity: AdminHeaderIdentit
   const panelRef = useRef<HTMLDivElement>(null);
   const panelId = useId();
 
+  // Refetches on every route change, not just the mount + 60s interval — an
+  // admin who just resolved a queue item and navigated away would otherwise
+  // see this bell disagree with AdminSidebar.tsx's own badges (which DO
+  // refetch on `pathname` change) for up to a minute. Found exactly this
+  // discrepancy live: the sidebar correctly showed 1 pending while this bell
+  // still showed a stale 3 from before two items were actioned.
   useEffect(() => {
     let cancelled = false;
-    const run = () => {
+    fetch("/api/admin/queues/health", { cache: "no-store" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((body: { health: QueueHealthEntry[] } | null) => {
+        if (cancelled || !body) return;
+        setHealth(body.health);
+        const total = body.health.reduce((sum, h) => sum + h.depth, 0);
+        setStatusMessage(total > 0 ? `${total} item${total === 1 ? "" : "s"} pending across queues` : "");
+      })
+      .catch(() => {
+        // A missed refresh isn't worth surfacing as an error — the next
+        // navigation or the interval below retries.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [pathname]);
+
+  useEffect(() => {
+    const interval = window.setInterval(() => {
       fetch("/api/admin/queues/health", { cache: "no-store" })
         .then((res) => (res.ok ? res.json() : null))
         .then((body: { health: QueueHealthEntry[] } | null) => {
-          if (cancelled || !body) return;
+          if (!body) return;
           setHealth(body.health);
           const total = body.health.reduce((sum, h) => sum + h.depth, 0);
           setStatusMessage(total > 0 ? `${total} item${total === 1 ? "" : "s"} pending across queues` : "");
         })
-        .catch(() => {
-          // Next poll retries — a missed refresh isn't worth surfacing as an error.
-        });
-    };
-    run();
-    const interval = window.setInterval(run, PENDING_POLL_MS);
-    return () => {
-      cancelled = true;
-      window.clearInterval(interval);
-    };
+        .catch(() => {});
+    }, PENDING_POLL_MS);
+    return () => window.clearInterval(interval);
   }, []);
 
   useEffect(() => {

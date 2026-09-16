@@ -30,10 +30,15 @@ export function StatTile({
   value: React.ReactNode;
   tone?: StatTileTone;
 }) {
-  const toneClass = tone === "warn" ? "text-ember" : tone === "muted" ? "text-ink/45" : "text-ink";
+  const toneClass =
+    tone === "warn"
+      ? "text-ember"
+      : tone === "muted"
+        ? "text-ink/45 admin-dark:text-mist/45"
+        : "text-ink admin-dark:text-mist";
   return (
-    <div className="rounded-xl border border-ink/5 bg-mist/60 px-4 py-3">
-      <p className="text-[10px] font-semibold uppercase tracking-wider text-ink/45">{label}</p>
+    <div className="rounded-xl border border-ink/5 bg-mist/60 px-4 py-3 admin-dark:border-white/10 admin-dark:bg-white/5">
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-ink/45 admin-dark:text-mist/45">{label}</p>
       <p className={`mt-1 font-data text-xl font-bold ${toneClass}`}>{value}</p>
     </div>
   );
@@ -41,9 +46,9 @@ export function StatTile({
 
 export function StatTileCompact({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="rounded-xl bg-mist/60 px-3 py-2.5">
-      <p className="text-[10px] font-bold uppercase tracking-wider text-ink/40">{label}</p>
-      <p className="mt-0.5 font-data text-lg font-semibold text-ink">{value}</p>
+    <div className="rounded-xl bg-mist/60 px-3 py-2.5 admin-dark:bg-white/5">
+      <p className="text-[10px] font-bold uppercase tracking-wider text-ink/40 admin-dark:text-mist/40">{label}</p>
+      <p className="mt-0.5 font-data text-lg font-semibold text-ink admin-dark:text-mist">{value}</p>
     </div>
   );
 }

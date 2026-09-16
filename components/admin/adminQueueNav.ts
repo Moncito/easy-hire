@@ -1,3 +1,4 @@
+import { Building2, Users, Briefcase, ScrollText, AlertOctagon } from "lucide-react";
 import type { QueueKind } from "@/lib/admin/queues";
 
 /**
@@ -16,3 +17,31 @@ export const ADMIN_QUEUE_NAV_ITEMS: { kind: QueueKind; label: string; href: stri
   { kind: "REVIEW", label: "Reviews", href: "/admin/queues/reviews" },
   { kind: "REPORT", label: "Reports", href: "/admin/queues/reports" },
 ];
+
+/**
+ * Semantic icon color per queue kind — Teal for employer/company-side
+ * content, Marigold for seeker-side content, Navy for shared/structural
+ * content (reviews and reports touch both sides). Relocated here from
+ * `AdminSidebar.tsx` (docs/ADMIN-CONSOLE-PLAN.md admin-home task, "one
+ * shared module, not two independently-typed copies") — `app/admin/
+ * dashboard/page.tsx`'s Band 3 queue-health tiles need the exact same
+ * icon+color treatment the sidebar already uses, and duplicating this map a
+ * third time would have been the same mistake `ADMIN_QUEUE_NAV_ITEMS` itself
+ * was extracted to prevent.
+ */
+export const QUEUE_ICON_COLOR: Record<QueueKind, string> = {
+  COMPANY: "text-teal",
+  SEEKER: "text-marigold",
+  JOB: "text-teal",
+  REVIEW: "text-navy",
+  REPORT: "text-navy",
+};
+
+/** Relocated from `AdminSidebar.tsx` alongside `QUEUE_ICON_COLOR` — see that constant's doc comment. */
+export const QUEUE_KIND_ICON: Record<QueueKind, typeof Building2> = {
+  COMPANY: Building2,
+  SEEKER: Users,
+  JOB: Briefcase,
+  REVIEW: ScrollText,
+  REPORT: AlertOctagon,
+};

@@ -103,6 +103,84 @@ export function computeResponseMetrics(
   return { responseRate, medianResponseMinutes, sampleSize };
 }
 
+// ============================================================================
+// PLATFORM-WIDE "RESPONSE RATE 72H" — docs/ADMIN-CONSOLE-PLAN.md §4.1 Band 1
+// ("% of applications with an employer status change or message within 72h").
+// This is a DIFFERENT metric from `computeResponseMetrics` above, not a
+// duplicate: that one measures "did the employer ever respond" over a
+// 90-day/no-time-cap company-level window (anti-ghosting for one company's
+// public profile); this one measures "did the employer respond WITHIN 72
+// HOURS specifically" as a platform-wide anti-ghosting headline number
+// (docs/ADMIN-CONSOLE-PLAN.md §4.1 Band 1). Both are built on the exact same
+// underlying signal (`Application.firstEmployerResponseAt`) and both apply
+// the same "don't judge too early" discipline, just with a 72-hour grace
+// window instead of a 7-day one — kept in this file because it owns that
+// signal's windowing rules, not duplicated at the call site
+// (lib/admin/home-dashboard.ts).
+// ============================================================================
+
+/** The window this metric measures against — 72 hours, per §4.1's own text. */
+export const RESPONSE_RATE_72H_WINDOW_HOURS = 72;
+const RESPONSE_RATE_72H_WINDOW_MS = RESPONSE_RATE_72H_WINDOW_HOURS * 60 * 60 * 1000;
+
+export type ResponseRate72hResult = {
+  /** Fraction (0..1), NOT a percentage — matches `PlatformDailyRollupMetrics.fillRate.rate`'s convention in lib/admin/rollups.ts, since both live in the same Band 1 tile row. */
+  responseRate: number | null;
+  sampleSize: number;
+};
+
+/**
+ * Pure — no Prisma import, unit-testable in isolation, same convention as
+ * `computeResponseMetrics` above.
+ *
+ * An application is DETERMINED (counts toward the denominator) once one of
+ * two things is true:
+ *   - it already has a response, at any elapsed time — a response that took
+ *     longer than 72h is already a known "no" for this metric, and one that
+ *     came within 72h is already a known "yes"; either way waiting longer
+ *     changes nothing about the answer.
+ *   - it has no response yet AND the full 72-hour window has already
+ *     elapsed since it was submitted — the "no, not within 72h" verdict is
+ *     final at that point even though the employer could still respond
+ *     later (that later response would just count as a "no" for this
+ *     specific metric, same as the first bullet).
+ * An application with no response and less than 72h elapsed is UNDETERMINED
+ * — still possibly a "yes" — and is excluded from both the numerator and
+ * denominator entirely, the same "don't judge too early" shape as
+ * `RESPONSE_METRICS_GRACE_DAYS` above, just with a 72-hour window instead of
+ * a 7-day one.
+ *
+ * Gated on `RESPONSE_METRICS_MIN_SAMPLE` (reused, not a second threshold
+ * defined here) for the identical reason `computeResponseMetrics` is: fewer
+ * than 5 qualifying applications and the rate is never published, only
+ * `sampleSize` is returned — never a rate computed from a handful of
+ * applications that could trivially be gamed or read as statistically
+ * meaningful when it isn't.
+ */
+export function computeResponseRate72h(
+  samples: ResponseMetricsSample[],
+  opts?: { now?: Date }
+): ResponseRate72hResult {
+  const now = opts?.now ?? new Date();
+
+  const determined = samples.filter((sample) => {
+    if (sample.firstEmployerResponseAt) return true;
+    return now.getTime() - sample.appliedAt.getTime() >= RESPONSE_RATE_72H_WINDOW_MS;
+  });
+
+  const sampleSize = determined.length;
+  if (sampleSize < RESPONSE_METRICS_MIN_SAMPLE) {
+    return { responseRate: null, sampleSize };
+  }
+
+  const respondedWithinWindow = determined.filter((sample) => {
+    if (!sample.firstEmployerResponseAt) return false;
+    return sample.firstEmployerResponseAt.getTime() - sample.appliedAt.getTime() <= RESPONSE_RATE_72H_WINDOW_MS;
+  }).length;
+
+  return { responseRate: respondedWithinWindow / sampleSize, sampleSize };
+}
+
 /** Loads one company's rolling-window applications, computes, and persists the four denormalized fields. */
 export async function recomputeCompanyResponseMetrics(companyId: string): Promise<ResponseMetricsResult> {
   const windowStart = new Date(Date.now() - WINDOW_MS);
