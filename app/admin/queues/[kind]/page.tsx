@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { requireAdminPagePermission } from "@/lib/auth/admin-session";
-import { listQueue, encodeQueueCursor, type QueueKind } from "@/lib/admin/queues";
+import { listQueue, encodeQueueCursor, getQueueKindStats, type QueueKind } from "@/lib/admin/queues";
 import {
   ABUSE_REPORT_RESOLUTION_REASON_CODES,
   COMPANY_VERIFICATION_REASON_CODES,
@@ -8,8 +8,9 @@ import {
   SEEKER_ID_REASON_CODES,
 } from "@/lib/admin/reason-codes";
 import ReviewQueue from "@/components/admin/ReviewQueue";
+import QueueKindStatTiles from "@/components/admin/queue/QueueKindStatTiles";
 import type { ReasonCodeOption } from "@/components/admin/queue/types";
-import { QUEUE_KIND_BY_SEGMENT, QUEUE_KIND_LABEL } from "../_lib/kind-map";
+import { QUEUE_KIND_BY_SEGMENT } from "../_lib/kind-map";
 
 const REASON_CODES_BY_KIND: Record<QueueKind, ReasonCodeOption[]> = {
   COMPANY: [...COMPANY_VERIFICATION_REASON_CODES],
@@ -69,21 +70,37 @@ export default async function AdminQueueKindPage({
   }
 
   const { filter } = await searchParams;
-  const { items, nextCursor } = await listQueue({
-    kind,
-    status: "PENDING",
-    limit: 25,
-    breachedOnly: filter === "breached",
-  });
+  const [{ items, nextCursor }, stats] = await Promise.all([
+    listQueue({
+      kind,
+      status: "PENDING",
+      limit: 25,
+      breachedOnly: filter === "breached",
+    }),
+    getQueueKindStats(kind),
+  ]);
   const copy = KIND_COPY[kind];
 
   return (
     <div className="mx-auto max-w-6xl">
       <div className="mb-8">
-        <p className="text-xs font-semibold uppercase tracking-wider text-ink/40">Queues / {QUEUE_KIND_LABEL[kind]}</p>
-        <h1 className="mt-1 font-display text-3xl font-bold tracking-tight text-ink">{copy.title}</h1>
-        <p className="mt-2 text-sm text-ink/55">{copy.description}</p>
+        {/* Was `Queues / ${QUEUE_KIND_LABEL[kind]}` (e.g. "Queues / Companies")
+            — near-identical to AdminHeader.tsx's pathname-derived top-bar
+            title ("Companies queue") just above it, with the H1 below
+            ("Company verifications") also overlapping in meaning. Three
+            layers said the same thing. Fix: this breadcrumb now matches its
+            sibling on the parent /admin/queues index page ("Operations /
+            Queues") instead of re-stating the specific kind — the top-bar
+            title already carries "which queue", the H1 already carries
+            "what reviewing here means", so the breadcrumb's job shrinks to
+            "which section of the console", same as every other admin page's
+            breadcrumb (see app/admin/{trust,users,system}/page.tsx). */}
+        <p className="text-xs font-semibold uppercase tracking-wider text-ink/40 admin-dark:text-mist/40">Operations / Queues</p>
+        <h1 className="mt-1 font-display text-3xl font-bold tracking-tight text-ink admin-dark:text-mist">{copy.title}</h1>
+        <p className="mt-2 text-sm text-ink/55 admin-dark:text-mist/55">{copy.description}</p>
       </div>
+
+      <QueueKindStatTiles kind={kind} stats={stats} />
 
       <ReviewQueue
         kind={kind}
@@ -92,6 +109,7 @@ export default async function AdminQueueKindPage({
         initialStatus="PENDING"
         initialFilter={filter === "breached" ? "breached" : undefined}
         reasonCodes={REASON_CODES_BY_KIND[kind]}
+        pendingCount={stats.pendingCount}
       />
     </div>
   );

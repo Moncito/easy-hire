@@ -348,6 +348,31 @@ backdrop-filter:blur(6px);
   background: rgba(30, 58, 95, 0.28);
 }
 
+/* Review pane tab strip horizontal scroll — thin, subtle (avoids heavy global bar) */
+.tab-strip-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(32, 36, 43, 0.18) transparent;
+}
+
+.tab-strip-scroll::-webkit-scrollbar {
+  height: 6px;
+  width: 6px;
+}
+
+.tab-strip-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.tab-strip-scroll::-webkit-scrollbar-thumb {
+  background: rgba(32, 36, 43, 0.15);
+  border: none;
+  border-radius: 999px;
+}
+
+.tab-strip-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(30, 58, 95, 0.35);
+}
+
 /* Fixed public header clearance — single source of truth for the floating
    pill nav (20px top offset + 56px row height + a little breathing room).
    Every layout sitting under PublicJobsHeader / SeekerPillNav / landing

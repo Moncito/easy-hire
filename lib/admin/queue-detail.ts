@@ -76,10 +76,24 @@ export type QueueItemPriorDecision = {
   adminUserId: string;
 };
 
+/**
+ * Truthful live/expired state for a job shown in the COMPANY detail's
+ * "Live Jobs" list — derived from `status` + `expiresAt`, not the raw
+ * `status` column alone, since nothing transitions a job's `status` when
+ * `expiresAt` passes (see baseActiveJobWhere in lib/jobs/public-listing.ts,
+ * the actual public-board visibility rule this is meant to reflect).
+ *
+ * - "ACTIVE_LIVE": status is ACTIVE and (no expiresAt, or it's in the future) — genuinely visible on the public board (modulo company.verifiedStatus, which the COMPANY detail already shows separately).
+ * - "ACTIVE_EXPIRED": status is still ACTIVE in the DB but expiresAt has passed — no longer visible on the public board despite the raw status.
+ * - "PENDING_REVIEW": awaiting admin approval — was never live, not an expiry state at all.
+ */
+export type JobLiveState = "ACTIVE_LIVE" | "ACTIVE_EXPIRED" | "PENDING_REVIEW";
+
 export type CompanyQueueItemDetail = {
   kind: "COMPANY";
   companyId: string;
   companyName: string;
+  logoUrl: string | null;
   industry: string | null;
   description: string | null;
   website: string | null;
@@ -87,7 +101,18 @@ export type CompanyQueueItemDetail = {
   verifiedStatus: VerificationStatus;
   verificationRejectionReason: string | null;
   trustScore: number | null;
-  jobs: { id: string; title: string; status: string }[];
+  /**
+   * Same `updatedAt`-as-pending-anchor proxy already used everywhere else in
+   * this file for this kind (see listCompanyQueue's `computeAgeHours(row.updatedAt, now)`
+   * in lib/admin/queues.ts) — NOT a dedicated "became pending" timestamp.
+   * `updatedAt` gets overwritten by the review decision itself and doesn't
+   * survive resubmission, so this can read newer than when the company
+   * actually entered the queue. A real fix (`pending_at TIMESTAMPTZ?`,
+   * restamped on transition to PENDING) is proposed but NOT YET APPROVED —
+   * see docs/build-plan.md's pending schema-changes registry.
+   */
+  submittedAt: Date;
+  jobs: { id: string; title: string; status: string; expiresAt: Date | null; liveState: JobLiveState }[];
   documents: QueueItemDocument[];
   priorDecisions: QueueItemPriorDecision[];
 };
@@ -96,6 +121,7 @@ export type SeekerQueueItemDetail = {
   kind: "SEEKER";
   seekerProfileId: string;
   fullName: string;
+  photoUrl: string | null;
   headline: string | null;
   bio: string | null;
   phone: string | null;
@@ -105,6 +131,18 @@ export type SeekerQueueItemDetail = {
   idVerificationRejectionReason: string | null;
   verificationScore: number;
   trustScore: number | null;
+  /**
+   * Same `updatedAt`-as-pending-anchor proxy already used everywhere else in
+   * this file for this kind (see listSeekerQueue's `computeAgeHours(row.updatedAt, now)`
+   * in lib/admin/queues.ts) — NOT a dedicated "became pending" timestamp.
+   * `updatedAt` gets overwritten by the review decision itself and doesn't
+   * survive resubmission, so this can read newer than when the seeker
+   * actually entered the queue. A real fix (a `pending_at`-style column,
+   * restamped on transition to pending) is proposed but NOT YET APPROVED for
+   * `companies` — see docs/build-plan.md's pending schema-changes registry;
+   * the identical gap applies here to `seeker_profiles`.
+   */
+  submittedAt: Date;
   documents: QueueItemDocument[];
   priorDecisions: QueueItemPriorDecision[];
 };
@@ -245,6 +283,19 @@ function recordDocumentViewed(adminUserId: string, targetType: string, targetId:
   recordPiiRead(adminUserId, "ID_DOCUMENT_VIEWED", targetType, targetId);
 }
 
+/**
+ * Mirrors baseActiveJobWhere's ACTIVE-visibility test (lib/jobs/public-listing.ts)
+ * on a single already-fetched job, so the COMPANY review pane can show the
+ * truth instead of the raw `status` column. Only ever called on jobs whose
+ * `status` is ACTIVE or PENDING_REVIEW (the `where` this module fetches with)
+ * — CLOSED/DRAFT jobs never reach here, so there's no state for them.
+ */
+function deriveJobLiveState(status: JobStatus, expiresAt: Date | null, now: Date): JobLiveState {
+  if (status === "PENDING_REVIEW") return "PENDING_REVIEW";
+  const stillLive = expiresAt === null || expiresAt > now;
+  return stillLive ? "ACTIVE_LIVE" : "ACTIVE_EXPIRED";
+}
+
 // ============================================================================
 // COMPANY
 // ============================================================================
@@ -255,18 +306,20 @@ async function getCompanyQueueItemDetail(adminUserId: string, companyId: string)
     select: {
       id: true,
       companyName: true,
+      logoUrl: true,
       industry: true,
       description: true,
       website: true,
       verifiedStatus: true,
       verificationRejectionReason: true,
       trustScore: true,
+      updatedAt: true,
       user: { select: { email: true } },
       // Same "live jobs" filter as lib/admin/companies.ts's listPendingCompanies —
       // the population either already visible to seekers or about to become so.
       jobs: {
         where: { status: { in: ["ACTIVE", "PENDING_REVIEW"] } },
-        select: { id: true, title: true, status: true },
+        select: { id: true, title: true, status: true, expiresAt: true },
         orderBy: { updatedAt: "desc" },
       },
       verificationDocuments: { orderBy: { uploadedAt: "desc" } },
@@ -284,10 +337,20 @@ async function getCompanyQueueItemDetail(adminUserId: string, companyId: string)
 
   const priorDecisions = await fetchPriorDecisions(TARGET_TYPE_BY_KIND.COMPANY, companyId);
 
+  const now = new Date();
+  const jobs = company.jobs.map((job) => ({
+    id: job.id,
+    title: job.title,
+    status: job.status,
+    expiresAt: job.expiresAt,
+    liveState: deriveJobLiveState(job.status, job.expiresAt, now),
+  }));
+
   return {
     kind: "COMPANY",
     companyId: company.id,
     companyName: company.companyName,
+    logoUrl: company.logoUrl,
     industry: company.industry,
     description: company.description,
     website: company.website,
@@ -295,7 +358,8 @@ async function getCompanyQueueItemDetail(adminUserId: string, companyId: string)
     verifiedStatus: company.verifiedStatus,
     verificationRejectionReason: company.verificationRejectionReason,
     trustScore: company.trustScore,
-    jobs: company.jobs,
+    submittedAt: company.updatedAt,
+    jobs,
     documents,
     priorDecisions,
   };
@@ -311,6 +375,7 @@ async function getSeekerQueueItemDetail(adminUserId: string, seekerProfileId: st
     select: {
       id: true,
       fullName: true,
+      photoUrl: true,
       headline: true,
       bio: true,
       phone: true,
@@ -319,6 +384,7 @@ async function getSeekerQueueItemDetail(adminUserId: string, seekerProfileId: st
       idVerificationRejectionReason: true,
       verificationScore: true,
       trustScore: true,
+      updatedAt: true,
       user: { select: { email: true } },
       identityDocuments: { orderBy: { uploadedAt: "desc" } },
     },
@@ -339,6 +405,7 @@ async function getSeekerQueueItemDetail(adminUserId: string, seekerProfileId: st
     kind: "SEEKER",
     seekerProfileId: profile.id,
     fullName: profile.fullName,
+    photoUrl: profile.photoUrl,
     headline: profile.headline,
     bio: profile.bio,
     phone: profile.phone,
@@ -348,6 +415,7 @@ async function getSeekerQueueItemDetail(adminUserId: string, seekerProfileId: st
     idVerificationRejectionReason: profile.idVerificationRejectionReason,
     verificationScore: profile.verificationScore,
     trustScore: profile.trustScore,
+    submittedAt: profile.updatedAt,
     documents,
     priorDecisions,
   };

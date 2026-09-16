@@ -1,6 +1,7 @@
 import type { Prisma, VerificationStatus, ReviewDirection, SalaryPeriod } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import type { AdminAuditAction } from "@/lib/admin/audit";
+import { median } from "@/lib/admin/rollups";
 import {
   listAbuseReports,
   ABUSE_REPORT_REASONS_BY_TARGET_TYPE,
@@ -1749,5 +1750,176 @@ export async function getDecisionStats(input?: { since?: Date }): Promise<Decisi
       totalRejectDecisions,
       overturnRate: totalRejectDecisions > 0 ? totalOverturns / totalRejectDecisions : null,
     },
+  };
+}
+
+// ============================================================================
+// getQueueKindStats — the four admin-console stat tiles ("Pending review",
+// "SLA breached", "Median time to decision", "Approved this week") for ONE
+// queue kind. Built on top of `getQueueHealth()` (pending/SLA tiles) plus two
+// new derivations: a per-kind decision-count window off `admin_audit_logs`,
+// and a median-time-to-decision metric that is honestly `null` for every kind
+// except JOB.
+// ============================================================================
+
+/**
+ * Per-kind `admin_audit_logs` vocabulary for the "approved this week" tile:
+ * the `targetType` each kind's decision rows are written under, and the
+ * (positive-outcome action, negative-outcome action) pair.
+ *
+ * NOT uniformly "approve"/"reject" wording — only COMPANY/SEEKER/JOB use that
+ * verb pair. REVIEW's pair is "keep the disputed review published"
+ * (`REVIEW_DISPUTE_RESOLVE`) vs. "take it down" (`REVIEW_HIDE`); REPORT's pair
+ * is "action the reported content/account" (`ABUSE_REPORT_ACTIONED`) vs. "no
+ * violation found" (`ABUSE_REPORT_DISMISSED`). A caller rendering a tile label
+ * for those two kinds should read "Restored"/"Hidden" and "Actioned"/
+ * "Dismissed" respectively, not "Approved"/"Rejected" — see each entry below.
+ */
+const QUEUE_KIND_DECISION_ACTIONS: Record<
+  QueueKind,
+  { targetType: string; positive: AdminAuditAction; negative: AdminAuditAction }
+> = {
+  COMPANY: { targetType: "COMPANY", positive: "COMPANY_APPROVE", negative: "COMPANY_REJECT" },
+  SEEKER: {
+    targetType: "SEEKER_PROFILE",
+    positive: "SEEKER_VERIFICATION_APPROVE",
+    negative: "SEEKER_VERIFICATION_REJECT",
+  },
+  JOB: { targetType: "JOB", positive: "JOB_APPROVE", negative: "JOB_REJECT" },
+  // "positive"/"negative" here mean "kept visible" vs. "taken down" — label as Restored/Hidden, not Approved/Rejected.
+  REVIEW: { targetType: "REVIEW", positive: "REVIEW_DISPUTE_RESOLVE", negative: "REVIEW_HIDE" },
+  // "positive"/"negative" here mean "actioned" vs. "dismissed" — label as Actioned/Dismissed, not Approved/Rejected.
+  REPORT: { targetType: "ABUSE_REPORT", positive: "ABUSE_REPORT_ACTIONED", negative: "ABUSE_REPORT_DISMISSED" },
+};
+
+const QUEUE_KIND_STATS_WEEK_DAYS = 7;
+/** Trailing window for the median-time-to-decision tile — same span as `FILL_RATE_WINDOW_DAYS` in lib/admin/rollups.ts, the codebase's standard "how are we trending" window rather than a fresh one-off number. */
+const MEDIAN_DECISION_WINDOW_DAYS = 30;
+
+export type QueueKindStats = {
+  pendingCount: number;
+  pendingBreached: number;
+  pendingOnTime: number;
+  slaBreachedCount: number;
+  /** Hours the oldest pending item is PAST the 24h SLA threshold — not its raw age. `null` when `slaBreachedCount` is 0 (nothing breached, so there is no "oldest over" to show). */
+  oldestOverHours: number | null;
+  /**
+   * `null` = not tracked for this kind. Only JOB has a `pendingReviewAt`
+   * column to measure from (see `computeAdminReviewLatencyMetrics` in
+   * lib/admin/rollups.ts); `Company`/`SeekerProfile` have no equivalent
+   * column today, and `Review`/`AbuseReport` were never in scope for it
+   * either. Deliberately NOT backfilled from `updatedAt`/`createdAt` — both
+   * are proven-wrong proxies here (`updatedAt` is overwritten by the
+   * decision itself; a resubmission after rejection doesn't restamp
+   * either). Render "Not tracked yet", never a fabricated number.
+   */
+  medianDecisionHours: number | null;
+  approvedThisWeek: number;
+  rejectedThisWeek: number;
+};
+
+/**
+ * Median hours between `Job.pendingReviewAt` and its JOB_APPROVE/JOB_REJECT
+ * decision, for decisions in the trailing `MEDIAN_DECISION_WINDOW_DAYS` days.
+ * Same method as `computeAdminReviewLatencyMetrics` (lib/admin/rollups.ts),
+ * just widened from "decided on one calendar day" to "decided in the last 30
+ * days" for a live stat tile instead of a per-day rollup row. JOB only — see
+ * `QueueKindStats.medianDecisionHours`'s doc comment for why every other kind
+ * returns `null` instead of a fallback proxy.
+ */
+async function computeMedianJobDecisionHours(since: Date): Promise<number | null> {
+  const decisions = await prisma.adminAuditLog.findMany({
+    where: { action: { in: ["JOB_APPROVE", "JOB_REJECT"] }, targetType: "JOB", createdAt: { gte: since } },
+    select: { targetId: true, createdAt: true },
+  });
+  if (decisions.length === 0) return null;
+
+  // A job can be decided more than once in the window (rejected, resubmitted,
+  // decided again) — every decision row is kept as its own data point, not
+  // deduped to one per job, mirroring `computeAdminReviewLatencyMetrics`'s own
+  // same-day edge-case note in lib/admin/rollups.ts.
+  const jobIds = Array.from(new Set(decisions.map((d) => d.targetId)));
+  const jobs = await prisma.job.findMany({
+    where: { id: { in: jobIds } },
+    select: { id: true, pendingReviewAt: true },
+  });
+  const pendingReviewAtById = new Map(jobs.map((j) => [j.id, j.pendingReviewAt]));
+
+  const hours: number[] = [];
+  for (const decision of decisions) {
+    const pendingReviewAt = pendingReviewAtById.get(decision.targetId);
+    if (!pendingReviewAt) continue; // pre-migration job — no fallback, see lib/admin/rollups.ts
+    hours.push(Math.max(0, (decision.createdAt.getTime() - pendingReviewAt.getTime()) / (1000 * 60 * 60)));
+  }
+  hours.sort((a, b) => a - b);
+  return median(hours);
+}
+
+/** One `groupBy` for the positive/negative decision counts on one kind's `targetType`, in the trailing window since `since`. */
+async function getWeeklyDecisionCounts(
+  targetType: string,
+  positiveAction: AdminAuditAction,
+  negativeAction: AdminAuditAction,
+  since: Date
+): Promise<{ positive: number; negative: number }> {
+  const rows = await prisma.adminAuditLog.groupBy({
+    by: ["action"],
+    where: { targetType, action: { in: [positiveAction, negativeAction] }, createdAt: { gte: since } },
+    _count: { _all: true },
+  });
+
+  let positive = 0;
+  let negative = 0;
+  for (const row of rows) {
+    if (row.action === positiveAction) positive = row._count._all;
+    else if (row.action === negativeAction) negative = row._count._all;
+  }
+  return { positive, negative };
+}
+
+/**
+ * The four admin-console stat tiles for one queue kind. Reuses
+ * `getQueueHealth()` (already computes depth/oldest-age/SLA-breaches for
+ * every kind in two batched aggregates) rather than re-deriving the
+ * pending/SLA numbers, and runs it alongside the two NEW per-kind queries
+ * (decision counts, median decision hours) in one `Promise.all` so this is
+ * three round-trips in parallel, not sequential.
+ */
+export async function getQueueKindStats(kind: QueueKind): Promise<QueueKindStats> {
+  const now = new Date();
+  const weekAgo = new Date(now.getTime() - QUEUE_KIND_STATS_WEEK_DAYS * 24 * 60 * 60 * 1000);
+  const monthAgo = new Date(now.getTime() - MEDIAN_DECISION_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+  const decisionActions = QUEUE_KIND_DECISION_ACTIONS[kind];
+
+  const [health, weekly, medianDecisionHours] = await Promise.all([
+    getQueueHealth(),
+    getWeeklyDecisionCounts(decisionActions.targetType, decisionActions.positive, decisionActions.negative, weekAgo),
+    kind === "JOB" ? computeMedianJobDecisionHours(monthAgo) : Promise.resolve(null),
+  ]);
+
+  const kindHealth = health.find((h) => h.kind === kind);
+  if (!kindHealth) {
+    // Unreachable in practice — `getQueueHealth()` always returns exactly one
+    // row per `QueueKind` — but thrown rather than silently defaulted so a
+    // future kind added to the union without a `getQueueHealth()` branch
+    // fails loudly instead of rendering a fabricated zero.
+    throw new Error(`getQueueKindStats: getQueueHealth() returned no entry for kind "${kind}"`);
+  }
+
+  const slaBreachedCount = kindHealth.slaBreaches;
+  const oldestOverHours =
+    slaBreachedCount > 0 && kindHealth.oldestAgeHours !== null
+      ? Math.max(0, kindHealth.oldestAgeHours - QUEUE_RANKING.sla.amberUnderHours)
+      : null;
+
+  return {
+    pendingCount: kindHealth.depth,
+    pendingBreached: slaBreachedCount,
+    pendingOnTime: kindHealth.depth - slaBreachedCount,
+    slaBreachedCount,
+    oldestOverHours,
+    medianDecisionHours,
+    approvedThisWeek: weekly.positive,
+    rejectedThisWeek: weekly.negative,
   };
 }

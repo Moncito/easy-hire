@@ -62,10 +62,19 @@ export type SerializedQueueItemPriorDecision = {
   adminUserId: string;
 };
 
+/**
+ * Serialized mirror of lib/admin/queue-detail.ts's JobLiveState — the
+ * truthful live/expired state for a job in the COMPANY detail's "Live Jobs"
+ * list, derived from `status` + `expiresAt` rather than `status` alone.
+ * See that file's JobLiveState doc comment for what each value means.
+ */
+export type SerializedJobLiveState = "ACTIVE_LIVE" | "ACTIVE_EXPIRED" | "PENDING_REVIEW";
+
 export type SerializedCompanyQueueItemDetail = {
   kind: "COMPANY";
   companyId: string;
   companyName: string;
+  logoUrl: string | null;
   industry: string | null;
   description: string | null;
   website: string | null;
@@ -73,7 +82,9 @@ export type SerializedCompanyQueueItemDetail = {
   verifiedStatus: string;
   verificationRejectionReason: string | null;
   trustScore: number | null;
-  jobs: { id: string; title: string; status: string }[];
+  /** Same `updatedAt`-as-proxy convention as lib/admin/queue-detail.ts's `CompanyQueueItemDetail.submittedAt` — see that field's doc comment. */
+  submittedAt: string;
+  jobs: { id: string; title: string; status: string; expiresAt: string | null; liveState: SerializedJobLiveState }[];
   documents: SerializedQueueItemDocument[];
   priorDecisions: SerializedQueueItemPriorDecision[];
 };
@@ -82,6 +93,7 @@ export type SerializedSeekerQueueItemDetail = {
   kind: "SEEKER";
   seekerProfileId: string;
   fullName: string;
+  photoUrl: string | null;
   headline: string | null;
   bio: string | null;
   phone: string | null;
@@ -91,6 +103,8 @@ export type SerializedSeekerQueueItemDetail = {
   idVerificationRejectionReason: string | null;
   verificationScore: number;
   trustScore: number | null;
+  /** Same `updatedAt`-as-proxy convention as lib/admin/queue-detail.ts's `SeekerQueueItemDetail.submittedAt` — see that field's doc comment. */
+  submittedAt: string;
   documents: SerializedQueueItemDocument[];
   priorDecisions: SerializedQueueItemPriorDecision[];
 };

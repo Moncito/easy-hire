@@ -102,6 +102,11 @@ export default function QueueHealthGrid({ queueHealth }: { queueHealth: QueueHea
             <div className="mt-auto border-t border-ink/5 pt-2.5 admin-dark:border-white/10">
               {health?.oldestAgeHours != null ? (
                 <div className="flex flex-col gap-1">
+                  {/* Not passing `ageHours` here (unlike QueueList.tsx's
+                      per-item rows) — this tile already prints the raw
+                      "Oldest item: Xh" age directly below the badge, so a
+                      RED badge's own "Xh over" text would just restate the
+                      same number a second time in the same tile. */}
                   <SlaBadge slaBand={computeSlaBand(health.oldestAgeHours)} dense />
                   <span className="font-data text-[10px] text-ink/40 admin-dark:text-mist/40">
                     Oldest item: {formatAge(health.oldestAgeHours)}

@@ -35,9 +35,9 @@ export default async function AdminQueuesIndexPage() {
   return (
     <div className="mx-auto max-w-6xl">
       <div className="mb-8">
-        <p className="text-xs font-semibold uppercase tracking-wider text-ink/40">Operations / Queues</p>
-        <h1 className="mt-1 font-display text-3xl font-bold tracking-tight text-ink">Moderation queues</h1>
-        <p className="mt-2 text-sm text-ink/55">
+        <p className="text-xs font-semibold uppercase tracking-wider text-ink/40 admin-dark:text-mist/40">Operations / Queues</p>
+        <h1 className="mt-1 font-display text-3xl font-bold tracking-tight text-ink admin-dark:text-mist">Moderation queues</h1>
+        <p className="mt-2 text-sm text-ink/55 admin-dark:text-mist/55">
           Risk-ranked, not first-in-first-out. Pick a queue to review documents side-by-side with the decision, or
           bulk-act on everything at once.
         </p>
@@ -51,31 +51,36 @@ export default async function AdminQueuesIndexPage() {
           return (
             <div
               key={kind}
-              className="group flex flex-col justify-between rounded-2xl border border-ink/5 bg-white p-5 shadow-xs transition-shadow hover:shadow-sm"
+              className="group flex flex-col justify-between rounded-2xl border border-ink/5 bg-white p-5 shadow-xs transition-shadow hover:shadow-sm admin-dark:border-white/10 admin-dark:bg-white/5"
             >
               <Link href={`/admin/queues/${segment}`} className="rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy">
                 <div>
                   <div className="flex items-center justify-between">
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-navy/8 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-navy">
+                    {/* Colored info tag, not a "current page" indicator — same
+                        navy-tint-badge treatment SlaBadge.tsx's GREEN band
+                        already established (bg-navy/8 text-navy -> a bumped
+                        navy fill plus mist text, since plain navy text loses
+                        contrast against the dark surface on its own). */}
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-navy/8 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-navy admin-dark:bg-navy/25 admin-dark:text-mist">
                       <Layers className="h-3 w-3" aria-hidden="true" />
                       {QUEUE_KIND_LABEL[kind]}
                     </span>
                     <ArrowRight
-                      className="h-4 w-4 text-ink/25 transition-transform group-hover:translate-x-0.5 group-hover:text-navy"
+                      className="h-4 w-4 text-ink/25 transition-transform group-hover:translate-x-0.5 group-hover:text-navy admin-dark:text-mist/30"
                       aria-hidden="true"
                     />
                   </div>
-                  <p className="mt-3 text-xs text-ink/50">{KIND_DESCRIPTION[kind]}</p>
-                  <p className="mt-2 font-data text-3xl font-bold text-ink">{h?.depth ?? 0}</p>
-                  <p className="text-xs text-ink/45">pending</p>
+                  <p className="mt-3 text-xs text-ink/50 admin-dark:text-mist/50">{KIND_DESCRIPTION[kind]}</p>
+                  <p className="mt-2 font-data text-3xl font-bold text-ink admin-dark:text-mist">{h?.depth ?? 0}</p>
+                  <p className="text-xs text-ink/45 admin-dark:text-mist/45">pending</p>
                 </div>
               </Link>
 
-              <div className="mt-4 flex items-center justify-between border-t border-ink/5 pt-3 text-xs">
-                <Link href={`/admin/queues/${segment}`} className="inline-flex items-center gap-1 rounded text-ink/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy">
+              <div className="mt-4 flex items-center justify-between border-t border-ink/5 pt-3 text-xs admin-dark:border-white/10">
+                <Link href={`/admin/queues/${segment}`} className="inline-flex items-center gap-1 rounded text-ink/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy admin-dark:text-mist/50">
                   <Clock className="h-3.5 w-3.5" aria-hidden="true" />
                   Oldest{" "}
-                  <span className="font-data font-semibold text-ink/70">
+                  <span className="font-data font-semibold text-ink/70 admin-dark:text-mist/70">
                     {h?.oldestAgeHours === null || h?.oldestAgeHours === undefined ? "—" : `${Math.round(h.oldestAgeHours)}h`}
                   </span>
                 </Link>
@@ -90,7 +95,7 @@ export default async function AdminQueuesIndexPage() {
                   </Link>
                 ) : (
                   <span
-                    className="inline-flex items-center gap-1 rounded-full bg-navy/8 px-2 py-0.5 font-bold uppercase tracking-wider text-navy"
+                    className="inline-flex items-center gap-1 rounded-full bg-navy/8 px-2 py-0.5 font-bold uppercase tracking-wider text-navy admin-dark:bg-navy/25 admin-dark:text-mist"
                     title="No SLA breaches"
                   >
                     0 breached

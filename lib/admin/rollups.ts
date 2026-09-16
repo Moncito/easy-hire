@@ -48,7 +48,12 @@ function trailingWindowRange(date: Date, days: number): { start: Date; end: Date
   return { start, end };
 }
 
-function median(sortedAscending: number[]): number | null {
+/**
+ * Exported so lib/admin/queues.ts's `getQueueKindStats` can share this exact
+ * definition for its own median-time-to-decision tile rather than
+ * duplicating it — same input contract (must already be sorted ascending).
+ */
+export function median(sortedAscending: number[]): number | null {
   const n = sortedAscending.length;
   if (n === 0) return null;
   const mid = Math.floor(n / 2);

@@ -2,6 +2,7 @@
 
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Check, Loader2, X } from "lucide-react";
+import AdminButton from "../ui/Button";
 import type { QueueKind, ReasonCodeOption } from "./types";
 
 /**
@@ -142,9 +143,8 @@ const DecisionForm = forwardRef<DecisionFormHandle, DecisionFormProps>(function 
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <h3 className="font-display text-sm font-bold uppercase tracking-wider text-ink/50">Decision</h3>
-        <p className="mt-1 text-sm text-ink/70">
-          Reviewing <span className="font-semibold text-ink">{itemTitle}</span>
+        <p className="text-sm text-ink/70 admin-dark:text-mist/70">
+          Reviewing <span className="font-semibold text-ink admin-dark:text-mist">{itemTitle}</span>
         </p>
       </div>
 
@@ -155,12 +155,7 @@ const DecisionForm = forwardRef<DecisionFormHandle, DecisionFormProps>(function 
       )}
 
       <div className="flex flex-wrap gap-2">
-        <button
-          type="button"
-          disabled={disabled || busy}
-          onClick={submitApprove}
-          className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-teal px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-teal/95 disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal focus-visible:ring-offset-2"
-        >
+        <AdminButton variant="primary" disabled={disabled || busy} onClick={submitApprove}>
           {submitting === approveAction ? (
             <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
           ) : (
@@ -168,25 +163,20 @@ const DecisionForm = forwardRef<DecisionFormHandle, DecisionFormProps>(function 
           )}
           {APPROVE_LABEL[kind]}
           <kbd className="ml-1 rounded border border-white/30 px-1 text-[10px] font-data opacity-80">a</kbd>
-        </button>
-        <button
-          type="button"
-          disabled={disabled || busy}
-          onClick={() => setRejectOpen(true)}
-          className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-ink/10 px-4 py-2.5 text-sm font-semibold text-ink/70 hover:bg-ink/4 disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy focus-visible:ring-offset-2"
-        >
+        </AdminButton>
+        <AdminButton variant="secondary" disabled={disabled || busy} onClick={() => setRejectOpen(true)}>
           <X className="h-4 w-4" aria-hidden="true" />
           {REJECT_LABEL[kind]}
-          <kbd className="ml-1 rounded border border-ink/15 px-1 text-[10px] font-data text-ink/50">r</kbd>
-        </button>
+          <kbd className="ml-1 rounded border border-ink/15 px-1 text-[10px] font-data text-ink/50 admin-dark:border-white/15 admin-dark:text-mist/50">r</kbd>
+        </AdminButton>
       </div>
 
       {rejectOpen && (
-        <div className="rounded-xl border border-ink/10 bg-mist/60 p-4">
+        <div className="rounded-xl border border-ink/10 bg-mist/60 p-4 admin-dark:border-white/10 admin-dark:bg-white/5">
           {isReview ? (
             <>
-              <label htmlFor="reason-code-free" className="mb-1 block text-xs font-semibold text-ink/70">
-                Reason code <span className="font-normal text-ink/40">(optional, max 64 characters)</span>
+              <label htmlFor="reason-code-free" className="mb-1 block text-xs font-semibold text-ink/70 admin-dark:text-mist/70">
+                Reason code <span className="font-normal text-ink/40 admin-dark:text-mist/40">(optional, max 64 characters)</span>
               </label>
               <input
                 ref={reasonTextRef}
@@ -196,12 +186,12 @@ const DecisionForm = forwardRef<DecisionFormHandle, DecisionFormProps>(function 
                 value={reasonCode}
                 onChange={(e) => setReasonCode(e.target.value)}
                 placeholder="e.g. FABRICATED_CLAIM"
-                className="w-full rounded-lg border border-ink/10 px-3 py-2 text-sm outline-none focus:border-navy focus:ring-2 focus:ring-navy/20"
+                className="w-full rounded-lg border border-ink/10 px-3 py-2 text-sm outline-none focus:border-navy focus:ring-2 focus:ring-navy/20 admin-dark:border-white/15 admin-dark:bg-white/5 admin-dark:text-mist admin-dark:placeholder:text-mist/35"
               />
             </>
           ) : (
             <>
-              <label htmlFor="reason-code-select" className="mb-1 block text-xs font-semibold text-ink/70">
+              <label htmlFor="reason-code-select" className="mb-1 block text-xs font-semibold text-ink/70 admin-dark:text-mist/70">
                 Reason code <span className="text-ember">*</span>
               </label>
               <select
@@ -209,7 +199,7 @@ const DecisionForm = forwardRef<DecisionFormHandle, DecisionFormProps>(function 
                 id="reason-code-select"
                 value={reasonCode}
                 onChange={(e) => setReasonCode(e.target.value)}
-                className="w-full rounded-lg border border-ink/10 bg-white px-3 py-2 text-sm outline-none focus:border-navy focus:ring-2 focus:ring-navy/20"
+                className="w-full rounded-lg border border-ink/10 bg-white px-3 py-2 text-sm outline-none focus:border-navy focus:ring-2 focus:ring-navy/20 admin-dark:border-white/15 admin-dark:bg-white/5 admin-dark:text-mist"
               >
                 <option value="">Select a reason…</option>
                 {reasonCodes.map((rc) => (
@@ -221,8 +211,8 @@ const DecisionForm = forwardRef<DecisionFormHandle, DecisionFormProps>(function 
             </>
           )}
 
-          <label htmlFor="reason-note" className="mb-1 mt-3 block text-xs font-semibold text-ink/70">
-            {isReview ? "Note" : "Note to the employer"} <span className="font-normal text-ink/40">(optional)</span>
+          <label htmlFor="reason-note" className="mb-1 mt-3 block text-xs font-semibold text-ink/70 admin-dark:text-mist/70">
+            {isReview ? "Note" : "Note to the employer"} <span className="font-normal text-ink/40 admin-dark:text-mist/40">(optional)</span>
           </label>
           <textarea
             id="reason-note"
@@ -231,32 +221,26 @@ const DecisionForm = forwardRef<DecisionFormHandle, DecisionFormProps>(function 
             value={freeText}
             onChange={(e) => setFreeText(e.target.value)}
             placeholder="Add context for the record…"
-            className="w-full resize-y rounded-lg border border-ink/10 px-3 py-2 text-sm outline-none focus:border-navy focus:ring-2 focus:ring-navy/20"
+            className="w-full resize-y rounded-lg border border-ink/10 px-3 py-2 text-sm outline-none focus:border-navy focus:ring-2 focus:ring-navy/20 admin-dark:border-white/15 admin-dark:bg-white/5 admin-dark:text-mist admin-dark:placeholder:text-mist/35"
           />
 
           <div className="mt-3 flex gap-2">
-            <button
-              type="button"
+            <AdminButton
+              variant="secondary"
               onClick={() => {
                 setRejectOpen(false);
                 setReasonCode("");
                 setFreeText("");
                 setLocalError(null);
               }}
-              className="rounded-xl border border-ink/10 px-4 py-2 text-sm font-semibold text-ink/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy"
             >
               Cancel
-            </button>
-            <button
-              type="button"
-              disabled={busy}
-              onClick={submitReject}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-ember px-4 py-2 text-sm font-semibold text-white disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ember focus-visible:ring-offset-2"
-            >
+            </AdminButton>
+            <AdminButton variant="danger" disabled={busy} onClick={submitReject}>
               {submitting === rejectAction && <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />}
               Confirm {REJECT_LABEL[kind].toLowerCase()}
               <kbd className="ml-1 rounded border border-white/30 px-1 text-[10px] font-data opacity-80">Enter</kbd>
-            </button>
+            </AdminButton>
           </div>
         </div>
       )}
