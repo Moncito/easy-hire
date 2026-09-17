@@ -381,3 +381,59 @@ export async function listAuditLogForAdmin(
     limit: params.limit,
   });
 }
+
+// ============================================================================
+// Analytics band — `/admin/audit` (docs/ADMIN-CONSOLE-PLAN.md §4.9's
+// Users/Jobs directory-analytics precedent — see `getUserDirectoryStats` in
+// lib/admin/users.ts and `getJobDirectoryStats` in lib/admin/jobs.ts — applied
+// here a third time). Deliberately NOT gated by the table's own
+// admin/action/target/date filters: same "whole-platform snapshot,
+// independent of whatever the table is currently scrolled/filtered to"
+// contract as those two. A live count against `AdminAuditLog` directly, not
+// a rollup read — same "how many right now" judgment call as
+// `getJobDirectoryStats`'s status `groupBy`.
+// ============================================================================
+
+export type AdminAuditLogStats = {
+  totalActions: number;
+  /** Inclusive lower bound of `now - 24h`, exclusive upper bound of "now" (an open window, re-evaluated on every call — not calendar-day-aligned). */
+  actionsLast24h: number;
+  /** Count of distinct `adminUserId` values with at least one row, ever — not scoped to any window. */
+  distinctAdminCount: number;
+  /** Rows with a non-null `impersonationSessionId` — actions taken during an active impersonation session (§8.2), across all time. */
+  impersonatedActionCount: number;
+  /** Top 8 actions by all-time frequency, most frequent first. Capped at 8 on purpose — this module's own "density over decoration" bar means a legend, not a full breakdown. */
+  topActions: { action: string; count: number }[];
+};
+
+/**
+ * Five independent reads, one `Promise.all` — same fan-out shape as
+ * `getUserDirectoryStats`. `distinctAdminCount` has no native
+ * `COUNT(DISTINCT adminUserId)` equivalent in Prisma, so it's a `groupBy`
+ * used only for its row count rather than its per-group counts; fine here
+ * because the admin roster (§8.1) is small, unlike the audit table itself.
+ */
+export async function getAuditLogStats(): Promise<AdminAuditLogStats> {
+  const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+  const [totalActions, actionsLast24h, distinctAdmins, impersonatedActionCount, topActionGroups] = await Promise.all([
+    prisma.adminAuditLog.count(),
+    prisma.adminAuditLog.count({ where: { createdAt: { gte: since24h } } }),
+    prisma.adminAuditLog.groupBy({ by: ["adminUserId"] }),
+    prisma.adminAuditLog.count({ where: { impersonationSessionId: { not: null } } }),
+    prisma.adminAuditLog.groupBy({
+      by: ["action"],
+      _count: { _all: true },
+      orderBy: { _count: { action: "desc" } },
+      take: 8,
+    }),
+  ]);
+
+  return {
+    totalActions,
+    actionsLast24h,
+    distinctAdminCount: distinctAdmins.length,
+    impersonatedActionCount,
+    topActions: topActionGroups.map((group) => ({ action: group.action, count: group._count._all })),
+  };
+}

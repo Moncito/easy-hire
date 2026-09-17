@@ -32,6 +32,21 @@ export type SerializedAdminAuditLog = {
 
 export type AuditLogApiResponse = { logs: SerializedAdminAuditLog[]; nextCursor: string | null };
 
+/**
+ * Serialized mirror of `AdminAuditLogStats` (lib/admin/audit.ts) — the
+ * analytics band above the table, same "unfiltered whole-platform snapshot"
+ * contract as `UserDirectoryStats`/`JobDirectoryStats`. Every field is
+ * already a plain number/string on the server side, so unlike
+ * `SerializedAdminAuditLog` above, no ISO-string conversion is needed here.
+ */
+export type SerializedAdminAuditLogStats = {
+  totalActions: number;
+  actionsLast24h: number;
+  distinctAdminCount: number;
+  impersonatedActionCount: number;
+  topActions: { action: string; count: number }[];
+};
+
 /** Exact-match / range filters against a controlled vocabulary — not free text (task spec: "a filter bar, not a search box"). */
 export type AuditLogFilters = {
   adminUserId?: string;
