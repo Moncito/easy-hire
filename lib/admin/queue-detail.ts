@@ -13,6 +13,12 @@ import type { QueueKind } from "@/lib/admin/queues";
 import { recordPiiRead, listAuditLog, type AdminAuditAction } from "@/lib/admin/audit";
 import { requireAdminPermission } from "@/lib/admin/permissions";
 import { VERIFICATION_DOC_BUCKET, resolveSignedUrl } from "@/lib/storage";
+import {
+  getAbuseReportDetail,
+  ABUSE_REPORT_REASONS_BY_TARGET_TYPE,
+  type AbuseReportStatus,
+  type AbuseTargetType,
+} from "@/lib/admin/abuse-reports";
 
 /**
  * PER-ITEM QUEUE DETAIL — docs/ADMIN-CONSOLE-PLAN.md §4.2: "Side-by-side
@@ -40,12 +46,13 @@ import { VERIFICATION_DOC_BUCKET, resolveSignedUrl } from "@/lib/storage";
 /** Prior-decision history is for context, not a full audit browser — bounded, same precedent as every other admin list in this codebase. */
 const PRIOR_DECISIONS_TAKE = 10;
 
-/** Matches the `targetType` strings the four decision functions already write via buildAdminActionOperation (lib/admin/{companies,jobs,seekers}.ts, lib/reviews.ts) — reused here, not reinvented. */
+/** Matches the `targetType` strings the five decision functions already write via buildAdminActionOperation (lib/admin/{companies,jobs,seekers,abuse-reports}.ts, lib/reviews.ts) — reused here, not reinvented. */
 const TARGET_TYPE_BY_KIND: Record<QueueKind, string> = {
   COMPANY: "COMPANY",
   JOB: "JOB",
   SEEKER: "SEEKER_PROFILE",
   REVIEW: "REVIEW",
+  REPORT: "ABUSE_REPORT",
 };
 
 // ============================================================================
@@ -69,10 +76,24 @@ export type QueueItemPriorDecision = {
   adminUserId: string;
 };
 
+/**
+ * Truthful live/expired state for a job shown in the COMPANY detail's
+ * "Live Jobs" list — derived from `status` + `expiresAt`, not the raw
+ * `status` column alone, since nothing transitions a job's `status` when
+ * `expiresAt` passes (see baseActiveJobWhere in lib/jobs/public-listing.ts,
+ * the actual public-board visibility rule this is meant to reflect).
+ *
+ * - "ACTIVE_LIVE": status is ACTIVE and (no expiresAt, or it's in the future) — genuinely visible on the public board (modulo company.verifiedStatus, which the COMPANY detail already shows separately).
+ * - "ACTIVE_EXPIRED": status is still ACTIVE in the DB but expiresAt has passed — no longer visible on the public board despite the raw status.
+ * - "PENDING_REVIEW": awaiting admin approval — was never live, not an expiry state at all.
+ */
+export type JobLiveState = "ACTIVE_LIVE" | "ACTIVE_EXPIRED" | "PENDING_REVIEW";
+
 export type CompanyQueueItemDetail = {
   kind: "COMPANY";
   companyId: string;
   companyName: string;
+  logoUrl: string | null;
   industry: string | null;
   description: string | null;
   website: string | null;
@@ -80,7 +101,18 @@ export type CompanyQueueItemDetail = {
   verifiedStatus: VerificationStatus;
   verificationRejectionReason: string | null;
   trustScore: number | null;
-  jobs: { id: string; title: string; status: string }[];
+  /**
+   * Same `updatedAt`-as-pending-anchor proxy already used everywhere else in
+   * this file for this kind (see listCompanyQueue's `computeAgeHours(row.updatedAt, now)`
+   * in lib/admin/queues.ts) — NOT a dedicated "became pending" timestamp.
+   * `updatedAt` gets overwritten by the review decision itself and doesn't
+   * survive resubmission, so this can read newer than when the company
+   * actually entered the queue. A real fix (`pending_at TIMESTAMPTZ?`,
+   * restamped on transition to PENDING) is proposed but NOT YET APPROVED —
+   * see docs/build-plan.md's pending schema-changes registry.
+   */
+  submittedAt: Date;
+  jobs: { id: string; title: string; status: string; expiresAt: Date | null; liveState: JobLiveState }[];
   documents: QueueItemDocument[];
   priorDecisions: QueueItemPriorDecision[];
 };
@@ -89,6 +121,7 @@ export type SeekerQueueItemDetail = {
   kind: "SEEKER";
   seekerProfileId: string;
   fullName: string;
+  photoUrl: string | null;
   headline: string | null;
   bio: string | null;
   phone: string | null;
@@ -98,6 +131,18 @@ export type SeekerQueueItemDetail = {
   idVerificationRejectionReason: string | null;
   verificationScore: number;
   trustScore: number | null;
+  /**
+   * Same `updatedAt`-as-pending-anchor proxy already used everywhere else in
+   * this file for this kind (see listSeekerQueue's `computeAgeHours(row.updatedAt, now)`
+   * in lib/admin/queues.ts) — NOT a dedicated "became pending" timestamp.
+   * `updatedAt` gets overwritten by the review decision itself and doesn't
+   * survive resubmission, so this can read newer than when the seeker
+   * actually entered the queue. A real fix (a `pending_at`-style column,
+   * restamped on transition to pending) is proposed but NOT YET APPROVED for
+   * `companies` — see docs/build-plan.md's pending schema-changes registry;
+   * the identical gap applies here to `seeker_profiles`.
+   */
+  submittedAt: Date;
   documents: QueueItemDocument[];
   priorDecisions: QueueItemPriorDecision[];
 };
@@ -151,11 +196,42 @@ export type ReviewQueueItemDetail = {
   priorDecisions: QueueItemPriorDecision[];
 };
 
+export type ReportQueueItemDetail = {
+  kind: "REPORT";
+  reportId: string;
+  reporterUserId: string;
+  reporterEmail: string | null;
+  targetType: AbuseTargetType;
+  targetId: string;
+  reason: string;
+  reasonLabel: string;
+  detail: string | null;
+  status: AbuseReportStatus;
+  severity: number;
+  resolvedByUserId: string | null;
+  resolvedAt: Date | null;
+  createdAt: Date;
+  distinctReporterCount: number;
+  /** Other reports (any status) filed against this exact target — bounded, most-recent-first. Distinct from `priorDecisions` below, which is admin ACTIONS on this specific report row, not other reporters' complaints about the same target. */
+  otherReportsForTarget: {
+    id: string;
+    reporterUserId: string;
+    reason: string;
+    status: AbuseReportStatus;
+    severity: number;
+    createdAt: Date;
+  }[];
+  /** Always empty — reports carry no document model. Present for the same one-shape reason as JobQueueItemDetail.documents/ReviewQueueItemDetail.documents. */
+  documents: QueueItemDocument[];
+  priorDecisions: QueueItemPriorDecision[];
+};
+
 export type QueueItemDetail =
   | CompanyQueueItemDetail
   | SeekerQueueItemDetail
   | JobQueueItemDetail
-  | ReviewQueueItemDetail;
+  | ReviewQueueItemDetail
+  | ReportQueueItemDetail;
 
 // ============================================================================
 // Shared helpers
@@ -207,6 +283,19 @@ function recordDocumentViewed(adminUserId: string, targetType: string, targetId:
   recordPiiRead(adminUserId, "ID_DOCUMENT_VIEWED", targetType, targetId);
 }
 
+/**
+ * Mirrors baseActiveJobWhere's ACTIVE-visibility test (lib/jobs/public-listing.ts)
+ * on a single already-fetched job, so the COMPANY review pane can show the
+ * truth instead of the raw `status` column. Only ever called on jobs whose
+ * `status` is ACTIVE or PENDING_REVIEW (the `where` this module fetches with)
+ * — CLOSED/DRAFT jobs never reach here, so there's no state for them.
+ */
+function deriveJobLiveState(status: JobStatus, expiresAt: Date | null, now: Date): JobLiveState {
+  if (status === "PENDING_REVIEW") return "PENDING_REVIEW";
+  const stillLive = expiresAt === null || expiresAt > now;
+  return stillLive ? "ACTIVE_LIVE" : "ACTIVE_EXPIRED";
+}
+
 // ============================================================================
 // COMPANY
 // ============================================================================
@@ -217,18 +306,20 @@ async function getCompanyQueueItemDetail(adminUserId: string, companyId: string)
     select: {
       id: true,
       companyName: true,
+      logoUrl: true,
       industry: true,
       description: true,
       website: true,
       verifiedStatus: true,
       verificationRejectionReason: true,
       trustScore: true,
+      updatedAt: true,
       user: { select: { email: true } },
       // Same "live jobs" filter as lib/admin/companies.ts's listPendingCompanies —
       // the population either already visible to seekers or about to become so.
       jobs: {
         where: { status: { in: ["ACTIVE", "PENDING_REVIEW"] } },
-        select: { id: true, title: true, status: true },
+        select: { id: true, title: true, status: true, expiresAt: true },
         orderBy: { updatedAt: "desc" },
       },
       verificationDocuments: { orderBy: { uploadedAt: "desc" } },
@@ -246,10 +337,20 @@ async function getCompanyQueueItemDetail(adminUserId: string, companyId: string)
 
   const priorDecisions = await fetchPriorDecisions(TARGET_TYPE_BY_KIND.COMPANY, companyId);
 
+  const now = new Date();
+  const jobs = company.jobs.map((job) => ({
+    id: job.id,
+    title: job.title,
+    status: job.status,
+    expiresAt: job.expiresAt,
+    liveState: deriveJobLiveState(job.status, job.expiresAt, now),
+  }));
+
   return {
     kind: "COMPANY",
     companyId: company.id,
     companyName: company.companyName,
+    logoUrl: company.logoUrl,
     industry: company.industry,
     description: company.description,
     website: company.website,
@@ -257,7 +358,8 @@ async function getCompanyQueueItemDetail(adminUserId: string, companyId: string)
     verifiedStatus: company.verifiedStatus,
     verificationRejectionReason: company.verificationRejectionReason,
     trustScore: company.trustScore,
-    jobs: company.jobs,
+    submittedAt: company.updatedAt,
+    jobs,
     documents,
     priorDecisions,
   };
@@ -273,6 +375,7 @@ async function getSeekerQueueItemDetail(adminUserId: string, seekerProfileId: st
     select: {
       id: true,
       fullName: true,
+      photoUrl: true,
       headline: true,
       bio: true,
       phone: true,
@@ -281,6 +384,7 @@ async function getSeekerQueueItemDetail(adminUserId: string, seekerProfileId: st
       idVerificationRejectionReason: true,
       verificationScore: true,
       trustScore: true,
+      updatedAt: true,
       user: { select: { email: true } },
       identityDocuments: { orderBy: { uploadedAt: "desc" } },
     },
@@ -301,6 +405,7 @@ async function getSeekerQueueItemDetail(adminUserId: string, seekerProfileId: st
     kind: "SEEKER",
     seekerProfileId: profile.id,
     fullName: profile.fullName,
+    photoUrl: profile.photoUrl,
     headline: profile.headline,
     bio: profile.bio,
     phone: profile.phone,
@@ -310,6 +415,7 @@ async function getSeekerQueueItemDetail(adminUserId: string, seekerProfileId: st
     idVerificationRejectionReason: profile.idVerificationRejectionReason,
     verificationScore: profile.verificationScore,
     trustScore: profile.trustScore,
+    submittedAt: profile.updatedAt,
     documents,
     priorDecisions,
   };
@@ -445,6 +551,50 @@ async function getReviewQueueItemDetail(reviewId: string): Promise<ReviewQueueIt
 }
 
 // ============================================================================
+// REPORT — no document model exists for this kind; `documents` is always [].
+// Delegates to lib/admin/abuse-reports.ts's `getAbuseReportDetail` for the
+// raw record + reporter email + other-reports-for-target aggregation, then
+// reshapes it into this module's shared `QueueItemDetail` union — same
+// "one fetch, then shape" split every other kind here uses.
+// ============================================================================
+
+async function getReportQueueItemDetail(reportId: string): Promise<ReportQueueItemDetail> {
+  const report = await getAbuseReportDetail(reportId);
+  const reasonLabel =
+    ABUSE_REPORT_REASONS_BY_TARGET_TYPE[report.targetType].find((e) => e.code === report.reason)?.label ?? report.reason;
+
+  const priorDecisions = await fetchPriorDecisions(TARGET_TYPE_BY_KIND.REPORT, reportId);
+
+  return {
+    kind: "REPORT",
+    reportId: report.id,
+    reporterUserId: report.reporterUserId,
+    reporterEmail: report.reporterEmail,
+    targetType: report.targetType,
+    targetId: report.targetId,
+    reason: report.reason,
+    reasonLabel,
+    detail: report.detail,
+    status: report.status,
+    severity: report.severity,
+    resolvedByUserId: report.resolvedByUserId,
+    resolvedAt: report.resolvedAt,
+    createdAt: report.createdAt,
+    distinctReporterCount: report.distinctReporterCount,
+    otherReportsForTarget: report.otherReportsForTarget.map((r) => ({
+      id: r.id,
+      reporterUserId: r.reporterUserId,
+      reason: r.reason,
+      status: r.status,
+      severity: r.severity,
+      createdAt: r.createdAt,
+    })),
+    documents: [],
+    priorDecisions,
+  };
+}
+
+// ============================================================================
 // Public entry point — dispatches to the kind-specific fetcher above. Mirrors
 // listQueue's own dispatch switch in lib/admin/queues.ts.
 // ============================================================================
@@ -458,8 +608,8 @@ export async function getQueueItemDetail(input: {
 
   // Gated on `document.view` (docs/ADMIN-CONSOLE-PLAN.md §6.7/§8.1's own
   // worked example) — every kind funnels through this one entry point, and
-  // JOB/REVIEW's `documents` array happens to always be empty, but the
-  // permission check stays uniform across all four kinds rather than
+  // JOB/REVIEW/REPORT's `documents` array happens to always be empty, but
+  // the permission check stays uniform across all five kinds rather than
   // branching on which ones currently have a document model.
   await requireAdminPermission(adminUserId, "document.view");
 
@@ -472,5 +622,7 @@ export async function getQueueItemDetail(input: {
       return getJobQueueItemDetail(id);
     case "REVIEW":
       return getReviewQueueItemDetail(id);
+    case "REPORT":
+      return getReportQueueItemDetail(id);
   }
 }

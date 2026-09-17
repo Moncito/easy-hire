@@ -22,10 +22,18 @@ import type { ReactNode } from "react";
 
 export type DataTableColumn<T> = {
   key: string;
-  header: string;
+  /**
+   * `ReactNode`, not `string` — plain text for every existing consumer, but
+   * widened (additively, no consumer needs a change) so a column header can
+   * also be a small interactive control, e.g. `UserDirectory.tsx`'s
+   * sortable "Joined"/"Trust" headers.
+   */
+  header: ReactNode;
   align?: "left" | "right";
   headerClassName?: string;
   cellClassName?: string;
+  /** Set alongside an interactive/sortable `header` — read by the real `<th aria-sort>`, since a column's `header` content itself may just be a button. */
+  ariaSort?: "ascending" | "descending" | "none";
   render: (row: T) => ReactNode;
 };
 
@@ -48,10 +56,10 @@ function SkeletonRows({ columnCount, count }: { columnCount: number; count: numb
   return (
     <>
       {Array.from({ length: count }).map((_, i) => (
-        <tr key={i} className="h-8 animate-pulse border-b border-ink/5">
+        <tr key={i} className="h-8 animate-pulse border-b border-ink/5 admin-dark:border-white/5">
           {Array.from({ length: columnCount }).map((__, j) => (
             <td key={j} className="px-2 py-0">
-              <div className={`h-3 rounded bg-ink/10 ${j === 0 ? "w-32" : "w-14"}`} />
+              <div className={`h-3 rounded bg-ink/10 admin-dark:bg-white/10 ${j === 0 ? "w-32" : "w-14"}`} />
             </td>
           ))}
         </tr>
@@ -71,23 +79,49 @@ export default function DataTable<T>({
   skeletonRowCount = 8,
   emptyState,
   footer,
-  maxHeightClassName = "max-h-[65vh]",
+  // No default bound. Bounding this in its OWN `overflow-y-auto` box nests a
+  // second scroll container inside `main` (the admin layout's one true scroll
+  // surface — see app/admin/layout.tsx) for every consumer that renders a
+  // table as a page's main content rather than a small embedded panel. That
+  // nesting is exactly what caused a real, reproducible bug on the audit log
+  // (default page size 50, easily tall enough to need its OWN internal
+  // scroll): the sticky `<thead>` visibly corrupted — a stale row's text
+  // painted through it — once real scrolling happened inside the nested box,
+  // same root cause as the `ActivityTimeline.tsx` double-scroll fix (a
+  // scrollable region nested inside another scrollable region). Consumers
+  // that genuinely want a small bounded/scrollable panel (e.g.
+  // `CompanyDetailView.tsx`'s Members table, `max-h-[24rem]`) still pass
+  // `maxHeightClassName` explicitly and keep their own internal scrollbar —
+  // only the previous *default* (`max-h-[65vh]`, used by every full-page
+  // directory table: Users, Jobs, Trust, Audit) is removed, since those
+  // tables' one true scroll surface should be `main`, not a second one.
+  maxHeightClassName,
 }: DataTableProps<T>) {
   if (rows.length === 0 && !loading) {
     return <>{emptyState}</>;
   }
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-ink/5 bg-white">
-      <div className={`${maxHeightClassName} overflow-y-auto`}>
+    <div className="overflow-hidden rounded-2xl border border-ink/5 bg-white admin-dark:border-white/10 admin-dark:bg-admin-dark-surface">
+      <div className={maxHeightClassName ? `${maxHeightClassName} overflow-y-auto` : ""}>
         <table className="w-full border-collapse text-sm" aria-busy={loading}>
           <caption className="sr-only">{caption}</caption>
-          <thead className="sticky top-0 z-10 bg-mist/95 backdrop-blur-sm">
-            <tr className="border-b border-ink/10 text-left text-[10px] font-bold uppercase tracking-wider text-ink/45">
+          {/* Solid `bg-white` (not the translucent `bg-mist/95 backdrop-blur-sm`
+              this used to be) — on a table with enough rows to actually
+              scroll internally (e.g. the audit log's 50-row page), the
+              scrolled-under row's dense text bled straight through the 5%
+              gap plus a `blur-sm` that isn't strong enough to hide it,
+              producing a visible double-exposure of the header and whatever
+              row was currently under it. A fully opaque background, matching
+              the table's own card colour exactly (not the page's `bg-mist`),
+              can't show anything behind it regardless of scroll position. */}
+          <thead className="sticky top-0 z-10 bg-white admin-dark:bg-admin-dark-surface">
+            <tr className="border-b border-ink/10 text-left text-[10px] font-bold uppercase tracking-wider text-ink/45 admin-dark:border-white/10 admin-dark:text-mist/45">
               {columns.map((col) => (
                 <th
                   key={col.key}
                   scope="col"
+                  aria-sort={col.ariaSort}
                   className={`px-2 py-2 first:pl-3 last:pr-3 ${col.align === "right" ? "text-right" : "text-left"} ${col.headerClassName ?? ""}`}
                 >
                   {col.header}
@@ -105,7 +139,7 @@ export default function DataTable<T>({
                 return (
                   <tr
                     key={id}
-                    className="relative h-8 border-b border-ink/5 text-ink/80 transition-colors hover:bg-ink/[0.03]"
+                    className="relative h-8 border-b border-ink/5 text-ink/80 transition-colors hover:bg-ink/[0.03] admin-dark:border-white/5 admin-dark:text-mist/80 admin-dark:hover:bg-white/[0.04]"
                   >
                     {columns.map((col, colIndex) => (
                       <td
@@ -116,7 +150,7 @@ export default function DataTable<T>({
                           <Link
                             href={href}
                             aria-label={getRowAriaLabel?.(row)}
-                            className="absolute inset-0 z-0 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy focus-visible:ring-inset"
+                            className="absolute inset-0 z-0 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy focus-visible:ring-inset admin-dark:focus-visible:ring-teal"
                           />
                         ) : null}
                         <div className="relative z-10">{col.render(row)}</div>

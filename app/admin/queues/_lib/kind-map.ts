@@ -14,6 +14,7 @@ export const QUEUE_KIND_BY_SEGMENT: Record<string, QueueKind> = {
   seekers: "SEEKER",
   jobs: "JOB",
   reviews: "REVIEW",
+  reports: "REPORT",
 };
 
 export const QUEUE_SEGMENT_BY_KIND: Record<QueueKind, string> = {
@@ -21,6 +22,7 @@ export const QUEUE_SEGMENT_BY_KIND: Record<QueueKind, string> = {
   SEEKER: "seekers",
   JOB: "jobs",
   REVIEW: "reviews",
+  REPORT: "reports",
 };
 
 export const QUEUE_KIND_LABEL: Record<QueueKind, string> = {
@@ -28,4 +30,5 @@ export const QUEUE_KIND_LABEL: Record<QueueKind, string> = {
   SEEKER: "Seekers",
   JOB: "Jobs",
   REVIEW: "Reviews",
+  REPORT: "Abuse reports",
 };

@@ -106,6 +106,35 @@ describe("resolveAdminAccess — each level's default permission set", () => {
     expect(access.permissions).toEqual(new Set(ADMIN_PERMISSIONS));
     expect(access.permissions.has("user.delete")).toBe(true);
     expect(access.permissions.has("team.manage")).toBe(true);
+    expect(access.permissions.has("impersonate")).toBe(true);
+    expect(access.permissions.has("audit.read")).toBe(true);
+  });
+});
+
+describe("resolveAdminAccess — audit.read defaults to nobody but SUPER_ADMIN", () => {
+  it("SUPPORT, MODERATOR and FINANCE do not get audit.read by default", () => {
+    for (const level of ["SUPPORT", "MODERATOR", "FINANCE"] as const) {
+      const access = resolveAdminAccess({ userId: "u", profile: { level, permissions: [] }, totalAdminProfileCount: 1 });
+      expect(access.permissions.has("audit.read")).toBe(false);
+    }
+  });
+
+  it("SUPER_ADMIN gets audit.read by default", () => {
+    const access = resolveAdminAccess({
+      userId: "u",
+      profile: { level: "SUPER_ADMIN", permissions: [] },
+      totalAdminProfileCount: 1,
+    });
+    expect(access.permissions.has("audit.read")).toBe(true);
+  });
+
+  it("unlike user.delete/team.manage/impersonate, audit.read is NOT floored to SUPER_ADMIN only — an explicit additive grant to a non-SUPER_ADMIN level succeeds", () => {
+    const access = resolveAdminAccess({
+      userId: "u",
+      profile: { level: "MODERATOR", permissions: ["audit.read"] },
+      totalAdminProfileCount: 1,
+    });
+    expect(access.permissions.has("audit.read")).toBe(true);
   });
 });
 
@@ -149,14 +178,24 @@ describe("resolveAdminAccess — additive per-user grants", () => {
     expect(access.permissions.has("team.manage")).toBe(false);
   });
 
-  it("a SUPER_ADMIN's own additive grants are a no-op for the two SUPER_ADMIN-only permissions since they're already included by the level default", () => {
+  it("refuses to grant impersonate to a non-SUPER_ADMIN level even via an additive grant", () => {
     const access = resolveAdminAccess({
       userId: "u",
-      profile: { level: "SUPER_ADMIN", permissions: ["user.delete", "team.manage"] },
+      profile: { level: "FINANCE", permissions: ["impersonate"] },
+      totalAdminProfileCount: 1,
+    });
+    expect(access.permissions.has("impersonate")).toBe(false);
+  });
+
+  it("a SUPER_ADMIN's own additive grants are a no-op for the SUPER_ADMIN-only permissions since they're already included by the level default", () => {
+    const access = resolveAdminAccess({
+      userId: "u",
+      profile: { level: "SUPER_ADMIN", permissions: ["user.delete", "team.manage", "impersonate"] },
       totalAdminProfileCount: 1,
     });
     expect(access.permissions.has("user.delete")).toBe(true);
     expect(access.permissions.has("team.manage")).toBe(true);
+    expect(access.permissions.has("impersonate")).toBe(true);
   });
 });
 
@@ -315,13 +354,32 @@ describe("defaultPermissionsForLevel", () => {
     }
   });
 
-  it("only SUPER_ADMIN's default set includes user.delete or team.manage", () => {
+  it("only SUPER_ADMIN's default set includes user.delete, team.manage or impersonate", () => {
     for (const level of ["SUPPORT", "MODERATOR", "FINANCE"] as const) {
       const defaults = defaultPermissionsForLevel(level);
       expect(defaults).not.toContain("user.delete");
       expect(defaults).not.toContain("team.manage");
+      expect(defaults).not.toContain("impersonate");
     }
     expect(defaultPermissionsForLevel("SUPER_ADMIN")).toContain("user.delete");
     expect(defaultPermissionsForLevel("SUPER_ADMIN")).toContain("team.manage");
+    expect(defaultPermissionsForLevel("SUPER_ADMIN")).toContain("impersonate");
+  });
+
+  it("only SUPER_ADMIN's default set includes system.read or system.manage", () => {
+    for (const level of ["SUPPORT", "MODERATOR", "FINANCE"] as const) {
+      const defaults = defaultPermissionsForLevel(level);
+      expect(defaults).not.toContain("system.read");
+      expect(defaults).not.toContain("system.manage");
+    }
+    expect(defaultPermissionsForLevel("SUPER_ADMIN")).toContain("system.read");
+    expect(defaultPermissionsForLevel("SUPER_ADMIN")).toContain("system.manage");
+  });
+
+  it("only SUPER_ADMIN's default set includes audit.read — granted to nobody else by default (not a SUPER_ADMIN-only floor, just no default grant)", () => {
+    for (const level of ["SUPPORT", "MODERATOR", "FINANCE"] as const) {
+      expect(defaultPermissionsForLevel(level)).not.toContain("audit.read");
+    }
+    expect(defaultPermissionsForLevel("SUPER_ADMIN")).toContain("audit.read");
   });
 });

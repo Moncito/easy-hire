@@ -1,43 +1,52 @@
-import Link from "next/link";
-import { Briefcase, Building2, Clock, CheckCircle } from "lucide-react";
 import { requireAdminPageContext } from "@/lib/auth/admin-session";
-import { getAdminDashboardMetrics } from "@/lib/admin/dashboard";
+import { getAdminHomeDashboard } from "@/lib/admin/home-dashboard";
+import MarketplacePulseBand from "@/components/admin/dashboard/MarketplacePulseBand";
+import MoneyBandCard from "@/components/admin/dashboard/MoneyBandCard";
+import WorkBand from "@/components/admin/dashboard/WorkBand";
 
+/**
+ * `/admin` Home — docs/ADMIN-CONSOLE-PLAN.md §4.1. Three bands, in the
+ * plan's own priority order: "Liquidity first, money second, queues third —
+ * because a queue you can clear tells you nothing about whether the
+ * business works." Replaces the old 4-tile placeholder
+ * (`getAdminDashboardMetrics`, lib/admin/dashboard.ts), which only ever
+ * showed pending/live job counts — this reads the real aggregate,
+ * `getAdminHomeDashboard`, straight from lib/admin/home-dashboard.ts (the
+ * backend contract for this page; not modified here).
+ *
+ * Bare `requireAdminPageContext()`, not a specific `AdminPermission` — see
+ * `getAdminHomeDashboard`'s own doc comment for why: every number in Bands 1
+ * and 2 (plus Band 3's queue depths) is safe for any signed-in admin, and
+ * the one genuinely sensitive slice (Band 3's per-admin decision/overturn
+ * breakdown) is gated INSIDE the dashboard aggregate itself
+ * (`PermissionGated<T>`), not by refusing the whole page.
+ */
 export default async function AdminDashboardPage() {
-  const { session } = await requireAdminPageContext();
-  const { pendingJobs, pendingCompanies, publicLiveJobs, approvedToday } =
-    await getAdminDashboardMetrics();
+  const ctx = await requireAdminPageContext();
+  const dashboard = await getAdminHomeDashboard(ctx.userId);
+
+  const generatedAtLabel = dashboard.generatedAt.toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
 
   return (
-    <div className="mx-auto max-w-5xl">
-      <div className="mb-8">
-        <h1 className="font-display text-3xl font-bold tracking-tight text-ink">Admin dashboard</h1>
-        <p className="mt-2 text-sm text-ink/55">Signed in as {session.user.email}</p>
+    <div className="mx-auto max-w-6xl space-y-10">
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-wider text-ink/40 admin-dark:text-mist/40">
+          Admin Console
+        </p>
+        <h1 className="mt-1 font-display text-3xl font-bold tracking-tight text-ink admin-dark:text-mist">Home</h1>
+        <p className="mt-2 text-sm text-ink/55 admin-dark:text-mist/55">
+          Signed in as {ctx.session.user.email} · Generated {generatedAtLabel}
+        </p>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {[
-          { label: "Companies to verify", value: pendingCompanies, icon: Building2, href: "/admin/companies" },
-          { label: "Jobs to review", value: pendingJobs, icon: Clock, href: "/admin/jobs" },
-          { label: "Public live jobs", value: publicLiveJobs, icon: CheckCircle, href: "/jobs" },
-          { label: "Published today", value: approvedToday, icon: Briefcase, href: "/admin/jobs" },
-        ].map((stat) => {
-          const Icon = stat.icon;
-          return (
-            <Link
-              key={stat.label}
-              href={stat.href}
-              className="rounded-2xl border border-ink/5 bg-white p-5 shadow-xs transition-shadow hover:shadow-sm"
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold uppercase tracking-wider text-ink/40">{stat.label}</span>
-                <Icon className="h-4 w-4 text-navy/50" aria-hidden="true" />
-              </div>
-              <p className="mt-3 font-display text-3xl font-bold text-ink">{stat.value}</p>
-            </Link>
-          );
-        })}
-      </div>
+      <MarketplacePulseBand pulse={dashboard.marketplacePulse} />
+      <MoneyBandCard money={dashboard.money} />
+      <WorkBand work={dashboard.work} />
     </div>
   );
 }

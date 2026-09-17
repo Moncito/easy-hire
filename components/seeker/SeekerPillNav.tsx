@@ -170,7 +170,10 @@ export default function SeekerPillNav({ userName, userEmail }: Props) {
 
   return (
     <>
-      <header className="pointer-events-none fixed inset-x-0 top-0 z-50 hidden items-start justify-center gap-2 pt-3 lg:flex">
+      <header
+        className="pointer-events-none fixed inset-x-0 z-50 hidden items-start justify-center gap-2 pt-3 lg:flex"
+        style={{ top: "var(--eh-impersonation-h, 0px)" }}
+      >
       <div
         ref={shellRef}
         role="navigation"

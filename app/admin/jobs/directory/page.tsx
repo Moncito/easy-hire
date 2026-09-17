@@ -1,5 +1,5 @@
 import { requireAdminPagePermission } from "@/lib/auth/admin-session";
-import { listJobDirectory } from "@/lib/admin/jobs";
+import { listJobDirectory, getJobDirectoryStats, getJobPostingTrend } from "@/lib/admin/jobs";
 import { encodeQueueCursor } from "@/lib/admin/queues";
 import JobDirectory from "@/components/admin/directory/JobDirectory";
 
@@ -26,14 +26,21 @@ export default async function AdminJobsDirectoryPage({
   await requireAdminPagePermission("queue.decide");
   const { search } = await searchParams;
 
-  const { items, nextCursor } = await listJobDirectory({ search: search || undefined, limit: 25 });
+  // Three independent reads — the table page, the unfiltered stat tiles, and
+  // the posting trend chart — none of which depends on another, so they run
+  // in parallel rather than sequentially. Same pattern as app/admin/users/page.tsx.
+  const [{ items, nextCursor }, stats, postingTrend] = await Promise.all([
+    listJobDirectory({ search: search || undefined, limit: 25 }),
+    getJobDirectoryStats(),
+    getJobPostingTrend(),
+  ]);
 
   return (
     <div className="mx-auto max-w-6xl">
       <div className="mb-8">
-        <p className="text-xs font-semibold uppercase tracking-wider text-ink/40">Directory / Jobs</p>
-        <h1 className="mt-1 font-display text-3xl font-bold tracking-tight text-ink">Jobs</h1>
-        <p className="mt-2 text-sm text-ink/55">
+        <p className="text-xs font-semibold uppercase tracking-wider text-ink/40 admin-dark:text-mist/40">Directory / Jobs</p>
+        <h1 className="mt-1 font-display text-3xl font-bold tracking-tight text-ink admin-dark:text-mist">Jobs</h1>
+        <p className="mt-2 text-sm text-ink/55 admin-dark:text-mist/55">
           Every job posting, any status — draft, pending review, active or closed. For the risk-ranked approval
           queue, see Queues → Jobs.
         </p>
@@ -43,6 +50,8 @@ export default async function AdminJobsDirectoryPage({
         initialItems={JSON.parse(JSON.stringify(items))}
         initialNextCursor={nextCursor ? encodeQueueCursor(nextCursor) : null}
         initialSearch={search ?? ""}
+        stats={JSON.parse(JSON.stringify(stats))}
+        postingTrend={JSON.parse(JSON.stringify(postingTrend))}
       />
     </div>
   );

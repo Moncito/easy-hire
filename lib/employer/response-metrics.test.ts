@@ -3,17 +3,29 @@ import {
   RESPONSE_METRICS_GRACE_DAYS,
   RESPONSE_METRICS_MIN_SAMPLE,
   RESPONSE_METRICS_WINDOW_DAYS,
+  RESPONSE_RATE_72H_WINDOW_HOURS,
   computeResponseMetrics,
+  computeResponseRate72h,
   isFirstEmployerResponseTransition,
   type ResponseMetricsSample,
 } from "@/lib/employer/response-metrics";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+const HOUR_MS = 60 * 60 * 1000;
 const MINUTE_MS = 60 * 1000;
 const NOW = new Date("2026-09-04T00:00:00.000Z");
 
 function daysAgo(days: number): Date {
   return new Date(NOW.getTime() - days * DAY_MS);
+}
+
+/** Applied `appliedHoursAgo` hours ago, responded `responseHoursAfter` hours after applying (or never). */
+function hourlySample(appliedHoursAgo: number, responseHoursAfter: number | null): ResponseMetricsSample {
+  const appliedAt = new Date(NOW.getTime() - appliedHoursAgo * HOUR_MS);
+  return {
+    appliedAt,
+    firstEmployerResponseAt: responseHoursAfter === null ? null : new Date(appliedAt.getTime() + responseHoursAfter * HOUR_MS),
+  };
 }
 
 /** Applied `appliedDaysAgo` days ago, responded `responseMinutesAfter` minutes after applying (or never). */
@@ -179,6 +191,113 @@ describe("computeResponseMetrics — responseRate", () => {
     const result = computeResponseMetrics(samples, { now: NOW });
     expect(result.sampleSize).toBe(6);
     expect(result.responseRate).toBe(67);
+  });
+});
+
+describe("computeResponseRate72h — window constant", () => {
+  it("is a 72-hour window", () => {
+    expect(RESPONSE_RATE_72H_WINDOW_HOURS).toBe(72);
+  });
+});
+
+describe("computeResponseRate72h — null-vs-zero discipline (minimum sample gate)", () => {
+  it("returns null (not 0) with sampleSize 0 when there are no applications at all", () => {
+    const result = computeResponseRate72h([], { now: NOW });
+    expect(result).toEqual({ responseRate: null, sampleSize: 0 });
+  });
+
+  it("returns null with the true sampleSize when below the minimum, even if every one responded within 72h", () => {
+    const samples = [hourlySample(80, 10), hourlySample(75, 20), hourlySample(73, 30)];
+    const result = computeResponseRate72h(samples, { now: NOW });
+    expect(result).toEqual({ responseRate: null, sampleSize: 3 });
+  });
+
+  it("publishes a real rate once the qualifying sample reaches RESPONSE_METRICS_MIN_SAMPLE", () => {
+    const samples = [
+      hourlySample(80, 10),
+      hourlySample(75, 20),
+      hourlySample(73, 30),
+      hourlySample(90, 5),
+      hourlySample(100, 1),
+    ];
+    const result = computeResponseRate72h(samples, { now: NOW });
+    expect(result.sampleSize).toBe(RESPONSE_METRICS_MIN_SAMPLE);
+    expect(result.responseRate).toBe(1);
+  });
+});
+
+describe("computeResponseRate72h — undetermined (< 72h old, unanswered) applications are excluded entirely", () => {
+  it("excludes a fresh unanswered application from both numerator and denominator", () => {
+    const determined = [hourlySample(200, 10), hourlySample(150, 20), hourlySample(120, 30), hourlySample(110, 40), hourlySample(90, 50)];
+    const fresh = hourlySample(10, null); // applied 10h ago, no response yet — still inside the 72h window
+    const withoutFresh = computeResponseRate72h(determined, { now: NOW });
+    const withFresh = computeResponseRate72h([...determined, fresh], { now: NOW });
+    expect(withFresh).toEqual(withoutFresh);
+  });
+
+  it("a fresh application that WAS answered within 72h is immediately determined (a known 'yes'), unlike an unanswered one", () => {
+    const determined = [hourlySample(200, 10), hourlySample(150, 20), hourlySample(120, 30), hourlySample(110, 40)];
+    const freshAnswered = hourlySample(5, 1); // applied 5h ago, answered 1h later
+    const result = computeResponseRate72h([...determined, freshAnswered], { now: NOW });
+    expect(result.sampleSize).toBe(5);
+  });
+});
+
+describe("computeResponseRate72h — the 72h boundary itself", () => {
+  it("counts a response that took exactly 72h as within the window (inclusive)", () => {
+    const samples = [
+      hourlySample(200, RESPONSE_RATE_72H_WINDOW_HOURS),
+      hourlySample(150, 1),
+      hourlySample(120, 1),
+      hourlySample(110, 1),
+      hourlySample(90, 1),
+    ];
+    const result = computeResponseRate72h(samples, { now: NOW });
+    expect(result.sampleSize).toBe(5);
+    expect(result.responseRate).toBe(1);
+  });
+
+  it("counts a response that took just over 72h as a non-response (still determined, since it already happened)", () => {
+    const samples = [
+      hourlySample(200, RESPONSE_RATE_72H_WINDOW_HOURS + 1),
+      hourlySample(150, 1),
+      hourlySample(120, 1),
+      hourlySample(110, 1),
+      hourlySample(90, 1),
+    ];
+    const result = computeResponseRate72h(samples, { now: NOW });
+    expect(result.sampleSize).toBe(5);
+    expect(result.responseRate).toBe(0.8); // 4 of 5 within window
+  });
+
+  it("an unanswered application exactly at the 72h mark is already determined (a known non-response), not undetermined", () => {
+    const answered = [hourlySample(150, 1), hourlySample(120, 1), hourlySample(110, 1), hourlySample(90, 1)];
+    const atBoundary = hourlySample(RESPONSE_RATE_72H_WINDOW_HOURS, null);
+    const result = computeResponseRate72h([...answered, atBoundary], { now: NOW });
+    expect(result.sampleSize).toBe(5);
+    expect(result.responseRate).toBe(0.8);
+  });
+});
+
+describe("computeResponseRate72h — result is a fraction (0..1), matching fillRate's convention, not a percentage", () => {
+  it("returns 1 (not 100) when every determined application responded within window", () => {
+    const samples = [hourlySample(200, 1), hourlySample(150, 1), hourlySample(120, 1), hourlySample(110, 1), hourlySample(90, 1)];
+    const result = computeResponseRate72h(samples, { now: NOW });
+    expect(result.responseRate).toBe(1);
+  });
+
+  it("returns 0 (not null) once the sample gate is met, when nobody responded in time", () => {
+    const samples = [
+      hourlySample(200, null),
+      hourlySample(150, null),
+      hourlySample(120, null),
+      hourlySample(110, null),
+      hourlySample(90, null),
+    ];
+    const result = computeResponseRate72h(samples, { now: NOW });
+    expect(result.sampleSize).toBe(5);
+    expect(result.responseRate).toBe(0);
+    expect(result.responseRate).not.toBeNull();
   });
 });
 

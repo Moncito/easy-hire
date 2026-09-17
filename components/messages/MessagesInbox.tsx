@@ -27,6 +27,8 @@ import { fetchJsonSafe, noStore } from "@/lib/client/fetch-json";
 import { useEmployerShell } from "@/components/employer/EmployerShellContext";
 import { callEasyAi } from "@/components/employer/pro/useEasyAi";
 import EmployerAvatar from "@/components/employer/ui/EmployerAvatar";
+import ReportButton from "@/components/ReportButton";
+import type { AbuseReasonEntry } from "@/lib/admin/abuse-reports";
 
 type Conversation = ConversationListItem;
 
@@ -56,6 +58,8 @@ type Props = {
   role: "EMPLOYER" | "SEEKER";
   fillNavClearance?: boolean;
   initialConversations?: Conversation[];
+  /** `ABUSE_REPORT_REASONS_BY_TARGET_TYPE.MESSAGE`, passed down from a Server Component page (see components/ReportButton.tsx's header comment for why). Omitted/empty hides the per-message "Report" control. */
+  reportReasons?: readonly AbuseReasonEntry[];
 };
 
 type ListFilter = "ALL" | "UNREAD" | "INTERVIEWS" | "HIRED";
@@ -188,6 +192,7 @@ export default function MessagesInbox({
   role,
   fillNavClearance = false,
   initialConversations,
+  reportReasons = [],
 }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -1144,6 +1149,16 @@ export default function MessagesInbox({
                             </span>
                             {msg.isMine && !msg.pending && msg.readAt && (
                               <CheckCheck className="h-3 w-3 text-navy/50" aria-label="Read" />
+                            )}
+                            {!msg.isMine && !msg.pending && reportReasons.length > 0 && (
+                              <ReportButton
+                                targetType="MESSAGE"
+                                targetId={msg.id}
+                                reasons={reportReasons}
+                                variant="icon"
+                                size="sm"
+                                label="Report this message"
+                              />
                             )}
                           </div>
                         )}

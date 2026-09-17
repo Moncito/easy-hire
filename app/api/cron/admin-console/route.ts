@@ -5,6 +5,7 @@ import { recomputeTrustScores } from "@/lib/admin/trust";
 import { rollUpExpiredPartitions } from "@/lib/admin/retention";
 import { requireCronAuth } from "@/lib/cron-auth";
 import { errorResponse } from "@/lib/api-error";
+import { runTrackedCronJob } from "@/lib/admin/cron-runs";
 
 /** Trust scores are recomputed for accounts active in this trailing window (docs/ADMIN-CONSOLE-PLAN.md §7.3: "activity in the last 24h"). */
 const TRUST_SCORE_LOOKBACK_HOURS = 24;
@@ -38,22 +39,27 @@ const TRUST_SCORE_LOOKBACK_HOURS = 24;
  *
  * Intended to run once daily. Auth/error handling mirrors
  * app/api/cron/analytics-rollups/route.ts exactly.
+ *
+ * Wrapped in `runTrackedCronJob` (job name "admin-console", matching
+ * `.github/workflows/cron-admin-console.yml`) so the `/admin/system` health
+ * screen has real run history for this job. NOTE: this is a DIFFERENT job
+ * from `admin-console/backfill` (app/api/cron/admin-console/backfill/route.ts)
+ * — that route is a manually-invoked one-off and is deliberately never
+ * wired to cron tracking (see lib/admin/cron-runs.ts's module doc comment).
  */
 async function runAdminConsoleMaintenance() {
-  const partitions = await ensureFuturePartitions();
-  const rollup = await runPlatformRollupForYesterday();
-  const trust = await recomputeTrustScores({
-    since: new Date(Date.now() - TRUST_SCORE_LOOKBACK_HOURS * 60 * 60 * 1000),
-  });
-  const retention = await rollUpExpiredPartitions();
+  const result = await runTrackedCronJob("admin-console", async () => {
+    const partitions = await ensureFuturePartitions();
+    const rollup = await runPlatformRollupForYesterday();
+    const trust = await recomputeTrustScores({
+      since: new Date(Date.now() - TRUST_SCORE_LOOKBACK_HOURS * 60 * 60 * 1000),
+    });
+    const retention = await rollUpExpiredPartitions();
 
-  return NextResponse.json({
-    ok: true,
-    partitions,
-    rollup,
-    trust,
-    retention,
+    return { partitions, rollup, trust, retention };
   });
+
+  return NextResponse.json({ ok: true, ...result });
 }
 
 /** GET /api/cron/admin-console — invoked by Vercel Cron. */

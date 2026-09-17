@@ -15,26 +15,19 @@ import type {
   JobStatus,
   SerializedUserDirectoryItem,
   SerializedJobDirectoryItem,
+  SerializedCompanyDirectoryItem,
   SerializedPlatformEvent,
   UserDirectoryVerifiedFilter,
   PlatformEventType,
   UserSupportAction,
   SerializedUserSupportActionResult,
 } from "./types";
+import { readErrorMessage } from "@/components/admin/apiHelpers";
 
 export type UserDirectoryApiResponse = { items: SerializedUserDirectoryItem[]; nextCursor: string | null };
 export type JobDirectoryApiResponse = { items: SerializedJobDirectoryItem[]; nextCursor: string | null };
+export type CompanyDirectoryApiResponse = { items: SerializedCompanyDirectoryItem[]; nextCursor: string | null };
 export type ActivityApiResponse = { events: SerializedPlatformEvent[]; nextCursor: string | null };
-
-async function readErrorMessage(res: Response, fallback: string): Promise<string> {
-  try {
-    const body = await res.json();
-    if (body && typeof body.error === "string") return body.error;
-  } catch {
-    // response wasn't JSON — fall through to the generic message
-  }
-  return fallback;
-}
 
 export async function fetchUserDirectoryPage(
   params: {
@@ -77,6 +70,22 @@ export async function fetchJobDirectoryPage(
   return res.json();
 }
 
+export async function fetchCompanyDirectoryPage(
+  params: { search?: string; cursor?: string | null; limit?: number },
+  signal?: AbortSignal
+): Promise<CompanyDirectoryApiResponse> {
+  const qs = new URLSearchParams();
+  if (params.search) qs.set("search", params.search);
+  if (params.cursor) qs.set("cursor", params.cursor);
+  qs.set("limit", String(params.limit ?? 25));
+
+  const res = await fetch(`/api/admin/companies/directory?${qs.toString()}`, { cache: "no-store", signal });
+  if (!res.ok) {
+    throw new Error(await readErrorMessage(res, "Failed to load the company directory."));
+  }
+  return res.json();
+}
+
 export async function fetchUserActivityPage(
   userId: string,
   params: { eventType?: PlatformEventType; cursor?: string | null; limit?: number },
@@ -113,4 +122,33 @@ export async function submitUserSupportAction(
   }
   const result = (await res.json()) as SerializedUserSupportActionResult;
   return { ok: true, result };
+}
+
+// ============================================================================
+// Impersonation start — POST /api/admin/impersonation
+// (docs/ADMIN-CONSOLE-PLAN.md §8.2, lib/admin/impersonation.ts,
+// app/api/admin/impersonation/route.ts). Ending an active session is handled
+// entirely by components/admin/ImpersonationBanner.tsx (DELETE, same route)
+// — this file only starts one, from the 360-degree record's support actions.
+// ============================================================================
+
+export type StartImpersonationResult =
+  | { ok: true; sessionId: string; targetUserId: string; expiresAt: string }
+  | { ok: false; error: string };
+
+export async function startImpersonationSession(input: {
+  targetUserId: string;
+  ticketReference: string;
+  reason: string;
+}): Promise<StartImpersonationResult> {
+  const res = await fetch(`/api/admin/impersonation`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) {
+    return { ok: false, error: await readErrorMessage(res, "Could not start the session.") };
+  }
+  const data = (await res.json()) as { sessionId: string; targetUserId: string; expiresAt: string };
+  return { ok: true, ...data };
 }

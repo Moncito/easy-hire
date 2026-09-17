@@ -36,21 +36,21 @@ export default async function AdminCompaniesPage() {
   return (
     <div className="mx-auto max-w-5xl">
       <div className="mb-8">
-        <h1 className="font-display text-3xl font-bold tracking-tight text-ink">Company access</h1>
-        <p className="mt-2 text-sm text-ink/55">
+        <h1 className="font-display text-3xl font-bold tracking-tight text-ink admin-dark:text-mist">Company access</h1>
+        <p className="mt-2 text-sm text-ink/55 admin-dark:text-mist/55">
           Grant or revoke collaborative hiring for individual companies.
         </p>
       </div>
 
       <Link
         href="/admin/queues/companies"
-        className="mb-6 flex items-center justify-between gap-3 rounded-xl border border-navy/15 bg-navy/5 px-4 py-3 text-sm transition-colors hover:bg-navy/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy"
+        className="mb-6 flex items-center justify-between gap-3 rounded-xl border border-navy/15 bg-navy/5 px-4 py-3 text-sm transition-colors hover:bg-navy/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy admin-dark:border-navy/30 admin-dark:bg-navy/20 admin-dark:hover:bg-navy/25"
       >
-        <span className="text-ink/75">
-          Looking for <span className="font-semibold text-ink">company verifications</span>? They moved to the
+        <span className="text-ink/75 admin-dark:text-mist/75">
+          Looking for <span className="font-semibold text-ink admin-dark:text-mist">company verifications</span>? They moved to the
           risk-ranked review queue.
         </span>
-        <span className="inline-flex shrink-0 items-center gap-1.5 font-semibold text-navy">
+        <span className="inline-flex shrink-0 items-center gap-1.5 font-semibold text-navy admin-dark:text-mist">
           Open queue
           <ArrowRight className="h-4 w-4" aria-hidden="true" />
         </span>

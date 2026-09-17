@@ -10,6 +10,7 @@ import { buildAdminActionOperation } from "@/lib/admin/audit";
 import { recordEvent } from "@/lib/admin/events";
 import { requireAdminPermission } from "@/lib/admin/permissions";
 import type { QueueCursor } from "@/lib/admin/queues";
+import type { PlatformDailyRollupMetrics } from "@/lib/admin/rollups";
 
 const JOB_LISTING_DAYS = 90;
 
@@ -287,4 +288,87 @@ export async function listJobDirectory(params: {
   }));
 
   return { items, nextCursor };
+}
+
+// ============================================================================
+// Directory analytics band — snapshot tiles + posting trend, `/admin/jobs/
+// directory` (docs/ADMIN-CONSOLE-PLAN.md §3, §4.3's Users-directory precedent
+// applied to jobs). Deliberately NOT gated by the table's own status/search
+// filters — this is "how many job postings exist right now, broken down by
+// status", independent of whatever the table happens to be scrolled/filtered
+// to. Same split as lib/admin/users.ts's `getUserDirectoryStats` (live,
+// current-state count) vs `getUserSignupTrend` (historical, rollup-only).
+// ============================================================================
+
+export type JobDirectoryStats = {
+  totalJobs: number;
+  draftCount: number;
+  pendingReviewCount: number;
+  activeCount: number;
+  closedCount: number;
+};
+
+/**
+ * Live snapshot, not a rollup read — same "how many right now" judgment call
+ * as `getUserDirectoryStats` (and `getQueueHealth` in lib/admin/queues.ts):
+ * a current-state count is fine to ask the live table directly. One `groupBy`
+ * on `status`, not four separate `count()` calls.
+ */
+export async function getJobDirectoryStats(): Promise<JobDirectoryStats> {
+  const statusGroups = await prisma.job.groupBy({ by: ["status"], _count: { _all: true } });
+
+  const countByStatus = new Map<JobStatus, number>(statusGroups.map((r) => [r.status, r._count._all]));
+  const totalJobs = statusGroups.reduce((sum, r) => sum + r._count._all, 0);
+
+  return {
+    totalJobs,
+    draftCount: countByStatus.get("DRAFT") ?? 0,
+    pendingReviewCount: countByStatus.get("PENDING_REVIEW") ?? 0,
+    activeCount: countByStatus.get("ACTIVE") ?? 0,
+    closedCount: countByStatus.get("CLOSED") ?? 0,
+  };
+}
+
+export type JobPostingTrendPoint = {
+  date: Date;
+  /** Exactly as stored in that day's `platform_daily_rollups` row (`metrics.jobs.created`) — not recomputed. */
+  created: number;
+  /** `metrics.jobs.published` — see that field's own doc comment in lib/admin/rollups.ts for what "published" means here. */
+  published: number;
+  /** `metrics.jobs.closed` — an upper bound, not an exact same-day-close count; see `PlatformDailyRollupMetrics.jobs.closed`'s doc comment in lib/admin/rollups.ts. */
+  closed: number;
+};
+
+export const DEFAULT_JOB_POSTING_TREND_DAYS = 30;
+
+/**
+ * Last `days` days of `platform_daily_rollups` — however many rows actually
+ * exist, per lib/admin/rollups.ts's own module doc comment ("Charts must read
+ * `platform_daily_rollups`, never the live tables"). Does NOT pad,
+ * interpolate, or backfill missing days — same discipline as
+ * `getUserSignupTrend` in lib/admin/users.ts, whose exact date-window logic
+ * this copies.
+ *
+ * Unlike `getUserSignupTrend` (which sums a `signupsByRole` breakdown into a
+ * `total`), `metrics.jobs` is already shaped as the three counts this returns
+ * — `created`/`published`/`closed` are re-exposed as-is, nothing to derive.
+ */
+export async function getJobPostingTrend(days = DEFAULT_JOB_POSTING_TREND_DAYS): Promise<JobPostingTrendPoint[]> {
+  const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+  const rows = await prisma.platformDailyRollup.findMany({
+    where: { date: { gte: since } },
+    orderBy: { date: "asc" },
+    select: { date: true, metrics: true },
+  });
+
+  return rows.map((row) => {
+    const metrics = row.metrics as unknown as PlatformDailyRollupMetrics;
+    return {
+      date: row.date,
+      created: metrics.jobs.created,
+      published: metrics.jobs.published,
+      closed: metrics.jobs.closed,
+    };
+  });
 }

@@ -1,11 +1,13 @@
 /**
  * Client-side fetch helpers for the admin team screen. Talks only to
  * `/api/admin/team` and `/api/admin/team/[id]` (docs/ADMIN-CONSOLE-PLAN.md
- * §6.7/§8.1) — no business logic here, same rationale and same
- * per-directory-local `readErrorMessage` duplication as
+ * §6.7/§8.1) — no business logic here, same rationale as
  * components/admin/directory/api.ts and components/admin/queue/api.ts.
+ * `readErrorMessage` is shared from `components/admin/apiHelpers.ts` rather
+ * than redefined locally (docs/ADMIN-UI-UPGRADE.md §2.2).
  */
 import type { AdminLevel, AdminPermission } from "./types";
+import { readErrorMessage } from "@/components/admin/apiHelpers";
 
 export type SerializedAdminTeamMember = {
   userId: string;
@@ -17,16 +19,6 @@ export type SerializedAdminTeamMember = {
 };
 
 export type AdminTeamApiResult<T> = { ok: true; data: T } | { ok: false; status: number; error: string };
-
-async function readErrorMessage(res: Response, fallback: string): Promise<string> {
-  try {
-    const body = await res.json();
-    if (body && typeof body.error === "string") return body.error;
-  } catch {
-    // response wasn't JSON — fall through to the generic message
-  }
-  return fallback;
-}
 
 export async function createAdminTeamProfile(input: {
   userId: string;

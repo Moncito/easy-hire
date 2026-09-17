@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { HelpCircle, RefreshCcw, Search } from "lucide-react";
+import { AlertTriangle, HelpCircle, RefreshCcw, Search, X } from "lucide-react";
 import QueueList from "./queue/QueueList";
 import ReviewPane from "./queue/ReviewPane";
 import BulkBar from "./queue/BulkBar";
@@ -69,7 +69,17 @@ export type ReviewQueueProps = {
   initialItems: SerializedQueueItem[];
   initialNextCursor: string | null;
   initialStatus?: QueueStatus;
+  initialFilter?: "breached";
   reasonCodes: ReasonCodeOption[];
+  /**
+   * True count of PENDING items for this queue kind, from the page's own
+   * `getQueueKindStats(kind)` call (already computed for the stat-tile row).
+   * Deliberately NOT derived from `items.length` here — that's only the
+   * currently-loaded page and goes stale/wrong the moment "Load more" or a
+   * search narrows what's in memory. Optional so this component still works
+   * (badge simply not shown) if a future caller doesn't have it handy.
+   */
+  pendingCount?: number;
 };
 
 export default function ReviewQueue({
@@ -77,9 +87,12 @@ export default function ReviewQueue({
   initialItems,
   initialNextCursor,
   initialStatus = "PENDING",
+  initialFilter,
   reasonCodes,
+  pendingCount,
 }: ReviewQueueProps) {
   const [status, setStatus] = useState<QueueStatus>(initialStatus);
+  const [filter, setFilter] = useState<"breached" | undefined>(initialFilter);
   const [searchInput, setSearchInput] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
 
@@ -131,6 +144,7 @@ export default function ReviewQueue({
         search: debouncedSearch || undefined,
         cursor: reset ? undefined : nextCursorRef.current,
         limit: 25,
+        filter,
       });
       setItems((prev) => (reset ? res.items : [...prev, ...res.items]));
       setNextCursor(res.nextCursor);
@@ -145,8 +159,9 @@ export default function ReviewQueue({
     }
   }
 
-  // Status tab or search change -> refetch from the top. Skips the very
-  // first render, which already has the server-rendered first page.
+  // Status tab, search, or breach-filter change -> refetch from the top.
+  // Skips the very first render, which already has the server-rendered first
+  // page (including any `initialFilter` it was given).
   useEffect(() => {
     if (!didMountRef.current) {
       didMountRef.current = true;
@@ -154,7 +169,7 @@ export default function ReviewQueue({
     }
     void loadPage(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, debouncedSearch]);
+  }, [status, debouncedSearch, filter]);
 
   // Per-item detail — fetched lazily only for the selected item, never for
   // the whole list (lib/admin/queue-detail.ts's own rationale).
@@ -309,6 +324,20 @@ export default function ReviewQueue({
       if (bulkConfirmOpen) {
         return; // TypedConfirmDialog owns Escape/Tab while it's open
       }
+      // DecisionForm's reject/hide confirm modal (RejectConfirmModal) owns
+      // Escape/Tab the same way while it's open — its `rejectOpen` is local
+      // to that component (per-item, reset on selection change), so it's
+      // read through the imperative handle rather than lifted here, same
+      // pattern `focusReject`/`commit` already use to cross this boundary.
+      // Enter is the one exception: it's still forwarded to `commit()`,
+      // which is exactly how the modal's own "Confirm reject" button (kbd
+      // hint: Enter) is meant to fire from the keyboard.
+      if (decisionFormRef.current?.isRejectOpen()) {
+        if (e.key === "Enter") {
+          decisionFormRef.current?.commit();
+        }
+        return;
+      }
       if (isTypingTarget(e.target)) {
         return;
       }
@@ -361,138 +390,192 @@ export default function ReviewQueue({
         {announce}
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="inline-flex rounded-xl border border-ink/10 bg-white p-1">
-          {STATUS_TABS.map((tab) => (
-            <button
-              key={tab.value}
-              type="button"
-              aria-pressed={status === tab.value}
-              onClick={() => setStatus(tab.value)}
-              className={`rounded-lg px-3.5 py-1.5 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy ${
-                status === tab.value ? "bg-navy text-white" : "text-ink/55 hover:bg-ink/5"
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
+      {/* Master-detail split: the item table is the WIDER, dominant LEFT
+          column, the unified detail rail is a narrower fixed-width RIGHT
+          column (~360px). The list keeps its own internal scroll (QueueList's
+          max-h-[65vh]), so this row is left `items-start` rather than
+          stretched — the detail rail is capped/scrolls internally on its own
+          terms (see its max-h-[80vh] in ReviewPane) and stays `sticky` so its
+          decision footer stays reachable without scrolling the whole page,
+          even when the list column (toolbar + table + load more + bulk bar)
+          runs longer than the viewport. Falls back to a single stacked column
+          below `lg`, matching the responsive pattern already used elsewhere
+          in this admin console rather than requiring a wider minimum. */}
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
+        <div className="min-w-0 space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="inline-flex rounded-xl border border-ink/10 bg-white p-1 admin-dark:border-white/10 admin-dark:bg-white/5">
+              {STATUS_TABS.map((tab) => (
+                <button
+                  key={tab.value}
+                  type="button"
+                  aria-pressed={status === tab.value}
+                  onClick={() => setStatus(tab.value)}
+                  className={`cursor-pointer inline-flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy ${
+                    status === tab.value
+                      ? "bg-navy text-white"
+                      : "text-ink/55 hover:bg-ink/5 admin-dark:text-mist/55 admin-dark:hover:bg-white/10"
+                  }`}
+                >
+                  {tab.label}
+                  {/* True pending count from the page's `getQueueKindStats`
+                      (see `pendingCount`'s doc comment above) — only ever on
+                      the Pending tab, and only navy (never Ember): this is a
+                      plain count, not a warning, matching AdminSidebar.tsx's
+                      own `CountBadge` convention of reserving Ember for an
+                      actual SLA breach and navy for an ordinary depth count. */}
+                  {tab.value === "PENDING" && pendingCount != null && pendingCount > 0 && (
+                    <span
+                      className={`inline-flex min-w-[1.25rem] shrink-0 items-center justify-center rounded-full px-1.5 py-0.5 font-data text-[10px] font-bold ${
+                        status === "PENDING" ? "bg-white/20 text-white" : "bg-navy/10 text-navy admin-dark:bg-navy/30 admin-dark:text-mist"
+                      }`}
+                    >
+                      {pendingCount > 99 ? "99+" : pendingCount}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+
+            {filter === "breached" && (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-ember/10 pl-2.5 pr-1 py-0.5 text-xs font-semibold text-ember">
+                <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />
+                Showing: SLA-breached only
+                <button
+                  type="button"
+                  onClick={() => setFilter(undefined)}
+                  aria-label="Clear breached-only filter"
+                  title="Clear filter"
+                  className="cursor-pointer rounded-full p-0.5 transition-colors hover:bg-ember/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ember"
+                >
+                  <X className="h-3 w-3" aria-hidden="true" />
+                </button>
+              </span>
+            )}
+
+            <div className="flex items-center gap-2">
+              {/* Quiet caption, same tone as the "Items are shown risk-ranked…"
+                  footer below — not a control, just context for what order
+                  the list (and thus j/k navigation) is in. */}
+              <span className="hidden text-xs text-ink/45 admin-dark:text-mist/45 sm:inline">Sorted by risk</span>
+              <label htmlFor="queue-search" className="sr-only">
+                Search this queue
+              </label>
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/30 admin-dark:text-mist/30" aria-hidden="true" />
+                <input
+                  id="queue-search"
+                  type="search"
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  placeholder="Search by name, id, email…"
+                  className="w-64 rounded-xl border border-ink/10 bg-white py-2 pl-9 pr-3 text-sm outline-none focus:border-navy focus:ring-2 focus:ring-navy/20 admin-dark:border-white/15 admin-dark:bg-white/5 admin-dark:text-mist admin-dark:placeholder:text-mist/35"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => setShortcutSheetOpen(true)}
+                aria-label="Show keyboard shortcuts"
+                title="Keyboard shortcuts (?)"
+                className="cursor-pointer rounded-xl border border-ink/10 bg-white p-2 text-ink/50 transition-colors hover:bg-ink/5 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy admin-dark:border-white/15 admin-dark:bg-white/5 admin-dark:text-mist/50 admin-dark:hover:bg-white/10 admin-dark:hover:text-mist"
+              >
+                <HelpCircle className="h-4 w-4" aria-hidden="true" />
+              </button>
+            </div>
+          </div>
+
+          {listError ? (
+            <div className="flex flex-col items-center gap-2 rounded-2xl border border-ember/20 bg-ember/5 py-12 text-center">
+              <p className="text-sm text-ember">{listError}</p>
+              <button
+                type="button"
+                onClick={() => void loadPage(true)}
+                className="cursor-pointer inline-flex items-center gap-1.5 rounded-lg border border-ember/30 px-3 py-1.5 text-xs font-semibold text-ember transition-colors hover:bg-ember/10"
+              >
+                <RefreshCcw className="h-3.5 w-3.5" aria-hidden="true" />
+                Retry
+              </button>
+            </div>
+          ) : (
+            <>
+              {loadingList && items.length === 0 ? (
+                <div className="overflow-hidden rounded-2xl border border-ink/5 bg-white admin-dark:border-white/10 admin-dark:bg-white/5" aria-hidden="true">
+                  <div className="h-8 animate-pulse border-b border-ink/10 bg-mist/70 admin-dark:border-white/10 admin-dark:bg-white/5" />
+                  {Array.from({ length: 8 }).map((_, i) => (
+                    <div key={i} className="flex h-8 animate-pulse items-center gap-3 border-b border-ink/5 px-3 admin-dark:border-white/8">
+                      <div className="h-3.5 w-3.5 rounded bg-ink/10 admin-dark:bg-white/10" />
+                      <div className="h-3 w-20 rounded bg-ink/10 admin-dark:bg-white/10" />
+                      <div className="h-3 max-w-xs flex-1 rounded bg-ink/5 admin-dark:bg-white/8" />
+                      <div className="ml-auto h-3 w-10 rounded bg-ink/10 admin-dark:bg-white/10" />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <QueueList
+                  items={items}
+                  status={status}
+                  search={debouncedSearch}
+                  selectedId={selectedId}
+                  checkedIds={checkedIds}
+                  onSelect={setSelectedId}
+                  onToggleCheck={toggleCheck}
+                  onToggleCheckAll={toggleCheckAll}
+                  loading={loadingList}
+                />
+              )}
+
+              {nextCursor && (
+                <div className="flex justify-center">
+                  <button
+                    type="button"
+                    disabled={loadingList}
+                    onClick={() => void loadPage(false)}
+                    className="cursor-pointer rounded-xl border border-ink/10 bg-white px-4 py-2 text-sm font-semibold text-ink/65 transition-colors hover:bg-ink/5 disabled:cursor-not-allowed disabled:opacity-60 admin-dark:border-white/15 admin-dark:bg-white/5 admin-dark:text-mist/65 admin-dark:hover:bg-white/10"
+                  >
+                    {loadingList ? "Loading…" : "Load more"}
+                  </button>
+                </div>
+              )}
+
+              <BulkBar
+                kind={kind}
+                selectedCount={checkedIds.size}
+                reasonCodes={reasonCodes}
+                onClear={() => setCheckedIds(new Set())}
+                onApprove={handleBulkApprove}
+                onReject={handleBulkReject}
+                lastResult={lastBulkResult}
+                onDismissResult={() => setLastBulkResult(null)}
+                confirmOpen={bulkConfirmOpen}
+                onOpenConfirm={() => setBulkConfirmOpen(true)}
+                onCloseConfirm={() => setBulkConfirmOpen(false)}
+              />
+            </>
+          )}
+
+          <p className="text-center text-[11px] text-ink/35 admin-dark:text-mist/35">
+            {allChecked && items.length > 0 ? "All items on this page selected. " : ""}
+            Items are shown risk-ranked, not by arrival time — do not expect chronological order.
+          </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <label htmlFor="queue-search" className="sr-only">
-            Search this queue
-          </label>
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/30" aria-hidden="true" />
-            <input
-              id="queue-search"
-              type="search"
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              placeholder="Search by name, id, email…"
-              className="w-64 rounded-xl border border-ink/10 bg-white py-2 pl-9 pr-3 text-sm outline-none focus:border-navy focus:ring-2 focus:ring-navy/20"
-            />
-          </div>
-          <button
-            type="button"
-            onClick={() => setShortcutSheetOpen(true)}
-            aria-label="Show keyboard shortcuts"
-            title="Keyboard shortcuts (?)"
-            className="rounded-xl border border-ink/10 bg-white p-2 text-ink/50 hover:bg-ink/5 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy"
-          >
-            <HelpCircle className="h-4 w-4" aria-hidden="true" />
-          </button>
+        <div className="min-w-0 lg:sticky lg:top-0">
+          <ReviewPane
+            ref={decisionFormRef}
+            kind={kind}
+            item={selectedItem}
+            detail={activeDetail}
+            loading={selectedId !== null && activeDetail === null && activeDetailError === null}
+            error={activeDetailError}
+            onRetry={() => setDetailReloadToken((t) => t + 1)}
+            reasonCodes={reasonCodes}
+            onDecide={handleDecide}
+            decisionPending={decisionPendingId !== null}
+          />
         </div>
       </div>
 
-      {listError ? (
-        <div className="flex flex-col items-center gap-2 rounded-2xl border border-ember/20 bg-ember/5 py-12 text-center">
-          <p className="text-sm text-ember">{listError}</p>
-          <button
-            type="button"
-            onClick={() => void loadPage(true)}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-ember/30 px-3 py-1.5 text-xs font-semibold text-ember hover:bg-ember/10"
-          >
-            <RefreshCcw className="h-3.5 w-3.5" aria-hidden="true" />
-            Retry
-          </button>
-        </div>
-      ) : (
-        <>
-          {loadingList && items.length === 0 ? (
-            <div className="overflow-hidden rounded-2xl border border-ink/5 bg-white" aria-hidden="true">
-              <div className="h-8 animate-pulse border-b border-ink/10 bg-mist/70" />
-              {Array.from({ length: 8 }).map((_, i) => (
-                <div key={i} className="flex h-8 animate-pulse items-center gap-3 border-b border-ink/5 px-3">
-                  <div className="h-3.5 w-3.5 rounded bg-ink/10" />
-                  <div className="h-3 w-20 rounded bg-ink/10" />
-                  <div className="h-3 max-w-xs flex-1 rounded bg-ink/5" />
-                  <div className="ml-auto h-3 w-10 rounded bg-ink/10" />
-                </div>
-              ))}
-            </div>
-          ) : (
-            <QueueList
-              items={items}
-              status={status}
-              search={debouncedSearch}
-              selectedId={selectedId}
-              checkedIds={checkedIds}
-              onSelect={setSelectedId}
-              onToggleCheck={toggleCheck}
-              onToggleCheckAll={toggleCheckAll}
-              loading={loadingList}
-            />
-          )}
-
-          {nextCursor && (
-            <div className="flex justify-center">
-              <button
-                type="button"
-                disabled={loadingList}
-                onClick={() => void loadPage(false)}
-                className="rounded-xl border border-ink/10 bg-white px-4 py-2 text-sm font-semibold text-ink/65 hover:bg-ink/5 disabled:opacity-60"
-              >
-                {loadingList ? "Loading…" : "Load more"}
-              </button>
-            </div>
-          )}
-
-          <BulkBar
-            kind={kind}
-            selectedCount={checkedIds.size}
-            reasonCodes={reasonCodes}
-            onClear={() => setCheckedIds(new Set())}
-            onApprove={handleBulkApprove}
-            onReject={handleBulkReject}
-            lastResult={lastBulkResult}
-            onDismissResult={() => setLastBulkResult(null)}
-            confirmOpen={bulkConfirmOpen}
-            onOpenConfirm={() => setBulkConfirmOpen(true)}
-            onCloseConfirm={() => setBulkConfirmOpen(false)}
-          />
-        </>
-      )}
-
-      <ReviewPane
-        ref={decisionFormRef}
-        kind={kind}
-        item={selectedItem}
-        detail={activeDetail}
-        loading={selectedId !== null && activeDetail === null && activeDetailError === null}
-        error={activeDetailError}
-        onRetry={() => setDetailReloadToken((t) => t + 1)}
-        reasonCodes={reasonCodes}
-        onDecide={handleDecide}
-        decisionPending={decisionPendingId !== null}
-      />
-
-      <ShortcutSheet open={shortcutSheetOpen} onClose={() => setShortcutSheetOpen(false)} />
-
-      <p className="text-center text-[11px] text-ink/35">
-        {allChecked && items.length > 0 ? "All items on this page selected. " : ""}
-        Items are shown risk-ranked, not by arrival time — do not expect chronological order.
-      </p>
+      {shortcutSheetOpen && <ShortcutSheet onClose={() => setShortcutSheetOpen(false)} />}
     </div>
   );
 }

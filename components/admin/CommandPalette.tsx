@@ -3,30 +3,24 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Briefcase, Building2, Command, Loader2, Search, User as UserIcon, X } from "lucide-react";
-import { fetchUserDirectoryPage, fetchJobDirectoryPage } from "@/components/admin/directory/api";
+import { fetchUserDirectoryPage, fetchJobDirectoryPage, fetchCompanyDirectoryPage } from "@/components/admin/directory/api";
 import { RoleBadge } from "@/components/admin/directory/badges";
-import type { SerializedJobDirectoryItem, SerializedUserDirectoryItem } from "@/components/admin/directory/types";
+import ModalPortal from "@/components/admin/ui/ModalPortal";
+import type {
+  SerializedJobDirectoryItem,
+  SerializedUserDirectoryItem,
+  SerializedCompanyDirectoryItem,
+} from "@/components/admin/directory/types";
 
 /**
  * ⌘K / Ctrl+K jump-to — docs/ADMIN-CONSOLE-PLAN.md §5: "the single
  * highest-value ergonomic addition." Mounted once in app/admin/layout.tsx so
  * it works on every admin page.
  *
- * BACKEND GAP, reported rather than worked around by touching /lib or
- * /app/api (outside this agent's territory): there is no company
- * search-by-name/id endpoint. `lib/admin/companies.ts` only exposes
- * `listPendingCompanies` (PENDING-only, no search) and
- * `listCompaniesForCollaborativeHiring` (capped at 100, no search) — neither
- * is a searchable directory, and `Company.id` is never present on
- * `UserDirectoryItem` (an EMPLOYER row there carries only the owning
- * `User.id`), so a company can't be reached from a user-directory search
- * result either. This palette's "Companies" section is therefore DERIVED
- * from job-directory search results (`JobDirectoryItem.companyId` +
- * `companyName`, deduplicated) — it only surfaces companies that have
- * posted at least one job in any status. A company with zero jobs is
- * findable only via its EMPLOYER user's 360 record. The real fix is a
- * `listCompanyDirectory`/company-search `/lib` function and API route —
- * flagged for the backend agent, not built here.
+ * Companies are searched directly via `GET /api/admin/companies/directory`
+ * (lib/admin/companies.ts's `listCompanyDirectory`) — a real search-by-name/
+ * owner-email endpoint, not derived from job results. A company with zero
+ * jobs is therefore findable here too, not only via its owner's 360 record.
  *
  * There is also no per-job detail page in this phase, so Job results route
  * to the job directory pre-filtered to that job's title, not a specific row.
@@ -50,19 +44,17 @@ type PaletteItem = {
 const DEBOUNCE_MS = 200;
 const MIN_QUERY_LENGTH = 2;
 
-function buildCompanyItems(jobs: SerializedJobDirectoryItem[]): PaletteItem[] {
-  const seen = new Map<string, PaletteItem>();
-  for (const job of jobs) {
-    if (seen.has(job.companyId)) continue;
-    seen.set(job.companyId, {
-      id: `company-${job.companyId}`,
-      kind: "company",
-      label: job.companyName,
-      sublabel: "Company",
-      href: `/admin/companies/${job.companyId}`,
-    });
-  }
-  return Array.from(seen.values()).slice(0, 5);
+/** Shared event name — imported by components/admin/AdminHeader.tsx's search trigger rather than re-typed as a string on both sides. */
+export const OPEN_EVENT_NAME = "admin-command-palette:open";
+
+function buildCompanyItems(companies: SerializedCompanyDirectoryItem[]): PaletteItem[] {
+  return companies.slice(0, 5).map((c) => ({
+    id: `company-${c.id}`,
+    kind: "company",
+    label: c.companyName,
+    sublabel: c.email,
+    href: `/admin/companies/${c.id}`,
+  }));
 }
 
 function buildUserItems(users: SerializedUserDirectoryItem[]): PaletteItem[] {
@@ -86,6 +78,28 @@ function buildJobItems(jobs: SerializedJobDirectoryItem[]): PaletteItem[] {
   }));
 }
 
+/** Section-header labels for the grouped result list below. `items` is built
+ * user->company->job (see the `useMemo` below) and stays that way — grouping
+ * is purely a render-time concern, detected by comparing each item's `kind`
+ * to the previous item's, so a kind with zero results simply never gets a
+ * header rather than needing to be special-cased here. */
+const KIND_LABELS: Record<PaletteItem["kind"], string> = {
+  user: "Users",
+  company: "Companies",
+  job: "Jobs",
+};
+
+/** The small bordered keyboard-shortcut chip established in
+ * components/admin/queue/DecisionForm.tsx's `r`/`a`/`Enter` hint badges —
+ * reused here for the footer hint bar instead of plain inline text. */
+function Kbd({ children }: { children: React.ReactNode }) {
+  return (
+    <kbd className="inline-flex items-center justify-center rounded border border-ink/15 px-1 py-0.5 font-data text-[10px] leading-none text-ink/50 admin-dark:border-white/15 admin-dark:text-mist/50">
+      {children}
+    </kbd>
+  );
+}
+
 export default function CommandPalette() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -102,6 +116,7 @@ export default function CommandPalette() {
     forQuery: string;
     users: SerializedUserDirectoryItem[];
     jobs: SerializedJobDirectoryItem[];
+    companies: SerializedCompanyDirectoryItem[];
   } | null>(null);
   const [error, setError] = useState<{ forQuery: string; message: string } | null>(null);
   // The highlighted row is tagged with the query it belongs to instead of
@@ -123,7 +138,7 @@ export default function CommandPalette() {
 
   const items: PaletteItem[] = useMemo(() => {
     if (!fresh) return [];
-    return [...buildUserItems(fresh.users), ...buildCompanyItems(fresh.jobs), ...buildJobItems(fresh.jobs)];
+    return [...buildUserItems(fresh.users), ...buildCompanyItems(fresh.companies), ...buildJobItems(fresh.jobs)];
   }, [fresh]);
 
   const activeIndex =
@@ -172,6 +187,24 @@ export default function CommandPalette() {
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [open, closePalette]);
+
+  // Second, decoupled way to open this same palette — the header's clickable
+  // search trigger (components/admin/AdminHeader.tsx) dispatches this custom
+  // window event on click rather than the two components sharing React
+  // state: they're independent siblings under app/admin/layout.tsx (a
+  // Server Component, so it can't hold client-only "is the palette open"
+  // state itself), and a custom event is the lightest way for one client
+  // component to command another without lifting state into a shared
+  // context neither otherwise needs. Open-only (never toggles closed) —
+  // clicking a search box conventionally opens search, it doesn't act as an
+  // on/off switch the way the ⌘K shortcut does.
+  useEffect(() => {
+    function onOpenRequest() {
+      setOpen(true);
+    }
+    window.addEventListener(OPEN_EVENT_NAME, onOpenRequest);
+    return () => window.removeEventListener(OPEN_EVENT_NAME, onOpenRequest);
+  }, []);
 
   // Focus management + focus trap while open, same pattern as
   // components/admin/queue/BulkBar.tsx's TypedConfirmDialog.
@@ -235,9 +268,10 @@ export default function CommandPalette() {
     Promise.all([
       fetchUserDirectoryPage({ search: forQuery, limit: 6 }, controller.signal),
       fetchJobDirectoryPage({ search: forQuery, limit: 10 }, controller.signal),
+      fetchCompanyDirectoryPage({ search: forQuery, limit: 5 }, controller.signal),
     ])
-      .then(([usersRes, jobsRes]) => {
-        setResult({ forQuery, users: usersRes.items, jobs: jobsRes.items });
+      .then(([usersRes, jobsRes, companiesRes]) => {
+        setResult({ forQuery, users: usersRes.items, jobs: jobsRes.items, companies: companiesRes.items });
       })
       .catch((e) => {
         // An aborted request was superseded by a newer keystroke — its result
@@ -285,17 +319,18 @@ export default function CommandPalette() {
   const activeItem = items[activeIndex];
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-start justify-center bg-ink/40 px-4 pt-[12vh]" onClick={closePalette}>
+    <ModalPortal>
+    <div className="fixed inset-0 z-[100] flex items-start justify-center bg-ink/40 backdrop-blur-sm px-4 pt-[12vh]" onClick={closePalette}>
       <div
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-label="Jump to a user, company or job"
-        className="w-full max-w-xl overflow-hidden rounded-2xl border border-ink/10 bg-white shadow-2xl"
+        className="w-full max-w-xl overflow-hidden rounded-2xl border border-ink/10 bg-white shadow-2xl admin-dark:border-white/10 admin-dark:bg-admin-dark-surface"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center gap-2 border-b border-ink/10 px-4 py-3">
-          <Search className="h-4 w-4 shrink-0 text-ink/35" aria-hidden="true" />
+        <div className="flex items-center gap-2 border-b border-ink/10 px-4 py-3 admin-dark:border-white/10">
+          <Search className="h-4 w-4 shrink-0 text-ink/35 admin-dark:text-mist/35" aria-hidden="true" />
           <input
             ref={inputRef}
             type="text"
@@ -309,15 +344,15 @@ export default function CommandPalette() {
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={onInputKeyDown}
             placeholder="Jump to a user, company or job…"
-            className="flex-1 border-none bg-transparent text-sm text-ink outline-none placeholder:text-ink/35"
+            className="flex-1 border-none bg-transparent text-sm text-ink outline-none placeholder:text-ink/35 admin-dark:text-mist admin-dark:placeholder:text-mist/35"
           />
-          {loading && <Loader2 className="h-4 w-4 shrink-0 animate-spin text-ink/30" aria-hidden="true" />}
+          {loading && <Loader2 className="h-4 w-4 shrink-0 animate-spin text-ink/30 admin-dark:text-mist/30" aria-hidden="true" />}
           <button
             ref={closeButtonRef}
             type="button"
             onClick={closePalette}
             aria-label="Close command palette"
-            className="shrink-0 rounded-lg p-1 text-ink/40 hover:bg-ink/5 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy"
+            className="shrink-0 rounded-lg p-1 text-ink/40 hover:bg-ink/5 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy admin-dark:text-mist/40 admin-dark:hover:bg-white/8 admin-dark:hover:text-mist"
           >
             <X className="h-4 w-4" aria-hidden="true" />
           </button>
@@ -333,46 +368,82 @@ export default function CommandPalette() {
           {visibleError ? (
             <p className="px-4 py-6 text-center text-sm text-ember">{visibleError}</p>
           ) : debouncedQuery.length < MIN_QUERY_LENGTH ? (
-            <p className="px-4 py-6 text-center text-sm text-ink/40">Type at least 2 characters to search.</p>
+            <p className="px-4 py-6 text-center text-sm text-ink/40 admin-dark:text-mist/40">
+              Type at least 2 characters to search.
+            </p>
           ) : items.length === 0 && !loading ? (
-            <p className="px-4 py-6 text-center text-sm text-ink/40">No matches for &ldquo;{debouncedQuery}&rdquo;.</p>
+            <p className="px-4 py-6 text-center text-sm text-ink/40 admin-dark:text-mist/40">
+              No matches for &ldquo;{debouncedQuery}&rdquo;.
+            </p>
           ) : (
             items.map((item, index) => {
               const Icon = item.kind === "user" ? UserIcon : item.kind === "company" ? Building2 : Briefcase;
               const isActive = index === activeIndex;
+              // Groups are detected off the (already user->company->job
+              // ordered) `items` array itself rather than tracked
+              // separately, so a header renders exactly once, right before
+              // the first item of a new kind — and never for a kind with no
+              // results, since that kind never appears in `items` at all.
+              const showGroupHeader = index === 0 || items[index - 1].kind !== item.kind;
               return (
-                <button
-                  key={item.id}
-                  id={`${listboxId}-${item.id}`}
-                  role="option"
-                  aria-selected={isActive}
-                  type="button"
-                  tabIndex={-1}
-                  onMouseEnter={() => setActiveIndex(index)}
-                  onClick={() => navigateTo(item)}
-                  className={`flex w-full items-center gap-3 px-4 py-2 text-left text-sm transition-colors ${
-                    isActive ? "bg-navy/8" : "hover:bg-ink/[0.03]"
-                  }`}
-                >
-                  <Icon className="h-4 w-4 shrink-0 text-ink/40" aria-hidden="true" />
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate font-medium text-ink">{item.label}</span>
-                    <span className="block truncate text-xs text-ink/45">{item.sublabel}</span>
-                  </span>
-                  {item.meta && <RoleBadge role={item.meta.role} />}
-                </button>
+                <div key={item.id}>
+                  {showGroupHeader && (
+                    <p
+                      role="presentation"
+                      className={`px-4 pb-1 text-[10px] font-semibold uppercase tracking-wider text-ink/45 admin-dark:text-mist/45 ${
+                        index === 0 ? "pt-2" : "pt-3"
+                      }`}
+                    >
+                      {KIND_LABELS[item.kind]}
+                    </p>
+                  )}
+                  <button
+                    id={`${listboxId}-${item.id}`}
+                    role="option"
+                    aria-selected={isActive}
+                    type="button"
+                    tabIndex={-1}
+                    onMouseEnter={() => setActiveIndex(index)}
+                    onClick={() => navigateTo(item)}
+                    className={`flex w-full items-center gap-3 px-4 py-2 text-left text-sm transition-colors ${
+                      isActive ? "bg-navy/8 admin-dark:bg-white/10" : "hover:bg-ink/[0.03] admin-dark:hover:bg-white/5"
+                    }`}
+                  >
+                    <Icon className="h-4 w-4 shrink-0 text-ink/40 admin-dark:text-mist/40" aria-hidden="true" />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate font-medium text-ink admin-dark:text-mist">{item.label}</span>
+                      <span className="block truncate text-xs text-ink/45 admin-dark:text-mist/45">{item.sublabel}</span>
+                    </span>
+                    {item.meta && <RoleBadge role={item.meta.role} />}
+                  </button>
+                </div>
               );
             })
           )}
         </div>
 
-        <div className="flex items-center justify-between gap-2 border-t border-ink/5 px-4 py-2 text-[11px] text-ink/35">
+        <div className="flex items-center justify-between gap-2 border-t border-ink/5 px-4 py-2 text-[11px] text-ink/35 admin-dark:border-white/10 admin-dark:text-mist/35">
           <span className="flex items-center gap-1">
-            <Command className="h-3 w-3" aria-hidden="true" />K to toggle
+            <Kbd>
+              <Command className="h-3 w-3" aria-hidden="true" />
+            </Kbd>
+            <Kbd>K</Kbd>
+            <span className="ml-1">to toggle</span>
           </span>
-          <span>↑↓ to move · Enter to open · Esc to close</span>
+          <span className="flex items-center gap-1">
+            <Kbd>↑</Kbd>
+            <Kbd>↓</Kbd>
+            <span>to move</span>
+            <span className="mx-0.5 text-ink/25 admin-dark:text-mist/25">·</span>
+            <Kbd>Enter</Kbd>
+            <span>to open</span>
+            <span className="mx-0.5 text-ink/25 admin-dark:text-mist/25">·</span>
+            <Kbd>Esc</Kbd>
+            <span>to close</span>
+          </span>
         </div>
       </div>
     </div>
+    </ModalPortal>
   );
 }

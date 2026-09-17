@@ -1,6 +1,8 @@
 import type { AdminAuditLog, Prisma } from "@prisma/client";
 import { after } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { ApiError } from "@/lib/api-error";
+import { requireAdminPermission } from "@/lib/admin/permissions";
 
 /**
  * `admin_audit_logs` write/read path — the compliance artefact described in
@@ -9,39 +11,82 @@ import { prisma } from "@/lib/prisma";
  * different access rules, different legal weight.
  */
 
-export type AdminAuditAction =
-  | "COMPANY_APPROVE"
-  | "COMPANY_REJECT"
-  | "SEEKER_VERIFICATION_APPROVE"
-  | "SEEKER_VERIFICATION_REJECT"
-  | "JOB_APPROVE"
-  | "JOB_REJECT"
-  | "REVIEW_DISPUTE_RESOLVE"
-  | "REVIEW_HIDE"
-  | "ID_DOCUMENT_VIEWED"
-  | "IMPERSONATE_START"
-  | "IMPERSONATE_END"
+/**
+ * Runtime whitelist, same shape/discipline as `PLATFORM_EVENT_TYPES` in
+ * lib/admin/events.ts and `ADMIN_PERMISSIONS` in lib/admin/permissions.ts —
+ * promoted from a plain TS union to a `const` array (Phase 4) purely so
+ * `adminAuditLogQuerySchema` (lib/validations/admin.ts) can validate an
+ * incoming `action` filter against a real runtime vocabulary via `z.enum`,
+ * the same way every other admin-facing filter in this codebase is
+ * validated, rather than accepting an arbitrary string. No values changed —
+ * this is a mechanical conversion of the same union.
+ */
+export const ADMIN_AUDIT_ACTIONS = [
+  "COMPANY_APPROVE",
+  "COMPANY_REJECT",
+  "SEEKER_VERIFICATION_APPROVE",
+  "SEEKER_VERIFICATION_REJECT",
+  "JOB_APPROVE",
+  "JOB_REJECT",
+  "REVIEW_DISPUTE_RESOLVE",
+  "REVIEW_HIDE",
+  "ID_DOCUMENT_VIEWED",
+  "IMPERSONATE_START",
+  "IMPERSONATE_END",
+  // Phase 5 impersonation overlay (docs/ADMIN-CONSOLE-PLAN.md §8.2: "every
+  // action inside the session audited to admin_audit_logs with the
+  // impersonation session id attached"). One row per seeker/employer page
+  // rendered under an active impersonation session — a read, not a
+  // decision, so this goes through the same fire-and-forget `recordPiiRead`
+  // contract as ID_DOCUMENT_VIEWED/USER_RECORD_VIEWED/COMPANY_RECORD_VIEWED
+  // above, always carrying `impersonationSessionId`.
+  "IMPERSONATED_PAGE_VIEW",
   // Phase 2 (docs/ADMIN-CONSOLE-PLAN.md §4.3) — the 360-degree record and
   // company detail are single-target PII reads, same category as
   // ID_DOCUMENT_VIEWED above (a read, not a decision) — see
   // lib/admin/users.ts's recordPiiRead for why these use the same `after()`
   // reliability contract as ID_DOCUMENT_VIEWED rather than the awaited
   // recordAdminAction contract every decision below uses.
-  | "USER_RECORD_VIEWED"
-  | "COMPANY_RECORD_VIEWED"
+  "USER_RECORD_VIEWED",
+  "COMPANY_RECORD_VIEWED",
   // Phase 2 support actions (lib/admin/users.ts's performUserSupportAction) —
   // genuine decisions (a state change or a triggered side effect), so these
   // use the awaited recordAdminAction contract, like every action above.
-  | "USER_PASSWORD_RESET_TRIGGERED"
-  | "USER_VERIFICATION_RESEND_TRIGGERED"
-  | "USER_DELETED_BY_ADMIN"
+  "USER_PASSWORD_RESET_TRIGGERED",
+  "USER_VERIFICATION_RESEND_TRIGGERED",
+  "USER_DELETED_BY_ADMIN",
   // Admin RBAC (docs/ADMIN-CONSOLE-PLAN.md §6.7/§8.1, lib/admin/permissions.ts)
   // — admin-team CRUD. All three are decisions (a state change), so they use
   // the awaited recordAdminAction/buildAdminActionOperation contract, never
   // recordPiiRead's fire-and-forget one.
-  | "ADMIN_TEAM_PROFILE_CREATED"
-  | "ADMIN_TEAM_LEVEL_CHANGED"
-  | "ADMIN_TEAM_PROFILE_REVOKED";
+  "ADMIN_TEAM_PROFILE_CREATED",
+  "ADMIN_TEAM_LEVEL_CHANGED",
+  "ADMIN_TEAM_PROFILE_REVOKED",
+  // Phase 5 — feature flags (docs/ADMIN-CONSOLE-PLAN.md §4.10,
+  // lib/admin/feature-flags.ts). All three are decisions (a state change to
+  // a flag that can gate real product behaviour), so they use the awaited
+  // recordAdminAction contract, never recordPiiRead's fire-and-forget one.
+  "FEATURE_FLAG_CREATED",
+  "FEATURE_FLAG_UPDATED",
+  "FEATURE_FLAG_DELETED",
+  // Phase 4 — Trust & Safety, abuse-report resolution
+  // (lib/admin/abuse-reports.ts's resolveAbuseReport). Both are decisions (a
+  // status transition on `AbuseReport`), so both use the awaited
+  // recordAdminAction/buildAdminActionOperation contract, never
+  // recordPiiRead's fire-and-forget one — same category as
+  // COMPANY_APPROVE/COMPANY_REJECT etc. above, not the PII-read category.
+  "ABUSE_REPORT_ACTIONED",
+  "ABUSE_REPORT_DISMISSED",
+] as const;
+
+export type AdminAuditAction = (typeof ADMIN_AUDIT_ACTIONS)[number];
+
+const ADMIN_AUDIT_ACTION_SET: ReadonlySet<string> = new Set(ADMIN_AUDIT_ACTIONS);
+
+/** Runtime whitelist check, same role as `isAdminPermission` in lib/admin/permissions.ts and `isAbuseTargetType` in lib/admin/abuse-reports.ts. Used by `listAuditLogForAdmin` below to validate an incoming `action` filter — see that function's doc comment for why the Zod schema at the API boundary (`adminAuditLogQuerySchema`, lib/validations/admin.ts) deliberately does NOT `z.enum(ADMIN_AUDIT_ACTIONS)` this itself. */
+export function isAdminAuditAction(value: string): value is AdminAuditAction {
+  return ADMIN_AUDIT_ACTION_SET.has(value);
+}
 
 export type RecordAdminActionInput = {
   adminUserId: string;
@@ -54,6 +99,15 @@ export type RecordAdminActionInput = {
   before?: Record<string, unknown>;
   after?: Record<string, unknown>;
   ipHash?: string;
+  /**
+   * §8.2: "every action inside the [impersonation] session audited to
+   * admin_audit_logs with the impersonation session id attached." Omitted
+   * (→ `null`) for the common case of an admin acting as themselves — see
+   * `AdminAuditLog.impersonationSessionId`'s own doc comment in
+   * prisma/schema.prisma for why this is a plain nullable column rather
+   * than a required field.
+   */
+  impersonationSessionId?: string;
 };
 
 function adminAuditLogCreateData(input: RecordAdminActionInput): Prisma.AdminAuditLogCreateArgs["data"] {
@@ -67,6 +121,7 @@ function adminAuditLogCreateData(input: RecordAdminActionInput): Prisma.AdminAud
     before: (input.before as Prisma.InputJsonValue | undefined) ?? undefined,
     after: (input.after as Prisma.InputJsonValue | undefined) ?? undefined,
     ipHash: input.ipHash ?? null,
+    impersonationSessionId: input.impersonationSessionId ?? null,
   };
 }
 
@@ -130,9 +185,24 @@ export function buildAdminActionOperation(
  * through the awaited `recordAdminAction`/`buildAdminActionOperation` above,
  * per their own doc comments.
  */
-export function recordPiiRead(adminUserId: string, action: AdminAuditAction, targetType: string, targetId: string): void {
+export function recordPiiRead(
+  adminUserId: string,
+  action: AdminAuditAction,
+  targetType: string,
+  targetId: string,
+  options?: {
+    /** Threaded through to `RecordAdminActionInput.impersonationSessionId` — see `IMPERSONATED_PAGE_VIEW`'s doc comment above for the call sites that pass this. */
+    impersonationSessionId?: string;
+  }
+): void {
   const write = () =>
-    recordAdminAction({ adminUserId, action, targetType, targetId }).catch((error) => {
+    recordAdminAction({
+      adminUserId,
+      action,
+      targetType,
+      targetId,
+      impersonationSessionId: options?.impersonationSessionId,
+    }).catch((error) => {
       console.error(`[admin/audit] failed to record ${action} for ${targetType}:${targetId}:`, error);
     });
 
@@ -154,14 +224,50 @@ const DEFAULT_AUDIT_LIST_LIMIT = 50;
 const MAX_AUDIT_LIST_LIMIT = 200;
 
 /**
+ * Opaque cursor codec, same shape/convention as `encodeQueueCursor` /
+ * `decodeQueueCursor` in lib/admin/queues.ts — base64url of a small JSON
+ * envelope, never a raw offset.
+ */
+export function encodeAuditCursor(cursor: AuditCursor): string {
+  return Buffer.from(JSON.stringify({ createdAt: cursor.createdAt.toISOString(), id: cursor.id }), "utf8").toString(
+    "base64url"
+  );
+}
+
+export function decodeAuditCursor(raw: string): AuditCursor | null {
+  try {
+    const parsed = JSON.parse(Buffer.from(raw, "base64url").toString("utf8"));
+    if (typeof parsed?.createdAt !== "string" || typeof parsed?.id !== "string") return null;
+    const createdAt = new Date(parsed.createdAt);
+    if (Number.isNaN(createdAt.getTime())) return null;
+    return { createdAt, id: parsed.id };
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Cursor-paginated on (createdAt, id) — never OFFSET, same convention as
  * lib/admin/events.ts's `listEventsForUser`.
+ *
+ * NOT admin-permission-gated itself. This is the low-level query used by
+ * TWO different callers with two different access stories: `getQueueItemDetail`
+ * in lib/admin/queue-detail.ts calls it internally (with `targetType`/
+ * `targetId` pinned to one specific queue item) from inside a function that
+ * is already gated on `document.view` — adding a second, unrelated
+ * `audit.read` check there would refuse a MODERATOR the "prior decisions on
+ * this item" panel they already have every right to see as part of reviewing
+ * it. `listAuditLogForAdmin` below is the gated entry point for the actual
+ * `/admin/audit` browse screen (GET /api/admin/audit) — see its own doc
+ * comment for why the permission check belongs there instead of here.
  */
 export async function listAuditLog({
   adminUserId,
   targetType,
   targetId,
   action,
+  since,
+  until,
   cursor,
   limit = DEFAULT_AUDIT_LIST_LIMIT,
 }: {
@@ -169,6 +275,10 @@ export async function listAuditLog({
   targetType?: string;
   targetId?: string;
   action?: AdminAuditAction;
+  /** Inclusive lower bound on `createdAt`. */
+  since?: Date;
+  /** Inclusive upper bound on `createdAt`. */
+  until?: Date;
   cursor?: AuditCursor;
   limit?: number;
 }) {
@@ -180,6 +290,14 @@ export async function listAuditLog({
       ...(targetType ? { targetType } : {}),
       ...(targetId ? { targetId } : {}),
       ...(action ? { action } : {}),
+      ...(since || until
+        ? {
+            createdAt: {
+              ...(since ? { gte: since } : {}),
+              ...(until ? { lte: until } : {}),
+            },
+          }
+        : {}),
       ...(cursor
         ? {
             OR: [
@@ -200,5 +318,122 @@ export async function listAuditLog({
   return {
     logs: page,
     nextCursor: hasMore && last ? { createdAt: last.createdAt, id: last.id } : null,
+  };
+}
+
+/**
+ * The gated entry point for the `/admin/audit` browse screen
+ * (docs/ADMIN-CONSOLE-PLAN.md §4.9), and the ONLY caller allowed to pass an
+ * `action` filter sourced from untrusted wire input. Gated on `audit.read`
+ * (§8.1's real gate, at the /lib layer — GET /api/admin/audit also calls
+ * `requireAdminWithPermission` for defence in depth).
+ *
+ * `action`, if present, is validated against `ADMIN_AUDIT_ACTIONS` here via
+ * `isAdminAuditAction` rather than by `z.enum(ADMIN_AUDIT_ACTIONS)` at the
+ * Zod boundary in lib/validations/admin.ts — importing that constant into
+ * that file would create an import cycle (validations/admin.ts ->
+ * lib/admin/audit.ts -> lib/admin/permissions.ts -> validations/admin.ts,
+ * since permissions.ts already imports the admin-team Zod schemas from
+ * there for its own CRUD functions). Rejecting an unrecognized action here,
+ * at the one call site that actually owns the vocabulary, keeps the
+ * boundary honest without introducing the cycle.
+ *
+ * DELIBERATELY NOT ITSELF AUDITED. Every other admin read that touches one
+ * person's private data (`ID_DOCUMENT_VIEWED`, `USER_RECORD_VIEWED`,
+ * `COMPANY_RECORD_VIEWED`, `IMPERSONATED_PAGE_VIEW`) writes an audit row,
+ * because that is the category of read §8.3 asks to be traceable — someone
+ * accessed THIS specific person's PII. Browsing the audit log itself is a
+ * different category, the same one `listQueue`/`listAdminTeam` already sit
+ * in without an audit row: an aggregate/browse read over operational
+ * metadata, not a PII lookup on an individual. Auditing it would also be
+ * self-referential noise in the literal sense — a written row that the very
+ * next page of the same screen would show, immediately turning "did anyone
+ * browse the audit log" into an unbounded, ever-growing answer to its own
+ * question.
+ */
+export async function listAuditLogForAdmin(
+  adminUserId: string,
+  params: {
+    adminUserId?: string;
+    targetType?: string;
+    targetId?: string;
+    action?: string;
+    since?: Date;
+    until?: Date;
+    cursor?: AuditCursor;
+    limit?: number;
+  }
+) {
+  await requireAdminPermission(adminUserId, "audit.read");
+
+  if (params.action !== undefined && !isAdminAuditAction(params.action)) {
+    throw new ApiError(`Unrecognized audit action: "${params.action}".`, 400);
+  }
+
+  return listAuditLog({
+    adminUserId: params.adminUserId,
+    targetType: params.targetType,
+    targetId: params.targetId,
+    action: params.action,
+    since: params.since,
+    until: params.until,
+    cursor: params.cursor,
+    limit: params.limit,
+  });
+}
+
+// ============================================================================
+// Analytics band — `/admin/audit` (docs/ADMIN-CONSOLE-PLAN.md §4.9's
+// Users/Jobs directory-analytics precedent — see `getUserDirectoryStats` in
+// lib/admin/users.ts and `getJobDirectoryStats` in lib/admin/jobs.ts — applied
+// here a third time). Deliberately NOT gated by the table's own
+// admin/action/target/date filters: same "whole-platform snapshot,
+// independent of whatever the table is currently scrolled/filtered to"
+// contract as those two. A live count against `AdminAuditLog` directly, not
+// a rollup read — same "how many right now" judgment call as
+// `getJobDirectoryStats`'s status `groupBy`.
+// ============================================================================
+
+export type AdminAuditLogStats = {
+  totalActions: number;
+  /** Inclusive lower bound of `now - 24h`, exclusive upper bound of "now" (an open window, re-evaluated on every call — not calendar-day-aligned). */
+  actionsLast24h: number;
+  /** Count of distinct `adminUserId` values with at least one row, ever — not scoped to any window. */
+  distinctAdminCount: number;
+  /** Rows with a non-null `impersonationSessionId` — actions taken during an active impersonation session (§8.2), across all time. */
+  impersonatedActionCount: number;
+  /** Top 8 actions by all-time frequency, most frequent first. Capped at 8 on purpose — this module's own "density over decoration" bar means a legend, not a full breakdown. */
+  topActions: { action: string; count: number }[];
+};
+
+/**
+ * Five independent reads, one `Promise.all` — same fan-out shape as
+ * `getUserDirectoryStats`. `distinctAdminCount` has no native
+ * `COUNT(DISTINCT adminUserId)` equivalent in Prisma, so it's a `groupBy`
+ * used only for its row count rather than its per-group counts; fine here
+ * because the admin roster (§8.1) is small, unlike the audit table itself.
+ */
+export async function getAuditLogStats(): Promise<AdminAuditLogStats> {
+  const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+  const [totalActions, actionsLast24h, distinctAdmins, impersonatedActionCount, topActionGroups] = await Promise.all([
+    prisma.adminAuditLog.count(),
+    prisma.adminAuditLog.count({ where: { createdAt: { gte: since24h } } }),
+    prisma.adminAuditLog.groupBy({ by: ["adminUserId"] }),
+    prisma.adminAuditLog.count({ where: { impersonationSessionId: { not: null } } }),
+    prisma.adminAuditLog.groupBy({
+      by: ["action"],
+      _count: { _all: true },
+      orderBy: { _count: { action: "desc" } },
+      take: 8,
+    }),
+  ]);
+
+  return {
+    totalActions,
+    actionsLast24h,
+    distinctAdminCount: distinctAdmins.length,
+    impersonatedActionCount,
+    topActions: topActionGroups.map((group) => ({ action: group.action, count: group._count._all })),
   };
 }

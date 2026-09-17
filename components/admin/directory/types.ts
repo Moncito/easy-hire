@@ -23,7 +23,8 @@ import type { SubscriptionPlan } from "@/lib/billing/subscriptions";
 import type { TrustComponent } from "@/lib/admin/trust";
 import type { PlatformEventType, ActorType } from "@/lib/admin/events";
 import { ADMIN_JOB_DIRECTORY_STATUSES, type AdminUserActionInput } from "@/lib/validations/admin";
-import type { UserDirectoryVerifiedFilter } from "@/lib/admin/users";
+import type { UserDirectoryVerifiedFilter, UserDirectoryStats, UserSignupTrendPoint } from "@/lib/admin/users";
+import type { JobDirectoryStats, JobPostingTrendPoint } from "@/lib/admin/jobs";
 
 export type {
   Role,
@@ -51,6 +52,23 @@ export type SerializedUserDirectoryItem = {
   displayName: string | null;
   verified: boolean | null;
   trustScore: number | null;
+  lastActiveAt: string | null;
+};
+
+/** Mirrors lib/admin/users.ts's `UserDirectoryStats` — the analytics band above the directory table. */
+export type SerializedUserDirectoryStats = UserDirectoryStats;
+
+/** Mirrors lib/admin/users.ts's `UserSignupTrendPoint`, with `date` serialized to an ISO string. */
+export type SerializedUserSignupTrendPoint = Omit<UserSignupTrendPoint, "date"> & { date: string };
+
+/** Mirrors lib/admin/companies.ts's `CompanyDirectoryItem`. */
+export type SerializedCompanyDirectoryItem = {
+  id: string;
+  companyName: string;
+  email: string;
+  verifiedStatus: VerificationStatus;
+  trustScore: number | null;
+  createdAt: string;
 };
 
 export type { UserDirectoryVerifiedFilter };
@@ -80,6 +98,8 @@ export type SerializedSeekerRecordSection = {
   kind: "SEEKER";
   seekerProfileId: string;
   fullName: string;
+  photoUrl: string | null;
+  resumeUrl: string | null;
   profileCompletionPercent: number;
   applicationsByStatus: Record<ApplicationStatus, number>;
   totalApplications: number;
@@ -91,6 +111,7 @@ export type SerializedEmployerRecordSection = {
   kind: "EMPLOYER";
   companyId: string;
   companyName: string;
+  logoUrl: string | null;
   verifiedStatus: VerificationStatus;
   plan: SubscriptionPlan;
   jobsPosted: number;
@@ -115,6 +136,7 @@ export type SerializedUserRecord = {
     emailVerifiedAt: string | null;
     createdAt: string;
     lastSeenAt: string | null;
+    avatarUrl: string | null;
   };
   trust: SerializedUserRecordTrust;
   roleDetail:
@@ -178,6 +200,7 @@ export type SerializedCompanyDetail = {
   companyId: string;
   companyName: string;
   email: string;
+  logoUrl: string | null;
   industry: string | null;
   website: string | null;
   verifiedStatus: VerificationStatus;
@@ -215,5 +238,11 @@ export type SerializedJobDirectoryItem = {
   updatedAt: string;
   publishedAt: string | null;
 };
+
+/** Mirrors lib/admin/jobs.ts's `JobDirectoryStats` — the analytics band above the job directory table. */
+export type SerializedJobDirectoryStats = JobDirectoryStats;
+
+/** Mirrors lib/admin/jobs.ts's `JobPostingTrendPoint`, with `date` serialized to an ISO string. */
+export type SerializedJobPostingTrendPoint = Omit<JobPostingTrendPoint, "date"> & { date: string };
 
 export { ADMIN_JOB_DIRECTORY_STATUSES };

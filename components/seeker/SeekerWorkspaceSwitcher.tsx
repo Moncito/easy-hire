@@ -74,7 +74,11 @@ export default function SeekerWorkspaceSwitcher({ userName, workspaces }: Props)
   }, []);
 
   return (
-    <div ref={rootRef} className="fixed right-5 top-4 z-[60] hidden lg:block">
+    <div
+      ref={rootRef}
+      className="fixed right-5 z-[60] hidden lg:block"
+      style={{ top: "calc(var(--eh-impersonation-h, 0px) + 1rem)" }}
+    >
       <button
         type="button"
         aria-haspopup="menu"

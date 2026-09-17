@@ -1,5 +1,5 @@
-import { Briefcase, CheckCircle2, CircleDashed, ShieldCheck, User, XCircle } from "lucide-react";
-import type { Role, VerificationStatus } from "./types";
+import { Briefcase, CheckCircle2, CircleDashed, ShieldCheck, User, UserX, XCircle } from "lucide-react";
+import type { CompanyMemberStatus, Role, SubscriptionPlan, VerificationStatus } from "./types";
 
 /**
  * Role/verification pills used across the directory + 360 record.
@@ -10,10 +10,35 @@ import type { Role, VerificationStatus } from "./types";
  * (§5 accessibility: "no colour-only status encoding").
  */
 
+/**
+ * `admin-dark:` overrides only where the light-mode color would otherwise
+ * lose contrast on a dark surface (docs/ADMIN-UI-UPGRADE.md's dark pass) —
+ * `text-teal` needs none (StatTile's own precedent: teal/marigold are
+ * already high-contrast accent hues in both themes). SEEKER's light-mode
+ * text is a deliberately darkened brown for readability on `bg-marigold/15`
+ * against a light page, which goes muddy on a dark surface, so it swaps to
+ * plain marigold; ADMIN's navy has the same problem (dark-on-dark), so it
+ * swaps to the lighter navy-family blue the dashboard's own charts already
+ * use for dark mode (`chartColors.ts`'s `dark.stroke`).
+ */
 const ROLE_STYLE: Record<Role, { label: string; icon: typeof User; className: string }> = {
-  SEEKER: { label: "Seeker", icon: User, className: "bg-marigold/15 text-[#8a5a10] ring-1 ring-inset ring-marigold/30" },
-  EMPLOYER: { label: "Employer", icon: Briefcase, className: "bg-teal/10 text-teal ring-1 ring-inset ring-teal/30" },
-  ADMIN: { label: "Admin", icon: ShieldCheck, className: "bg-navy/10 text-navy ring-1 ring-inset ring-navy/30" },
+  SEEKER: {
+    label: "Seeker",
+    icon: User,
+    className:
+      "bg-marigold/15 text-[#8a5a10] ring-1 ring-inset ring-marigold/30 admin-dark:bg-marigold/20 admin-dark:text-marigold admin-dark:ring-marigold/40",
+  },
+  EMPLOYER: {
+    label: "Employer",
+    icon: Briefcase,
+    className: "bg-teal/10 text-teal ring-1 ring-inset ring-teal/30 admin-dark:bg-teal/15 admin-dark:ring-teal/40",
+  },
+  ADMIN: {
+    label: "Admin",
+    icon: ShieldCheck,
+    className:
+      "bg-navy/10 text-navy ring-1 ring-inset ring-navy/30 admin-dark:bg-white/10 admin-dark:text-[#9EB3CC] admin-dark:ring-white/20",
+  },
 };
 
 export function RoleBadge({ role }: { role: Role }) {
@@ -27,11 +52,91 @@ export function RoleBadge({ role }: { role: Role }) {
   );
 }
 
+/**
+ * Background+text classes for a role-colored circular avatar (the 360-record
+ * identity card's initials fallback) — same accent mapping as `ROLE_STYLE`
+ * above (marigold/seeker, teal/employer, navy/admin), minus the pill's
+ * ring/padding, so the two never drift apart into two different "what color
+ * is a seeker" answers.
+ */
+export function roleAvatarClassName(role: Role): string {
+  switch (role) {
+    case "SEEKER":
+      return "bg-marigold/15 text-[#8a5a10] admin-dark:bg-marigold/20 admin-dark:text-marigold";
+    case "EMPLOYER":
+      return "bg-teal/10 text-teal admin-dark:bg-teal/15";
+    case "ADMIN":
+      return "bg-navy/10 text-navy admin-dark:bg-white/10 admin-dark:text-[#9EB3CC]";
+  }
+}
+
+/**
+ * The 360-record identity card's top-edge accent + faint background wash —
+ * SAME accent mapping as `ROLE_STYLE`/`roleAvatarClassName` above, just at
+ * card-chrome intensity rather than badge intensity. Purely decorative
+ * (`aria-hidden` where applied, never a substitute for `RoleBadge`'s
+ * icon+text), which is why this is the one place a colour-only signal is
+ * fine — it never stands alone.
+ */
+export function roleAccentCardClassName(role: Role): string {
+  switch (role) {
+    case "SEEKER":
+      return "border-t-marigold bg-gradient-to-br from-marigold/8 via-white to-white admin-dark:from-marigold/10 admin-dark:via-white/[0.04] admin-dark:to-white/[0.04]";
+    case "EMPLOYER":
+      return "border-t-teal bg-gradient-to-br from-teal/8 via-white to-white admin-dark:from-teal/10 admin-dark:via-white/[0.04] admin-dark:to-white/[0.04]";
+    case "ADMIN":
+      // Same navy -> lighter blue swap as `ROLE_STYLE.ADMIN`/`roleAvatarClassName`
+      // above for the dark surface — plain navy is the one hue in this map
+      // that loses definition against the near-black admin-dark background.
+      return "border-t-navy bg-gradient-to-br from-navy/8 via-white to-white admin-dark:border-t-[#9EB3CC] admin-dark:from-navy/15 admin-dark:via-white/[0.04] admin-dark:to-white/[0.04]";
+  }
+}
+
+/**
+ * Small accent bar rendered above a section heading (Trust, Activity, Role
+ * detail) — same spirit as the identity card's top edge, at a much quieter
+ * scale so it reads as a section marker rather than another card. `navy` for
+ * sections that are role-agnostic/structural (Trust, Activity — CLAUDE.md:
+ * "Harbor Navy — shared/structural"); role-tinted for the role-specific
+ * section (Seeker/Employer profile).
+ */
+export function roleAccentBarClassName(role: Role): string {
+  switch (role) {
+    case "SEEKER":
+      return "bg-marigold";
+    case "EMPLOYER":
+      return "bg-teal";
+    case "ADMIN":
+      return "bg-navy admin-dark:bg-[#9EB3CC]";
+  }
+}
+
+/**
+ * Was defined byte-for-byte identically in `CompanyDetailView.tsx` and
+ * `RoleDetailSection.tsx` (docs/ADMIN-UI-UPGRADE.md §2.4) — moved here
+ * alongside `RoleBadge`, the other account-attribute badge it conceptually
+ * sits next to. `SubscriptionPlan` is an exhaustive two-value union
+ * ("FREE" | "PRO"), so — same as `ROLE_STYLE` above — no runtime fallback
+ * is needed for an unrecognized key.
+ */
+const PLAN_STYLE: Record<SubscriptionPlan, string> = {
+  PRO: "bg-teal/10 text-teal ring-1 ring-inset ring-teal/30 admin-dark:bg-teal/15 admin-dark:ring-teal/40",
+  FREE: "bg-ink/6 text-ink/55 ring-1 ring-inset ring-ink/10 admin-dark:bg-white/10 admin-dark:text-mist/55 admin-dark:ring-white/15",
+};
+
+export function PlanBadge({ plan }: { plan: SubscriptionPlan }) {
+  return (
+    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold ${PLAN_STYLE[plan]}`}>
+      {plan}
+    </span>
+  );
+}
+
 /** `null` = no verification concept for this account (ADMIN). Icon + text always accompany the colour. */
 export function VerifiedBadge({ verified }: { verified: boolean | null }) {
   if (verified === null) {
     return (
-      <span className="inline-flex items-center gap-1 text-[11px] font-medium text-ink/35">
+      <span className="inline-flex items-center gap-1 text-[11px] font-medium text-ink/35 admin-dark:text-mist/35">
         <CircleDashed className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
         N/A
       </span>
@@ -46,7 +151,7 @@ export function VerifiedBadge({ verified }: { verified: boolean | null }) {
     );
   }
   return (
-    <span className="inline-flex items-center gap-1 text-[11px] font-medium text-ink/45">
+    <span className="inline-flex items-center gap-1 text-[11px] font-medium text-ink/45 admin-dark:text-mist/45">
       <CircleDashed className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
       Unverified
     </span>
@@ -54,7 +159,7 @@ export function VerifiedBadge({ verified }: { verified: boolean | null }) {
 }
 
 const VERIFICATION_STATUS_STYLE: Record<VerificationStatus, { label: string; icon: typeof CheckCircle2; className: string }> = {
-  PENDING: { label: "Pending", icon: CircleDashed, className: "text-navy/70" },
+  PENDING: { label: "Pending", icon: CircleDashed, className: "text-navy/70 admin-dark:text-[#9EB3CC]" },
   APPROVED: { label: "Approved", icon: CheckCircle2, className: "text-teal" },
   REJECTED: { label: "Rejected", icon: XCircle, className: "text-ember" },
 };
@@ -70,11 +175,40 @@ export function VerificationStatusBadge({ status }: { status: VerificationStatus
   );
 }
 
+/**
+ * `CompanyDetailView.tsx`'s Members table used to encode ACTIVE/REMOVED by
+ * text colour alone — the one place on that page that didn't follow this
+ * file's own icon+colour+text convention. `CompanyMemberStatus` is an
+ * exhaustive two-value union (`prisma/schema.prisma`'s `CompanyMemberStatus`
+ * has no `PENDING` value — `getCompanyDetail` itself only ever queries
+ * `status: "ACTIVE"` members, but the table stays exhaustive over the full
+ * enum rather than assuming that filter never changes), so — same as
+ * `PLAN_STYLE` above — no runtime fallback is needed for an unrecognized
+ * key. REMOVED stays a neutral muted grey rather than Ember: leaving/being
+ * removed from a company isn't itself a fraud/rejection signal (CLAUDE.md:
+ * "Ember — warnings only").
+ */
+const MEMBER_STATUS_STYLE: Record<CompanyMemberStatus, { label: string; icon: typeof CheckCircle2; className: string }> = {
+  ACTIVE: { label: "Active", icon: CheckCircle2, className: "text-teal" },
+  REMOVED: { label: "Removed", icon: UserX, className: "text-ink/40 admin-dark:text-mist/40" },
+};
+
+export function MemberStatusBadge({ status }: { status: CompanyMemberStatus }) {
+  const s = MEMBER_STATUS_STYLE[status];
+  const Icon = s.icon;
+  return (
+    <span className={`inline-flex items-center gap-1 text-xs font-semibold ${s.className}`}>
+      <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+      {s.label}
+    </span>
+  );
+}
+
 export function TrustScoreValue({ score }: { score: number | null }) {
   if (score === null) {
-    return <span className="font-data text-xs text-ink/35">—</span>;
+    return <span className="font-data text-xs text-ink/35 admin-dark:text-mist/35">—</span>;
   }
-  const tone = score >= 75 ? "text-teal" : score >= 45 ? "text-ink/70" : "text-ember";
+  const tone = score >= 75 ? "text-teal" : score >= 45 ? "text-ink/70 admin-dark:text-mist/70" : "text-ember";
   return <span className={`font-data text-xs font-semibold ${tone}`}>{score}</span>;
 }
 

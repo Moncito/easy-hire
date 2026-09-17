@@ -5,6 +5,7 @@ import { reviewCompany } from "@/lib/admin/companies";
 import { reviewJob } from "@/lib/admin/jobs";
 import { reviewSeekerVerification } from "@/lib/admin/seekers";
 import { resolveDisputedReview } from "@/lib/reviews";
+import { resolveAbuseReport } from "@/lib/admin/abuse-reports";
 import { requireAdminPermission } from "@/lib/admin/permissions";
 
 /**
@@ -13,13 +14,14 @@ import { requireAdminPermission } from "@/lib/admin/permissions";
  * ============================================================================
  * This module is ORCHESTRATION ONLY. It does not open a transaction, write a
  * notification, send an email, invalidate a cache, or insert an audit row —
- * every one of those already happens inside exactly one of the four existing
+ * every one of those already happens inside exactly one of the five existing
  * per-item decision functions it calls:
  *
  *   COMPANY -> reviewCompany               (lib/admin/companies.ts)
  *   JOB     -> reviewJob                   (lib/admin/jobs.ts)
  *   SEEKER  -> reviewSeekerVerification     (lib/admin/seekers.ts)
  *   REVIEW  -> resolveDisputedReview        (lib/reviews.ts)
+ *   REPORT  -> resolveAbuseReport           (lib/admin/abuse-reports.ts)
  *
  * Each of those already runs its own `$transaction` with the audit insert
  * inside it (see lib/admin/audit.ts's `buildAdminActionOperation` — atomic
@@ -59,9 +61,9 @@ export type BulkReviewQueueItemsInput = {
   /** May contain duplicates on the wire — deduped before processing so a repeated id can never produce two audit rows for one target. */
   ids: string[];
   action: AdminBulkQueueAction;
-  /** COMPANY/JOB/SEEKER only — threaded straight through to reviewCompany/reviewJob/reviewSeekerVerification's `reason`. Ignored for REVIEW. */
+  /** COMPANY/JOB/SEEKER only — threaded straight through to reviewCompany/reviewJob/reviewSeekerVerification's `reason`. Ignored for REVIEW/REPORT. */
   reason?: string;
-  /** REVIEW only — threaded straight through to resolveDisputedReview's `note`. Ignored for COMPANY/JOB/SEEKER. */
+  /** REVIEW/REPORT only — threaded straight through to resolveDisputedReview's/resolveAbuseReport's `note`. Ignored for COMPANY/JOB/SEEKER. */
   note?: string;
   /** Required by the Zod schema (lib/validations/admin.ts's adminBulkQueueReviewSchema) whenever `action` is reject-like; validated there against the matching controlled vocabulary. Passed through unvalidated here — this module trusts its caller already ran that schema, same as every other lib/admin/* decision function trusts its `raw` argument gets re-parsed by the callee's own schema. */
   reasonCode?: string;
@@ -74,11 +76,18 @@ const GENERIC_ITEM_ERROR = "Failed to process this item. See server logs for det
  * Maps (kind, action) to the one decision function that owns that target
  * type, and shapes the `raw` payload each one expects from its own Zod
  * schema (adminCompanyReviewSchema / adminJobReviewSchema /
- * adminSeekerVerificationReviewSchema / adminReviewResolveSchema — all in
- * lib/validations/{admin,review}.ts). This is the "mapping boundary" the
- * task spec calls out: REVIEW's restore/hide + note vocabulary is kept
- * distinct from the other three kinds' approve/reject + reason vocabulary
- * here, not merged into one shape passed uniformly to all four.
+ * adminSeekerVerificationReviewSchema / adminReviewResolveSchema /
+ * adminAbuseReportResolveSchema — all in lib/validations/{admin,review}.ts).
+ * This is the "mapping boundary" the task spec calls out: REVIEW's
+ * restore/hide + note vocabulary is kept distinct from the other kinds'
+ * approve/reject + reason vocabulary here, not merged into one shape passed
+ * uniformly to all five. REPORT uses the same approve/reject wire vocabulary
+ * as COMPANY/JOB/SEEKER (bulk's `adminBulkQueueReviewSchema` already treats
+ * it that way — see lib/validations/admin.ts), but reuses REVIEW's `note`
+ * field rather than `reason`, since `resolveAbuseReport`'s own schema
+ * (`adminAbuseReportResolveSchema`) calls its free-text field `note`, not
+ * `reason` — this mapping is exactly where that difference is handled, not a
+ * reason to add a third wire vocabulary.
  */
 function dispatchDecision(params: {
   adminUserId: string;
@@ -100,6 +109,15 @@ function dispatchDecision(params: {
       return reviewSeekerVerification(adminUserId, id, { action, reason, reasonCode });
     case "REVIEW":
       return resolveDisputedReview(adminUserId, id, { action, note, reasonCode });
+    case "REPORT":
+      // Bulk's wire vocabulary is approve/reject for REPORT (see
+      // lib/validations/admin.ts's adminBulkQueueReviewSchema); mapped onto
+      // resolveAbuseReport's own ACTIONED/DISMISSED status vocabulary here.
+      return resolveAbuseReport(adminUserId, id, {
+        status: action === "approve" ? "ACTIONED" : "DISMISSED",
+        note,
+        reasonCode,
+      });
   }
 }
 

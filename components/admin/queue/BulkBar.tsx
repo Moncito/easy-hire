@@ -1,9 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { AlertTriangle, Check, Loader2, X } from "lucide-react";
 import type { QueueKind, ReasonCodeOption } from "./types";
 import type { BulkReviewQueueResult } from "@/lib/admin/bulk";
+import { useDialogFocusTrap } from "@/components/admin/useDialogFocusTrap";
+import AdminSelect from "../ui/Select";
+import ModalPortal from "../ui/ModalPortal";
 
 /**
  * Bulk toolbar + typed-confirmation dialog — docs/ADMIN-CONSOLE-PLAN.md
@@ -38,13 +41,19 @@ const APPROVE_LABEL: Record<QueueKind, string> = {
   JOB: "Approve",
   SEEKER: "Approve",
   REVIEW: "Restore",
+  REPORT: "Action",
 };
 
+// For REPORT the risky half is inverted relative to the other kinds: acting
+// on a genuine report is the safe call, and DISMISSING one is the decision
+// that can leave a real abuser in place. The mandatory-reason-code friction
+// on this side is therefore exactly where it should be.
 const REJECT_LABEL: Record<QueueKind, string> = {
   COMPANY: "Reject",
   JOB: "Reject",
   SEEKER: "Reject",
   REVIEW: "Hide",
+  REPORT: "Dismiss",
 };
 
 function TypedConfirmDialog({
@@ -68,49 +77,12 @@ function TypedConfirmDialog({
   const [localError, setLocalError] = useState<string | null>(null);
 
   const dialogRef = useRef<HTMLDivElement>(null);
-  const firstFieldRef = useRef<HTMLInputElement | HTMLSelectElement>(null);
   const cancelRef = useRef<HTMLButtonElement>(null);
-  const triggerElementRef = useRef<Element | null>(null);
 
   const confirmed = typedCount.trim() === String(count);
   const reasonReady = isReview ? true : !!reasonCode;
 
-  useEffect(() => {
-    triggerElementRef.current = document.activeElement;
-    firstFieldRef.current?.focus();
-
-    function onKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        onCancel();
-        return;
-      }
-      if (e.key === "Tab" && dialogRef.current) {
-        const focusable = dialogRef.current.querySelectorAll<HTMLElement>(
-          'button, input, select, textarea, [tabindex]:not([tabindex="-1"])'
-        );
-        if (focusable.length === 0) return;
-        const first = focusable[0];
-        const last = focusable[focusable.length - 1];
-        if (e.shiftKey && document.activeElement === first) {
-          e.preventDefault();
-          last.focus();
-        } else if (!e.shiftKey && document.activeElement === last) {
-          e.preventDefault();
-          first.focus();
-        }
-      }
-    }
-
-    document.addEventListener("keydown", onKeyDown, true);
-    return () => {
-      document.removeEventListener("keydown", onKeyDown, true);
-      if (triggerElementRef.current instanceof HTMLElement) {
-        triggerElementRef.current.focus();
-      }
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  useDialogFocusTrap(dialogRef, onCancel);
 
   async function handleConfirm() {
     if (!confirmed || !reasonReady || submitting) return;
@@ -129,64 +101,63 @@ function TypedConfirmDialog({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 px-4" onClick={onCancel}>
+    <ModalPortal>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-ink/40 backdrop-blur-sm px-4" onClick={onCancel}>
+      {/* Floating dialog surface — same solid admin-dark-surface treatment
+          as AdminHeader.tsx's dropdown panel and AdminSidebar.tsx's aside,
+          not the page-content-card `white/5` treatment: a modal floats over
+          a backdrop, not directly on the page background. */}
       <div
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="bulk-confirm-title"
-        className="w-full max-w-md rounded-2xl border border-ink/10 bg-white p-6 shadow-lg"
+        className="w-full max-w-md rounded-2xl border border-ink/10 bg-white p-6 shadow-lg admin-dark:border-white/10 admin-dark:bg-admin-dark-surface"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-3 flex items-start gap-3">
           <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-ember" aria-hidden="true" />
           <div>
-            <h2 id="bulk-confirm-title" className="font-display text-lg font-bold text-ink">
+            <h2 id="bulk-confirm-title" className="font-display text-lg font-bold text-ink admin-dark:text-mist">
               {REJECT_LABEL[kind]} {count} item{count === 1 ? "" : "s"}?
             </h2>
-            <p className="mt-1 text-sm text-ink/60">This cannot be bulk-undone. Type the count below to confirm.</p>
+            <p className="mt-1 text-sm text-ink/60 admin-dark:text-mist/60">This cannot be bulk-undone. Type the count below to confirm.</p>
           </div>
         </div>
 
         {isReview ? (
           <>
-            <label htmlFor="bulk-reason-free" className="mb-1 block text-xs font-semibold text-ink/70">
-              Reason code <span className="text-ember">*</span> <span className="font-normal text-ink/40">(max 64 characters)</span>
+            <label htmlFor="bulk-reason-free" className="mb-1 block text-xs font-semibold text-ink/70 admin-dark:text-mist/70">
+              Reason code <span className="text-ember">*</span> <span className="font-normal text-ink/40 admin-dark:text-mist/40">(max 64 characters)</span>
             </label>
             <input
-              ref={firstFieldRef as React.RefObject<HTMLInputElement>}
               id="bulk-reason-free"
               type="text"
               maxLength={64}
               value={reasonCode}
               onChange={(e) => setReasonCode(e.target.value)}
-              className="w-full rounded-lg border border-ink/10 px-3 py-2 text-sm outline-none focus:border-navy focus:ring-2 focus:ring-navy/20"
+              className="w-full rounded-lg border border-ink/10 px-3 py-2 text-sm outline-none focus:border-navy focus:ring-2 focus:ring-navy/20 admin-dark:border-white/15 admin-dark:bg-white/5 admin-dark:text-mist"
             />
           </>
         ) : (
           <>
-            <label htmlFor="bulk-reason-select" className="mb-1 block text-xs font-semibold text-ink/70">
+            <label htmlFor="bulk-reason-select" className="mb-1 block text-xs font-semibold text-ink/70 admin-dark:text-mist/70">
               Reason code <span className="text-ember">*</span>
             </label>
-            <select
-              ref={firstFieldRef as React.RefObject<HTMLSelectElement>}
+            <AdminSelect
               id="bulk-reason-select"
               value={reasonCode}
-              onChange={(e) => setReasonCode(e.target.value)}
-              className="w-full rounded-lg border border-ink/10 bg-white px-3 py-2 text-sm outline-none focus:border-navy focus:ring-2 focus:ring-navy/20"
-            >
-              <option value="">Select a reason…</option>
-              {reasonCodes.map((rc) => (
-                <option key={rc.code} value={rc.code}>
-                  {rc.label}
-                </option>
-              ))}
-            </select>
+              onChange={setReasonCode}
+              options={reasonCodes.map((rc) => ({ value: rc.code, label: rc.label }))}
+              placeholder="Select a reason…"
+              aria-label="Reason code"
+              required
+            />
           </>
         )}
 
-        <label htmlFor="bulk-note" className="mb-1 mt-3 block text-xs font-semibold text-ink/70">
-          Note <span className="font-normal text-ink/40">(optional)</span>
+        <label htmlFor="bulk-note" className="mb-1 mt-3 block text-xs font-semibold text-ink/70 admin-dark:text-mist/70">
+          Note <span className="font-normal text-ink/40 admin-dark:text-mist/40">(optional)</span>
         </label>
         <textarea
           id="bulk-note"
@@ -194,11 +165,11 @@ function TypedConfirmDialog({
           maxLength={500}
           value={freeText}
           onChange={(e) => setFreeText(e.target.value)}
-          className="w-full resize-y rounded-lg border border-ink/10 px-3 py-2 text-sm outline-none focus:border-navy focus:ring-2 focus:ring-navy/20"
+          className="w-full resize-y rounded-lg border border-ink/10 px-3 py-2 text-sm outline-none focus:border-navy focus:ring-2 focus:ring-navy/20 admin-dark:border-white/15 admin-dark:bg-white/5 admin-dark:text-mist"
         />
 
-        <label htmlFor="bulk-typed-count" className="mb-1 mt-3 block text-xs font-semibold text-ink/70">
-          Type <span className="font-data font-bold text-ink">{count}</span> to confirm
+        <label htmlFor="bulk-typed-count" className="mb-1 mt-3 block text-xs font-semibold text-ink/70 admin-dark:text-mist/70">
+          Type <span className="font-data font-bold text-ink admin-dark:text-mist">{count}</span> to confirm
         </label>
         <input
           id="bulk-typed-count"
@@ -206,7 +177,7 @@ function TypedConfirmDialog({
           inputMode="numeric"
           value={typedCount}
           onChange={(e) => setTypedCount(e.target.value)}
-          className="w-full rounded-lg border border-ink/10 px-3 py-2 font-data text-sm outline-none focus:border-navy focus:ring-2 focus:ring-navy/20"
+          className="w-full rounded-lg border border-ink/10 px-3 py-2 font-data text-sm outline-none focus:border-navy focus:ring-2 focus:ring-navy/20 admin-dark:border-white/15 admin-dark:bg-white/5 admin-dark:text-mist"
         />
 
         {localError && (
@@ -221,7 +192,7 @@ function TypedConfirmDialog({
             type="button"
             onClick={onCancel}
             aria-label="Cancel bulk action"
-            className="rounded-xl border border-ink/10 px-4 py-2 text-sm font-semibold text-ink/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy"
+            className="cursor-pointer rounded-xl border border-ink/10 px-4 py-2 text-sm font-semibold text-ink/60 transition-colors hover:bg-ink/4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy admin-dark:border-white/15 admin-dark:text-mist/60 admin-dark:hover:bg-white/8"
           >
             Cancel
           </button>
@@ -229,7 +200,7 @@ function TypedConfirmDialog({
             type="button"
             disabled={!confirmed || !reasonReady || submitting}
             onClick={handleConfirm}
-            className="inline-flex items-center gap-1.5 rounded-xl bg-ember px-4 py-2 text-sm font-semibold text-white disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ember focus-visible:ring-offset-2"
+            className="inline-flex items-center gap-1.5 rounded-xl bg-ember px-4 py-2 text-sm font-semibold text-white transition-all active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ember focus-visible:ring-offset-2"
           >
             {submitting && <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />}
             Confirm {REJECT_LABEL[kind].toLowerCase()}
@@ -237,6 +208,7 @@ function TypedConfirmDialog({
         </div>
       </div>
     </div>
+    </ModalPortal>
   );
 }
 
@@ -251,12 +223,17 @@ function ResultBreakdown({
 }) {
   const failed = result.results.filter((r) => !r.ok);
   return (
-    <div className="mt-3 rounded-xl border border-ink/10 bg-mist/60 p-3 text-xs">
+    <div className="mt-3 rounded-xl border border-ink/10 bg-mist/60 p-3 text-xs admin-dark:border-white/10 admin-dark:bg-white/5">
       <div className="flex items-center justify-between">
-        <p className="font-semibold text-ink">
+        <p className="font-semibold text-ink admin-dark:text-mist">
           {action}: {result.succeeded} succeeded, {result.failed} failed
         </p>
-        <button type="button" onClick={onDismiss} aria-label="Dismiss bulk result" className="text-ink/40 hover:text-ink">
+        <button
+          type="button"
+          onClick={onDismiss}
+          aria-label="Dismiss bulk result"
+          className="cursor-pointer text-ink/40 transition-colors hover:text-ink admin-dark:text-mist/40 admin-dark:hover:text-mist"
+        >
           <X className="h-3.5 w-3.5" aria-hidden="true" />
         </button>
       </div>
@@ -266,7 +243,7 @@ function ResultBreakdown({
             <li key={f.id} className="flex items-center gap-1.5 text-ember">
               <AlertTriangle className="h-3 w-3 shrink-0" aria-hidden="true" />
               <span className="font-data">{f.id}</span>
-              <span className="text-ink/60">— {f.error}</span>
+              <span className="text-ink/60 admin-dark:text-mist/60">— {f.error}</span>
             </li>
           ))}
         </ul>
@@ -299,17 +276,17 @@ export default function BulkBar({
   }
 
   return (
-    <div className="sticky bottom-0 z-20 mt-3 rounded-2xl border border-navy/15 bg-white p-3 shadow-lg">
+    <div className="sticky bottom-0 z-20 mt-3 rounded-2xl border border-navy/15 bg-white p-3 shadow-lg admin-dark:border-navy/30 admin-dark:bg-admin-dark-surface">
       {selectedCount > 0 && (
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="text-sm font-semibold text-ink">
+          <p className="text-sm font-semibold text-ink admin-dark:text-mist">
             {selectedCount} item{selectedCount === 1 ? "" : "s"} selected
           </p>
           <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={onClear}
-              className="rounded-lg px-3 py-1.5 text-xs font-semibold text-ink/55 hover:bg-ink/5"
+              className="cursor-pointer rounded-lg px-3 py-1.5 text-xs font-semibold text-ink/55 transition-colors hover:bg-ink/5 admin-dark:text-mist/55 admin-dark:hover:bg-white/8"
             >
               Clear selection
             </button>
@@ -317,7 +294,7 @@ export default function BulkBar({
               type="button"
               disabled={approving}
               onClick={handleApprove}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-teal px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-teal/95 disabled:opacity-60"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-teal px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-teal/95 hover:shadow-md active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100 cursor-pointer"
             >
               {approving ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Check className="h-4 w-4" aria-hidden="true" />}
               {APPROVE_LABEL[kind]} {selectedCount}
@@ -325,7 +302,7 @@ export default function BulkBar({
             <button
               type="button"
               onClick={onOpenConfirm}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-ember/30 px-4 py-2 text-sm font-semibold text-ember hover:bg-ember/5"
+              className="cursor-pointer inline-flex items-center gap-1.5 rounded-xl border border-ember/30 px-4 py-2 text-sm font-semibold text-ember transition-colors hover:bg-ember/5"
             >
               <X className="h-4 w-4" aria-hidden="true" />
               {REJECT_LABEL[kind]} {selectedCount}…

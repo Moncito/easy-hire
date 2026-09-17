@@ -1,5 +1,17 @@
 @import "tailwindcss";
 
+/* `admin-dark:` — a Tailwind v4 custom variant scoped to `/admin` only,
+   conditioned on `[data-admin-theme="dark"]` set on `document.documentElement`
+   by components/admin/AdminHeader.tsx's theme toggle. Named `admin-dark`
+   rather than reusing Tailwind's own `dark:` variant on purpose: this app
+   has no site-wide dark mode (no `darkMode` strategy configured, zero `dark:`
+   usage anywhere outside /admin), and this variant must never accidentally
+   apply to seeker/employer/public pages that happen to render inside an
+   unrelated dark-themed ancestor somewhere. Matches selector to descendants
+   only via `[data-admin-theme="dark"] *` plus the attribute host element
+   itself via the `:where(...)`. */
+@custom-variant admin-dark (&:where([data-admin-theme="dark"], [data-admin-theme="dark"] *));
+
 @theme {
   --color-mist: #F5F6F4;
   --color-ink: #20242B;
@@ -7,6 +19,16 @@
   --color-marigold: #F2A93B;
   --color-teal: #1F8073;
   --color-ember: #D9553A;
+
+  /* Admin console dark theme — two new surfaces only. Text/borders/hovers
+     reuse the EXISTING `mist` token and plain white/black opacity utilities
+     (`admin-dark:text-mist/65`, `admin-dark:border-white/10`, etc.) rather
+     than a full second palette — the brand accents (navy/teal/marigold)
+     read fine unchanged on a dark background, which is why only the two
+     neutral surfaces need their own values. Scoped to `/admin` only — no
+     other part of the app declares or uses these. */
+  --color-admin-dark-bg: #14171C;
+  --color-admin-dark-surface: #1B1F26;
 
   --font-display: var(--font-space-grotesk), sans-serif;
   --font-body: var(--font-inter), sans-serif;
@@ -117,6 +139,24 @@
 
   html{
     scroll-behavior:smooth;
+    /* Reserved height of the admin impersonation banner (components/admin/
+       ImpersonationBanner.tsx), published at runtime via
+       document.documentElement.style.setProperty. Defaults to 0px — every
+       fixed/viewport-anchored piece of seeker/employer chrome that reads
+       this var (SeekerPillNav, SeekerWorkspaceSwitcher, EmployerShell,
+       Sidebar, EmployerRouteProgress) falls back to today's exact layout
+       when it's unset, which is the overwhelmingly common case. */
+    --eh-impersonation-h: 0px;
+    /* Current width of the admin sidebar (components/admin/AdminSidebar.tsx),
+       published at runtime the same way --eh-impersonation-h is — set via
+       document.documentElement.style.setProperty whenever the collapse state
+       changes, no ResizeObserver needed here since the two widths are fixed
+       design values (16rem expanded, 4rem collapsed), not something that
+       needs runtime measurement. Defaults to 16rem (expanded) so a
+       fresh/JS-disabled visitor gets full width, matching today's layout
+       before the client component ever mounts. Read by app/admin/layout.tsx's
+       content column instead of a static Tailwind pl-64. */
+    --eh-sidebar-w: 16rem;
   }
 
   body{
@@ -306,6 +346,31 @@ backdrop-filter:blur(6px);
 
 .jobs-workspace-scroll::-webkit-scrollbar-thumb:hover {
   background: rgba(30, 58, 95, 0.28);
+}
+
+/* Review pane tab strip horizontal scroll — thin, subtle (avoids heavy global bar) */
+.tab-strip-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(32, 36, 43, 0.18) transparent;
+}
+
+.tab-strip-scroll::-webkit-scrollbar {
+  height: 6px;
+  width: 6px;
+}
+
+.tab-strip-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.tab-strip-scroll::-webkit-scrollbar-thumb {
+  background: rgba(32, 36, 43, 0.15);
+  border: none;
+  border-radius: 999px;
+}
+
+.tab-strip-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(30, 58, 95, 0.35);
 }
 
 /* Fixed public header clearance — single source of truth for the floating

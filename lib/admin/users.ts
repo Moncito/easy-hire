@@ -8,18 +8,27 @@ import { deleteUserAccountAsAdmin, type AccountDeletionResult } from "@/lib/acco
 import { recordAdminAction, recordPiiRead } from "@/lib/admin/audit";
 import { requireAdminPermission } from "@/lib/admin/permissions";
 import type { TrustComputation } from "@/lib/admin/trust";
+import type { PlatformDailyRollupMetrics } from "@/lib/admin/rollups";
 import { adminUserActionSchema } from "@/lib/validations/admin";
 
 /**
  * ADMIN DIRECTORY + 360-DEGREE USER RECORD — docs/ADMIN-CONSOLE-PLAN.md
  * §4.3, §3, Phase 2.
  * ============================================================================
- * Two read shapes, deliberately different in how "expensive" a call they are:
+ * Three read shapes, deliberately different in how "expensive" a call they are:
  *
  *  - `listUserDirectory` is a paginated TABLE — many rows, cheap fields only,
  *    no per-row audit write. This mirrors `listQueue` in lib/admin/queues.ts,
  *    which also renders no PII-sensitive detail and is not itself audited;
  *    only the single-item detail read (`getQueueItemDetail`) is.
+ *  - `getUserDirectoryStats` / `getUserSignupTrend` back the analytics band
+ *    ABOVE that table — unfiltered whole-platform snapshots/history, not
+ *    scoped to whatever role/verified/search the table is currently showing.
+ *    `getUserDirectoryStats` counts CURRENT live state (same live-query
+ *    judgment call as `getQueueHealth` in lib/admin/queues.ts — "how many
+ *    right now" is fine to ask the live tables). `getUserSignupTrend` is
+ *    historical, so per lib/admin/rollups.ts's own module doc comment it
+ *    reads `platform_daily_rollups` only, never a live table.
  *  - `getUserRecord` / `getCompanyDetail` (lib/admin/companies.ts) are
  *    single-TARGET reads — the full record for exactly one account — and
  *    DO write an audit row, on the same `after()` reliability contract as
@@ -63,6 +72,15 @@ export type UserDirectoryItem = {
    */
   verified: boolean | null;
   trustScore: number | null;
+  /**
+   * Most recent `platform_events` row for this user, scoped to the CURRENT
+   * PAGE only — filled in by one batched `groupBy` after the page is
+   * fetched (see `listUserDirectory`), never a per-row query. `null` when
+   * the account has no recorded event yet (pre-instrumentation history, or
+   * simply never active) — same "no fabricated value" posture as the rest
+   * of this file, just without a rate to null out.
+   */
+  lastActiveAt: Date | null;
 };
 
 /** Cursor is (createdAt, id), descending — same base64url-JSON codec shape as `EventCursor` in lib/admin/events.ts, just exported locally since this cursor is over `User`, not `PlatformEvent`. */
@@ -176,6 +194,28 @@ export async function listUserDirectory(params: {
   const last = page[page.length - 1];
   const nextCursor = hasMore && last ? { createdAt: last.createdAt, id: last.id } : null;
 
+  // ONE batched groupBy for the whole page's "last active" column, not a
+  // query per row — same "COUNTS, NOT LISTS" discipline as the rest of this
+  // file, applied to a MAX instead of a count. `_max.createdAt` is exactly
+  // "most recent event" per user; `groupBy`'s `userId` column is nullable on
+  // `PlatformEvent` in general (system/anonymous events), but every row this
+  // query can match already has `userId IN (page ids)`, so it is never null
+  // here — the `if (group.userId)` below is a type-narrowing formality, not
+  // a real runtime branch.
+  const pageUserIds = page.map((row) => row.id);
+  const lastActiveGroups =
+    pageUserIds.length > 0
+      ? await prisma.platformEvent.groupBy({
+          by: ["userId"],
+          where: { userId: { in: pageUserIds } },
+          _max: { createdAt: true },
+        })
+      : [];
+  const lastActiveById = new Map<string, Date | null>();
+  for (const group of lastActiveGroups) {
+    if (group.userId) lastActiveById.set(group.userId, group._max.createdAt);
+  }
+
   const items: UserDirectoryItem[] = page.map((row) => {
     const verified =
       row.role === "SEEKER"
@@ -197,10 +237,121 @@ export async function listUserDirectory(params: {
       displayName: row.seekerProfile?.fullName ?? row.company?.companyName ?? null,
       verified,
       trustScore: row.seekerProfile?.trustScore ?? row.company?.trustScore ?? null,
+      lastActiveAt: lastActiveById.get(row.id) ?? null,
     };
   });
 
   return { items, nextCursor };
+}
+
+// ============================================================================
+// Directory analytics band — snapshot tiles + signup trend, `/admin/users`
+// (docs/ADMIN-CONSOLE-PLAN.md §4.3). Deliberately NOT gated by the table's own
+// role/verified/search filters — this is "how many accounts exist right now
+// on the whole platform", independent of whatever the table happens to be
+// scrolled/filtered to.
+// ============================================================================
+
+export type UserDirectoryStats = {
+  totalUsers: number;
+  seekerCount: number;
+  employerCount: number;
+  adminCount: number;
+  /**
+   * Verification snapshot over the two roles that actually have a
+   * verification concept (seeker `idVerificationStatus`, employer
+   * `verifiedStatus` — same fields `listUserDirectory`'s own `verified`
+   * filter reads). ADMIN accounts are excluded from BOTH counts, not folded
+   * into `unverifiedCount`: an admin was never submitted for review, so
+   * counting it as "unverified" would misreport it as a rejected/pending
+   * account rather than one the concept doesn't apply to — the same
+   * distinction `UserDirectoryItem.verified: null` already draws for a
+   * single row. Consequence for whoever renders this: `verifiedCount +
+   * unverifiedCount === seekerCount + employerCount`, not `totalUsers`; the
+   * gap is exactly `adminCount`.
+   */
+  verifiedCount: number;
+  unverifiedCount: number;
+};
+
+export async function getUserDirectoryStats(): Promise<UserDirectoryStats> {
+  const [roleGroups, verifiedCount, unverifiedCount] = await Promise.all([
+    prisma.user.groupBy({ by: ["role"], _count: { _all: true } }),
+    // Identical OR-condition shape to listUserDirectory's `verified === "VERIFIED"`
+    // branch above, just run as a standalone whole-table count with no role/
+    // search filter.
+    prisma.user.count({
+      where: {
+        OR: [{ seekerProfile: { idVerificationStatus: "APPROVED" } }, { company: { verifiedStatus: "APPROVED" } }],
+      },
+    }),
+    // Identical to the `verified === "UNVERIFIED"` branch above, plus an
+    // explicit `role: { not: "ADMIN" }` — without it, an ADMIN row would
+    // trivially satisfy both OR halves (it has neither a seekerProfile nor a
+    // company) and get miscounted as "unverified" rather than excluded. See
+    // the doc comment on UserDirectoryStats.unverifiedCount for why ADMIN is
+    // excluded here instead of counted.
+    prisma.user.count({
+      where: {
+        AND: [
+          { role: { not: "ADMIN" } },
+          { OR: [{ seekerProfile: null }, { seekerProfile: { idVerificationStatus: { not: "APPROVED" } } }] },
+          { OR: [{ company: null }, { company: { verifiedStatus: { not: "APPROVED" } } }] },
+        ],
+      },
+    }),
+  ]);
+
+  const countByRole = new Map(roleGroups.map((r) => [r.role, r._count._all]));
+  const totalUsers = roleGroups.reduce((sum, r) => sum + r._count._all, 0);
+
+  return {
+    totalUsers,
+    seekerCount: countByRole.get("SEEKER") ?? 0,
+    employerCount: countByRole.get("EMPLOYER") ?? 0,
+    adminCount: countByRole.get("ADMIN") ?? 0,
+    verifiedCount,
+    unverifiedCount,
+  };
+}
+
+export type UserSignupTrendPoint = {
+  date: Date;
+  /** Sum of this row's `signupsByRole` values — a derived total of an already-stored breakdown, not a fabricated number. Same convention as `MarketplacePulseTrendPoint.signupsTotal` in lib/admin/home-dashboard.ts. */
+  total: number;
+  /** Exactly as stored in that day's `platform_daily_rollups` row — not recomputed. */
+  byRole: Record<string, number>;
+};
+
+export const DEFAULT_USER_SIGNUP_TREND_DAYS = 30;
+
+/**
+ * Last `days` days of `platform_daily_rollups` — however many rows actually
+ * exist, per this file's module doc comment ("Charts must read
+ * `platform_daily_rollups`, never the live tables"). Does NOT pad,
+ * interpolate, or backfill missing days: a marketplace with 6 stored rows
+ * returns 6 points, not `days`.
+ *
+ * Deliberately a small standalone query rather than a call into
+ * `getMarketplacePulseTrend` (lib/admin/home-dashboard.ts) — that function is
+ * scoped to Home's Band-1 card and also carries `fillRate`/
+ * `medianTimeToFirstApplicantHours`, neither of which this page needs.
+ */
+export async function getUserSignupTrend(days = DEFAULT_USER_SIGNUP_TREND_DAYS): Promise<UserSignupTrendPoint[]> {
+  const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+  const rows = await prisma.platformDailyRollup.findMany({
+    where: { date: { gte: since } },
+    orderBy: { date: "asc" },
+    select: { date: true, metrics: true },
+  });
+
+  return rows.map((row) => {
+    const metrics = row.metrics as unknown as PlatformDailyRollupMetrics;
+    const byRole = metrics.signupsByRole ?? {};
+    const total = Object.values(byRole).reduce((sum, n) => sum + n, 0);
+    return { date: row.date, total, byRole };
+  });
 }
 
 // ============================================================================
@@ -222,6 +373,8 @@ export type UserRecordIdentity = {
   createdAt: Date;
   /** Derived from the most recent `platform_events` row for this user — never a Session-table read (there is none; see the module doc comment). */
   lastSeenAt: Date | null;
+  /** `User.avatarUrl` — set via Google OAuth sign-in. Null for accounts that never signed in with Google. */
+  avatarUrl: string | null;
 };
 
 export type UserRecordTrust = {
@@ -239,6 +392,8 @@ export type SeekerRecordSection = {
   kind: "SEEKER";
   seekerProfileId: string;
   fullName: string;
+  photoUrl: string | null;
+  resumeUrl: string | null;
   profileCompletionPercent: number;
   applicationsByStatus: Record<ApplicationStatus, number>;
   totalApplications: number;
@@ -250,6 +405,7 @@ export type EmployerRecordSection = {
   kind: "EMPLOYER";
   companyId: string;
   companyName: string;
+  logoUrl: string | null;
   verifiedStatus: VerificationStatus;
   plan: SubscriptionPlan;
   jobsPosted: number;
@@ -330,6 +486,8 @@ async function buildSeekerSection(seekerProfileId: string): Promise<SeekerRecord
     kind: "SEEKER",
     seekerProfileId,
     fullName: profile.fullName,
+    photoUrl: profile.photoUrl,
+    resumeUrl: profile.resumeUrl,
     profileCompletionPercent,
     applicationsByStatus,
     totalApplications,
@@ -343,6 +501,7 @@ async function buildEmployerSection(companyId: string): Promise<EmployerRecordSe
     where: { id: companyId },
     select: {
       companyName: true,
+      logoUrl: true,
       verifiedStatus: true,
       responseRate: true,
       medianResponseMinutes: true,
@@ -367,6 +526,7 @@ async function buildEmployerSection(companyId: string): Promise<EmployerRecordSe
     kind: "EMPLOYER",
     companyId,
     companyName: company.companyName,
+    logoUrl: company.logoUrl,
     verifiedStatus: company.verifiedStatus,
     plan,
     jobsPosted,
@@ -403,6 +563,7 @@ export async function getUserRecord(adminUserId: string, targetUserId: string): 
       role: true,
       emailVerifiedAt: true,
       createdAt: true,
+      avatarUrl: true,
       seekerProfile: { select: { id: true, trustScore: true, trustScoreUpdatedAt: true, trustSignals: true, idVerificationStatus: true } },
       company: { select: { id: true, trustScore: true, trustScoreUpdatedAt: true, trustSignals: true, verifiedStatus: true } },
     },
@@ -457,6 +618,7 @@ export async function getUserRecord(adminUserId: string, targetUserId: string): 
       emailVerifiedAt: user.emailVerifiedAt,
       createdAt: user.createdAt,
       lastSeenAt: lastEvent?.createdAt ?? null,
+      avatarUrl: user.avatarUrl,
     },
     trust,
     roleDetail,

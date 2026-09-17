@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { AlertTriangle, Info, Loader2, Trash2, X } from "lucide-react";
 import { ADMIN_PERMISSION_ORDER, PERMISSION_META } from "./permissionMeta";
 import { ADMIN_LEVELS, type AdminLevel, type AdminPermission, type SerializedAdminTeamRow } from "./types";
+import { useDialogFocusTrap } from "@/components/admin/useDialogFocusTrap";
+import ModalPortal from "@/components/admin/ui/ModalPortal";
 
 /**
  * Edit an existing `AdminProfile` (level + additive permissions) and, from
@@ -31,46 +33,6 @@ export type AdminProfileEditorProps = {
   onRevoke: () => Promise<{ ok: boolean; error?: string }>;
 };
 
-function useDialogFocusTrap(dialogRef: React.RefObject<HTMLDivElement | null>, onCancel: () => void) {
-  useEffect(() => {
-    const triggerElement = document.activeElement;
-    const focusable = dialogRef.current?.querySelectorAll<HTMLElement>(
-      'button, input, select, textarea, [tabindex]:not([tabindex="-1"])'
-    );
-    focusable?.[0]?.focus();
-
-    function onKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        onCancel();
-        return;
-      }
-      if (e.key === "Tab" && dialogRef.current) {
-        const items = dialogRef.current.querySelectorAll<HTMLElement>(
-          'button, input, select, textarea, [tabindex]:not([tabindex="-1"])'
-        );
-        if (items.length === 0) return;
-        const first = items[0];
-        const last = items[items.length - 1];
-        if (e.shiftKey && document.activeElement === first) {
-          e.preventDefault();
-          last.focus();
-        } else if (!e.shiftKey && document.activeElement === last) {
-          e.preventDefault();
-          first.focus();
-        }
-      }
-    }
-
-    document.addEventListener("keydown", onKeyDown, true);
-    return () => {
-      document.removeEventListener("keydown", onKeyDown, true);
-      if (triggerElement instanceof HTMLElement) triggerElement.focus();
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-}
-
 function RevokeConfirmDialog({
   email,
   submitting,
@@ -91,7 +53,8 @@ function RevokeConfirmDialog({
   const confirmed = typedEmail.trim().toLowerCase() === email.toLowerCase();
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-ink/40 px-4" onClick={onCancel}>
+    <ModalPortal>
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-ink/40 backdrop-blur-sm px-4" onClick={onCancel}>
       <div
         ref={dialogRef}
         role="dialog"
@@ -155,6 +118,7 @@ function RevokeConfirmDialog({
         </div>
       </div>
     </div>
+    </ModalPortal>
   );
 }
 
@@ -204,7 +168,8 @@ export default function AdminProfileEditor({ row, onClose, onSave, onRevoke }: A
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 px-4" onClick={onClose}>
+    <ModalPortal>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-ink/40 backdrop-blur-sm px-4" onClick={onClose}>
       <div
         ref={dialogRef}
         role="dialog"
@@ -368,5 +333,6 @@ export default function AdminProfileEditor({ row, onClose, onSave, onRevoke }: A
         )}
       </div>
     </div>
+    </ModalPortal>
   );
 }

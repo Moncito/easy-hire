@@ -6,9 +6,10 @@ import { adminBulkQueueReviewSchema } from "@/lib/validations/admin";
 import { bulkReviewQueueItems } from "@/lib/admin/bulk";
 
 /**
- * POST /api/admin/queues/bulk — bulk approve/reject (COMPANY/JOB/SEEKER) or
- * restore/hide (REVIEW) across the unified moderation queues (Phase 1,
- * docs/ADMIN-CONSOLE-PLAN.md §4.2 "Bulk actions"). Thin handler: auth,
+ * POST /api/admin/queues/bulk — bulk approve/reject (COMPANY/JOB/SEEKER/
+ * REPORT) or restore/hide (REVIEW) across the unified moderation queues
+ * (Phase 1, extended to REPORT in Phase 4 — docs/ADMIN-CONSOLE-PLAN.md §4.2
+ * "Bulk actions", §11 Phase 4). Thin handler: auth,
  * Zod-validate, call lib/admin/bulk.ts, respond — same shape as
  * GET /api/admin/queues (app/api/admin/queues/route.ts). Business logic
  * (dedup, dispatch, partial-failure handling) lives entirely in

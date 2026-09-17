@@ -1214,21 +1214,29 @@ model PlatformEventDailyRollup {
 /// that produced it was later removed. The audit trail has to outlive the
 /// admin.
 model AdminAuditLog {
-  id          String   @id @default(cuid())
-  adminUserId String   @map("admin_user_id")
-  action      String // COMPANY_APPROVE | JOB_REJECT | IMPERSONATE_START | ...
-  targetType  String   @map("target_type")
-  targetId    String   @map("target_id")
-  reasonCode  String?  @map("reason_code") // controlled vocabulary
-  note        String?
-  before      Json?
-  after       Json?
-  ipHash      String?  @map("ip_hash")
-  createdAt   DateTime @default(now()) @map("created_at")
+  id                     String   @id @default(cuid())
+  adminUserId            String   @map("admin_user_id")
+  action                 String // COMPANY_APPROVE | JOB_REJECT | IMPERSONATE_START | ...
+  targetType             String   @map("target_type")
+  targetId               String   @map("target_id")
+  reasonCode             String?  @map("reason_code") // controlled vocabulary
+  note                   String?
+  before                 Json?
+  after                  Json?
+  ipHash                 String?  @map("ip_hash")
+  createdAt              DateTime @default(now()) @map("created_at")
+  // §8.2: "every action inside the [impersonation] session audited to
+  // admin_audit_logs with the impersonation session id attached." Nullable —
+  // most audit rows are an admin acting as themselves, not impersonating.
+  // Plain id, not an FK relation to ImpersonationSession, for the same
+  // reason as adminUserId above: this row must outlive the session record's
+  // own retention/deletion story.
+  impersonationSessionId String?  @map("impersonation_session_id")
 
   @@index([adminUserId, createdAt])
   @@index([targetType, targetId])
   @@index([action, createdAt])
+  @@index([impersonationSessionId])
   @@map("admin_audit_logs")
 }
 
@@ -1335,4 +1343,85 @@ enum AdminLevel {
   MODERATOR
   FINANCE
   SUPER_ADMIN
+}
+
+/// docs/ADMIN-CONSOLE-PLAN.md §8.2's consent-and-ticket record for an admin
+/// "log in as this user" session, and the authority for expiry and
+/// revocation. `Auth.ts` uses `session: { strategy: "jwt" }` and there is no
+/// `Session` model in this schema, so the 1-hour impersonation token rides in
+/// its own cookie rather than a DB-backed session row — a bare stateless JWT
+/// cannot be revoked before its TTL, which §8.2 requires (an admin ending the
+/// session early, or a SUPER_ADMIN killing one in progress). This row is what
+/// makes that possible: every read of the impersonation cookie must also
+/// check `endedAt`/`expiresAt` here before honoring it.
+///
+/// `adminUserId` and `targetUserId` are plain ids, not FK relations — same
+/// precedent as `AdminAuditLog.adminUserId` and `AbuseReport.reporterUserId`
+/// elsewhere in this file: this is a historical record of who impersonated
+/// whom and why, and it must survive either account being deleted rather
+/// than cascade-deleting or leaving a dangling required relation.
+///
+/// `scope` is a plain String, not a Postgres enum — same reasoning already
+/// applied to queue reason codes (`lib/admin/reason-codes.ts`): the set of
+/// scopes narrower than full impersonation (e.g. a future "read-only minus
+/// billing") is expected to grow, and adding one should be a row/config
+/// change, not a migration. `"READ_ONLY"` is the only scope Phase 5 ships.
+model ImpersonationSession {
+  id              String    @id @default(cuid())
+  adminUserId     String    @map("admin_user_id")
+  targetUserId    String    @map("target_user_id")
+  ticketReference String    @map("ticket_reference")
+  scope           String    @default("READ_ONLY")
+  reason          String
+  startedAt       DateTime  @default(now()) @map("started_at")
+  expiresAt       DateTime  @map("expires_at")
+  endedAt         DateTime? @map("ended_at")
+  endedReason     String?   @map("ended_reason")
+  ipHash          String?   @map("ip_hash")
+
+  @@index([adminUserId, startedAt])
+  @@index([targetUserId, startedAt])
+  @@index([expiresAt])
+  @@map("impersonation_sessions")
+}
+
+/// Feature flags for staged rollout, per docs/ADMIN-CONSOLE-PLAN.md §4.10.
+/// `key` is a plain unique TEXT, never a Postgres enum, so adding a new flag
+/// is a row insert — same reasoning as the open-vocabulary queue reason
+/// codes in `lib/admin/reason-codes.ts`. `rolloutPercentage` is optional: a
+/// flag can be a plain on/off switch (percentage unset) or a staged rollout
+/// (percentage set), without needing two different tables.
+model FeatureFlag {
+  id                String   @id @default(cuid())
+  key               String   @unique
+  description       String
+  enabled           Boolean  @default(false)
+  rolloutPercentage Int?     @map("rollout_percentage")
+  updatedBy         String   @map("updated_by")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  @@map("feature_flags")
+}
+
+/// Cron run history for the admin health screen, per
+/// docs/ADMIN-CONSOLE-PLAN.md §4.10 ("cron run history and last-success
+/// age"). Nothing recorded this before: `vercel.json` declares no `crons`
+/// array, and all five scheduled jobs are GitHub Actions workflows, so the
+/// app only learns a job ran if the route itself writes a row here at start
+/// and finish. `status` is a plain String (`RUNNING` / `SUCCESS` / `FAILED`
+/// in practice), not an enum — consistent with every other operational
+/// status column in this file (`AbuseReport.status`, etc.) that is expected
+/// to gain values without a migration.
+model CronRun {
+  id         String    @id @default(cuid())
+  jobName    String    @map("job_name")
+  startedAt  DateTime  @default(now()) @map("started_at")
+  finishedAt DateTime? @map("finished_at")
+  status     String
+  detail     Json?
+  error      String?
+
+  @@index([jobName, startedAt(sort: Desc)])
+  @@map("cron_runs")
 }

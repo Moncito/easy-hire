@@ -16,8 +16,8 @@ import { getQueueItemDetail } from "@/lib/admin/queue-detail";
  * (app/api/admin/queues/route.ts).
  *
  * The `kind` segment uses the SAME uppercase vocabulary as
- * ADMIN_QUEUE_KINDS ("COMPANY" | "SEEKER" | "JOB" | "REVIEW") — one
- * vocabulary across every admin queue endpoint, never a lowercase/plural
+ * ADMIN_QUEUE_KINDS ("COMPANY" | "SEEKER" | "JOB" | "REVIEW" | "REPORT") —
+ * one vocabulary across every admin queue endpoint, never a lowercase/plural
  * alias. An unrecognized kind fails Zod parsing and comes back as a 400 via
  * errorResponse, not a runtime crash.
  */

@@ -20,6 +20,16 @@ export async function getPublicSeeker(id: string) {
         where: { id, visibility: "PUBLIC" },
         select: {
           id: true,
+          // Not a public-facing field on its own — it's the underlying
+          // User.id, distinct from the SeekerProfile.id already in the URL.
+          // Selected so `components/ReportButton.tsx` on `/seekers/[id]` can
+          // file a USER-type abuse report against the right row:
+          // `AbuseReport.targetId` for targetType 'USER' is `User.id`, never
+          // `SeekerProfile.id` (see lib/admin/trust-directory.ts's identical
+          // distinction, and lib/admin/abuse-reports.ts's targetExists
+          // check). Cuid-format and non-sequential, same exposure profile as
+          // every other id already rendered on this public page.
+          userId: true,
           fullName: true,
           headline: true,
           bio: true,
