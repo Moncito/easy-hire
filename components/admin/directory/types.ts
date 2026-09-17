@@ -24,6 +24,7 @@ import type { TrustComponent } from "@/lib/admin/trust";
 import type { PlatformEventType, ActorType } from "@/lib/admin/events";
 import { ADMIN_JOB_DIRECTORY_STATUSES, type AdminUserActionInput } from "@/lib/validations/admin";
 import type { UserDirectoryVerifiedFilter, UserDirectoryStats, UserSignupTrendPoint } from "@/lib/admin/users";
+import type { JobDirectoryStats, JobPostingTrendPoint } from "@/lib/admin/jobs";
 
 export type {
   Role,
@@ -237,5 +238,11 @@ export type SerializedJobDirectoryItem = {
   updatedAt: string;
   publishedAt: string | null;
 };
+
+/** Mirrors lib/admin/jobs.ts's `JobDirectoryStats` — the analytics band above the job directory table. */
+export type SerializedJobDirectoryStats = JobDirectoryStats;
+
+/** Mirrors lib/admin/jobs.ts's `JobPostingTrendPoint`, with `date` serialized to an ISO string. */
+export type SerializedJobPostingTrendPoint = Omit<JobPostingTrendPoint, "date"> & { date: string };
 
 export { ADMIN_JOB_DIRECTORY_STATUSES };
