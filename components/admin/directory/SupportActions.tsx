@@ -58,16 +58,16 @@ function DeleteConfirmDialog({ email, submitting, error, onCancel, onConfirm }: 
         aria-modal="true"
         aria-labelledby="delete-confirm-title"
         aria-describedby="delete-confirm-body"
-        className="w-full max-w-md rounded-2xl border border-ember/25 bg-white p-6 shadow-lg"
+        className="w-full max-w-md rounded-2xl border border-ember/25 bg-white p-6 shadow-lg admin-dark:border-ember/30 admin-dark:bg-admin-dark-surface"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-3 flex items-start gap-3">
           <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-ember" aria-hidden="true" />
           <div>
-            <h2 id="delete-confirm-title" className="font-display text-lg font-bold text-ink">
+            <h2 id="delete-confirm-title" className="font-display text-lg font-bold text-ink admin-dark:text-mist">
               Delete this account?
             </h2>
-            <p id="delete-confirm-body" className="mt-1 text-sm text-ink/65">
+            <p id="delete-confirm-body" className="mt-1 text-sm text-ink/65 admin-dark:text-mist/65">
               This is <strong className="text-ember">irreversible</strong>. It runs the RA 10173 anonymisation path:
               the account&rsquo;s email and identifying profile fields are permanently anonymised, any company it
               owns is anonymised too, its memberships are removed, and its active job listings are closed. This
@@ -76,8 +76,8 @@ function DeleteConfirmDialog({ email, submitting, error, onCancel, onConfirm }: 
           </div>
         </div>
 
-        <label htmlFor="delete-typed-email" className="mb-1 mt-2 block text-xs font-semibold text-ink/70">
-          Type <span className="font-data font-bold text-ink">{email}</span> to confirm
+        <label htmlFor="delete-typed-email" className="mb-1 mt-2 block text-xs font-semibold text-ink/70 admin-dark:text-mist/70">
+          Type <span className="font-data font-bold text-ink admin-dark:text-mist">{email}</span> to confirm
         </label>
         <input
           id="delete-typed-email"
@@ -86,7 +86,7 @@ function DeleteConfirmDialog({ email, submitting, error, onCancel, onConfirm }: 
           spellCheck={false}
           value={typedEmail}
           onChange={(e) => setTypedEmail(e.target.value)}
-          className="w-full rounded-lg border border-ink/10 px-3 py-2 font-data text-sm outline-none focus:border-ember focus:ring-2 focus:ring-ember/20"
+          className="w-full rounded-lg border border-ink/10 px-3 py-2 font-data text-sm outline-none focus:border-ember focus:ring-2 focus:ring-ember/20 admin-dark:border-white/15 admin-dark:bg-white/5 admin-dark:text-mist admin-dark:focus:border-ember admin-dark:focus:ring-ember/20"
         />
 
         {error && (
@@ -100,7 +100,7 @@ function DeleteConfirmDialog({ email, submitting, error, onCancel, onConfirm }: 
             type="button"
             onClick={onCancel}
             aria-label="Cancel account deletion"
-            className="rounded-xl border border-ink/10 px-4 py-2 text-sm font-semibold text-ink/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy"
+            className="rounded-xl border border-ink/10 px-4 py-2 text-sm font-semibold text-ink/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy admin-dark:border-white/15 admin-dark:text-mist/65 admin-dark:hover:bg-white/10"
           >
             Cancel
           </button>
@@ -155,25 +155,25 @@ function ImpersonationStartDialog({ email, submitting, error, onCancel, onConfir
         aria-modal="true"
         aria-labelledby="impersonate-start-title"
         aria-describedby="impersonate-start-body"
-        className="w-full max-w-md rounded-2xl border border-ink/10 bg-white p-6 shadow-lg"
+        className="w-full max-w-md rounded-2xl border border-ink/10 bg-white p-6 shadow-lg admin-dark:border-white/10 admin-dark:bg-admin-dark-surface"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-3 flex items-start gap-3">
-          <Eye className="mt-0.5 h-5 w-5 shrink-0 text-navy" aria-hidden="true" />
+          <Eye className="mt-0.5 h-5 w-5 shrink-0 text-navy admin-dark:text-teal" aria-hidden="true" />
           <div>
-            <h2 id="impersonate-start-title" className="font-display text-lg font-bold text-ink">
+            <h2 id="impersonate-start-title" className="font-display text-lg font-bold text-ink admin-dark:text-mist">
               View as {email}?
             </h2>
-            <p id="impersonate-start-body" className="mt-1 text-sm text-ink/65">
-              This opens a <strong className="text-ink">read-only</strong> session showing exactly what this account
-              sees — no changes can be made through it. It lasts at most <strong className="text-ink">1 hour</strong>{" "}
-              and ends automatically. <strong className="text-ink">Every page you view while it&rsquo;s active is
+            <p id="impersonate-start-body" className="mt-1 text-sm text-ink/65 admin-dark:text-mist/65">
+              This opens a <strong className="text-ink admin-dark:text-mist">read-only</strong> session showing exactly what this account
+              sees — no changes can be made through it. It lasts at most <strong className="text-ink admin-dark:text-mist">1 hour</strong>{" "}
+              and ends automatically. <strong className="text-ink admin-dark:text-mist">Every page you view while it&rsquo;s active is
               audited</strong> against the ticket reference and reason below.
             </p>
           </div>
         </div>
 
-        <label htmlFor="impersonate-ticket" className="mb-1 mt-2 block text-xs font-semibold text-ink/70">
+        <label htmlFor="impersonate-ticket" className="mb-1 mt-2 block text-xs font-semibold text-ink/70 admin-dark:text-mist/70">
           Support ticket reference
         </label>
         <input
@@ -184,10 +184,10 @@ function ImpersonationStartDialog({ email, submitting, error, onCancel, onConfir
           maxLength={IMPERSONATION_TICKET_REFERENCE_MAX_LENGTH}
           onChange={(e) => setTicketReference(e.target.value)}
           placeholder="e.g. ZENDESK-4821"
-          className="w-full rounded-lg border border-ink/10 px-3 py-2 text-sm outline-none focus:border-navy focus:ring-2 focus:ring-navy/20"
+          className="w-full rounded-lg border border-ink/10 px-3 py-2 text-sm outline-none focus:border-navy focus:ring-2 focus:ring-navy/20 admin-dark:border-white/15 admin-dark:bg-white/5 admin-dark:text-mist admin-dark:placeholder:text-mist/35"
         />
 
-        <label htmlFor="impersonate-reason" className="mb-1 mt-3 block text-xs font-semibold text-ink/70">
+        <label htmlFor="impersonate-reason" className="mb-1 mt-3 block text-xs font-semibold text-ink/70 admin-dark:text-mist/70">
           Reason
         </label>
         <textarea
@@ -197,7 +197,7 @@ function ImpersonationStartDialog({ email, submitting, error, onCancel, onConfir
           maxLength={IMPERSONATION_REASON_MAX_LENGTH}
           onChange={(e) => setReason(e.target.value)}
           placeholder="What are you investigating?"
-          className="w-full resize-none rounded-lg border border-ink/10 px-3 py-2 text-sm outline-none focus:border-navy focus:ring-2 focus:ring-navy/20"
+          className="w-full resize-none rounded-lg border border-ink/10 px-3 py-2 text-sm outline-none focus:border-navy focus:ring-2 focus:ring-navy/20 admin-dark:border-white/15 admin-dark:bg-white/5 admin-dark:text-mist admin-dark:placeholder:text-mist/35"
         />
 
         {error && (
@@ -211,7 +211,7 @@ function ImpersonationStartDialog({ email, submitting, error, onCancel, onConfir
             type="button"
             onClick={onCancel}
             aria-label="Cancel starting a view-as session"
-            className="rounded-xl border border-ink/10 px-4 py-2 text-sm font-semibold text-ink/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy"
+            className="rounded-xl border border-ink/10 px-4 py-2 text-sm font-semibold text-ink/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy admin-dark:border-white/15 admin-dark:text-mist/65 admin-dark:hover:bg-white/10"
           >
             Cancel
           </button>
@@ -324,15 +324,19 @@ export default function SupportActions({
   }
 
   return (
-    <section aria-labelledby="support-actions-heading" className="rounded-2xl border border-ink/5 bg-white p-5">
-      <h2 id="support-actions-heading" className="font-display text-lg font-bold text-ink">
+    // Plain action bar, not a card — buttons that don't need visual
+    // isolation of their own, just separation from Activity above (a top
+    // divider does that on its own, per the card-density pass: this section
+    // is a row of controls, not a body of content to box in).
+    <section aria-labelledby="support-actions-heading" className="border-t border-ink/10 pt-5 admin-dark:border-white/10">
+      <h2 id="support-actions-heading" className="font-display text-lg font-bold text-ink admin-dark:text-mist">
         Support actions
       </h2>
       <div aria-live="polite" role="status" className="sr-only">
         {announce}
       </div>
       {announce && (
-        <p className="mt-2 flex items-center gap-1.5 text-xs font-medium text-ink/60">
+        <p className="mt-2 flex items-center gap-1.5 text-xs font-medium text-ink/60 admin-dark:text-mist/60">
           <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-teal" aria-hidden="true" />
           {announce}
         </p>
@@ -342,7 +346,7 @@ export default function SupportActions({
           type="button"
           disabled={pending !== null}
           onClick={() => void handlePasswordReset()}
-          className="inline-flex items-center gap-1.5 rounded-xl border border-ink/10 px-3.5 py-2 text-sm font-semibold text-ink/70 hover:bg-ink/5 disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy"
+          className="inline-flex items-center gap-1.5 rounded-xl border border-ink/10 px-3.5 py-2 text-sm font-semibold text-ink/70 hover:bg-ink/5 disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy admin-dark:border-white/15 admin-dark:text-mist/70 admin-dark:hover:bg-white/10"
         >
           {pending === "password_reset" ? (
             <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
@@ -356,7 +360,7 @@ export default function SupportActions({
           disabled={pending !== null || emailVerified}
           onClick={() => void handleResendVerification()}
           title={emailVerified ? "This account is already verified" : undefined}
-          className="inline-flex items-center gap-1.5 rounded-xl border border-ink/10 px-3.5 py-2 text-sm font-semibold text-ink/70 hover:bg-ink/5 disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy"
+          className="inline-flex items-center gap-1.5 rounded-xl border border-ink/10 px-3.5 py-2 text-sm font-semibold text-ink/70 hover:bg-ink/5 disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy admin-dark:border-white/15 admin-dark:text-mist/70 admin-dark:hover:bg-white/10"
         >
           {pending === "resend_verification" ? (
             <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
@@ -373,7 +377,7 @@ export default function SupportActions({
             setImpersonateError(null);
             setImpersonateDialogOpen(true);
           }}
-          className="inline-flex items-center gap-1.5 rounded-xl border border-navy/20 px-3.5 py-2 text-sm font-semibold text-navy hover:bg-navy/5 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy"
+          className="inline-flex items-center gap-1.5 rounded-xl border border-navy/20 px-3.5 py-2 text-sm font-semibold text-navy hover:bg-navy/5 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy admin-dark:border-teal/30 admin-dark:text-teal admin-dark:hover:bg-teal/10"
         >
           <Eye className="h-4 w-4" aria-hidden="true" />
           View as this user…
@@ -385,7 +389,7 @@ export default function SupportActions({
             setDeleteError(null);
             setDeleteDialogOpen(true);
           }}
-          className="ml-auto inline-flex items-center gap-1.5 rounded-xl border border-ember/30 px-3.5 py-2 text-sm font-semibold text-ember hover:bg-ember/5 disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ember"
+          className="ml-auto inline-flex items-center gap-1.5 rounded-xl border border-ember/30 px-3.5 py-2 text-sm font-semibold text-ember hover:bg-ember/5 disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ember admin-dark:bg-ember/[0.05] admin-dark:hover:bg-ember/10 admin-dark:hover:border-ember/40"
         >
           <Trash2 className="h-4 w-4" aria-hidden="true" />
           Delete account…
@@ -395,7 +399,7 @@ export default function SupportActions({
       {isAdminTarget && (
         <p
           id={IMPERSONATE_ADMIN_TARGET_REASON_ID}
-          className="mt-2 flex items-start gap-1.5 text-xs text-ink/50"
+          className="mt-2 flex items-start gap-1.5 text-xs text-ink/50 admin-dark:text-mist/50"
         >
           <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
           Admin accounts cannot be viewed as — the view-as overlay only ever covers seeker/employer surfaces.
@@ -404,7 +408,7 @@ export default function SupportActions({
       {!isAdminTarget && !canImpersonate && (
         <p
           id={IMPERSONATE_NO_PERMISSION_REASON_ID}
-          className="mt-2 flex items-start gap-1.5 text-xs text-ink/50"
+          className="mt-2 flex items-start gap-1.5 text-xs text-ink/50 admin-dark:text-mist/50"
         >
           <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
           You do not hold the impersonate permission — this is SUPER_ADMIN-only.

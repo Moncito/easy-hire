@@ -27,7 +27,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           static `w-64` before this component ever existed. */}
       <div className="flex min-w-0 flex-1 flex-col transition-[padding-left] duration-200 ease-out" style={{ paddingLeft: "var(--eh-sidebar-w, 16rem)" }}>
         <AdminHeader identity={headerIdentity} />
-        <main className="flex-1 overflow-y-auto px-8 py-8">{children}</main>
+        <main className="relative flex-1 overflow-y-auto px-8 py-8">{children}</main>
       </div>
       {/* Mounted once here (docs/ADMIN-CONSOLE-PLAN.md §5) so ⌘K/Ctrl+K works from every admin page. */}
       <CommandPalette />

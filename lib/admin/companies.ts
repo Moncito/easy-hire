@@ -324,6 +324,7 @@ export type CompanyDetail = {
   companyId: string;
   companyName: string;
   email: string;
+  logoUrl: string | null;
   industry: string | null;
   website: string | null;
   verifiedStatus: VerificationStatus;
@@ -355,6 +356,7 @@ export async function getCompanyDetail(adminUserId: string, companyId: string): 
     select: {
       id: true,
       companyName: true,
+      logoUrl: true,
       industry: true,
       website: true,
       verifiedStatus: true,
@@ -413,6 +415,7 @@ export async function getCompanyDetail(adminUserId: string, companyId: string): 
     companyId: company.id,
     companyName: company.companyName,
     email: company.user.email,
+    logoUrl: company.logoUrl,
     industry: company.industry,
     website: company.website,
     verifiedStatus: company.verifiedStatus,

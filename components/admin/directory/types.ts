@@ -97,6 +97,8 @@ export type SerializedSeekerRecordSection = {
   kind: "SEEKER";
   seekerProfileId: string;
   fullName: string;
+  photoUrl: string | null;
+  resumeUrl: string | null;
   profileCompletionPercent: number;
   applicationsByStatus: Record<ApplicationStatus, number>;
   totalApplications: number;
@@ -108,6 +110,7 @@ export type SerializedEmployerRecordSection = {
   kind: "EMPLOYER";
   companyId: string;
   companyName: string;
+  logoUrl: string | null;
   verifiedStatus: VerificationStatus;
   plan: SubscriptionPlan;
   jobsPosted: number;
@@ -132,6 +135,7 @@ export type SerializedUserRecord = {
     emailVerifiedAt: string | null;
     createdAt: string;
     lastSeenAt: string | null;
+    avatarUrl: string | null;
   };
   trust: SerializedUserRecordTrust;
   roleDetail:
@@ -195,6 +199,7 @@ export type SerializedCompanyDetail = {
   companyId: string;
   companyName: string;
   email: string;
+  logoUrl: string | null;
   industry: string | null;
   website: string | null;
   verifiedStatus: VerificationStatus;

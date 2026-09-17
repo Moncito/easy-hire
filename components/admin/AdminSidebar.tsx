@@ -341,7 +341,7 @@ export default function AdminSidebar({ access }: AdminSidebarProps) {
         </button>
       </div>
 
-      <nav className={`flex flex-1 flex-col gap-1.5 overflow-y-auto overflow-x-hidden px-4 ${collapsed ? "items-center px-2" : ""}`}>
+      <nav className={`flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto overflow-x-hidden px-4 ${collapsed ? "items-center px-2" : ""}`}>
         <Link
           href="/admin/dashboard"
           title="Dashboard"

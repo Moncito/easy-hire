@@ -1,5 +1,5 @@
-import { Briefcase, CheckCircle2, CircleDashed, ShieldCheck, User, XCircle } from "lucide-react";
-import type { Role, SubscriptionPlan, VerificationStatus } from "./types";
+import { Briefcase, CheckCircle2, CircleDashed, ShieldCheck, User, UserX, XCircle } from "lucide-react";
+import type { CompanyMemberStatus, Role, SubscriptionPlan, VerificationStatus } from "./types";
 
 /**
  * Role/verification pills used across the directory + 360 record.
@@ -50,6 +50,65 @@ export function RoleBadge({ role }: { role: Role }) {
       {s.label}
     </span>
   );
+}
+
+/**
+ * Background+text classes for a role-colored circular avatar (the 360-record
+ * identity card's initials fallback) — same accent mapping as `ROLE_STYLE`
+ * above (marigold/seeker, teal/employer, navy/admin), minus the pill's
+ * ring/padding, so the two never drift apart into two different "what color
+ * is a seeker" answers.
+ */
+export function roleAvatarClassName(role: Role): string {
+  switch (role) {
+    case "SEEKER":
+      return "bg-marigold/15 text-[#8a5a10] admin-dark:bg-marigold/20 admin-dark:text-marigold";
+    case "EMPLOYER":
+      return "bg-teal/10 text-teal admin-dark:bg-teal/15";
+    case "ADMIN":
+      return "bg-navy/10 text-navy admin-dark:bg-white/10 admin-dark:text-[#9EB3CC]";
+  }
+}
+
+/**
+ * The 360-record identity card's top-edge accent + faint background wash —
+ * SAME accent mapping as `ROLE_STYLE`/`roleAvatarClassName` above, just at
+ * card-chrome intensity rather than badge intensity. Purely decorative
+ * (`aria-hidden` where applied, never a substitute for `RoleBadge`'s
+ * icon+text), which is why this is the one place a colour-only signal is
+ * fine — it never stands alone.
+ */
+export function roleAccentCardClassName(role: Role): string {
+  switch (role) {
+    case "SEEKER":
+      return "border-t-marigold bg-gradient-to-br from-marigold/8 via-white to-white admin-dark:from-marigold/10 admin-dark:via-white/[0.04] admin-dark:to-white/[0.04]";
+    case "EMPLOYER":
+      return "border-t-teal bg-gradient-to-br from-teal/8 via-white to-white admin-dark:from-teal/10 admin-dark:via-white/[0.04] admin-dark:to-white/[0.04]";
+    case "ADMIN":
+      // Same navy -> lighter blue swap as `ROLE_STYLE.ADMIN`/`roleAvatarClassName`
+      // above for the dark surface — plain navy is the one hue in this map
+      // that loses definition against the near-black admin-dark background.
+      return "border-t-navy bg-gradient-to-br from-navy/8 via-white to-white admin-dark:border-t-[#9EB3CC] admin-dark:from-navy/15 admin-dark:via-white/[0.04] admin-dark:to-white/[0.04]";
+  }
+}
+
+/**
+ * Small accent bar rendered above a section heading (Trust, Activity, Role
+ * detail) — same spirit as the identity card's top edge, at a much quieter
+ * scale so it reads as a section marker rather than another card. `navy` for
+ * sections that are role-agnostic/structural (Trust, Activity — CLAUDE.md:
+ * "Harbor Navy — shared/structural"); role-tinted for the role-specific
+ * section (Seeker/Employer profile).
+ */
+export function roleAccentBarClassName(role: Role): string {
+  switch (role) {
+    case "SEEKER":
+      return "bg-marigold";
+    case "EMPLOYER":
+      return "bg-teal";
+    case "ADMIN":
+      return "bg-navy admin-dark:bg-[#9EB3CC]";
+  }
 }
 
 /**
@@ -110,6 +169,35 @@ export function VerificationStatusBadge({ status }: { status: VerificationStatus
   const Icon = s.icon;
   return (
     <span className={`inline-flex items-center gap-1 text-[11px] font-semibold ${s.className}`}>
+      <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+      {s.label}
+    </span>
+  );
+}
+
+/**
+ * `CompanyDetailView.tsx`'s Members table used to encode ACTIVE/REMOVED by
+ * text colour alone — the one place on that page that didn't follow this
+ * file's own icon+colour+text convention. `CompanyMemberStatus` is an
+ * exhaustive two-value union (`prisma/schema.prisma`'s `CompanyMemberStatus`
+ * has no `PENDING` value — `getCompanyDetail` itself only ever queries
+ * `status: "ACTIVE"` members, but the table stays exhaustive over the full
+ * enum rather than assuming that filter never changes), so — same as
+ * `PLAN_STYLE` above — no runtime fallback is needed for an unrecognized
+ * key. REMOVED stays a neutral muted grey rather than Ember: leaving/being
+ * removed from a company isn't itself a fraud/rejection signal (CLAUDE.md:
+ * "Ember — warnings only").
+ */
+const MEMBER_STATUS_STYLE: Record<CompanyMemberStatus, { label: string; icon: typeof CheckCircle2; className: string }> = {
+  ACTIVE: { label: "Active", icon: CheckCircle2, className: "text-teal" },
+  REMOVED: { label: "Removed", icon: UserX, className: "text-ink/40 admin-dark:text-mist/40" },
+};
+
+export function MemberStatusBadge({ status }: { status: CompanyMemberStatus }) {
+  const s = MEMBER_STATUS_STYLE[status];
+  const Icon = s.icon;
+  return (
+    <span className={`inline-flex items-center gap-1 text-xs font-semibold ${s.className}`}>
       <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
       {s.label}
     </span>

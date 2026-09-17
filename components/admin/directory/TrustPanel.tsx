@@ -22,6 +22,16 @@ export type TrustPanelProps = {
   trustSignals: SerializedTrustComputation | null;
   verificationStatus: VerificationStatus | null;
   extraRows?: TrustPanelExtraRow[];
+  /**
+   * `"card"` (default) — full bordered/bg-white chrome, own landmark
+   * `<section>`. Used standalone by `CompanyDetailView.tsx`.
+   * `"embedded"` — content only, no outer card/border/background — used by
+   * `UserRecordView.tsx`, which supplies the shared card chrome itself when
+   * pairing this with `RoleDetailSection` in one merged card (§ the
+   * card-density pass: two sections that always travel together and never
+   * need independent visual isolation).
+   */
+  variant?: "card" | "embedded";
 };
 
 function contributionLabel(key: string): string {
@@ -32,27 +42,42 @@ function contributionLabel(key: string): string {
   return titleCaseFromConstant(spaced.replace(/\s+/g, "_"));
 }
 
-export default function TrustPanel({ trustScore, trustScoreUpdatedAt, trustSignals, verificationStatus, extraRows = [] }: TrustPanelProps) {
-  return (
-    <section aria-labelledby="trust-panel-heading" className="rounded-2xl border border-ink/5 bg-white p-5">
+export default function TrustPanel({
+  trustScore,
+  trustScoreUpdatedAt,
+  trustSignals,
+  verificationStatus,
+  extraRows = [],
+  variant = "card",
+}: TrustPanelProps) {
+  const content = (
+    <>
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 id="trust-panel-heading" className="font-display text-lg font-bold text-ink">
+          {/* Navy — Trust is role-agnostic/structural, applies identically to
+              seekers, employers and companies (CLAUDE.md: "Harbor Navy —
+              shared/structural"). */}
+          <div aria-hidden="true" className="mb-2 h-1 w-8 rounded-full bg-navy admin-dark:bg-[#9EB3CC]" />
+          <h2 id="trust-panel-heading" className="font-display text-lg font-bold text-ink admin-dark:text-mist">
             Trust
           </h2>
           {trustScoreUpdatedAt && (
-            <p className="mt-0.5 text-xs text-ink/40">Last recomputed {formatDateTime(trustScoreUpdatedAt)}</p>
+            <p className="mt-0.5 text-xs text-ink/40 admin-dark:text-mist/40">
+              Last recomputed {formatDateTime(trustScoreUpdatedAt)}
+            </p>
           )}
         </div>
         <div className="flex items-center gap-4">
           {verificationStatus && (
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-ink/40">Verification</p>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-ink/40 admin-dark:text-mist/40">
+                Verification
+              </p>
               <VerificationStatusBadge status={verificationStatus} />
             </div>
           )}
           <div className="text-right">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-ink/40">Score</p>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-ink/40 admin-dark:text-mist/40">Score</p>
             <div className="text-lg">
               <TrustScoreValue score={trustScore} />
             </div>
@@ -61,11 +86,17 @@ export default function TrustPanel({ trustScore, trustScoreUpdatedAt, trustSigna
       </div>
 
       {extraRows.length > 0 && (
-        <dl className="mb-4 grid grid-cols-2 gap-3 border-y border-ink/5 py-3 sm:grid-cols-4">
+        <dl className="mb-4 grid grid-cols-2 gap-3 border-y border-ink/5 py-3 sm:grid-cols-4 admin-dark:border-white/10">
           {extraRows.map((row) => (
             <div key={row.label}>
-              <dt className="text-[10px] font-bold uppercase tracking-wider text-ink/40">{row.label}</dt>
-              <dd className={`mt-0.5 flex items-center gap-1 font-data text-sm font-semibold ${row.warn ? "text-ember" : "text-ink"}`}>
+              <dt className="text-[10px] font-bold uppercase tracking-wider text-ink/40 admin-dark:text-mist/40">
+                {row.label}
+              </dt>
+              <dd
+                className={`mt-0.5 flex items-center gap-1 font-data text-sm font-semibold ${
+                  row.warn ? "text-ember" : "text-ink admin-dark:text-mist"
+                }`}
+              >
                 {row.warn && <ShieldAlert className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />}
                 {row.value}
               </dd>
@@ -75,7 +106,7 @@ export default function TrustPanel({ trustScore, trustScoreUpdatedAt, trustSigna
       )}
 
       {trustSignals === null ? (
-        <div className="flex items-center gap-2 rounded-xl bg-mist/60 px-3 py-3 text-sm text-ink/50">
+        <div className="flex items-center gap-2 rounded-xl bg-mist/60 px-3 py-3 text-sm text-ink/50 admin-dark:bg-white/5 admin-dark:text-mist/50">
           <CircleDashed className="h-4 w-4 shrink-0" aria-hidden="true" />
           {trustScore === null
             ? "Not yet scored — the nightly trust cron scores accounts with recent activity."
@@ -83,16 +114,27 @@ export default function TrustPanel({ trustScore, trustScoreUpdatedAt, trustSigna
         </div>
       ) : (
         <div>
-          <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-ink/40">
+          <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-ink/40 admin-dark:text-mist/40">
             Component breakdown (baseline {trustSignals.baseline}, weights v{trustSignals.weightsVersion})
           </p>
           <ul className="space-y-1.5">
             {trustSignals.components.map((c) => (
-              <li key={c.key} className="flex items-center justify-between gap-3 rounded-lg bg-mist/50 px-3 py-1.5 text-xs">
-                <div className="min-w-0">
-                  <span className="font-medium text-ink">{contributionLabel(c.key)}</span>
+              <li
+                key={c.key}
+                className="flex items-center justify-between gap-3 rounded-lg bg-mist/50 px-3 py-1.5 text-xs admin-dark:bg-white/5"
+              >
+                <div className="flex min-w-0 items-baseline gap-2">
+                  {/* `truncate` on a bare inline `<span>` is a no-op — CSS only
+                      applies overflow/ellipsis to block or inline-block boxes.
+                      This row worked by coincidence when Trust was full-width
+                      (the inputs text always had room to fit); once Trust went
+                      half-width alongside Role detail, the untruncated text
+                      ran past the row and overlapped the contribution value on
+                      the right. A flex row gives the inputs span a real
+                      computed width to ellipsize against. */}
+                  <span className="shrink-0 font-medium text-ink admin-dark:text-mist">{contributionLabel(c.key)}</span>
                   {Object.keys(c.inputs).length > 0 && (
-                    <span className="ml-2 truncate text-ink/45">
+                    <span className="min-w-0 flex-1 truncate text-ink/45 admin-dark:text-mist/45">
                       {Object.entries(c.inputs)
                         .map(([k, v]) => `${contributionLabel(k)}: ${v}`)
                         .join(" · ")}
@@ -101,7 +143,11 @@ export default function TrustPanel({ trustScore, trustScoreUpdatedAt, trustSigna
                 </div>
                 <span
                   className={`shrink-0 font-data font-semibold ${
-                    c.contribution > 0 ? "text-teal" : c.contribution < 0 ? "text-ember" : "text-ink/35"
+                    c.contribution > 0
+                      ? "text-teal"
+                      : c.contribution < 0
+                        ? "text-ember"
+                        : "text-ink/35 admin-dark:text-mist/35"
                   }`}
                 >
                   {c.contribution > 0 ? "+" : ""}
@@ -112,6 +158,23 @@ export default function TrustPanel({ trustScore, trustScoreUpdatedAt, trustSigna
           </ul>
         </div>
       )}
+    </>
+  );
+
+  if (variant === "embedded") {
+    return (
+      <div role="group" aria-labelledby="trust-panel-heading">
+        {content}
+      </div>
+    );
+  }
+
+  return (
+    <section
+      aria-labelledby="trust-panel-heading"
+      className="rounded-2xl border border-ink/5 bg-white p-5 admin-dark:border-white/10 admin-dark:bg-white/5"
+    >
+      {content}
     </section>
   );
 }

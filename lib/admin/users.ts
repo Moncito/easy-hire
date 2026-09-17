@@ -373,6 +373,8 @@ export type UserRecordIdentity = {
   createdAt: Date;
   /** Derived from the most recent `platform_events` row for this user — never a Session-table read (there is none; see the module doc comment). */
   lastSeenAt: Date | null;
+  /** `User.avatarUrl` — set via Google OAuth sign-in. Null for accounts that never signed in with Google. */
+  avatarUrl: string | null;
 };
 
 export type UserRecordTrust = {
@@ -390,6 +392,8 @@ export type SeekerRecordSection = {
   kind: "SEEKER";
   seekerProfileId: string;
   fullName: string;
+  photoUrl: string | null;
+  resumeUrl: string | null;
   profileCompletionPercent: number;
   applicationsByStatus: Record<ApplicationStatus, number>;
   totalApplications: number;
@@ -401,6 +405,7 @@ export type EmployerRecordSection = {
   kind: "EMPLOYER";
   companyId: string;
   companyName: string;
+  logoUrl: string | null;
   verifiedStatus: VerificationStatus;
   plan: SubscriptionPlan;
   jobsPosted: number;
@@ -481,6 +486,8 @@ async function buildSeekerSection(seekerProfileId: string): Promise<SeekerRecord
     kind: "SEEKER",
     seekerProfileId,
     fullName: profile.fullName,
+    photoUrl: profile.photoUrl,
+    resumeUrl: profile.resumeUrl,
     profileCompletionPercent,
     applicationsByStatus,
     totalApplications,
@@ -494,6 +501,7 @@ async function buildEmployerSection(companyId: string): Promise<EmployerRecordSe
     where: { id: companyId },
     select: {
       companyName: true,
+      logoUrl: true,
       verifiedStatus: true,
       responseRate: true,
       medianResponseMinutes: true,
@@ -518,6 +526,7 @@ async function buildEmployerSection(companyId: string): Promise<EmployerRecordSe
     kind: "EMPLOYER",
     companyId,
     companyName: company.companyName,
+    logoUrl: company.logoUrl,
     verifiedStatus: company.verifiedStatus,
     plan,
     jobsPosted,
@@ -554,6 +563,7 @@ export async function getUserRecord(adminUserId: string, targetUserId: string): 
       role: true,
       emailVerifiedAt: true,
       createdAt: true,
+      avatarUrl: true,
       seekerProfile: { select: { id: true, trustScore: true, trustScoreUpdatedAt: true, trustSignals: true, idVerificationStatus: true } },
       company: { select: { id: true, trustScore: true, trustScoreUpdatedAt: true, trustSignals: true, verifiedStatus: true } },
     },
@@ -608,6 +618,7 @@ export async function getUserRecord(adminUserId: string, targetUserId: string): 
       emailVerifiedAt: user.emailVerifiedAt,
       createdAt: user.createdAt,
       lastSeenAt: lastEvent?.createdAt ?? null,
+      avatarUrl: user.avatarUrl,
     },
     trust,
     roleDetail,

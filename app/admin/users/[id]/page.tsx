@@ -44,11 +44,11 @@ export default async function AdminUserRecordPage({ params }: { params: Promise<
   const { events, nextCursor } = await listEventsForUser(id, { limit: 50 });
 
   return (
-    <div className="mx-auto max-w-4xl">
+    <div className="mx-auto max-w-6xl">
       <div className="mb-6">
         <Link
           href="/admin/users"
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-ink/50 hover:text-ink"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-ink/50 hover:text-ink admin-dark:text-mist/50 admin-dark:hover:text-mist"
         >
           <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
           Back to directory
