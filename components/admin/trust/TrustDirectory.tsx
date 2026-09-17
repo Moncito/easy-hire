@@ -6,8 +6,9 @@ import DataTable, { type DataTableColumn } from "@/components/admin/directory/Da
 import { TrustScoreValue, formatDateTime } from "@/components/admin/directory/badges";
 import { StatTile } from "@/components/admin/statTiles";
 import TrustComponentChips from "./TrustComponentChips";
+import ScoreDistributionChart from "./ScoreDistributionChart";
 import { fetchTrustDirectoryPage } from "./api";
-import type { SerializedTrustDirectoryRow, TrustDirectoryTargetType } from "./types";
+import type { SerializedTrustDirectoryRow, SerializedTrustScoreDistribution, TrustDirectoryTargetType } from "./types";
 
 /**
  * `/admin/trust` client shell — docs/ADMIN-CONSOLE-PLAN.md §4.8, §11 Phase 4
@@ -35,6 +36,7 @@ export type TrustDirectoryProps = {
   initialScoredCount: number;
   initialNeverScoredCount: number;
   initialBelowThresholdCount: number;
+  initialScoreDistribution: SerializedTrustScoreDistribution;
 };
 
 export default function TrustDirectory({
@@ -44,6 +46,7 @@ export default function TrustDirectory({
   initialScoredCount,
   initialNeverScoredCount,
   initialBelowThresholdCount,
+  initialScoreDistribution,
 }: TrustDirectoryProps) {
   const [targetType, setTargetType] = useState<TrustDirectoryTargetType>(initialTargetType);
   const [rows, setRows] = useState<SerializedTrustDirectoryRow[]>(initialRows);
@@ -51,6 +54,11 @@ export default function TrustDirectory({
   const [scoredCount, setScoredCount] = useState(initialScoredCount);
   const [neverScoredCount, setNeverScoredCount] = useState(initialNeverScoredCount);
   const [belowThresholdCount, setBelowThresholdCount] = useState(initialBelowThresholdCount);
+  // Score-distribution histogram data — threaded through the same
+  // Seeker/Company refresh contract as the three counts above so it never
+  // goes stale after a tab switch. Rendered by ScoreDistributionChart below,
+  // not inline here (see that component for the actual histogram markup).
+  const [scoreDistribution, setScoreDistribution] = useState(initialScoreDistribution);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -79,6 +87,7 @@ export default function TrustDirectory({
       setScoredCount(res.scoredCount);
       setNeverScoredCount(res.neverScoredCount);
       setBelowThresholdCount(res.belowThresholdCount);
+      setScoreDistribution(res.scoreDistribution);
     } catch (e) {
       if (e instanceof DOMException && e.name === "AbortError") return;
       setError(e instanceof Error ? e.message : "Failed to load the trust directory.");
@@ -101,8 +110,8 @@ export default function TrustDirectory({
       header: targetType === "SEEKER" ? "Seeker" : "Company",
       render: (row) => (
         <div className="max-w-xs">
-          <p className="truncate font-medium text-ink">{row.displayName}</p>
-          <p className="truncate font-data text-[11px] text-ink/40">{row.id}</p>
+          <p className="truncate font-medium text-ink admin-dark:text-mist">{row.displayName}</p>
+          <p className="truncate font-data text-[11px] text-ink/40 admin-dark:text-mist/40">{row.id}</p>
         </div>
       ),
     },
@@ -119,7 +128,7 @@ export default function TrustDirectory({
         row.trustSignals ? (
           <TrustComponentChips components={row.trustSignals.components} />
         ) : (
-          <span className="text-[11px] text-ink/35">No breakdown stored for this score</span>
+          <span className="text-[11px] text-ink/35 admin-dark:text-mist/35">No breakdown stored for this score</span>
         ),
     },
     {
@@ -136,14 +145,18 @@ export default function TrustDirectory({
             {row.openAbuseReportCount}
           </span>
         ) : (
-          <span className="font-data text-xs text-ink/35">0</span>
+          <span className="font-data text-xs text-ink/35 admin-dark:text-mist/35">0</span>
         ),
     },
     {
       key: "updated",
       header: "Last scored",
       align: "right",
-      render: (row) => <span className="font-data text-xs text-ink/55">{formatDateTime(row.trustScoreUpdatedAt)}</span>,
+      render: (row) => (
+        <span className="font-data text-xs text-ink/55 admin-dark:text-mist/55">
+          {formatDateTime(row.trustScoreUpdatedAt)}
+        </span>
+      ),
     },
   ];
 
@@ -154,31 +167,44 @@ export default function TrustDirectory({
         <StatTile label="Never scored" value={neverScoredCount} tone="muted" />
         <StatTile label="Below risk threshold" value={belowThresholdCount} tone="warn" />
       </div>
-      <p className="flex items-start gap-1.5 text-xs text-ink/45">
-        <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-ink/30" aria-hidden="true" />
+
+      <ScoreDistributionChart distribution={scoreDistribution} scoredCount={scoredCount} targetType={targetType} />
+
+      <p className="flex items-start gap-1.5 text-xs text-ink/45 admin-dark:text-mist/45">
+        <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-ink/30 admin-dark:text-mist/30" aria-hidden="true" />
         <span>
-          Accounts with no activity yet are <strong className="font-semibold text-ink/60">never scored</strong> and
-          do not appear in the list below — see the &ldquo;Never scored&rdquo; count above; this table is not every
-          account on the platform. The list is always ordered lowest score first with no alternate sort — that
-          ordering is what lets a risky account surface before anyone reports it.
+          Accounts with no activity yet are{" "}
+          <strong className="font-semibold text-ink/60 admin-dark:text-mist/60">never scored</strong> and do not
+          appear in the list below — see the &ldquo;Never scored&rdquo; count above; this table is not every account
+          on the platform. The list is always ordered lowest score first with no alternate sort — that ordering is
+          what lets a risky account surface before anyone reports it.
         </span>
       </p>
 
-      <div className="inline-flex rounded-xl border border-ink/10 bg-white p-1">
+      <div className="inline-flex rounded-xl border border-ink/10 bg-white p-1 admin-dark:border-white/10 admin-dark:bg-white/5">
         {TARGET_TABS.map((tab) => (
           <button
             key={tab.value}
             type="button"
             aria-pressed={targetType === tab.value}
             onClick={() => setTargetType(tab.value)}
-            className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy ${
-              targetType === tab.value ? "bg-navy text-white" : "text-ink/55 hover:bg-ink/5"
+            className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy admin-dark:focus-visible:ring-teal ${
+              targetType === tab.value
+                ? "bg-navy text-white admin-dark:bg-teal admin-dark:text-white"
+                : "text-ink/55 hover:bg-ink/5 admin-dark:text-mist/55 admin-dark:hover:bg-white/10"
             }`}
           >
             {tab.label}
           </button>
         ))}
       </div>
+
+      <p className="px-1 text-xs text-ink/45 admin-dark:text-mist/45">
+        Showing <span className="font-data font-semibold text-ink admin-dark:text-mist">{rows.length}</span> of{" "}
+        <span className="font-data font-semibold text-ink admin-dark:text-mist">{scoredCount.toLocaleString()}</span>{" "}
+        scored {targetType === "SEEKER" ? "seeker" : "compan"}
+        {targetType === "SEEKER" ? (scoredCount === 1 ? "" : "s") : scoredCount === 1 ? "y" : "ies"}
+      </p>
 
       {error ? (
         <div className="flex flex-col items-center gap-2 rounded-2xl border border-ember/20 bg-ember/5 py-12 text-center">
@@ -203,10 +229,10 @@ export default function TrustDirectory({
             caption={`Trust directory: ${targetType === "SEEKER" ? "seekers" : "companies"}, lowest trust score first`}
             loading={loading}
             emptyState={
-              <div className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-ink/5 bg-white py-16 text-center">
-                <ShieldCheck className="h-6 w-6 text-ink/30" aria-hidden="true" />
-                <p className="font-display text-base font-bold text-ink">No scored accounts yet</p>
-                <p className="max-w-xs text-sm text-ink/50">
+              <div className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-ink/5 bg-white py-16 text-center admin-dark:border-white/10 admin-dark:bg-white/5">
+                <ShieldCheck className="h-6 w-6 text-ink/30 admin-dark:text-mist/30" aria-hidden="true" />
+                <p className="font-display text-base font-bold text-ink admin-dark:text-mist">No scored accounts yet</p>
+                <p className="max-w-xs text-sm text-ink/50 admin-dark:text-mist/50">
                   The nightly trust cron scores accounts with recent activity — check back once there&apos;s
                   traffic to score.
                 </p>
@@ -220,7 +246,7 @@ export default function TrustDirectory({
                 type="button"
                 disabled={loading}
                 onClick={() => void loadPage(false, targetType)}
-                className="rounded-xl border border-ink/10 bg-white px-4 py-2 text-sm font-semibold text-ink/65 hover:bg-ink/5 disabled:opacity-60"
+                className="rounded-xl border border-ink/10 bg-white px-4 py-2 text-sm font-semibold text-ink/65 hover:bg-ink/5 disabled:opacity-60 admin-dark:border-white/10 admin-dark:bg-white/5 admin-dark:text-mist/65 admin-dark:hover:bg-white/10"
               >
                 {loading ? "Loading…" : "Load more"}
               </button>

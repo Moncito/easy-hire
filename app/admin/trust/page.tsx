@@ -19,9 +19,9 @@ export default async function AdminTrustPage() {
   return (
     <div className="mx-auto max-w-6xl">
       <div className="mb-8">
-        <p className="text-xs font-semibold uppercase tracking-wider text-ink/40">Trust / Scores</p>
-        <h1 className="mt-1 font-display text-3xl font-bold tracking-tight text-ink">Trust scores</h1>
-        <p className="mt-2 text-sm text-ink/55">
+        <p className="text-xs font-semibold uppercase tracking-wider text-ink/40 admin-dark:text-mist/40">Trust / Scores</p>
+        <h1 className="mt-1 font-display text-3xl font-bold tracking-tight text-ink admin-dark:text-mist">Trust scores</h1>
+        <p className="mt-2 text-sm text-ink/55 admin-dark:text-mist/55">
           Every scored account, ranked lowest score first — the accounts most likely to need attention next. Open
           abuse reports are shown alongside the score so the two halves of trust &amp; safety read as one screen.
         </p>
@@ -34,6 +34,7 @@ export default async function AdminTrustPage() {
         initialScoredCount={result.scoredCount}
         initialNeverScoredCount={result.neverScoredCount}
         initialBelowThresholdCount={result.belowThresholdCount}
+        initialScoreDistribution={result.scoreDistribution}
       />
     </div>
   );

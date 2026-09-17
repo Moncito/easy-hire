@@ -63,4 +63,19 @@ export type SerializedTrustDirectoryResult = {
   neverScoredCount: number;
   /** Accounts of this type scored below the shared "risky" cutoff (`QUEUE_RANKING.severity.lowTrustScore.threshold`) — an aggregate count, not `rows.length`, since the ranked page can be smaller than this count once pagination is in play. */
   belowThresholdCount: number;
+  /**
+   * Score-distribution histogram for this `targetType` — mirrors
+   * lib/admin/trust-directory.ts's `TrustScoreDistribution` exactly (plain
+   * numbers, nothing to serialize). The four fields always sum to
+   * `scoredCount`; `belowThreshold` is the same population as
+   * `belowThresholdCount` above.
+   */
+  scoreDistribution: SerializedTrustScoreDistribution;
+};
+
+export type SerializedTrustScoreDistribution = {
+  belowThreshold: number;
+  belowBaseline: number;
+  atOrAboveBaseline: number;
+  excellent: number;
 };

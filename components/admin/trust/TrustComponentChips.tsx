@@ -49,7 +49,7 @@ export default function TrustComponentChips({
   max?: number;
 }) {
   if (components.length === 0) {
-    return <span className="text-[11px] text-ink/35">No components recorded</span>;
+    return <span className="text-[11px] text-ink/35 admin-dark:text-mist/35">No components recorded</span>;
   }
 
   const sorted = [...components].sort((a, b) => a.contribution - b.contribution);
@@ -63,7 +63,11 @@ export default function TrustComponentChips({
           key={c.key}
           title={chipTitle(c)}
           className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-semibold ${
-            c.contribution < 0 ? "bg-ember/8 text-ember" : c.contribution > 0 ? "bg-teal/8 text-teal" : "bg-ink/5 text-ink/50"
+            c.contribution < 0
+              ? "bg-ember/8 text-ember admin-dark:bg-ember/15"
+              : c.contribution > 0
+                ? "bg-teal/8 text-teal admin-dark:bg-teal/15"
+                : "bg-ink/5 text-ink/50 admin-dark:bg-white/10 admin-dark:text-mist/50"
           }`}
         >
           {c.contribution < 0 && <ShieldAlert className="h-2.5 w-2.5 shrink-0" aria-hidden="true" />}
@@ -71,7 +75,9 @@ export default function TrustComponentChips({
         </span>
       ))}
       {extra > 0 && (
-        <span className="rounded-md bg-ink/5 px-1.5 py-0.5 text-[10px] font-semibold text-ink/50">+{extra} more</span>
+        <span className="rounded-md bg-ink/5 px-1.5 py-0.5 text-[10px] font-semibold text-ink/50 admin-dark:bg-white/10 admin-dark:text-mist/50">
+          +{extra} more
+        </span>
       )}
     </span>
   );

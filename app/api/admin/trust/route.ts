@@ -49,6 +49,7 @@ export async function GET(req: Request) {
       scoredCount: result.scoredCount,
       neverScoredCount: result.neverScoredCount,
       belowThresholdCount: result.belowThresholdCount,
+      scoreDistribution: result.scoreDistribution,
     });
   } catch (error) {
     return errorResponse(error);

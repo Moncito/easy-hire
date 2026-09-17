@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { requireAdminPermission } from "@/lib/admin/permissions";
 import { QUEUE_RANKING } from "@/lib/admin/queues";
-import type { TrustComponent, TrustComputation } from "@/lib/admin/trust";
+import { TRUST_WEIGHTS, type TrustComponent, type TrustComputation } from "@/lib/admin/trust";
 
 /**
  * Read surface over the trust scores `lib/admin/trust.ts` already computes
@@ -88,6 +88,32 @@ export type TrustDirectoryResult = {
   neverScoredCount: number;
   /** Accounts of this type with `trustScore < RISK_THRESHOLD` — the same cutoff `lib/admin/queues.ts`'s `lowTrustScore` severity signal already uses, reused verbatim (see `RISK_THRESHOLD` below) rather than a second number, so "risky" means the same thing in the queue and in this directory. An aggregate COUNT, not `rows.length` — the ranked page can be smaller than this count once pagination is in play. */
   belowThresholdCount: number;
+  /**
+   * Score-distribution histogram for this `targetType` — four bands over the
+   * exact same scored population `scoredCount` counts (never-scored accounts
+   * excluded, same as the ranked list itself), so the four fields always sum
+   * to `scoredCount` exactly. Bucketed on the two cutoffs already canonical
+   * in this codebase rather than invented ones: `RISK_THRESHOLD` (40, see
+   * above) and `BASELINE` (60, `TRUST_WEIGHTS.baseline` in lib/admin/trust.ts
+   * — the score a freshly-scored account starts from before any component
+   * moves it). `belowThreshold` is the exact same population as
+   * `belowThresholdCount` above (not recomputed with a second query — see
+   * `listSeekerTrustDirectory`/`listCompanyTrustDirectory`).
+   */
+  scoreDistribution: TrustScoreDistribution;
+};
+
+/**
+ * Four bands, lowest to highest: `< RISK_THRESHOLD`, `[RISK_THRESHOLD, BASELINE)`,
+ * `[BASELINE, EXCELLENT_THRESHOLD)`, `>= EXCELLENT_THRESHOLD`. See
+ * `TrustDirectoryResult.scoreDistribution`'s doc comment for the cutoffs'
+ * provenance.
+ */
+export type TrustScoreDistribution = {
+  belowThreshold: number;
+  belowBaseline: number;
+  atOrAboveBaseline: number;
+  excellent: number;
 };
 
 const DEFAULT_LIMIT = 25;
@@ -101,6 +127,22 @@ const MAX_LIMIT = 100;
  * different score cutoffs depending which screen you're looking at it from.
  */
 const RISK_THRESHOLD = QUEUE_RANKING.severity.lowTrustScore.threshold;
+
+/**
+ * The score every freshly-scored account starts from before any component
+ * adjusts it up or down — `TRUST_WEIGHTS.baseline` in lib/admin/trust.ts,
+ * reused verbatim (not a second, independently-tunable number) as the
+ * boundary between the distribution's "below baseline" and "at/above
+ * baseline" bands.
+ */
+const BASELINE = TRUST_WEIGHTS.baseline;
+
+/**
+ * The distribution's top-band floor. Unlike `RISK_THRESHOLD`/`BASELINE`,
+ * there is no existing "excellent" cutoff elsewhere in this codebase to
+ * reuse, so this one is defined here, local to the histogram it buckets.
+ */
+const EXCELLENT_THRESHOLD = 80;
 
 /**
  * Narrow, defensive check that a `Json` column's contents still look like a
@@ -160,7 +202,15 @@ async function listSeekerTrustDirectory(
       }
     : {};
 
-  const [profiles, scoredCount, neverScoredCount, belowThresholdCount] = await Promise.all([
+  const [
+    profiles,
+    scoredCount,
+    neverScoredCount,
+    belowThresholdCount,
+    belowBaselineCount,
+    atOrAboveBaselineCount,
+    excellentCount,
+  ] = await Promise.all([
     prisma.seekerProfile.findMany({
       where: { trustScore: { not: null }, ...cursorFilter },
       orderBy: [{ trustScore: "asc" }, { id: "asc" }],
@@ -172,8 +222,13 @@ async function listSeekerTrustDirectory(
     // `not: null` is redundant with SQL's NULL semantics (`trust_score < N`
     // is already unknown/excluded for a NULL row) but spelled out anyway —
     // this count backs a genuine trust/safety metric, and being explicit
-    // here costs nothing while removing any doubt for the next reader.
+    // here costs nothing while removing any doubt for the next reader. This
+    // is also `scoreDistribution.belowThreshold` verbatim — see that field's
+    // doc comment for why it isn't recomputed a second time below.
     prisma.seekerProfile.count({ where: { trustScore: { not: null, lt: RISK_THRESHOLD } } }),
+    prisma.seekerProfile.count({ where: { trustScore: { gte: RISK_THRESHOLD, lt: BASELINE } } }),
+    prisma.seekerProfile.count({ where: { trustScore: { gte: BASELINE, lt: EXCELLENT_THRESHOLD } } }),
+    prisma.seekerProfile.count({ where: { trustScore: { gte: EXCELLENT_THRESHOLD } } }),
   ]);
 
   const hasMore = profiles.length > limit;
@@ -211,6 +266,12 @@ async function listSeekerTrustDirectory(
     scoredCount,
     neverScoredCount,
     belowThresholdCount,
+    scoreDistribution: {
+      belowThreshold: belowThresholdCount,
+      belowBaseline: belowBaselineCount,
+      atOrAboveBaseline: atOrAboveBaselineCount,
+      excellent: excellentCount,
+    },
   };
 }
 
@@ -227,7 +288,15 @@ async function listCompanyTrustDirectory(
       }
     : {};
 
-  const [companies, scoredCount, neverScoredCount, belowThresholdCount] = await Promise.all([
+  const [
+    companies,
+    scoredCount,
+    neverScoredCount,
+    belowThresholdCount,
+    belowBaselineCount,
+    atOrAboveBaselineCount,
+    excellentCount,
+  ] = await Promise.all([
     prisma.company.findMany({
       where: { trustScore: { not: null }, ...cursorFilter },
       orderBy: [{ trustScore: "asc" }, { id: "asc" }],
@@ -236,7 +305,11 @@ async function listCompanyTrustDirectory(
     }),
     prisma.company.count({ where: { trustScore: { not: null } } }),
     prisma.company.count({ where: { trustScore: null } }),
+    // Same `scoreDistribution.belowThreshold` reuse as the seeker query above.
     prisma.company.count({ where: { trustScore: { not: null, lt: RISK_THRESHOLD } } }),
+    prisma.company.count({ where: { trustScore: { gte: RISK_THRESHOLD, lt: BASELINE } } }),
+    prisma.company.count({ where: { trustScore: { gte: BASELINE, lt: EXCELLENT_THRESHOLD } } }),
+    prisma.company.count({ where: { trustScore: { gte: EXCELLENT_THRESHOLD } } }),
   ]);
 
   const hasMore = companies.length > limit;
@@ -272,5 +345,11 @@ async function listCompanyTrustDirectory(
     scoredCount,
     neverScoredCount,
     belowThresholdCount,
+    scoreDistribution: {
+      belowThreshold: belowThresholdCount,
+      belowBaseline: belowBaselineCount,
+      atOrAboveBaseline: atOrAboveBaselineCount,
+      excellent: excellentCount,
+    },
   };
 }
