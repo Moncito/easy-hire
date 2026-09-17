@@ -10,10 +10,35 @@ import type { Role, SubscriptionPlan, VerificationStatus } from "./types";
  * (§5 accessibility: "no colour-only status encoding").
  */
 
+/**
+ * `admin-dark:` overrides only where the light-mode color would otherwise
+ * lose contrast on a dark surface (docs/ADMIN-UI-UPGRADE.md's dark pass) —
+ * `text-teal` needs none (StatTile's own precedent: teal/marigold are
+ * already high-contrast accent hues in both themes). SEEKER's light-mode
+ * text is a deliberately darkened brown for readability on `bg-marigold/15`
+ * against a light page, which goes muddy on a dark surface, so it swaps to
+ * plain marigold; ADMIN's navy has the same problem (dark-on-dark), so it
+ * swaps to the lighter navy-family blue the dashboard's own charts already
+ * use for dark mode (`chartColors.ts`'s `dark.stroke`).
+ */
 const ROLE_STYLE: Record<Role, { label: string; icon: typeof User; className: string }> = {
-  SEEKER: { label: "Seeker", icon: User, className: "bg-marigold/15 text-[#8a5a10] ring-1 ring-inset ring-marigold/30" },
-  EMPLOYER: { label: "Employer", icon: Briefcase, className: "bg-teal/10 text-teal ring-1 ring-inset ring-teal/30" },
-  ADMIN: { label: "Admin", icon: ShieldCheck, className: "bg-navy/10 text-navy ring-1 ring-inset ring-navy/30" },
+  SEEKER: {
+    label: "Seeker",
+    icon: User,
+    className:
+      "bg-marigold/15 text-[#8a5a10] ring-1 ring-inset ring-marigold/30 admin-dark:bg-marigold/20 admin-dark:text-marigold admin-dark:ring-marigold/40",
+  },
+  EMPLOYER: {
+    label: "Employer",
+    icon: Briefcase,
+    className: "bg-teal/10 text-teal ring-1 ring-inset ring-teal/30 admin-dark:bg-teal/15 admin-dark:ring-teal/40",
+  },
+  ADMIN: {
+    label: "Admin",
+    icon: ShieldCheck,
+    className:
+      "bg-navy/10 text-navy ring-1 ring-inset ring-navy/30 admin-dark:bg-white/10 admin-dark:text-[#9EB3CC] admin-dark:ring-white/20",
+  },
 };
 
 export function RoleBadge({ role }: { role: Role }) {
@@ -36,8 +61,8 @@ export function RoleBadge({ role }: { role: Role }) {
  * is needed for an unrecognized key.
  */
 const PLAN_STYLE: Record<SubscriptionPlan, string> = {
-  PRO: "bg-teal/10 text-teal ring-1 ring-inset ring-teal/30",
-  FREE: "bg-ink/6 text-ink/55 ring-1 ring-inset ring-ink/10",
+  PRO: "bg-teal/10 text-teal ring-1 ring-inset ring-teal/30 admin-dark:bg-teal/15 admin-dark:ring-teal/40",
+  FREE: "bg-ink/6 text-ink/55 ring-1 ring-inset ring-ink/10 admin-dark:bg-white/10 admin-dark:text-mist/55 admin-dark:ring-white/15",
 };
 
 export function PlanBadge({ plan }: { plan: SubscriptionPlan }) {
@@ -52,7 +77,7 @@ export function PlanBadge({ plan }: { plan: SubscriptionPlan }) {
 export function VerifiedBadge({ verified }: { verified: boolean | null }) {
   if (verified === null) {
     return (
-      <span className="inline-flex items-center gap-1 text-[11px] font-medium text-ink/35">
+      <span className="inline-flex items-center gap-1 text-[11px] font-medium text-ink/35 admin-dark:text-mist/35">
         <CircleDashed className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
         N/A
       </span>
@@ -67,7 +92,7 @@ export function VerifiedBadge({ verified }: { verified: boolean | null }) {
     );
   }
   return (
-    <span className="inline-flex items-center gap-1 text-[11px] font-medium text-ink/45">
+    <span className="inline-flex items-center gap-1 text-[11px] font-medium text-ink/45 admin-dark:text-mist/45">
       <CircleDashed className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
       Unverified
     </span>
@@ -75,7 +100,7 @@ export function VerifiedBadge({ verified }: { verified: boolean | null }) {
 }
 
 const VERIFICATION_STATUS_STYLE: Record<VerificationStatus, { label: string; icon: typeof CheckCircle2; className: string }> = {
-  PENDING: { label: "Pending", icon: CircleDashed, className: "text-navy/70" },
+  PENDING: { label: "Pending", icon: CircleDashed, className: "text-navy/70 admin-dark:text-[#9EB3CC]" },
   APPROVED: { label: "Approved", icon: CheckCircle2, className: "text-teal" },
   REJECTED: { label: "Rejected", icon: XCircle, className: "text-ember" },
 };
@@ -93,9 +118,9 @@ export function VerificationStatusBadge({ status }: { status: VerificationStatus
 
 export function TrustScoreValue({ score }: { score: number | null }) {
   if (score === null) {
-    return <span className="font-data text-xs text-ink/35">—</span>;
+    return <span className="font-data text-xs text-ink/35 admin-dark:text-mist/35">—</span>;
   }
-  const tone = score >= 75 ? "text-teal" : score >= 45 ? "text-ink/70" : "text-ember";
+  const tone = score >= 75 ? "text-teal" : score >= 45 ? "text-ink/70 admin-dark:text-mist/70" : "text-ember";
   return <span className={`font-data text-xs font-semibold ${tone}`}>{score}</span>;
 }
 

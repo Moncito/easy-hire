@@ -23,7 +23,7 @@ import type { SubscriptionPlan } from "@/lib/billing/subscriptions";
 import type { TrustComponent } from "@/lib/admin/trust";
 import type { PlatformEventType, ActorType } from "@/lib/admin/events";
 import { ADMIN_JOB_DIRECTORY_STATUSES, type AdminUserActionInput } from "@/lib/validations/admin";
-import type { UserDirectoryVerifiedFilter } from "@/lib/admin/users";
+import type { UserDirectoryVerifiedFilter, UserDirectoryStats, UserSignupTrendPoint } from "@/lib/admin/users";
 
 export type {
   Role,
@@ -51,7 +51,14 @@ export type SerializedUserDirectoryItem = {
   displayName: string | null;
   verified: boolean | null;
   trustScore: number | null;
+  lastActiveAt: string | null;
 };
+
+/** Mirrors lib/admin/users.ts's `UserDirectoryStats` — the analytics band above the directory table. */
+export type SerializedUserDirectoryStats = UserDirectoryStats;
+
+/** Mirrors lib/admin/users.ts's `UserSignupTrendPoint`, with `date` serialized to an ISO string. */
+export type SerializedUserSignupTrendPoint = Omit<UserSignupTrendPoint, "date"> & { date: string };
 
 /** Mirrors lib/admin/companies.ts's `CompanyDirectoryItem`. */
 export type SerializedCompanyDirectoryItem = {
