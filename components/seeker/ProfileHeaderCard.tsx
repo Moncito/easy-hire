@@ -7,15 +7,14 @@ import {
   Clock,
   ExternalLink,
   MapPin,
-  Save,
   Shield,
   ShieldCheck,
+  Sparkles,
   Wallet,
 } from "lucide-react";
 import { skillName } from "@/lib/seeker/profile-format";
 import { formatSalaryRange } from "@/lib/format";
 import type { ProfileBucketId } from "@/components/seeker/profile-buckets";
-import HeroAvailabilityControl from "@/components/seeker/profile-editor/HeroAvailabilityControl";
 
 /**
  * Phase B2 — the single "this is you" moment at the top of /seeker/profile.
@@ -131,6 +130,7 @@ export default function ProfileHeaderCard({
   const visibleSkills = skills.slice(0, MAX_HERO_SKILLS).map(skillName);
   const extraSkillCount = Math.max(0, skills.length - MAX_HERO_SKILLS);
   const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
+  const isComplete = total > 0 && completed >= total;
   const hasSalary = desiredSalaryMin != null || desiredSalaryMax != null;
   const quickFacts = [
     yearsExperience ? { icon: Clock, label: yearsExperience } : null,
@@ -186,12 +186,9 @@ export default function ProfileHeaderCard({
             </div>
           )}
           <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-              <p className="truncate font-display text-xl font-bold text-white sm:text-2xl lg:text-[28px]">
-                {fullName || "Your name"}
-              </p>
-              <HeroAvailabilityControl availability={availability ?? null} />
-            </div>
+            <p className="truncate font-display text-xl font-bold text-white sm:text-2xl lg:text-[28px]">
+              {fullName || "Your name"}
+            </p>
             <p className="mt-1.5 truncate text-sm font-medium text-white/75">
               {headline || "Add a headline to introduce yourself"}
             </p>
@@ -247,25 +244,15 @@ export default function ProfileHeaderCard({
               </div>
             )}
 
-            <div className="mt-4 flex flex-wrap items-center gap-2.5">
-              <a
-                href={publicProfileHref}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-white/30 bg-white/10 px-4 py-2 text-xs font-semibold text-white backdrop-blur transition hover:bg-white/20"
-              >
-                <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
-                Preview public profile
-              </a>
-              <button
-                type="submit"
-                form="seeker-profile-form"
-                className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl bg-ink px-4 py-2 text-xs font-semibold text-white shadow-[0_6px_18px_-6px_rgba(0,0,0,0.45)] transition hover:bg-ink/85"
-              >
-                <Save className="h-3.5 w-3.5" aria-hidden="true" />
-                Save changes
-              </button>
-            </div>
+            <a
+              href={publicProfileHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-4 inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-white/30 bg-white/10 px-4 py-2 text-xs font-semibold text-white backdrop-blur transition hover:bg-white/20"
+            >
+              <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+              Preview public profile
+            </a>
           </div>
         </div>
 
@@ -277,18 +264,25 @@ export default function ProfileHeaderCard({
           <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-white/15">
             <div className="h-full rounded-full bg-marigold transition-[width]" style={{ width: `${pct}%` }} />
           </div>
-          <ul className="mt-4 space-y-2" aria-label="Profile section completion">
-            {bucketStatus.map((b) => (
-              <li key={b.id} className="flex items-center gap-2 text-xs">
-                {b.complete ? (
-                  <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-marigold" aria-hidden="true" />
-                ) : (
-                  <Circle className="h-3.5 w-3.5 shrink-0 text-white/30" aria-hidden="true" />
-                )}
-                <span className={b.complete ? "text-white/90" : "text-white/50"}>{b.label}</span>
-              </li>
-            ))}
-          </ul>
+          {isComplete ? (
+            <div className="mt-4 flex items-center gap-2 rounded-xl border border-marigold/30 bg-marigold/15 px-3 py-2.5">
+              <Sparkles className="h-4 w-4 shrink-0 text-marigold" aria-hidden="true" />
+              <span className="text-xs font-medium text-white/90">All sections complete — nice work.</span>
+            </div>
+          ) : (
+            <ul className="mt-4 space-y-2" aria-label="Profile section completion">
+              {bucketStatus.map((b) => (
+                <li key={b.id} className="flex items-center gap-2 text-xs">
+                  {b.complete ? (
+                    <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-marigold" aria-hidden="true" />
+                  ) : (
+                    <Circle className="h-3.5 w-3.5 shrink-0 text-white/30" aria-hidden="true" />
+                  )}
+                  <span className={b.complete ? "text-white/90" : "text-white/50"}>{b.label}</span>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </div>
     </div>
