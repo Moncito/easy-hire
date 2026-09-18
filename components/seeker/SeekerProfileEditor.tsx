@@ -20,13 +20,20 @@ import NextRoleBucket from "@/components/seeker/profile-editor/NextRoleBucket";
 import LanguagesBucket from "@/components/seeker/profile-editor/LanguagesBucket";
 import CredentialsBucket from "@/components/seeker/profile-editor/CredentialsBucket";
 import VisibilityBucket from "@/components/seeker/profile-editor/VisibilityBucket";
+import ProfileVisibilityCard from "@/components/seeker/profile-editor/ProfileVisibilityCard";
+import ProfileQuickActionsCard from "@/components/seeker/profile-editor/ProfileQuickActionsCard";
+import ProfileStandOutCard from "@/components/seeker/profile-editor/ProfileStandOutCard";
+import { firstIncompleteBucket } from "@/lib/seeker/profile-completion";
 import type { FormData } from "@/components/seeker/profile-editor/shared";
+
+type IdVerificationStatus = "PENDING" | "APPROVED" | "REJECTED" | null;
 
 type Props = {
   initialData: FormData;
   profileUpdatedAt?: string;
   profileId?: string;
   initialBucket?: ProfileBucketId;
+  idVerificationStatus?: IdVerificationStatus;
 };
 
 function isProfileBucketId(value: string): value is ProfileBucketId {
@@ -66,6 +73,7 @@ export default function SeekerProfileEditor({
   profileUpdatedAt,
   profileId,
   initialBucket,
+  idVerificationStatus = null,
 }: Props) {
   const router = useRouter();
   const [form, setForm] = useState(() => normalizeFormData(initialData));
@@ -89,6 +97,11 @@ export default function SeekerProfileEditor({
     education: form.education,
   };
   const activeMeta = PROFILE_BUCKETS.find((b) => b.id === activeBucket)!;
+  // Computed client-side from live (possibly unsaved) form state, same as
+  // the rest of this preview column — mirrors what page.tsx's server-side
+  // firstIncompleteBucket() does for the dashboard's rail card, but reads
+  // the seeker's in-progress edits instead of only the last-saved profile.
+  const nextIncompleteBucket = firstIncompleteBucket(previewData);
 
   function updateField<K extends keyof FormData>(key: K, value: FormData[K]) {
     setForm((prev) => normalizeFormData({ ...prev, [key]: value }));
@@ -406,8 +419,18 @@ export default function SeekerProfileEditor({
           </div>
         </form>
 
-        <aside className="hidden animate-slide-in-right xl:block">
+        <aside className="hidden animate-slide-in-right space-y-4 xl:block">
           <SeekerEmployerPreview data={previewData} profileId={profileId} />
+          <ProfileVisibilityCard visibility={form.visibility} onManage={() => setActiveBucket("visibility")} />
+          <ProfileQuickActionsCard onSelectBucket={setActiveBucket} />
+          {nextIncompleteBucket ? (
+            <ProfileStandOutCard variant="finish" onAction={() => setActiveBucket(nextIncompleteBucket)} />
+          ) : idVerificationStatus !== "APPROVED" ? (
+            <ProfileStandOutCard
+              variant="verify"
+              onAction={() => document.getElementById("identity-verification")?.scrollIntoView({ behavior: "smooth" })}
+            />
+          ) : null}
         </aside>
       </div>
     </div>

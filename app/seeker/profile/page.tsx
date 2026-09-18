@@ -7,7 +7,7 @@ import SeekerProfileAccountLinks from "@/components/seeker/SeekerProfileAccountL
 import SeekerProfileEditor from "@/components/seeker/SeekerProfileEditor";
 import ProfileHeaderCard from "@/components/seeker/ProfileHeaderCard";
 import IdentityVerificationPanel from "@/components/seeker/IdentityVerificationPanel";
-import { PROFILE_BUCKETS, profileBucketCompletion, type ProfileBucketId } from "@/components/seeker/profile-buckets";
+import { PROFILE_BUCKETS, isBucketComplete, profileBucketCompletion, type ProfileBucketId } from "@/components/seeker/profile-buckets";
 import { SeekerNavBandBleed } from "@/components/seeker/SeekerNavBand";
 import { User } from "lucide-react";
 
@@ -36,7 +36,7 @@ export default async function SeekerProfilePage({
     getVerificationScoreBreakdown(userId, ensuredProfile),
   ]);
 
-  const { completed, total } = profileBucketCompletion({
+  const bucketState = {
     fullName: profile.fullName ?? "",
     headline: profile.headline ?? "",
     location: profile.location ?? "",
@@ -56,7 +56,14 @@ export default async function SeekerProfilePage({
     timezone: profile.timezone ?? "Asia/Manila",
     photoUrl: profile.photoUrl,
     visibility: profile.visibility ?? "STANDARD",
-  });
+  };
+  const { completed, total } = profileBucketCompletion(bucketState);
+  const bucketStatus = PROFILE_BUCKETS.map((b) => ({
+    id: b.id,
+    label: b.label,
+    complete: isBucketComplete(b.id, bucketState),
+  }));
+  const publicProfileHref = `/seekers/${profile.id}`;
 
   return (
     <>
@@ -77,14 +84,24 @@ export default async function SeekerProfilePage({
         fullName={profile.fullName ?? ""}
         headline={profile.headline}
         photoUrl={profile.photoUrl}
+        location={profile.location}
+        bio={profile.bio}
+        yearsExperience={profile.yearsExperience}
+        availability={profile.availability}
+        desiredSalaryMin={profile.desiredSalaryMin}
+        desiredSalaryMax={profile.desiredSalaryMax}
         completed={completed}
         total={total}
         idVerificationStatus={profile.idVerificationStatus}
+        skills={profile.skills ?? []}
+        bucketStatus={bucketStatus}
+        publicProfileHref={publicProfileHref}
       />
       <SeekerProfileEditor
         profileId={profile.id}
         profileUpdatedAt={profile.updatedAt.toISOString()}
         initialBucket={parseInitialBucket(bucket)}
+        idVerificationStatus={profile.idVerificationStatus}
         initialData={{
           fullName: profile.fullName ?? "",
           phone: profile.phone ?? "",
@@ -122,7 +139,7 @@ export default async function SeekerProfilePage({
           profileBucketsCompleted={completed}
           profileBucketsTotal={total}
           firstIncompleteBucket={firstIncompleteBucket(profile)}
-          publicProfileHref={`/seekers/${profile.id}`}
+          publicProfileHref={publicProfileHref}
           initialDocuments={identityDocuments.map((doc) => ({
             id: doc.id,
             fileUrl: doc.fileUrl,
