@@ -328,7 +328,9 @@ export default async function SeekerDashboardPage({
           <section aria-labelledby="saved-heading">
             <div className="mb-3 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Bookmark className="h-4 w-4 text-navy/50" aria-hidden="true" />
+                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-navy/10 text-navy" aria-hidden="true">
+                  <Bookmark className="h-4 w-4" />
+                </span>
                 <h2
                   id="saved-heading"
                   className="font-display text-base font-bold text-ink"
@@ -378,7 +380,9 @@ export default async function SeekerDashboardPage({
           <section aria-labelledby="alerts-heading">
             <div className="mb-3 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Bell className="h-4 w-4 text-navy/50" aria-hidden="true" />
+                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-teal/10 text-teal" aria-hidden="true">
+                  <Bell className="h-4 w-4" />
+                </span>
                 <h2
                   id="alerts-heading"
                   className="font-display text-base font-bold text-ink"
@@ -402,7 +406,7 @@ export default async function SeekerDashboardPage({
             </div>
 
             {firstAlert ? (
-              <div className="mb-3 rounded-xl bg-ink/[0.03] px-4 py-3 ring-1 ring-ink/8">
+              <div className="mb-3 rounded-xl bg-teal/[0.05] px-4 py-3 ring-1 ring-teal/12">
                 <p className="text-sm font-semibold text-ink">
                   &ldquo;{firstAlert.keywords}&rdquo;
                 </p>
@@ -421,7 +425,7 @@ export default async function SeekerDashboardPage({
 
             <Link
               href="/seeker/job-alerts"
-              className="inline-flex items-center gap-1.5 rounded-xl border border-ink/15 px-3.5 py-2 text-xs font-semibold text-ink/65 transition hover:border-navy/30 hover:text-navy"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-teal px-3.5 py-2 text-xs font-semibold text-white shadow-[0_3px_8px_rgba(31,128,115,0.3)] transition hover:bg-teal/90"
             >
               <Plus className="h-3.5 w-3.5" aria-hidden="true" />
               {firstAlert ? "Create another alert" : "Create new alert"}
@@ -434,10 +438,9 @@ export default async function SeekerDashboardPage({
           <section aria-labelledby="messages-heading">
             <div className="mb-3 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <MessageSquare
-                  className="h-4 w-4 text-teal/70"
-                  aria-hidden="true"
-                />
+                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-teal/10 text-teal" aria-hidden="true">
+                  <MessageSquare className="h-4 w-4" />
+                </span>
                 <h2
                   id="messages-heading"
                   className="font-display text-base font-bold text-ink"
