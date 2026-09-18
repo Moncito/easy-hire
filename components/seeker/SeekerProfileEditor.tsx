@@ -34,6 +34,7 @@ type Props = {
   profileId?: string;
   initialBucket?: ProfileBucketId;
   idVerificationStatus?: IdVerificationStatus;
+  heroCard: React.ReactNode;
 };
 
 function isProfileBucketId(value: string): value is ProfileBucketId {
@@ -74,6 +75,7 @@ export default function SeekerProfileEditor({
   profileId,
   initialBucket,
   idVerificationStatus = null,
+  heroCard,
 }: Props) {
   const router = useRouter();
   const [form, setForm] = useState(() => normalizeFormData(initialData));
@@ -308,6 +310,21 @@ export default function SeekerProfileEditor({
 
   return (
     <div className="space-y-5">
+      {/* ── Hero row: ProfileHeaderCard (server-rendered, passed in as a
+          slot since it needs no client state) beside the live preview card
+          — same 3-col template as the grid below, hero spanning the first
+          two tracks (220px nav + flex form ≈ 80%) so both rows' column
+          edges line up exactly. Live preview only shows at xl+, matching
+          the sidebar's own breakpoint below; the xl:hidden mobile
+          accordion further down still renders it independently for
+          smaller screens. */}
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,220px)_minmax(0,1fr)_minmax(300px,320px)] xl:gap-6">
+        <div className="xl:col-span-2">{heroCard}</div>
+        <div className="hidden xl:block">
+          <SeekerEmployerPreview data={previewData} profileId={profileId} />
+        </div>
+      </div>
+
       {/* ── Progress toolbar (replaces old "Profile hub" card) ──
           The N/total "sections complete" widget itself now lives solely in
           ProfileHeaderCard's strength ring, above this page — this toolbar
@@ -421,7 +438,6 @@ export default function SeekerProfileEditor({
         </form>
 
         <aside className="hidden animate-slide-in-right space-y-4 xl:block">
-          <SeekerEmployerPreview data={previewData} profileId={profileId} />
           <ProfileVisibilityCard visibility={form.visibility} onManage={() => setActiveBucket("visibility")} />
           <ProfileQuickActionsCard onSelectBucket={setActiveBucket} />
           {nextIncompleteBucket ? (

@@ -58,28 +58,30 @@ export default async function SeekerProfilePage({
         <p className="mt-1.5 text-sm text-ink/50">Manage your professional presence</p>
       </div>
       <SeekerProfileAccountLinks />
-      <ProfileHeaderCard
-        fullName={profile.fullName ?? ""}
-        headline={profile.headline}
-        photoUrl={profile.photoUrl}
-        location={profile.location}
-        bio={profile.bio}
-        yearsExperience={profile.yearsExperience}
-        availability={profile.availability}
-        desiredSalaryMin={profile.desiredSalaryMin}
-        desiredSalaryMax={profile.desiredSalaryMax}
-        completed={completed}
-        total={total}
-        idVerificationStatus={profile.idVerificationStatus}
-        skills={profile.skills ?? []}
-        bucketStatus={bucketStatus}
-        publicProfileHref={publicProfileHref}
-      />
       <SeekerProfileEditor
         profileId={profile.id}
         profileUpdatedAt={profile.updatedAt.toISOString()}
         initialBucket={parseInitialBucket(bucket)}
         idVerificationStatus={profile.idVerificationStatus}
+        heroCard={
+          <ProfileHeaderCard
+            fullName={profile.fullName ?? ""}
+            headline={profile.headline}
+            photoUrl={profile.photoUrl}
+            location={profile.location}
+            bio={profile.bio}
+            yearsExperience={profile.yearsExperience}
+            availability={profile.availability}
+            desiredSalaryMin={profile.desiredSalaryMin}
+            desiredSalaryMax={profile.desiredSalaryMax}
+            completed={completed}
+            total={total}
+            idVerificationStatus={profile.idVerificationStatus}
+            skills={profile.skills ?? []}
+            bucketStatus={bucketStatus}
+            publicProfileHref={publicProfileHref}
+          />
+        }
         initialData={{
           fullName: profile.fullName ?? "",
           phone: profile.phone ?? "",
