@@ -27,7 +27,7 @@ export const VERIFICATION_SCORE_WEIGHTS = {
 } as const;
 
 /** Confirmed hires are worth 10 points each, capped at two (20 points). */
-const POINTS_PER_CONFIRMED_HIRE = 10;
+export const POINTS_PER_CONFIRMED_HIRE = 10;
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));

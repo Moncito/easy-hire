@@ -1,7 +1,8 @@
 import { requireSeekerPageContext } from "@/lib/auth/seeker-session";
 import { ensureSeekerProfile } from "@/lib/seekers";
 import { hydrateResumeFields } from "@/lib/seeker/resume-urls";
-import { listIdentityDocuments } from "@/lib/seeker/identity-verification";
+import { listIdentityDocuments, getVerificationScoreBreakdown } from "@/lib/seeker/identity-verification";
+import { firstIncompleteBucket } from "@/lib/seeker/profile-completion";
 import SeekerProfileAccountLinks from "@/components/seeker/SeekerProfileAccountLinks";
 import SeekerProfileEditor from "@/components/seeker/SeekerProfileEditor";
 import ProfileHeaderCard from "@/components/seeker/ProfileHeaderCard";
@@ -25,11 +26,14 @@ export default async function SeekerProfilePage({
   const ensuredProfile = await ensureSeekerProfile(userId, {
     fullName: session.user.name ?? "",
   });
-  // Both depend on the profile existing (ensured above), but not on each
-  // other — run them concurrently.
-  const [profile, identityDocuments] = await Promise.all([
+  // All three depend on the profile existing (ensured above), but not on
+  // each other — run them concurrently. The breakdown reads ensuredProfile
+  // directly (not the hydrated one) since hydration only re-signs resume
+  // URLs for display and doesn't affect any completion-relevant field.
+  const [profile, identityDocuments, verificationScoreResult] = await Promise.all([
     hydrateResumeFields(ensuredProfile),
     listIdentityDocuments(userId),
+    getVerificationScoreBreakdown(userId, ensuredProfile),
   ]);
 
   const { completed, total } = profileBucketCompletion({
@@ -112,10 +116,13 @@ export default async function SeekerProfilePage({
         <IdentityVerificationPanel
           status={profile.idVerificationStatus}
           rejectionReason={profile.idVerificationRejectionReason}
-          score={profile.verificationScore}
+          score={verificationScoreResult.score}
+          breakdown={verificationScoreResult.breakdown}
           idVerifiedAt={profile.idVerifiedAt?.toISOString() ?? null}
           profileBucketsCompleted={completed}
           profileBucketsTotal={total}
+          firstIncompleteBucket={firstIncompleteBucket(profile)}
+          publicProfileHref={`/seekers/${profile.id}`}
           initialDocuments={identityDocuments.map((doc) => ({
             id: doc.id,
             fileUrl: doc.fileUrl,
