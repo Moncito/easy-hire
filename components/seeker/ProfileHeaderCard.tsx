@@ -195,7 +195,7 @@ export default function ProfileHeaderCard({
 
             <div className="mt-2.5 flex flex-wrap items-center gap-2">
               <a
-                href="#identity-verification"
+                href="/seeker/profile/identity"
                 aria-label={`Identity verification status: ${badge.label}. Jump to identity verification section.`}
                 className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-semibold backdrop-blur transition-opacity hover:opacity-85 ${badge.pillClassName}`}
               >

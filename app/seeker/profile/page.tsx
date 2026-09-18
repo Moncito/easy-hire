@@ -1,12 +1,10 @@
 import { requireSeekerPageContext } from "@/lib/auth/seeker-session";
 import { ensureSeekerProfile } from "@/lib/seekers";
 import { hydrateResumeFields } from "@/lib/seeker/resume-urls";
-import { listIdentityDocuments, getVerificationScoreBreakdown } from "@/lib/seeker/identity-verification";
-import { firstIncompleteBucket } from "@/lib/seeker/profile-completion";
+import { toBucketCompletionState } from "@/lib/seeker/profile-completion";
 import SeekerProfileAccountLinks from "@/components/seeker/SeekerProfileAccountLinks";
 import SeekerProfileEditor from "@/components/seeker/SeekerProfileEditor";
 import ProfileHeaderCard from "@/components/seeker/ProfileHeaderCard";
-import IdentityVerificationPanel from "@/components/seeker/IdentityVerificationPanel";
 import { PROFILE_BUCKETS, isBucketComplete, profileBucketCompletion, type ProfileBucketId } from "@/components/seeker/profile-buckets";
 import { SeekerNavBandBleed } from "@/components/seeker/SeekerNavBand";
 import { User } from "lucide-react";
@@ -26,37 +24,12 @@ export default async function SeekerProfilePage({
   const ensuredProfile = await ensureSeekerProfile(userId, {
     fullName: session.user.name ?? "",
   });
-  // All three depend on the profile existing (ensured above), but not on
-  // each other — run them concurrently. The breakdown reads ensuredProfile
-  // directly (not the hydrated one) since hydration only re-signs resume
-  // URLs for display and doesn't affect any completion-relevant field.
-  const [profile, identityDocuments, verificationScoreResult] = await Promise.all([
-    hydrateResumeFields(ensuredProfile),
-    listIdentityDocuments(userId),
-    getVerificationScoreBreakdown(userId, ensuredProfile),
-  ]);
+  // The profile fetch is the only piece other page sections still need
+  // here — identity documents/score now live on the dedicated identity
+  // page. hydrateResumeFields only re-signs resume URLs for display.
+  const profile = await hydrateResumeFields(ensuredProfile);
 
-  const bucketState = {
-    fullName: profile.fullName ?? "",
-    headline: profile.headline ?? "",
-    location: profile.location ?? "",
-    bio: profile.bio ?? "",
-    skills: profile.skills ?? [],
-    availability: profile.availability,
-    yearsExperience: profile.yearsExperience,
-    desiredSalaryMin: profile.desiredSalaryMin,
-    desiredSalaryMax: profile.desiredSalaryMax,
-    resumeUrl: profile.resumeUrl,
-    linkedinUrl: profile.linkedinUrl ?? "",
-    portfolioUrl: profile.portfolioUrl ?? "",
-    certifications: profile.certifications ?? [],
-    languages: profile.languages ?? [],
-    workExperience: profile.workExperience ?? [],
-    education: profile.education ?? [],
-    timezone: profile.timezone ?? "Asia/Manila",
-    photoUrl: profile.photoUrl,
-    visibility: profile.visibility ?? "STANDARD",
-  };
+  const bucketState = toBucketCompletionState(profile);
   const { completed, total } = profileBucketCompletion(bucketState);
   const bucketStatus = PROFILE_BUCKETS.map((b) => ({
     id: b.id,
@@ -128,27 +101,6 @@ export default async function SeekerProfilePage({
           visibility: profile.visibility ?? "STANDARD",
         }}
       />
-
-      <div className="mt-5 lg:mt-6">
-        <IdentityVerificationPanel
-          status={profile.idVerificationStatus}
-          rejectionReason={profile.idVerificationRejectionReason}
-          score={verificationScoreResult.score}
-          breakdown={verificationScoreResult.breakdown}
-          idVerifiedAt={profile.idVerifiedAt?.toISOString() ?? null}
-          profileBucketsCompleted={completed}
-          profileBucketsTotal={total}
-          firstIncompleteBucket={firstIncompleteBucket(profile)}
-          publicProfileHref={publicProfileHref}
-          initialDocuments={identityDocuments.map((doc) => ({
-            id: doc.id,
-            fileUrl: doc.fileUrl,
-            fileName: doc.fileName,
-            docType: doc.docType,
-            uploadedAt: doc.uploadedAt.toISOString(),
-          }))}
-        />
-      </div>
       </div>
     </>
   );

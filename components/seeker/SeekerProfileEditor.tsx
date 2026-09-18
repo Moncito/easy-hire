@@ -341,7 +341,7 @@ export default function SeekerProfileEditor({
         />
       </div>
 
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,200px)_minmax(0,1fr)] xl:grid-cols-[minmax(0,200px)_minmax(0,1fr)_minmax(280px,340px)] xl:gap-6">
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,220px)_minmax(0,1fr)] xl:grid-cols-[minmax(0,220px)_minmax(0,1fr)_minmax(300px,320px)] xl:gap-6">
         <aside className="hidden animate-slide-in-left lg:block">
           <div className="sticky top-28 py-1">
             <ProfileBucketNav
@@ -349,6 +349,7 @@ export default function SeekerProfileEditor({
               activeId={activeBucket}
               onSelect={setActiveBucket}
               data={previewData}
+              identityStatus={idVerificationStatus}
             />
           </div>
         </aside>
@@ -428,7 +429,7 @@ export default function SeekerProfileEditor({
           ) : idVerificationStatus !== "APPROVED" ? (
             <ProfileStandOutCard
               variant="verify"
-              onAction={() => document.getElementById("identity-verification")?.scrollIntoView({ behavior: "smooth" })}
+              onAction={() => router.push("/seeker/profile/identity")}
             />
           ) : null}
         </aside>
