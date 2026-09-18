@@ -11,6 +11,42 @@ import {
 } from "@/lib/seeker/cache-tags";
 import { reviveDates } from "@/lib/cache-utils";
 
+export const APPLICATION_STATUS_PIPELINE = ["APPLIED", "SHORTLISTED", "INTERVIEW", "HIRED", "REJECTED"] as const;
+export type ApplicationStatusFilter = (typeof APPLICATION_STATUS_PIPELINE)[number] | "ALL";
+export const APPLICATION_STATUS_FILTERS: ApplicationStatusFilter[] = ["ALL", ...APPLICATION_STATUS_PIPELINE];
+
+/** Parses the dashboard's `?status=` query param, falling back to "ALL" for anything unrecognized. */
+export function normalizeApplicationStatusFilter(raw: string | undefined): ApplicationStatusFilter {
+  const normalized = raw?.toUpperCase() as ApplicationStatusFilter | undefined;
+  return normalized && APPLICATION_STATUS_FILTERS.includes(normalized) ? normalized : "ALL";
+}
+
+/** Tailwind classes for an application-status pill, shared by the dashboard's featured card and pipeline list. */
+export function applicationStatusBadgeClassName(status: string): string {
+  if (status === "REJECTED") return "bg-ember/10 text-ember border border-ember/20";
+  if (status === "HIRED") return "bg-marigold/15 text-[#7a4a0a] border border-marigold/20";
+  if (status === "INTERVIEW") return "bg-marigold/10 text-[#8a5a10] border border-marigold/15";
+  if (status === "SHORTLISTED") return "bg-navy/8 text-navy border border-navy/15";
+  return "bg-ink/5 text-ink/55 border border-ink/8";
+}
+
+/** The dashboard's "featured" application: most recent non-rejected one, or null if every application was rejected (or there are none). */
+export function pickFeaturedApplication<T extends { status: string }>(apps: T[]): T | null {
+  return apps.find((a) => a.status !== "REJECTED") ?? null;
+}
+
+/** The pipeline list below the featured card: respects the status filter, and excludes the featured application when showing "ALL" so it isn't listed twice. */
+export function filterPipelineApplications<T extends { id: string; status: string }>(
+  apps: T[],
+  statusFilter: ApplicationStatusFilter,
+  featuredId: string | null
+): T[] {
+  if (statusFilter === "ALL") {
+    return apps.filter((a) => (featuredId ? a.id !== featuredId : true));
+  }
+  return apps.filter((a) => a.status === statusFilter);
+}
+
 const DASHBOARD_REVALIDATE_SECONDS = 20;
 const INTERVIEWS_REVALIDATE_SECONDS = 20;
 // Upcoming + recent past — a seeker's interview history is not unbounded the

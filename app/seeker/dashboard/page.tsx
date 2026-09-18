@@ -1,5 +1,15 @@
 import Link from "next/link";
-import { getSeekerDashboardProfile, getSeekerInterviews } from "@/lib/seeker/dashboard";
+import {
+  getSeekerDashboardProfile,
+  getSeekerInterviews,
+  APPLICATION_STATUS_FILTERS,
+  applicationStatusBadgeClassName,
+  filterPipelineApplications,
+  normalizeApplicationStatusFilter,
+  pickFeaturedApplication,
+  type ApplicationStatusFilter,
+} from "@/lib/seeker/dashboard";
+import { capitalize } from "@/lib/format";
 import { getTopSeekerJobRecommendations } from "@/lib/seeker/job-recommendations";
 import { listSavedJobIds } from "@/lib/seeker/saved-jobs";
 import { relativeTime } from "@/lib/time-ago";
@@ -25,23 +35,6 @@ import ReviewablePromptList from "@/components/reviews/ReviewablePromptList";
 import { listReviewableApplications } from "@/lib/reviews";
 import { getSeekerProfileCompletion } from "@/lib/seeker/profile-completion";
 
-const STATUS_PIPELINE = ["APPLIED", "SHORTLISTED", "INTERVIEW", "HIRED", "REJECTED"] as const;
-type StatusFilter = (typeof STATUS_PIPELINE)[number] | "ALL";
-
-const STATUS_FILTERS: StatusFilter[] = ["ALL", ...STATUS_PIPELINE];
-
-function statusBadge(status: string) {
-  if (status === "REJECTED")
-    return "bg-ember/10 text-ember border border-ember/20";
-  if (status === "HIRED")
-    return "bg-marigold/15 text-[#7a4a0a] border border-marigold/20";
-  if (status === "INTERVIEW")
-    return "bg-marigold/10 text-[#8a5a10] border border-marigold/15";
-  if (status === "SHORTLISTED")
-    return "bg-navy/8 text-navy border border-navy/15";
-  return "bg-ink/5 text-ink/55 border border-ink/8";
-}
-
 export default async function SeekerDashboardPage({
   searchParams,
 }: {
@@ -49,9 +42,7 @@ export default async function SeekerDashboardPage({
 }) {
   const { session, userId } = await requireSeekerPageContext();
   const { status: statusParam } = await searchParams;
-  const normalized = statusParam?.toUpperCase() as StatusFilter | undefined;
-  const statusFilter: StatusFilter =
-    normalized && STATUS_FILTERS.includes(normalized) ? normalized : "ALL";
+  const statusFilter: ApplicationStatusFilter = normalizeApplicationStatusFilter(statusParam);
 
   const [{ profile, jobAlerts }, interviews, reviewablePrompts, recommendations, savedJobIds] =
     await Promise.all([
@@ -93,7 +84,7 @@ export default async function SeekerDashboardPage({
   const conversations: ConvoEntry[] = profile?.conversations ?? [];
 
   // Featured app for timeline: most recent non-rejected
-  const featuredApp = allApps.find((a) => a.status !== "REJECTED") ?? null;
+  const featuredApp = pickFeaturedApplication(allApps);
 
   // Interviews for the featured app — matched by jobId, since Application has
   // a unique (jobId, seekerId) pair, so at most one application shares a job
@@ -103,10 +94,7 @@ export default async function SeekerDashboardPage({
     : [];
 
   // Apps to show in the pipeline list (respects filter, excludes featured in ALL view)
-  const pipelineList =
-    statusFilter === "ALL"
-      ? allApps.filter((a) => (featuredApp ? a.id !== featuredApp.id : true))
-      : allApps.filter((a) => a.status === statusFilter);
+  const pipelineList = filterPipelineApplications(allApps, statusFilter, featuredApp?.id ?? null);
 
   // First job alert for preview card
   const firstAlert = jobAlerts[0] ?? null;
@@ -181,7 +169,7 @@ export default async function SeekerDashboardPage({
 
             {/* Status filter pills */}
             <div className="flex flex-wrap gap-1.5">
-              {STATUS_FILTERS.map((s) => {
+              {APPLICATION_STATUS_FILTERS.map((s) => {
                 const href =
                   s === "ALL"
                     ? "/seeker/dashboard"
@@ -197,7 +185,7 @@ export default async function SeekerDashboardPage({
                         : "bg-ink/[0.04] text-ink/45 hover:bg-ink/8 hover:text-ink/65"
                     }`}
                   >
-                    {s === "ALL" ? "All" : s.charAt(0) + s.slice(1).toLowerCase()}
+                    {s === "ALL" ? "All" : capitalize(s)}
                   </Link>
                 );
               })}
@@ -265,7 +253,7 @@ export default async function SeekerDashboardPage({
                         ) : null}
                         <MessageEmployerButton jobId={app.job.id} compact />
                         <span
-                          className={`rounded-lg px-2.5 py-1 text-xs font-semibold ${statusBadge(app.status)}`}
+                          className={`rounded-lg px-2.5 py-1 text-xs font-semibold ${applicationStatusBadgeClassName(app.status)}`}
                         >
                           {app.status === "REJECTED" && (
                             <XCircle
@@ -273,7 +261,7 @@ export default async function SeekerDashboardPage({
                               aria-hidden="true"
                             />
                           )}
-                          {app.status.charAt(0) + app.status.slice(1).toLowerCase()}
+                          {capitalize(app.status)}
                         </span>
                       </div>
                     </li>
@@ -384,8 +372,7 @@ export default async function SeekerDashboardPage({
                 </p>
                 <p className="mt-0.5 text-xs text-ink/45">
                   {firstAlert.category ? `${firstAlert.category} · ` : ""}
-                  {firstAlert.frequency.charAt(0) +
-                    firstAlert.frequency.slice(1).toLowerCase()}{" "}
+                  {capitalize(firstAlert.frequency)}{" "}
                   digest
                 </p>
               </div>

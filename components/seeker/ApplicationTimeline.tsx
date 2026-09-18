@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Check, Clock, XCircle as XCircleIcon } from "lucide-react";
 import { relativeTime } from "@/lib/time-ago";
+import { capitalize } from "@/lib/format";
 import WithdrawApplicationButton from "@/components/seeker/WithdrawApplicationButton";
 import MessageEmployerButton from "@/components/seeker/MessageEmployerButton";
 import { formatInterviewDuration, formatInterviewTimePHT, interviewFormatLabel } from "./interview-time";
@@ -105,7 +106,7 @@ export default function ApplicationTimeline({
             <div
               key={stage}
               role="listitem"
-              aria-label={`${stage.charAt(0) + stage.slice(1).toLowerCase()}: ${state}`}
+              aria-label={`${capitalize(stage)}: ${state}`}
               className="flex flex-1 flex-col items-center"
             >
               {/* Stage label */}
@@ -114,7 +115,7 @@ export default function ApplicationTimeline({
                   state === "future" ? "text-ink/25" : "text-ink/55"
                 }`}
               >
-                {stage.charAt(0) + stage.slice(1).toLowerCase()}
+                {capitalize(stage)}
               </span>
 
               {/* Dot + connecting lines */}
