@@ -1,7 +1,6 @@
 "use client";
 
 import { useRef } from "react";
-import Link from "next/link";
 import { Check, ShieldCheck } from "lucide-react";
 import {
   PROFILE_BUCKETS,
@@ -190,8 +189,8 @@ export default function ProfileBucketNav({
       <div className="flex flex-col gap-1">
         {settingsBuckets.map(renderBucketRow)}
 
-        <Link
-          href="/seeker/profile/identity"
+        <a
+          href="#identity-verification"
           className="group flex w-full cursor-pointer items-center gap-3 rounded-lg px-2 py-2 text-left text-sm font-medium text-ink/50 transition-colors hover:bg-ink/[0.03] hover:text-ink/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-marigold/40 focus-visible:ring-offset-2 focus-visible:ring-offset-mist"
         >
           <span
@@ -205,7 +204,7 @@ export default function ProfileBucketNav({
             aria-hidden="true"
             className={`h-2 w-2 shrink-0 rounded-full ${identityDotClass(identityStatus)}`}
           />
-        </Link>
+        </a>
       </div>
     </nav>
   );

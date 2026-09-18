@@ -429,7 +429,9 @@ export default function SeekerProfileEditor({
           ) : idVerificationStatus !== "APPROVED" ? (
             <ProfileStandOutCard
               variant="verify"
-              onAction={() => router.push("/seeker/profile/identity")}
+              onAction={() =>
+                document.getElementById("identity-verification")?.scrollIntoView({ behavior: "smooth" })
+              }
             />
           ) : null}
         </aside>

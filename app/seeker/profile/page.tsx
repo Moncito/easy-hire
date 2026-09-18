@@ -1,10 +1,12 @@
 import { requireSeekerPageContext } from "@/lib/auth/seeker-session";
 import { ensureSeekerProfile } from "@/lib/seekers";
 import { hydrateResumeFields } from "@/lib/seeker/resume-urls";
-import { toBucketCompletionState } from "@/lib/seeker/profile-completion";
+import { listIdentityDocuments, getVerificationScoreBreakdown } from "@/lib/seeker/identity-verification";
+import { toBucketCompletionState, firstIncompleteBucket } from "@/lib/seeker/profile-completion";
 import SeekerProfileAccountLinks from "@/components/seeker/SeekerProfileAccountLinks";
 import SeekerProfileEditor from "@/components/seeker/SeekerProfileEditor";
 import ProfileHeaderCard from "@/components/seeker/ProfileHeaderCard";
+import IdentityVerificationPanel from "@/components/seeker/IdentityVerificationPanel";
 import { PROFILE_BUCKETS, isBucketComplete, profileBucketCompletion, type ProfileBucketId } from "@/components/seeker/profile-buckets";
 import { SeekerNavBandBleed } from "@/components/seeker/SeekerNavBand";
 import { User } from "lucide-react";
@@ -24,10 +26,13 @@ export default async function SeekerProfilePage({
   const ensuredProfile = await ensureSeekerProfile(userId, {
     fullName: session.user.name ?? "",
   });
-  // The profile fetch is the only piece other page sections still need
-  // here — identity documents/score now live on the dedicated identity
-  // page. hydrateResumeFields only re-signs resume URLs for display.
-  const profile = await hydrateResumeFields(ensuredProfile);
+  // Both depend on the profile existing (ensured above), but not on each
+  // other — run them concurrently.
+  const [profile, identityDocuments, verificationScoreResult] = await Promise.all([
+    hydrateResumeFields(ensuredProfile),
+    listIdentityDocuments(userId),
+    getVerificationScoreBreakdown(userId, ensuredProfile),
+  ]);
 
   const bucketState = toBucketCompletionState(profile);
   const { completed, total } = profileBucketCompletion(bucketState);
@@ -101,6 +106,26 @@ export default async function SeekerProfilePage({
           visibility: profile.visibility ?? "STANDARD",
         }}
       />
+      <div className="mt-5 lg:mt-6">
+        <IdentityVerificationPanel
+          status={profile.idVerificationStatus}
+          rejectionReason={profile.idVerificationRejectionReason}
+          score={verificationScoreResult.score}
+          breakdown={verificationScoreResult.breakdown}
+          idVerifiedAt={profile.idVerifiedAt?.toISOString() ?? null}
+          profileBucketsCompleted={completed}
+          profileBucketsTotal={total}
+          firstIncompleteBucket={firstIncompleteBucket(profile)}
+          publicProfileHref={publicProfileHref}
+          initialDocuments={identityDocuments.map((doc) => ({
+            id: doc.id,
+            fileUrl: doc.fileUrl,
+            fileName: doc.fileName,
+            docType: doc.docType,
+            uploadedAt: doc.uploadedAt.toISOString(),
+          }))}
+        />
+      </div>
       </div>
     </>
   );
