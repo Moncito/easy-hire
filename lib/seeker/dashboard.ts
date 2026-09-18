@@ -47,6 +47,59 @@ export function filterPipelineApplications<T extends { id: string; status: strin
   return apps.filter((a) => a.status === statusFilter);
 }
 
+/** In-flight applications — everything except a final REJECTED or HIRED outcome. */
+export function countActiveApplications<T extends { status: string }>(apps: T[]): number {
+  return apps.filter((a) => a.status !== "REJECTED" && a.status !== "HIRED").length;
+}
+
+/**
+ * The soonest still-scheduled interview at or after `nowMs`, or null. Unlike
+ * SeekerInterviewsSection's own "upcoming" filter (which deliberately still
+ * shows cancelled rows so a seeker can see what happened), a dashboard
+ * spotlight card must not surface an interview that's dead — a cancelled
+ * or already-completed one carries nothing worth spotlighting.
+ */
+export function pickNextInterview<T extends { scheduledAt: Date; status: string }>(
+  interviews: T[],
+  nowMs: number
+): T | null {
+  const upcoming = interviews.filter(
+    (i) => i.scheduledAt.getTime() >= nowMs && i.status !== "CANCELLED" && i.status !== "COMPLETED"
+  );
+  if (upcoming.length === 0) return null;
+  return upcoming.reduce((soonest, i) => (i.scheduledAt < soonest.scheduledAt ? i : soonest));
+}
+
+/** Count for the same "still live" set pickNextInterview draws from — kept as a separate function so a stat card doesn't need to materialize the array just to know its length. */
+export function countUpcomingInterviews<T extends { scheduledAt: Date; status: string }>(
+  interviews: T[],
+  nowMs: number
+): number {
+  return interviews.filter(
+    (i) => i.scheduledAt.getTime() >= nowMs && i.status !== "CANCELLED" && i.status !== "COMPLETED"
+  ).length;
+}
+
+/**
+ * Interview.location is free-text supplied by the employer when scheduling
+ * (see app/api/hiring/.../interviews/route.ts) — untrusted input, not a
+ * vetted meeting-link field. Only ever treat it as a clickable join link
+ * when it parses as an http(s) URL; anything else (a physical address, or
+ * a scheme like javascript:/data: someone typed in) must render as plain
+ * text or nothing, never as an href.
+ */
+export function interviewJoinUrl(location: string | null | undefined): string | null {
+  const trimmed = location?.trim();
+  if (!trimmed) return null;
+  try {
+    const url = new URL(trimmed);
+    if (url.protocol !== "http:" && url.protocol !== "https:") return null;
+    return trimmed;
+  } catch {
+    return null;
+  }
+}
+
 const DASHBOARD_REVALIDATE_SECONDS = 20;
 const INTERVIEWS_REVALIDATE_SECONDS = 20;
 // Upcoming + recent past — a seeker's interview history is not unbounded the

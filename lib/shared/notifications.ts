@@ -104,6 +104,8 @@ export function notificationHref(
         return "/seeker/dashboard";
       case "SEEKER_ID_REJECTED":
         return "/seeker/dashboard";
+      case "APPLICATION_SUBMITTED":
+        return "/seeker/dashboard";
       default:
         return "/seeker/dashboard";
     }

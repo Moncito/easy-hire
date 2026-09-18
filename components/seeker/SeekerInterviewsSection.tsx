@@ -160,7 +160,7 @@ export default function SeekerInterviewsSection({
     .sort((a, b) => b.scheduledAt.getTime() - a.scheduledAt.getTime());
 
   return (
-    <section aria-labelledby="interviews-heading">
+    <section aria-labelledby="interviews-heading" className="scroll-mt-28">
       <div className="mb-4 flex items-center gap-2">
         <Calendar className="h-4 w-4 text-navy/50" aria-hidden="true" />
         <h2 id="interviews-heading" className="font-display text-lg font-bold text-ink">

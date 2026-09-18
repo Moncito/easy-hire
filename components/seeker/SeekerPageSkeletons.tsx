@@ -26,85 +26,118 @@ export function SeekerDashboardSkeleton() {
         <Bone className="h-4 w-44" />
       </div>
 
-      {/* Stats strip */}
-      <div className="flex flex-wrap divide-y divide-ink/8 overflow-hidden rounded-2xl bg-ink/[0.03] ring-1 ring-ink/8 sm:divide-x sm:divide-y-0">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="flex min-w-[120px] flex-1 flex-col gap-2 px-5 py-4">
-            <Bone className="h-2.5 w-20" />
+      {/* Stats strip — 3 cards */}
+      <div className="grid gap-3 sm:grid-cols-3">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div key={i} className="flex flex-col gap-2 rounded-2xl bg-white px-5 py-4 ring-1 ring-ink/8">
+            <Bone className="h-8 w-8 rounded-lg" />
+            <Bone className="h-2.5 w-24" />
             <Bone className="h-7 w-12" />
-            {i === 0 && <Bone className="h-1 w-full rounded-full" />}
+            <Bone className="h-3 w-16" />
           </div>
         ))}
       </div>
 
-      {/* Application tracking */}
-      <div>
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <Bone className="h-6 w-48" />
-          <div className="flex gap-1.5">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <Bone key={i} className="h-6 w-14 rounded-full" />
-            ))}
-          </div>
-        </div>
-
-        {/* Featured timeline card */}
-        <div className="rounded-2xl bg-white px-6 py-5 ring-1 ring-ink/8 shadow-[0_2px_12px_rgba(32,36,43,0.05)]">
-          <Bone className="mb-4 h-4 w-52" />
-          <Bone className="mb-5 h-3 w-36" />
-          <div className="flex items-center justify-between gap-2">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="flex flex-1 flex-col items-center gap-2">
-                <Bone className="h-8 w-8 rounded-full" />
-                <Bone className="h-2.5 w-full max-w-[56px] rounded-sm" />
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(300px,340px)] xl:gap-8">
+        <div className="min-w-0 space-y-8 xl:col-start-1 xl:row-start-1">
+          {/* Application tracking */}
+          <div>
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+              <Bone className="h-6 w-48" />
+              <div className="flex gap-1.5">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <Bone key={i} className="h-6 w-14 rounded-full" />
+                ))}
               </div>
-            ))}
-          </div>
-        </div>
+            </div>
 
-        {/* Pipeline list */}
-        <div className="mt-3 divide-y divide-ink/5 rounded-2xl bg-white px-5 ring-1 ring-ink/8">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="flex items-center justify-between py-3.5">
-              <div className="space-y-1.5">
-                <Bone className="h-4 w-40" />
+            {/* Featured timeline card */}
+            <div className="rounded-2xl bg-white px-6 py-5 ring-1 ring-ink/8 shadow-[0_2px_12px_rgba(32,36,43,0.05)]">
+              <Bone className="mb-4 h-4 w-52" />
+              <Bone className="mb-5 h-3 w-36" />
+              <div className="flex items-center justify-between gap-2">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <div key={i} className="flex flex-1 flex-col items-center gap-2">
+                    <Bone className="h-8 w-8 rounded-full" />
+                    <Bone className="h-2.5 w-full max-w-[56px] rounded-sm" />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Pipeline list */}
+            <div className="mt-3 divide-y divide-ink/5 rounded-2xl bg-white px-5 ring-1 ring-ink/8">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="flex items-center justify-between py-3.5">
+                  <div className="space-y-1.5">
+                    <Bone className="h-4 w-40" />
+                    <Bone className="h-3 w-28" />
+                  </div>
+                  <Bone className="h-7 w-20 rounded-lg" />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Two-column: saved jobs + job alerts */}
+          <div className="grid gap-8 sm:grid-cols-2">
+            {/* Saved jobs */}
+            <div>
+              <div className="mb-3 flex items-center gap-2">
+                <Bone className="h-4 w-4 rounded" />
+                <Bone className="h-5 w-24" />
+              </div>
+              <div className="space-y-4">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="space-y-1.5 py-1">
+                    <Bone className="h-4 w-48" />
+                    <Bone className="h-3 w-32" />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Job alerts */}
+            <div>
+              <div className="mb-3 flex items-center gap-2">
+                <Bone className="h-4 w-4 rounded" />
+                <Bone className="h-5 w-24" />
+              </div>
+              <div className="rounded-xl bg-ink/[0.03] px-4 py-3 ring-1 ring-ink/8">
+                <Bone className="mb-2 h-4 w-40" />
                 <Bone className="h-3 w-28" />
               </div>
-              <Bone className="h-7 w-20 rounded-lg" />
+              <Bone className="mt-3 h-9 w-36 rounded-xl" />
             </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Two-column: saved jobs + job alerts */}
-      <div className="grid gap-8 lg:grid-cols-2">
-        {/* Saved jobs */}
-        <div>
-          <div className="mb-3 flex items-center gap-2">
-            <Bone className="h-4 w-4 rounded" />
-            <Bone className="h-5 w-24" />
           </div>
-          <div className="space-y-4">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="space-y-1.5 py-1">
-                <Bone className="h-4 w-48" />
-                <Bone className="h-3 w-32" />
-              </div>
+        </div>
+
+        {/* Rail bones — hidden below xl, matching the real layout */}
+        <div className="hidden space-y-4 xl:block xl:col-start-2 xl:row-start-1">
+          <div className="space-y-3 rounded-2xl bg-white p-5 ring-1 ring-ink/8">
+            <Bone className="h-3 w-24" />
+            <Bone className="h-9 w-9 rounded-xl" />
+            <Bone className="h-4 w-32" />
+            <Bone className="h-3 w-full" />
+            <Bone className="h-9 w-full rounded-xl" />
+          </div>
+          <div className="space-y-3 rounded-2xl bg-white p-5 ring-1 ring-ink/8">
+            <Bone className="h-3 w-28" />
+            <Bone className="h-14 w-14 rounded-full" />
+            <Bone className="h-9 w-full rounded-xl" />
+          </div>
+          <div className="space-y-3 rounded-2xl bg-white p-5 ring-1 ring-ink/8">
+            <Bone className="h-3 w-24" />
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Bone key={i} className="h-9 w-full rounded-xl" />
             ))}
           </div>
-        </div>
-
-        {/* Job alerts */}
-        <div>
-          <div className="mb-3 flex items-center gap-2">
-            <Bone className="h-4 w-4 rounded" />
-            <Bone className="h-5 w-24" />
+          <div className="space-y-3 rounded-2xl bg-white p-5 ring-1 ring-ink/8">
+            <Bone className="h-3 w-16" />
+            {Array.from({ length: 3 }).map((_, i) => (
+              <Bone key={i} className="h-8 w-full rounded-lg" />
+            ))}
           </div>
-          <div className="rounded-xl bg-ink/[0.03] px-4 py-3 ring-1 ring-ink/8">
-            <Bone className="mb-2 h-4 w-40" />
-            <Bone className="h-3 w-28" />
-          </div>
-          <Bone className="mt-3 h-9 w-36 rounded-xl" />
         </div>
       </div>
       </div>

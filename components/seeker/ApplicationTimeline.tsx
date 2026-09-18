@@ -2,9 +2,19 @@ import Link from "next/link";
 import { Check, Clock, XCircle as XCircleIcon } from "lucide-react";
 import { relativeTime } from "@/lib/time-ago";
 import { capitalize } from "@/lib/format";
+import { applicationStatusBadgeClassName } from "@/lib/seeker/dashboard";
 import WithdrawApplicationButton from "@/components/seeker/WithdrawApplicationButton";
 import MessageEmployerButton from "@/components/seeker/MessageEmployerButton";
 import { formatInterviewDuration, formatInterviewTimePHT, interviewFormatLabel } from "./interview-time";
+
+function companyInitials(name: string) {
+  return name
+    .split(" ")
+    .map((w) => w[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+}
 
 const STAGES = ["APPLIED", "SHORTLISTED", "INTERVIEW", "HIRED"] as const;
 type Stage = (typeof STAGES)[number];
@@ -24,7 +34,11 @@ type AppForTimeline = {
 /** Narrow subset of SeekerInterview (lib/seeker/dashboard.ts) needed to
  *  highlight the most relevant interview inline — kept local rather than
  *  importing the full type to avoid coupling this presentational component
- *  to the dashboard data-fetching module. */
+ *  to the dashboard data-fetching module. (applicationStatusBadgeClassName,
+ *  imported above, is a pure style function rather than a data shape, so
+ *  sharing it here — instead of a second copy — is the thing that keeps
+ *  this card's status pill and the dashboard's pipeline-list pill from
+ *  drifting apart.) */
 type InterviewHighlight = {
   scheduledAt: Date;
   durationMins: number;
@@ -63,21 +77,33 @@ export default function ApplicationTimeline({
   return (
     <div>
       {/* App header */}
-      <div className="mb-5 flex flex-wrap items-start justify-between gap-2">
-        <div>
-          <p className="font-display text-lg font-bold text-ink">
-            {app.job.company.companyName}
-          </p>
-          <Link
-            href={`/jobs/${app.job.id}`}
-            className="mt-0.5 block text-sm text-ink/50 transition-colors hover:text-navy"
-          >
-            {app.job.title}
-          </Link>
+      <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
+        <div className="flex min-w-0 items-start gap-3">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-navy/8 font-display text-sm font-bold text-navy">
+            {companyInitials(app.job.company.companyName)}
+          </div>
+          <div className="min-w-0">
+            <p className="font-display text-lg font-bold text-ink">
+              {app.job.company.companyName}
+            </p>
+            <Link
+              href={`/jobs/${app.job.id}`}
+              className="mt-0.5 block text-sm text-ink/50 transition-colors hover:text-navy"
+            >
+              {app.job.title}
+            </Link>
+          </div>
         </div>
-        <span className="shrink-0 text-xs text-ink/35">
-          Updated {relativeTime(app.updatedAt.toISOString())}
-        </span>
+        <div className="flex shrink-0 flex-col items-end gap-1.5">
+          <span
+            className={`rounded-lg px-2.5 py-1 text-xs font-semibold ${applicationStatusBadgeClassName(app.status)}`}
+          >
+            {capitalize(app.status)}
+          </span>
+          <span className="text-xs text-ink/35">
+            Updated {relativeTime(app.updatedAt.toISOString())}
+          </span>
+        </div>
       </div>
 
       {/* Timeline */}

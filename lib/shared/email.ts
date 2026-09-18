@@ -182,6 +182,7 @@ type ApplicationEmailContext = {
   jobTitle: string;
   companyName: string;
   seekerName: string;
+  seekerUserId: string;
   employerUserId: string;
   employerEmail: string;
   seekerEmail: string;
@@ -194,6 +195,11 @@ export async function notifyApplicationSubmitted(ctx: ApplicationEmailContext) {
       ctx.employerUserId,
       "NEW_APPLICATION",
       `${ctx.seekerName} applied to "${ctx.jobTitle}".`
+    ),
+    createNotification(
+      ctx.seekerUserId,
+      "APPLICATION_SUBMITTED",
+      `Your application to "${ctx.jobTitle}" at ${ctx.companyName} was submitted.`
     ),
     sendEmail(
       ctx.employerEmail,

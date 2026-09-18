@@ -4,14 +4,18 @@ import {
   getSeekerInterviews,
   APPLICATION_STATUS_FILTERS,
   applicationStatusBadgeClassName,
+  countActiveApplications,
+  countUpcomingInterviews,
   filterPipelineApplications,
   normalizeApplicationStatusFilter,
   pickFeaturedApplication,
+  pickNextInterview,
   type ApplicationStatusFilter,
 } from "@/lib/seeker/dashboard";
 import { capitalize } from "@/lib/format";
 import { getTopSeekerJobRecommendations } from "@/lib/seeker/job-recommendations";
 import { listSavedJobIds } from "@/lib/seeker/saved-jobs";
+import { getSeekerNotifications } from "@/lib/shared/notifications";
 import { relativeTime } from "@/lib/time-ago";
 import { requireSeekerPageContext } from "@/lib/auth/seeker-session";
 import {
@@ -30,6 +34,10 @@ import WithdrawApplicationButton from "@/components/seeker/WithdrawApplicationBu
 import MessageEmployerButton from "@/components/seeker/MessageEmployerButton";
 import SeekerInterviewsSection from "@/components/seeker/SeekerInterviewsSection";
 import RecommendedJobsSection from "@/components/seeker/RecommendedJobsSection";
+import SeekerNextInterviewCard from "@/components/seeker/SeekerNextInterviewCard";
+import SeekerProfileProgressCard from "@/components/seeker/SeekerProfileProgressCard";
+import SeekerQuickActionsCard from "@/components/seeker/SeekerQuickActionsCard";
+import SeekerActivityFeedCard from "@/components/seeker/SeekerActivityFeedCard";
 import { SeekerNavBandBleed } from "@/components/seeker/SeekerNavBand";
 import ReviewablePromptList from "@/components/reviews/ReviewablePromptList";
 import { listReviewableApplications } from "@/lib/reviews";
@@ -44,13 +52,14 @@ export default async function SeekerDashboardPage({
   const { status: statusParam } = await searchParams;
   const statusFilter: ApplicationStatusFilter = normalizeApplicationStatusFilter(statusParam);
 
-  const [{ profile, jobAlerts }, interviews, reviewablePrompts, recommendations, savedJobIds] =
+  const [{ profile, jobAlerts }, interviews, reviewablePrompts, recommendations, savedJobIds, { notifications: activityItems }] =
     await Promise.all([
       getSeekerDashboardProfile(userId, session.user.name ?? ""),
       getSeekerInterviews(userId),
       listReviewableApplications(userId),
       getTopSeekerJobRecommendations(userId, 3),
       listSavedJobIds(userId),
+      getSeekerNotifications(userId, { limit: 5 }),
     ]);
 
   // Wall-clock read for splitting interviews into upcoming/past. Computed
@@ -99,6 +108,11 @@ export default async function SeekerDashboardPage({
   // First job alert for preview card
   const firstAlert = jobAlerts[0] ?? null;
 
+  // Rail derivations — all pure, all from data already loaded above; no new queries.
+  const nextInterview = pickNextInterview(interviews, nowMs);
+  const upcomingInterviewCount = countUpcomingInterviews(interviews, nowMs);
+  const activeApplicationCount = countActiveApplications(allApps);
+
   return (
     <div className="animate-fade-in">
       <SeekerNavBandBleed
@@ -129,9 +143,9 @@ export default async function SeekerDashboardPage({
 
         {/* ── Stats strip ── */}
         <SeekerDashboardStats
-          strength={strength}
-          strengthTotal={strengthTotal}
-          applicationCount={allApps.length}
+          activeApplicationCount={activeApplicationCount}
+          totalApplicationCount={allApps.length}
+          upcomingInterviewCount={upcomingInterviewCount}
           conversationCount={profile?.conversations.length ?? 0}
         />
 
@@ -157,6 +171,8 @@ export default async function SeekerDashboardPage({
           </div>
         )}
 
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(300px,340px)] xl:gap-8">
+          <div className="order-1 min-w-0 xl:col-start-1 xl:row-start-1">
         {/* ── Application tracking ── */}
         <section aria-labelledby="pipeline-heading">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -210,12 +226,19 @@ export default async function SeekerDashboardPage({
             <div className="space-y-3">
               {/* Featured app with horizontal timeline */}
               {featuredApp && statusFilter !== "REJECTED" && (
-                <div className="rounded-2xl bg-white px-6 py-5 ring-1 ring-ink/8 shadow-[0_2px_12px_rgba(32,36,43,0.05)]">
-                  <ApplicationTimeline
-                    app={featuredApp}
-                    interviews={featuredAppInterviews}
-                    nowMs={nowMs}
+                <div className="relative overflow-hidden rounded-2xl bg-white px-6 py-5 ring-1 ring-ink/8 shadow-[0_2px_12px_rgba(32,36,43,0.05)]">
+                  <div
+                    className="pointer-events-none absolute inset-0"
+                    style={{ backgroundImage: "radial-gradient(circle at 0% 0%, rgba(242,169,59,0.08), transparent 55%)" }}
+                    aria-hidden="true"
                   />
+                  <div className="relative">
+                    <ApplicationTimeline
+                      app={featuredApp}
+                      interviews={featuredAppInterviews}
+                      nowMs={nowMs}
+                    />
+                  </div>
                 </div>
               )}
 
@@ -278,6 +301,19 @@ export default async function SeekerDashboardPage({
             </div>
           )}
         </section>
+          </div>
+
+          <aside
+            aria-label="Dashboard summary"
+            className="order-2 min-w-0 space-y-4 xl:order-none xl:col-start-2 xl:row-start-1 xl:row-span-2 xl:sticky xl:top-28"
+          >
+            <SeekerNextInterviewCard interview={nextInterview} nowMs={nowMs} />
+            <SeekerProfileProgressCard completed={strength} total={strengthTotal} />
+            <SeekerQuickActionsCard />
+            <SeekerActivityFeedCard items={activityItems} />
+          </aside>
+
+          <div className="order-3 min-w-0 space-y-8 xl:col-start-1 xl:row-start-2">
 
         {/* ── Interviews ── */}
         <SeekerInterviewsSection interviews={interviews} nowMs={nowMs} />
@@ -286,7 +322,7 @@ export default async function SeekerDashboardPage({
         <RecommendedJobsSection recommendations={recommendations} variant="dashboard" savedJobIds={savedJobIds} />
 
         {/* ── Bottom two-column grid ── */}
-        <div className="grid gap-8 lg:grid-cols-2">
+        <div className="grid gap-8 sm:grid-cols-2">
 
           {/* Saved jobs */}
           <section aria-labelledby="saved-heading">
@@ -437,6 +473,8 @@ export default async function SeekerDashboardPage({
             </ul>
           </section>
         )}
+          </div>
+        </div>
       </div>
     </div>
   );
