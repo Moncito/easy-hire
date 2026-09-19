@@ -309,149 +309,159 @@ export default function SeekerProfileEditor({
   }
 
   return (
-    <div className="space-y-5">
-      {/* ── Hero row: ProfileHeaderCard (server-rendered, passed in as a
-          slot since it needs no client state) beside the live preview card
-          — same 3-col template as the grid below, hero spanning the first
-          two tracks (220px nav + flex form ≈ 80%) so both rows' column
-          edges line up exactly. Live preview only shows at xl+, matching
-          the sidebar's own breakpoint below; the xl:hidden mobile
-          accordion further down still renders it independently for
-          smaller screens. */}
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,220px)_minmax(0,1fr)_minmax(300px,320px)] xl:gap-6">
-        <div className="xl:col-span-2">{heroCard}</div>
-        <div className="hidden xl:block">
-          <SeekerEmployerPreview data={previewData} profileId={profileId} />
-        </div>
-      </div>
+    // ── Outer 2-column grid: left content column (hero, toolbar, nav+form)
+    // beside the right sidebar stack. items-start is load-bearing here — a
+    // real profile's hero (variable-height: bio, skills, quick facts) is
+    // often much taller than the live-preview + sidebar-card stack, and
+    // without it CSS grid stretches the shorter column to match the row
+    // height, leaving a dead gap below the sidebar's last card instead of
+    // just ending there. Each column now flows at its own natural height.
+    <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(300px,320px)] xl:items-start xl:gap-6">
+      <div className="min-w-0 space-y-5">
+        {heroCard}
 
-      {/* ── Progress toolbar (replaces old "Profile hub" card) ──
-          The N/total "sections complete" widget itself now lives solely in
-          ProfileHeaderCard's strength ring, above this page — this toolbar
-          keeps only the save-state text and the Save button so the fact
-          isn't shown twice. Lightened (no card background, subtler shadow)
-          so it sits well above the now-unboxed form. */}
-      <div className="animate-fade-in flex flex-wrap items-center justify-between gap-4 pb-1">
-        <div>
-          {profileUpdatedAt && (
-            <p className="text-xs text-ink/40">
-              Saved {formatRelativeUpdated(profileUpdatedAt)}
-            </p>
-          )}
-        </div>
-        <button
-          type="submit"
-          form="seeker-profile-form"
-          disabled={loading}
-          className="cursor-pointer rounded-xl bg-marigold px-6 py-2.5 text-sm font-bold text-ink shadow-[0_6px_18px_-6px_rgba(242,169,59,0.55)] transition-colors hover:bg-marigold/90 disabled:opacity-60"
-        >
-          {loading ? "Saving..." : "Save profile"}
-        </button>
-      </div>
-
-      <div className="lg:hidden">
-        <ProfileBucketNav
-          variant="pills"
-          activeId={activeBucket}
-          onSelect={setActiveBucket}
-          data={previewData}
-        />
-      </div>
-
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,220px)_minmax(0,1fr)] xl:grid-cols-[minmax(0,220px)_minmax(0,1fr)_minmax(300px,320px)] xl:gap-6">
-        <aside className="hidden animate-slide-in-left lg:block">
-          <div className="sticky top-28 py-1">
-            <ProfileBucketNav
-              variant="sidebar"
-              activeId={activeBucket}
-              onSelect={setActiveBucket}
-              data={previewData}
-              identityStatus={idVerificationStatus}
-            />
-          </div>
-        </aside>
-
-        <form id="seeker-profile-form" onSubmit={handleSubmit} className="min-w-0 space-y-4">
-          {error && (
-            <div className="rounded-xl border border-ember/20 bg-ember/5 px-4 py-3 text-sm text-ember">
-              {error}
-            </div>
-          )}
-
-          <section key={activeBucket} className="animate-slide-up min-w-0">
-            <div className="mb-1 h-0.5 w-10 rounded-full bg-marigold" />
-            <div className="mb-6 mt-3">
-              <h3 className="font-display text-xl font-bold text-ink">{activeMeta.label}</h3>
-              <p className="mt-1.5 text-sm text-ink/55">{activeMeta.description}</p>
-            </div>
-            {renderBucketContent()}
-          </section>
-
-          <div className="flex flex-wrap gap-2">
-            {(() => {
-              const idx = PROFILE_BUCKETS.findIndex((b) => b.id === activeBucket);
-              const prev = idx > 0 ? PROFILE_BUCKETS[idx - 1] : null;
-              const next = idx < PROFILE_BUCKETS.length - 1 ? PROFILE_BUCKETS[idx + 1] : null;
-              return (
-                <>
-                  {prev && (
-                    <button
-                      type="button"
-                      onClick={() => setActiveBucket(prev.id)}
-                      className="cursor-pointer rounded-xl border border-ink/10 px-4 py-2 text-sm font-medium text-ink/60 hover:border-navy/20"
-                    >
-                      ← {prev.label}
-                    </button>
-                  )}
-                  {next && (
-                    <button
-                      type="button"
-                      onClick={() => setActiveBucket(next.id)}
-                      className="cursor-pointer rounded-xl border border-navy/15 bg-navy/5 px-4 py-2 text-sm font-semibold text-navy hover:bg-navy/10"
-                    >
-                      Next: {next.label} →
-                    </button>
-                  )}
-                </>
-              );
-            })()}
-          </div>
-
-          <div className="xl:hidden">
-            <button
-              type="button"
-              onClick={() => setPreviewOpen((o) => !o)}
-              className="flex w-full cursor-pointer items-center justify-between rounded-2xl border border-navy/8 bg-white px-4 py-3 text-sm font-semibold text-ink"
-            >
-              Employer preview
-              <ChevronDown
-                className={`h-4 w-4 transition-transform ${previewOpen ? "rotate-180" : ""}`}
-                aria-hidden="true"
-              />
-            </button>
-            {previewOpen && (
-              <div className="mt-3">
-                <SeekerEmployerPreview data={previewData} profileId={profileId} />
-              </div>
+        {/* ── Progress toolbar (replaces old "Profile hub" card) ──
+            The N/total "sections complete" widget itself now lives solely in
+            ProfileHeaderCard's strength ring, above this page — this toolbar
+            keeps only the save-state text and the Save button so the fact
+            isn't shown twice. Lightened (no card background, subtler shadow)
+            so it sits well above the now-unboxed form. */}
+        <div className="animate-fade-in flex flex-wrap items-center justify-between gap-4 pb-1">
+          <div>
+            {profileUpdatedAt && (
+              <p className="text-xs text-ink/40">
+                Saved {formatRelativeUpdated(profileUpdatedAt)}
+              </p>
             )}
           </div>
-        </form>
+          <button
+            type="submit"
+            form="seeker-profile-form"
+            disabled={loading}
+            className="cursor-pointer rounded-xl bg-marigold px-6 py-2.5 text-sm font-bold text-ink shadow-[0_6px_18px_-6px_rgba(242,169,59,0.55)] transition-colors hover:bg-marigold/90 disabled:opacity-60"
+          >
+            {loading ? "Saving..." : "Save profile"}
+          </button>
+        </div>
 
-        <aside className="hidden animate-slide-in-right space-y-4 xl:block">
-          <ProfileVisibilityCard visibility={form.visibility} onManage={() => setActiveBucket("visibility")} />
-          <ProfileQuickActionsCard onSelectBucket={setActiveBucket} />
-          {nextIncompleteBucket ? (
-            <ProfileStandOutCard variant="finish" onAction={() => setActiveBucket(nextIncompleteBucket)} />
-          ) : idVerificationStatus !== "APPROVED" ? (
-            <ProfileStandOutCard
-              variant="verify"
-              onAction={() =>
-                document.getElementById("identity-verification")?.scrollIntoView({ behavior: "smooth" })
-              }
-            />
-          ) : null}
-        </aside>
+        <div className="lg:hidden">
+          <ProfileBucketNav
+            variant="pills"
+            activeId={activeBucket}
+            onSelect={setActiveBucket}
+            data={previewData}
+          />
+        </div>
+
+        <div className="grid gap-5 lg:grid-cols-[minmax(0,220px)_minmax(0,1fr)]">
+          <aside className="hidden animate-slide-in-left lg:block">
+            <div className="sticky top-28 py-1">
+              <ProfileBucketNav
+                variant="sidebar"
+                activeId={activeBucket}
+                onSelect={setActiveBucket}
+                data={previewData}
+                identityStatus={idVerificationStatus}
+              />
+            </div>
+          </aside>
+
+          <form id="seeker-profile-form" onSubmit={handleSubmit} className="min-w-0 space-y-4">
+            {error && (
+              <div className="rounded-xl border border-ember/20 bg-ember/5 px-4 py-3 text-sm text-ember">
+                {error}
+              </div>
+            )}
+
+            <div className="rounded-2xl border border-ink/8 bg-white p-6 shadow-[0_1px_2px_rgba(20,24,29,0.03)] sm:p-8">
+              <section key={activeBucket} className="animate-slide-up min-w-0">
+                <div className="mb-6 flex items-center gap-3">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-marigold/15 text-[#8a5a10]">
+                    <activeMeta.icon className="h-4 w-4" aria-hidden="true" />
+                  </span>
+                  <div>
+                    <h3 className="font-display text-xl font-bold text-ink">{activeMeta.label}</h3>
+                    <p className="mt-0.5 text-sm text-ink/55">{activeMeta.description}</p>
+                  </div>
+                </div>
+                {renderBucketContent()}
+              </section>
+
+              <div className="mt-6 flex items-center justify-between gap-2 border-t border-ink/8 pt-5">
+                <div>
+                  {(() => {
+                    const idx = PROFILE_BUCKETS.findIndex((b) => b.id === activeBucket);
+                    const prev = idx > 0 ? PROFILE_BUCKETS[idx - 1] : null;
+                    return (
+                      prev && (
+                        <button
+                          type="button"
+                          onClick={() => setActiveBucket(prev.id)}
+                          className="cursor-pointer rounded-xl border border-ink/10 px-4 py-2 text-sm font-medium text-ink/60 hover:border-navy/20"
+                        >
+                          ← {prev.label}
+                        </button>
+                      )
+                    );
+                  })()}
+                </div>
+                <div>
+                  {(() => {
+                    const idx = PROFILE_BUCKETS.findIndex((b) => b.id === activeBucket);
+                    const next = idx < PROFILE_BUCKETS.length - 1 ? PROFILE_BUCKETS[idx + 1] : null;
+                    return (
+                      next && (
+                        <button
+                          type="button"
+                          onClick={() => setActiveBucket(next.id)}
+                          className="cursor-pointer rounded-xl border border-navy/15 bg-navy/5 px-4 py-2 text-sm font-semibold text-navy hover:bg-navy/10"
+                        >
+                          Next: {next.label} →
+                        </button>
+                      )
+                    );
+                  })()}
+                </div>
+              </div>
+            </div>
+
+            <div className="xl:hidden">
+              <button
+                type="button"
+                onClick={() => setPreviewOpen((o) => !o)}
+                className="flex w-full cursor-pointer items-center justify-between rounded-2xl border border-navy/8 bg-white px-4 py-3 text-sm font-semibold text-ink"
+              >
+                Employer preview
+                <ChevronDown
+                  className={`h-4 w-4 transition-transform ${previewOpen ? "rotate-180" : ""}`}
+                  aria-hidden="true"
+                />
+              </button>
+              {previewOpen && (
+                <div className="mt-3">
+                  <SeekerEmployerPreview data={previewData} profileId={profileId} />
+                </div>
+              )}
+            </div>
+          </form>
+        </div>
       </div>
+
+      <aside className="hidden animate-slide-in-right space-y-4 xl:block">
+        <SeekerEmployerPreview data={previewData} profileId={profileId} />
+        <ProfileVisibilityCard visibility={form.visibility} onManage={() => setActiveBucket("visibility")} />
+        <ProfileQuickActionsCard onSelectBucket={setActiveBucket} />
+        {nextIncompleteBucket ? (
+          <ProfileStandOutCard variant="finish" onAction={() => setActiveBucket(nextIncompleteBucket)} />
+        ) : idVerificationStatus !== "APPROVED" ? (
+          <ProfileStandOutCard
+            variant="verify"
+            onAction={() =>
+              document.getElementById("identity-verification")?.scrollIntoView({ behavior: "smooth" })
+            }
+          />
+        ) : null}
+      </aside>
     </div>
   );
 }

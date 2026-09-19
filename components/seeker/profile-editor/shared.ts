@@ -43,8 +43,12 @@ export const inputClassName =
 export const selectClassName =
   "w-full cursor-pointer appearance-none border-0 border-b-[1.5px] border-ink/12 bg-transparent py-3 text-sm text-ink outline-none transition-colors focus-visible:border-marigold focus-visible:ring-2 focus-visible:ring-marigold/20 focus-visible:ring-offset-0";
 
+// Bordered-box style, distinct from inputClassName's underline treatment —
+// scoped to SummaryBucket only (headline/bio are the "first thing employers
+// read" fields the mockup singles out for a boxed, card-like look). The
+// underline style stays the convention everywhere else in the editor.
 export const summaryHeadlineClassName =
-  "w-full border-b-2 border-ink/12 bg-transparent py-3 text-xl font-semibold text-ink placeholder:text-ink/25 outline-none transition-colors focus:border-marigold";
+  "w-full rounded-lg border border-ink/15 bg-white px-3.5 py-2.5 text-sm font-medium text-ink placeholder:text-ink/30 outline-none transition-colors focus:border-marigold focus:ring-2 focus:ring-marigold/15";
 
 export const summaryBioClassName =
-  "w-full resize-y border-b border-ink/10 bg-transparent py-3 text-sm leading-relaxed text-ink placeholder:text-ink/30 outline-none transition-colors focus:border-marigold/70";
+  "w-full rounded-lg border border-ink/15 bg-white px-3.5 py-3 text-sm leading-relaxed text-ink placeholder:text-ink/30 outline-none transition-colors focus:border-marigold focus:ring-2 focus:ring-marigold/15";
