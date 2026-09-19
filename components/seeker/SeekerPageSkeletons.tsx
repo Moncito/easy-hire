@@ -38,6 +38,15 @@ export function SeekerDashboardSkeleton() {
         ))}
       </div>
 
+      {/* Profile-strength banner */}
+      <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl bg-marigold/[0.07] px-5 py-4 ring-1 ring-marigold/20">
+        <div className="space-y-1.5">
+          <Bone className="h-4 w-52" />
+          <Bone className="h-3 w-72" />
+        </div>
+        <Bone className="h-9 w-28 rounded-xl" />
+      </div>
+
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(300px,340px)] xl:gap-8">
         <div className="min-w-0 space-y-8 xl:col-start-1 xl:row-start-1">
           {/* Application tracking */}
@@ -74,6 +83,40 @@ export function SeekerDashboardSkeleton() {
                     <Bone className="h-3 w-28" />
                   </div>
                   <Bone className="h-7 w-20 rounded-lg" />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Interviews */}
+          <div>
+            <div className="mb-3 flex items-center gap-2">
+              <Bone className="h-4 w-4 rounded" />
+              <Bone className="h-5 w-28" />
+            </div>
+            <div className="rounded-2xl bg-ink/[0.02] px-6 py-8 ring-1 ring-ink/6">
+              <Bone className="mx-auto h-4 w-64" />
+            </div>
+          </div>
+
+          {/* Recommended for you */}
+          <div>
+            <div className="mb-3 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Bone className="h-4 w-4 rounded" />
+                <Bone className="h-5 w-36" />
+              </div>
+              <Bone className="h-3 w-20" />
+            </div>
+            <div className="space-y-3">
+              {Array.from({ length: 2 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-4 rounded-2xl bg-white px-5 py-4 ring-1 ring-ink/8">
+                  <Bone className="h-12 w-12 shrink-0 rounded-xl" />
+                  <div className="min-w-0 flex-1 space-y-1.5">
+                    <Bone className="h-4 w-40" />
+                    <Bone className="h-3 w-28" />
+                  </div>
+                  <Bone className="h-8 w-20 shrink-0 rounded-full" />
                 </div>
               ))}
             </div>
@@ -252,89 +295,174 @@ export function SeekerListPageSkeleton({
   );
 }
 
+function ProfileSidebarCardBones({ rows }: { rows: number }) {
+  return (
+    <div className="space-y-3 rounded-2xl bg-white p-5 ring-1 ring-ink/8">
+      <Bone className="h-3 w-24" />
+      {Array.from({ length: rows }).map((_, i) => (
+        <Bone key={i} className="h-9 w-full rounded-xl" />
+      ))}
+    </div>
+  );
+}
+
 export function SeekerProfileSkeleton() {
   return (
     <div className="pb-16 pt-6 sm:pt-8">
       <SeekerNavBandSkeleton />
       <div className="mt-6 space-y-6 sm:mt-8">
-      {/* Header */}
-      <div className="space-y-1.5">
-        <Bone className="h-9 w-36 sm:w-48" />
-        <Bone className="h-4 w-56" />
-      </div>
-
-      {/* Progress toolbar */}
-      <div className="flex flex-wrap items-center justify-between gap-4 pb-2">
-        <div className="space-y-2">
-          <Bone className="h-3 w-44" />
-          <Bone className="h-[2px] w-48 rounded-none sm:w-64" />
-        </div>
-        <Bone className="h-10 w-32 rounded-xl" />
-      </div>
-
-      {/* 3-column grid */}
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,200px)_minmax(0,1fr)] xl:grid-cols-[minmax(0,200px)_minmax(0,1fr)_minmax(280px,340px)]">
-        {/* Sidebar nav bones */}
-        <div className="hidden space-y-1.5 lg:block">
-          <Bone className="mb-3 h-3 w-28" />
-          {Array.from({ length: 10 }).map((_, i) => (
-            <Bone key={i} className="h-9 w-full rounded-xl" />
-          ))}
+        {/* Header */}
+        <div className="space-y-1.5">
+          <Bone className="h-9 w-36 sm:w-48" />
+          <Bone className="h-4 w-56" />
         </div>
 
-        {/* Form panel bones */}
-        <div className="space-y-6">
-          <Bone className="h-0.5 w-10 rounded-none" />
-          <div className="space-y-1.5">
-            <Bone className="h-7 w-44" />
-            <Bone className="h-4 w-64" />
-          </div>
-          <div className="space-y-2.5">
-            <Bone className="h-3 w-20" />
-            <Bone className="h-[2px] w-full rounded-none" />
-          </div>
-          <div className="space-y-2.5">
-            <Bone className="h-3 w-16" />
-            <Bone className="h-[2px] w-full rounded-none" />
-            <Bone className="h-[2px] w-4/5 rounded-none" />
-            <Bone className="h-[2px] w-3/4 rounded-none" />
-            <Bone className="h-[2px] w-full rounded-none" />
-            <Bone className="h-[2px] w-2/3 rounded-none" />
-          </div>
-          <div className="flex gap-2">
-            <Bone className="h-9 w-32 rounded-xl" />
-            <Bone className="h-9 w-36 rounded-xl" />
-          </div>
-        </div>
-
-        {/* Preview card bones */}
-        <div className="hidden xl:block">
-          <div className="rounded-2xl border border-navy/8 bg-white p-5">
-            <div className="mb-4 flex items-center justify-between">
-              <Bone className="h-6 w-24 rounded-full" />
-              <Bone className="h-7 w-28 rounded-lg" />
+        {/* Hero row: hero card (80%) + live preview (20%), matching the real
+            top-level grid — each column sized independently, no forced
+            equal-height stretch. */}
+        <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(300px,320px)] xl:items-start xl:gap-6">
+          <div className="min-w-0 space-y-5">
+            {/* Hero card bone */}
+            <div className="rounded-[28px] bg-ink/5 p-6 sm:p-8 lg:p-11">
+              <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+                <div className="flex min-w-0 flex-1 items-start gap-4 sm:gap-5">
+                  <Bone className="h-16 w-16 shrink-0 rounded-full sm:h-[72px] sm:w-[72px]" />
+                  <div className="min-w-0 flex-1 space-y-2.5">
+                    <Bone className="h-6 w-44" />
+                    <Bone className="h-4 w-56" />
+                    <div className="flex gap-2 pt-1">
+                      <Bone className="h-5 w-28 rounded-full" />
+                      <Bone className="h-5 w-24 rounded-full" />
+                    </div>
+                    <Bone className="mt-3 h-9 w-40 rounded-xl" />
+                  </div>
+                </div>
+                <div className="w-full shrink-0 space-y-3 rounded-2xl bg-ink/5 p-4 sm:p-5 lg:w-[280px]">
+                  <Bone className="h-3 w-28" />
+                  <Bone className="h-7 w-32" />
+                  <Bone className="h-1.5 w-full rounded-full" />
+                  <div className="space-y-2 pt-2">
+                    {Array.from({ length: 6 }).map((_, i) => (
+                      <Bone key={i} className="h-3 w-full" />
+                    ))}
+                  </div>
+                </div>
+              </div>
             </div>
-            <div className="mb-4 flex items-center gap-3">
-              <Bone className="h-14 w-14 shrink-0 rounded-xl" />
-              <div className="space-y-1.5">
-                <Bone className="h-4 w-28" />
+
+            {/* Progress toolbar */}
+            <div className="flex flex-wrap items-center justify-between gap-4 pb-1">
+              <Bone className="h-3 w-24" />
+              <Bone className="h-10 w-32 rounded-xl" />
+            </div>
+
+            {/* Nav + form grid */}
+            <div className="grid gap-5 lg:grid-cols-[minmax(0,220px)_minmax(0,1fr)]">
+              {/* Sidebar nav bones: icon-tile rows, two grouped sections */}
+              <div className="hidden space-y-4 lg:block">
+                <div className="space-y-1.5">
+                  <Bone className="mb-2 h-3 w-16" />
+                  {Array.from({ length: 9 }).map((_, i) => (
+                    <div key={i} className="flex items-center gap-3 py-1">
+                      <Bone className="h-8 w-8 shrink-0 rounded-lg" />
+                      <Bone className="h-3 w-24" />
+                    </div>
+                  ))}
+                </div>
+                <div className="space-y-1.5">
+                  <Bone className="mb-2 h-3 w-20" />
+                  {Array.from({ length: 2 }).map((_, i) => (
+                    <div key={i} className="flex items-center gap-3 py-1">
+                      <Bone className="h-8 w-8 shrink-0 rounded-lg" />
+                      <Bone className="h-3 w-28" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Form card bones */}
+              <div className="rounded-2xl border border-ink/8 bg-white p-6 sm:p-8">
+                <div className="mb-6 flex items-center gap-3">
+                  <Bone className="h-9 w-9 shrink-0 rounded-lg" />
+                  <div className="space-y-1.5">
+                    <Bone className="h-5 w-36" />
+                    <Bone className="h-3 w-56" />
+                  </div>
+                </div>
+                <div className="space-y-5">
+                  <div className="space-y-2">
+                    <Bone className="h-3 w-24" />
+                    <Bone className="h-10 w-full rounded-lg" />
+                  </div>
+                  <div className="space-y-2">
+                    <Bone className="h-3 w-16" />
+                    <Bone className="h-24 w-full rounded-lg" />
+                  </div>
+                  <Bone className="h-12 w-full rounded-xl" />
+                </div>
+                <div className="mt-6 flex justify-end border-t border-ink/8 pt-5">
+                  <Bone className="h-9 w-36 rounded-xl" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Right sidebar bones: live preview, visibility, quick actions, stand out */}
+          <div className="hidden space-y-4 xl:block">
+            <div className="space-y-3 rounded-2xl bg-ink/5 p-6">
+              <div className="flex items-center justify-between">
                 <Bone className="h-3 w-20" />
                 <Bone className="h-3 w-16" />
               </div>
+              <div className="flex items-center gap-3">
+                <Bone className="h-14 w-14 shrink-0 rounded-2xl" />
+                <div className="space-y-1.5">
+                  <Bone className="h-4 w-24" />
+                  <Bone className="h-3 w-20" />
+                </div>
+              </div>
+              <Bone className="h-9 w-full rounded-2xl" />
             </div>
-            <div className="mb-4 flex flex-wrap gap-1.5">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <Bone key={i} className="h-5 w-14 rounded-md" />
-              ))}
-            </div>
-            <div className="space-y-1.5">
-              <Bone className="h-3 w-28" />
-              <Bone className="h-3 w-20" />
-            </div>
-            <Bone className="mt-4 h-9 w-full rounded-xl" />
+            <ProfileSidebarCardBones rows={1} />
+            <ProfileSidebarCardBones rows={4} />
+            <ProfileSidebarCardBones rows={1} />
           </div>
         </div>
-      </div>
+
+        {/* Identity verification section bone */}
+        <div className="rounded-[28px] bg-ink/5 p-6 lg:p-11">
+          <div className="space-y-6">
+            <div className="space-y-3">
+              <Bone className="h-5 w-24 rounded-full" />
+              <Bone className="h-6 w-48" />
+              <Bone className="h-4 w-full max-w-md" />
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-2.5">
+                  <Bone className="h-6 w-6 shrink-0 rounded-full" />
+                  <Bone className="h-3 w-20" />
+                </div>
+              ))}
+            </div>
+            <div className="rounded-2xl bg-white/60 p-4">
+              <Bone className="h-4 w-40" />
+              <Bone className="mt-3 h-2 w-full rounded-full" />
+            </div>
+            <div className="grid gap-3 sm:grid-cols-3">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="space-y-3 rounded-2xl bg-white p-4">
+                  <div className="flex items-center gap-2.5">
+                    <Bone className="h-8 w-8 shrink-0 rounded-lg" />
+                    <Bone className="h-3 w-20" />
+                  </div>
+                  <Bone className="h-8 w-full rounded-lg" />
+                </div>
+              ))}
+            </div>
+            <Bone className="h-12 w-full rounded-xl" />
+          </div>
+        </div>
       </div>
     </div>
   );
