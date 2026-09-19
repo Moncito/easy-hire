@@ -144,6 +144,7 @@ export async function createApplication(seekerUserId: string, raw: unknown) {
       jobTitle: job.title,
       companyName: job.company.companyName,
       seekerName: seeker.fullName,
+      seekerUserId,
       employerUserId: job.company.user.id,
       employerEmail: job.company.user.email,
       seekerEmail: seeker.user.email,

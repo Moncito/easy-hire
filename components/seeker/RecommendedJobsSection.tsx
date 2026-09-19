@@ -201,7 +201,12 @@ export default function RecommendedJobsSection({
       <section aria-labelledby="recommended-heading">
         <div className="mb-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-marigold" aria-hidden="true" />
+            <span
+              className="flex h-7 w-7 items-center justify-center rounded-lg bg-marigold/15 text-[#8a5a10]"
+              aria-hidden="true"
+            >
+              <Sparkles className="h-4 w-4" />
+            </span>
             <h2 id="recommended-heading" className="font-display text-base font-bold text-ink">
               Recommended for you
             </h2>

@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { isDiscoverableInTalentSearch, skillName } from "@/lib/seeker/profile-format";
-import { ExternalLink, FileText, MapPin, Users } from "lucide-react";
+import { isDiscoverableInTalentSearch, skillName, timezoneLabel } from "@/lib/seeker/profile-format";
+import { Briefcase, Clock3, ExternalLink, FileText, Globe2, MapPin, Users } from "lucide-react";
 import type { ProfileVisibilityLevel } from "@/lib/validations/seeker";
 
 /**
@@ -59,9 +59,15 @@ export default function SeekerEmployerPreview({ data, profileId }: { data: Emplo
   const discoverable = isDiscoverableInTalentSearch(data.visibility);
   const previewSkills = data.skills.slice(0, MAX_PREVIEW_SKILLS);
   const extraSkillCount = data.skills.length - previewSkills.length;
+  const quickFacts = [
+    data.yearsExperience ? { icon: Clock3, label: data.yearsExperience } : null,
+    data.availability ? { icon: Briefcase, label: data.availability } : null,
+    data.timezone ? { icon: Globe2, label: timezoneLabel(data.timezone) } : null,
+  ].filter((f): f is { icon: typeof Clock3; label: string } => f !== null);
 
   return (
-    <div className="rounded-[24px] bg-ink p-6 shadow-[0_20px_50px_-18px_rgba(32,36,43,0.35)] lg:sticky lg:top-28">
+    <div className="relative overflow-hidden rounded-[24px] bg-[linear-gradient(160deg,var(--color-ink)_0%,var(--color-navy)_120%)] p-6 shadow-[0_20px_50px_-18px_rgba(32,36,43,0.35)] lg:sticky lg:top-28">
+      <div className="mb-4 h-0.5 w-10 rounded-full bg-marigold" />
       {/* ── Header: LIVE PREVIEW badge + compact mode toggle ── */}
       <div className="mb-5 flex items-center justify-between">
         <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-marigold">
@@ -137,6 +143,21 @@ export default function SeekerEmployerPreview({ data, profileId }: { data: Emplo
           )}
         </div>
       </div>
+
+      {data.bio?.trim() && (
+        <p className="mt-4 line-clamp-2 text-xs leading-relaxed text-white/55">{data.bio}</p>
+      )}
+
+      {quickFacts.length > 0 && (
+        <div className="mt-3.5 flex flex-wrap items-center gap-x-3 gap-y-1.5">
+          {quickFacts.map(({ icon: Icon, label }) => (
+            <span key={label} className="inline-flex items-center gap-1 text-[11px] text-white/50">
+              <Icon className="h-3 w-3 shrink-0" aria-hidden="true" />
+              {label}
+            </span>
+          ))}
+        </div>
+      )}
 
       {previewSkills.length > 0 && (
         <div className="mt-5 flex flex-wrap gap-1.5">

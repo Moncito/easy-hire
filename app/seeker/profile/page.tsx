@@ -1,12 +1,13 @@
 import { requireSeekerPageContext } from "@/lib/auth/seeker-session";
 import { ensureSeekerProfile } from "@/lib/seekers";
 import { hydrateResumeFields } from "@/lib/seeker/resume-urls";
-import { listIdentityDocuments } from "@/lib/seeker/identity-verification";
+import { listIdentityDocuments, getVerificationScoreBreakdown } from "@/lib/seeker/identity-verification";
+import { toBucketCompletionState, firstIncompleteBucket } from "@/lib/seeker/profile-completion";
 import SeekerProfileAccountLinks from "@/components/seeker/SeekerProfileAccountLinks";
 import SeekerProfileEditor from "@/components/seeker/SeekerProfileEditor";
 import ProfileHeaderCard from "@/components/seeker/ProfileHeaderCard";
 import IdentityVerificationPanel from "@/components/seeker/IdentityVerificationPanel";
-import { PROFILE_BUCKETS, profileBucketCompletion, type ProfileBucketId } from "@/components/seeker/profile-buckets";
+import { PROFILE_BUCKETS, isBucketComplete, profileBucketCompletion, type ProfileBucketId } from "@/components/seeker/profile-buckets";
 import { SeekerNavBandBleed } from "@/components/seeker/SeekerNavBand";
 import { User } from "lucide-react";
 
@@ -27,32 +28,20 @@ export default async function SeekerProfilePage({
   });
   // Both depend on the profile existing (ensured above), but not on each
   // other — run them concurrently.
-  const [profile, identityDocuments] = await Promise.all([
+  const [profile, identityDocuments, verificationScoreResult] = await Promise.all([
     hydrateResumeFields(ensuredProfile),
     listIdentityDocuments(userId),
+    getVerificationScoreBreakdown(userId, ensuredProfile),
   ]);
 
-  const { completed, total } = profileBucketCompletion({
-    fullName: profile.fullName ?? "",
-    headline: profile.headline ?? "",
-    location: profile.location ?? "",
-    bio: profile.bio ?? "",
-    skills: profile.skills ?? [],
-    availability: profile.availability,
-    yearsExperience: profile.yearsExperience,
-    desiredSalaryMin: profile.desiredSalaryMin,
-    desiredSalaryMax: profile.desiredSalaryMax,
-    resumeUrl: profile.resumeUrl,
-    linkedinUrl: profile.linkedinUrl ?? "",
-    portfolioUrl: profile.portfolioUrl ?? "",
-    certifications: profile.certifications ?? [],
-    languages: profile.languages ?? [],
-    workExperience: profile.workExperience ?? [],
-    education: profile.education ?? [],
-    timezone: profile.timezone ?? "Asia/Manila",
-    photoUrl: profile.photoUrl,
-    visibility: profile.visibility ?? "STANDARD",
-  });
+  const bucketState = toBucketCompletionState(profile);
+  const { completed, total } = profileBucketCompletion(bucketState);
+  const bucketStatus = PROFILE_BUCKETS.map((b) => ({
+    id: b.id,
+    label: b.label,
+    complete: isBucketComplete(b.id, bucketState),
+  }));
+  const publicProfileHref = `/seekers/${profile.id}`;
 
   return (
     <>
@@ -69,18 +58,30 @@ export default async function SeekerProfilePage({
         <p className="mt-1.5 text-sm text-ink/50">Manage your professional presence</p>
       </div>
       <SeekerProfileAccountLinks />
-      <ProfileHeaderCard
-        fullName={profile.fullName ?? ""}
-        headline={profile.headline}
-        photoUrl={profile.photoUrl}
-        completed={completed}
-        total={total}
-        idVerificationStatus={profile.idVerificationStatus}
-      />
       <SeekerProfileEditor
         profileId={profile.id}
         profileUpdatedAt={profile.updatedAt.toISOString()}
         initialBucket={parseInitialBucket(bucket)}
+        idVerificationStatus={profile.idVerificationStatus}
+        heroCard={
+          <ProfileHeaderCard
+            fullName={profile.fullName ?? ""}
+            headline={profile.headline}
+            photoUrl={profile.photoUrl}
+            location={profile.location}
+            bio={profile.bio}
+            yearsExperience={profile.yearsExperience}
+            availability={profile.availability}
+            desiredSalaryMin={profile.desiredSalaryMin}
+            desiredSalaryMax={profile.desiredSalaryMax}
+            completed={completed}
+            total={total}
+            idVerificationStatus={profile.idVerificationStatus}
+            skills={profile.skills ?? []}
+            bucketStatus={bucketStatus}
+            publicProfileHref={publicProfileHref}
+          />
+        }
         initialData={{
           fullName: profile.fullName ?? "",
           phone: profile.phone ?? "",
@@ -107,15 +108,17 @@ export default async function SeekerProfilePage({
           visibility: profile.visibility ?? "STANDARD",
         }}
       />
-
       <div className="mt-5 lg:mt-6">
         <IdentityVerificationPanel
           status={profile.idVerificationStatus}
           rejectionReason={profile.idVerificationRejectionReason}
-          score={profile.verificationScore}
+          score={verificationScoreResult.score}
+          breakdown={verificationScoreResult.breakdown}
           idVerifiedAt={profile.idVerifiedAt?.toISOString() ?? null}
           profileBucketsCompleted={completed}
           profileBucketsTotal={total}
+          firstIncompleteBucket={firstIncompleteBucket(profile)}
+          publicProfileHref={publicProfileHref}
           initialDocuments={identityDocuments.map((doc) => ({
             id: doc.id,
             fileUrl: doc.fileUrl,

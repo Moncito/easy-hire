@@ -160,16 +160,18 @@ export default function SeekerInterviewsSection({
     .sort((a, b) => b.scheduledAt.getTime() - a.scheduledAt.getTime());
 
   return (
-    <section aria-labelledby="interviews-heading">
+    <section aria-labelledby="interviews-heading" className="scroll-mt-28">
       <div className="mb-4 flex items-center gap-2">
-        <Calendar className="h-4 w-4 text-navy/50" aria-hidden="true" />
+        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-navy/10 text-navy" aria-hidden="true">
+          <Calendar className="h-4 w-4" />
+        </span>
         <h2 id="interviews-heading" className="font-display text-lg font-bold text-ink">
           Interviews
         </h2>
       </div>
 
       {interviews.length === 0 ? (
-        <div className="rounded-2xl bg-ink/[0.02] px-6 py-10 text-center ring-1 ring-ink/6">
+        <div className="rounded-2xl bg-navy/[0.03] px-6 py-10 text-center ring-1 ring-navy/10">
           <p className="text-sm text-ink/50">
             No interviews scheduled yet. Employers will reach out here once they&apos;d like to
             talk.
