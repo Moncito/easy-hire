@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { AlertCircle, ArrowRight, Clock, Shield, ShieldCheck } from "lucide-react";
+import { AlertCircle, ArrowRight, Clock, FilePlus2, Loader2, Shield, ShieldCheck } from "lucide-react";
 import VerificationBadge from "@/components/seeker/VerificationBadge";
 import { MAX_IDENTITY_DOCUMENTS, verificationTier, type VerificationScoreBreakdown } from "@/lib/seeker/verification-score";
 import { parseJsonBody } from "@/lib/client/fetch-json";
@@ -10,8 +10,15 @@ import type { ProfileBucketId } from "@/components/seeker/profile-buckets";
 import StepRail from "@/components/seeker/identity-verification/StepRail";
 import ScoreLedger from "@/components/seeker/identity-verification/ScoreLedger";
 import DocumentList from "@/components/seeker/identity-verification/DocumentList";
-import Dropzone from "@/components/seeker/identity-verification/Dropzone";
-import { uploadErrorMessage, type DocType, type IdentityDocument } from "@/components/seeker/identity-verification/shared";
+import DocTypeCard from "@/components/seeker/identity-verification/DocTypeCard";
+import {
+  DOC_TYPE_OPTIONS,
+  uploadErrorMessage,
+  type DocType,
+  type IdentityDocument,
+} from "@/components/seeker/identity-verification/shared";
+
+const CARD_DOC_TYPES: DocType[] = ["GOVERNMENT_ID", "PROOF_OF_ADDRESS", "SELFIE_WITH_ID"];
 
 /**
  * Phase 4.2 — the seeker's own identity-verification management surface.
@@ -66,8 +73,7 @@ export default function IdentityVerificationPanel({
 }: Props) {
   const router = useRouter();
   const [documents, setDocuments] = useState(initialDocuments);
-  const [docType, setDocType] = useState<DocType>("GOVERNMENT_ID");
-  const [uploading, setUploading] = useState(false);
+  const [uploadingDocType, setUploadingDocType] = useState<DocType | null>(null);
   const [fileError, setFileError] = useState("");
   const [actionError, setActionError] = useState("");
   const [requesting, setRequesting] = useState(false);
@@ -103,9 +109,9 @@ export default function IdentityVerificationPanel({
             ? "ready"
             : "not_started";
 
-  async function uploadOne(file: File) {
+  async function uploadOne(file: File, docType: DocType) {
     setAnnouncement(`Uploading ${file.name}…`);
-    setUploading(true);
+    setUploadingDocType(docType);
     try {
       const upload = await uploadIdentityDocFile(file);
       if (!upload.ok) {
@@ -145,17 +151,18 @@ export default function IdentityVerificationPanel({
       setAnnouncement(msg);
       throw err;
     } finally {
-      setUploading(false);
+      setUploadingDocType(null);
     }
   }
 
-  async function handleFiles(files: File[]) {
+  async function handleFiles(docType: DocType, files: File[]) {
     setFileError("");
-    for (const file of files) {
+    const room = MAX_IDENTITY_DOCUMENTS - documents.length;
+    for (const file of files.slice(0, Math.max(room, 0))) {
       try {
         // Sequential on purpose: the API enforces the 3-document cap
         // per-request, so firing all files at once could race past it.
-        await uploadOne(file);
+        await uploadOne(file, docType);
       } catch {
         break;
       }
@@ -272,29 +279,59 @@ export default function IdentityVerificationPanel({
           defaultExpanded={ledgerExpandedByDefault}
         />
 
+        <div className="grid gap-3 sm:grid-cols-3">
+          {CARD_DOC_TYPES.map((type) => {
+            const opt = DOC_TYPE_OPTIONS.find((o) => o.value === type)!;
+            return (
+              <DocTypeCard
+                key={type}
+                docType={type}
+                label={opt.label}
+                hint={opt.hint}
+                documents={documents.filter((d) => d.docType === type)}
+                uploading={uploadingDocType === type}
+                disabled={!canUpload || atCap}
+                canDelete={canUpload}
+                confirmBeforeDelete={confirmBeforeDelete}
+                deletingId={deletingId}
+                openingId={openingId}
+                onFiles={handleFiles}
+                onOpen={handleOpen}
+                onDelete={handleDelete}
+              />
+            );
+          })}
+        </div>
+
+        {atCap && (
+          <p className="text-center text-xs text-ink/45">
+            {MAX_IDENTITY_DOCUMENTS} of {MAX_IDENTITY_DOCUMENTS} documents uploaded — remove one above to add another.
+          </p>
+        )}
+
+        {fileError && (
+          <p role="alert" className="rounded-xl border border-ember/15 bg-ember/5 px-3 py-2 text-xs text-ember">
+            {fileError}
+          </p>
+        )}
+
         <DocumentList
-          documents={documents}
+          documents={documents.filter((d) => !CARD_DOC_TYPES.includes(d.docType as DocType))}
           canDelete={canUpload}
           confirmBeforeDelete={confirmBeforeDelete}
           deletingId={deletingId}
           openingId={openingId}
           onOpen={handleOpen}
           onDelete={handleDelete}
-          label={uiState === "rejected" ? "Documents from the last review" : undefined}
+          label="Other documents"
         />
+
+        {canUpload && !atCap && (
+          <OtherDocUpload uploading={uploadingDocType === "OTHER"} onFiles={(files) => handleFiles("OTHER", files)} />
+        )}
 
         {canUpload && (
           <div className="space-y-3">
-            <Dropzone
-              docType={docType}
-              onDocTypeChange={setDocType}
-              uploading={uploading}
-              atCap={atCap}
-              slotsLeft={MAX_IDENTITY_DOCUMENTS - documents.length}
-              onFiles={handleFiles}
-              error={fileError}
-            />
-
             {uiState === "ready" && (
               <div>
                 <button
@@ -472,6 +509,38 @@ function StatusChip({
       <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
       {label}
     </span>
+  );
+}
+
+function OtherDocUpload({ uploading, onFiles }: { uploading: boolean; onFiles: (files: File[]) => void }) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  return (
+    <div>
+      <input
+        ref={inputRef}
+        type="file"
+        multiple
+        accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+        className="hidden"
+        onChange={(e) => {
+          if (e.target.files?.length) onFiles(Array.from(e.target.files));
+          e.target.value = "";
+        }}
+      />
+      <button
+        type="button"
+        disabled={uploading}
+        onClick={() => inputRef.current?.click()}
+        className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-dashed border-ink/15 px-3 py-2 text-xs font-semibold text-ink/55 transition hover:border-marigold/40 hover:bg-marigold/5 hover:text-ink disabled:opacity-60"
+      >
+        {uploading ? (
+          <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+        ) : (
+          <FilePlus2 className="h-3.5 w-3.5" aria-hidden="true" />
+        )}
+        {uploading ? "Uploading…" : "Add another supporting document"}
+      </button>
+    </div>
   );
 }
 

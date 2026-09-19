@@ -146,6 +146,15 @@ export default function ScoreLedger({
           <Segment weight={w.history} earned={breakdown.history} />
           <Segment weight={w.email} earned={breakdown.email} />
         </div>
+        {!expanded && (
+          <button
+            type="button"
+            onClick={() => setExpanded(true)}
+            className="mt-1.5 cursor-pointer text-[11px] text-ink/40 hover:text-ink/60"
+          >
+            ID · Profile · Hires · Email — <span className="font-semibold text-ink/55">tap to see what counts</span>
+          </button>
+        )}
       </div>
 
       {expanded && (
