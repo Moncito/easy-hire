@@ -31,10 +31,10 @@ export async function sendEmail(
   subject: string,
   html: string,
   attachments?: EmailAttachment[]
-) {
+): Promise<boolean> {
   if (!resend) {
     console.warn("[email] RESEND_API_KEY not set — skipped:", subject, "→", to);
-    return;
+    return false;
   }
 
   // onboarding@resend.dev can only deliver to the Resend account email.
@@ -66,7 +66,10 @@ export async function sendEmail(
 
   if (error) {
     console.error("[email] send failed:", error);
+    return false;
   }
+
+  return true;
 }
 
 export async function sendCollaborativeHiringInvitation(ctx: {
@@ -300,7 +303,7 @@ export async function sendJobAlertEmail(ctx: {
     )
     .join("");
 
-  await sendEmail(
+  return sendEmail(
     ctx.to,
     `Your ${ctx.frequency.toLowerCase()} job alert — ${ctx.jobs.length} new match${ctx.jobs.length === 1 ? "" : "es"}`,
     renderEmailLayout({
@@ -319,7 +322,6 @@ export async function sendJobAlertEmail(ctx: {
       },
     })
   );
-  return true;
 }
 
 // ============================================================================
@@ -471,13 +473,15 @@ export async function notifyInterviewCancelled(ctx: InterviewEmailContext) {
 }
 
 // ============================================================================
-// ADMIN REVIEW — job approved/rejected, company verified/rejected
+// ADMIN REVIEW — job approved/rejected, company verified/rejected, seeker
+// identity verification approved/rejected
 // ============================================================================
 // Email-only (the JOB_APPROVED / JOB_REJECTED / COMPANY_APPROVED /
-// COMPANY_REJECTED Notification rows are created inside the same
-// prisma.$transaction as the status update in lib/admin/jobs.ts and
-// lib/admin/companies.ts, so they stay atomic with it). These are called
-// fire-and-forget, after that transaction commits.
+// COMPANY_REJECTED / SEEKER_ID_APPROVED / SEEKER_ID_REJECTED Notification
+// rows are created inside the same prisma.$transaction as the status update
+// in lib/admin/jobs.ts, lib/admin/companies.ts, and lib/admin/seekers.ts, so
+// they stay atomic with it). These are called fire-and-forget, after that
+// transaction commits.
 
 export async function sendJobApprovedEmail(ctx: {
   to: string;
@@ -590,6 +594,56 @@ export async function sendCompanyRejectedEmail(ctx: {
   );
 }
 
+export async function sendSeekerIdentityApprovedEmail(ctx: { to: string; seekerName: string }) {
+  await sendEmail(
+    ctx.to,
+    "Your identity is verified on EasyHire",
+    renderEmailLayout({
+      preview: "Your identity is verified on EasyHire.",
+      heading: "Identity verified",
+      badge: "VERIFICATION",
+      bodyHtml: `
+        <p style="margin:0 0 16px;">Hi ${escapeHtml(ctx.seekerName)},</p>
+        <p style="margin:0 0 16px;">
+          Your government ID has been reviewed and your identity is now verified. This raises your verification score and is visible to employers reviewing your profile.
+        </p>
+        <p style="margin:0;color:#5c6370;font-size:14px;">
+          Nothing else changes about your account — keep browsing and applying as usual.
+        </p>
+      `,
+      cta: { label: "View my dashboard", href: `${appUrl}${notificationHref("SEEKER_ID_APPROVED", "SEEKER")}` },
+    })
+  );
+}
+
+export async function sendSeekerIdentityRejectedEmail(ctx: {
+  to: string;
+  seekerName: string;
+  reason: string;
+}) {
+  await sendEmail(
+    ctx.to,
+    "Your identity verification needs attention",
+    renderEmailLayout({
+      preview: "Your identity verification was not approved — see what to fix.",
+      heading: "Verification needs attention",
+      badge: "VERIFICATION",
+      bodyHtml: `
+        <p style="margin:0 0 16px;">Hi ${escapeHtml(ctx.seekerName)},</p>
+        <p style="margin:0 0 16px;">
+          Your submitted document(s) were reviewed and your identity could not be verified.
+        </p>
+        <p style="margin:0 0 8px;font-size:14px;"><strong>Reviewer feedback:</strong></p>
+        <p style="margin:0 0 16px;color:#5c6370;font-size:14px;">${escapeHtml(ctx.reason)}</p>
+        <p style="margin:0;color:#5c6370;font-size:14px;">
+          You can upload a new document and request another review whenever you're ready.
+        </p>
+      `,
+      cta: { label: "Update my documents", href: `${appUrl}${notificationHref("SEEKER_ID_REJECTED", "SEEKER")}` },
+    })
+  );
+}
+
 // ============================================================================
 // APPLICATION STATUS CHANGED — shortlisted / interview / hired
 // ============================================================================
@@ -619,6 +673,53 @@ const APPLICATION_STATUS_COPY = {
 } as const;
 
 export type NonRejectionApplicationStatus = keyof typeof APPLICATION_STATUS_COPY;
+
+const NON_REJECTION_STATUSES = new Set<string>(Object.keys(APPLICATION_STATUS_COPY));
+
+/**
+ * Single decision point for "does this status transition need to notify the
+ * seeker" — shared by every path that can move an Application's status
+ * (lib/jobs/applications.ts's updateApplication and
+ * lib/collaborative-hiring-reviews.ts's updateCollaborativePipeline). Do not
+ * reimplement this at a new call site; import and call it instead, or a
+ * future pipeline path can silently drop notifications again.
+ */
+export function notifyApplicationStatusTransition(ctx: {
+  previousStatus: string;
+  nextStatus: string | undefined;
+  rejectionReason: string | null;
+  seekerUserId: string;
+  seekerEmail: string;
+  seekerName: string;
+  jobTitle: string;
+  companyName: string;
+}): void {
+  const becameRejected = ctx.nextStatus === "REJECTED" && ctx.previousStatus !== "REJECTED";
+  const becameOtherStatus =
+    ctx.nextStatus !== undefined &&
+    ctx.nextStatus !== ctx.previousStatus &&
+    NON_REJECTION_STATUSES.has(ctx.nextStatus);
+
+  if (becameRejected) {
+    void notifyApplicationRejected({
+      seekerUserId: ctx.seekerUserId,
+      seekerEmail: ctx.seekerEmail,
+      seekerName: ctx.seekerName,
+      jobTitle: ctx.jobTitle,
+      companyName: ctx.companyName,
+      rejectionReason: ctx.rejectionReason,
+    }).catch((err) => console.error("[applications] rejection notify failed:", err));
+  } else if (becameOtherStatus) {
+    void notifyApplicationStatusChanged({
+      seekerUserId: ctx.seekerUserId,
+      seekerEmail: ctx.seekerEmail,
+      seekerName: ctx.seekerName,
+      jobTitle: ctx.jobTitle,
+      companyName: ctx.companyName,
+      status: ctx.nextStatus as NonRejectionApplicationStatus,
+    }).catch((err) => console.error("[applications] status-change notify failed:", err));
+  }
+}
 
 export async function notifyApplicationStatusChanged(ctx: {
   seekerUserId: string;
