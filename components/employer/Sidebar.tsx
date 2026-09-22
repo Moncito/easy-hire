@@ -15,6 +15,7 @@ import {
   PanelLeft,
   CreditCard,
   Sparkles,
+  Lock,
   Settings,
 } from "lucide-react";
 import { useEmployerShell } from "@/components/employer/EmployerShellContext";
@@ -231,27 +232,46 @@ export default function Sidebar({
         )}
       </nav>
 
-      {isPro && (
-        <div className={`shrink-0 py-2 ${expanded ? "px-3" : "flex justify-center px-2"}`}>
-          <Link
-            href="/employer/easy-ai"
-            title={expanded ? undefined : "Easy AI"}
-            className={`group relative flex items-center rounded-xl text-[var(--pro-accent-ink,#9a5b12)] transition-colors ${
-              pathname.startsWith("/employer/easy-ai")
-                ? "bg-marigold/20"
-                : "hover:bg-marigold/10"
-            } ${expanded ? "gap-3 px-3 py-2.5" : "h-10 w-10 justify-center"}`}
-          >
+      <div className={`shrink-0 py-2 ${expanded ? "px-3" : "flex justify-center px-2"}`}>
+        <Link
+          href="/employer/easy-ai"
+          title={expanded ? undefined : isPro ? "Easy AI" : "Easy AI — Employer Pro"}
+          className={`group relative flex items-center rounded-xl transition-colors ${
+            expanded ? "gap-3 px-3 py-2.5" : "h-10 w-10 justify-center"
+          } ${
+            isPro
+              ? `text-[var(--pro-accent-ink,#9a5b12)] ${
+                  pathname.startsWith("/employer/easy-ai") ? "bg-marigold/20" : "hover:bg-marigold/10"
+                }`
+              : `text-mist/35 ${
+                  pathname.startsWith("/employer/easy-ai")
+                    ? "bg-white/8 text-mist/60"
+                    : "hover:bg-white/8 hover:text-mist/60"
+                }`
+          }`}
+        >
+          {isPro ? (
             <Sparkles className="h-[18px] w-[18px] shrink-0" strokeWidth={2} />
-            {expanded && <span className="text-sm font-semibold">Easy AI</span>}
-            {!expanded && (
-              <span className="pointer-events-none absolute left-full z-50 ml-3 whitespace-nowrap rounded-lg bg-ink px-2.5 py-1.5 text-xs font-medium text-mist opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100">
-                Easy AI
-              </span>
-            )}
-          </Link>
-        </div>
-      )}
+          ) : (
+            <Lock className="h-[18px] w-[18px] shrink-0" strokeWidth={2} />
+          )}
+          {expanded && (
+            <span className="flex min-w-0 flex-1 items-center gap-1.5 truncate text-sm font-semibold">
+              Easy AI
+              {!isPro && (
+                <span className="shrink-0 rounded-full bg-white/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-mist/60">
+                  Pro
+                </span>
+              )}
+            </span>
+          )}
+          {!expanded && (
+            <span className="pointer-events-none absolute left-full z-50 ml-3 whitespace-nowrap rounded-lg bg-ink px-2.5 py-1.5 text-xs font-medium text-mist opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100">
+              {isPro ? "Easy AI" : "Easy AI — Employer Pro"}
+            </span>
+          )}
+        </Link>
+      </div>
 
       <div
         className={`shrink-0 py-3 ${isPro ? "border-t border-ink/[0.06]" : "border-t border-white/5"} ${expanded ? "px-3" : "flex justify-center px-2"}`}

@@ -15,11 +15,19 @@ import {
   BarChart3,
   CreditCard,
   Sparkles,
+  Lock,
   LogOut,
   Settings,
   X,
 } from "lucide-react";
 import { useSignOut } from "@/components/ui/useSignOut";
+
+type NavEntry = {
+  label: string;
+  href: string;
+  icon: typeof LayoutDashboard;
+  locked?: boolean;
+};
 
 const primaryTabs = [
   { label: "Home", href: "/employer/dashboard", icon: LayoutDashboard },
@@ -30,15 +38,19 @@ const primaryTabs = [
 
 // Billing always appears here for nav parity with the desktop sidebar
 // (previously missing from mobile — see plan doc "Baseline notes").
-const overflowLinks = [
+const overflowLinks: NavEntry[] = [
   { label: "Talent search", href: "/employer/talent", icon: Search },
   { label: "Reports", href: "/employer/reports", icon: BarChart3 },
   { label: "Company profile", href: "/employer/company-profile", icon: Building2 },
   { label: "Billing", href: "/employer/billing", icon: CreditCard },
   { label: "Settings", href: "/employer/settings", icon: Settings },
-] as const;
+];
 
-const proOverflowLinks = [{ label: "Easy AI", href: "/employer/easy-ai", icon: Sparkles }] as const;
+// Easy AI is Employer Pro's flagship feature — Free employers see it too,
+// first in the list, but locked so they know it exists (see nav plan).
+function easyAiLink(locked: boolean): NavEntry[] {
+  return [{ label: "Easy AI", href: "/employer/easy-ai", icon: locked ? Lock : Sparkles, locked }];
+}
 
 function isActive(pathname: string, href: string) {
   if (href === "/employer/dashboard") return pathname === href;
@@ -55,8 +67,10 @@ export default function EmployerMobileNav({ plan = "FREE", collaborativeHiringEn
   const [menuOpen, setMenuOpen] = useState(false);
   const { signOut, overlay } = useSignOut();
   const isPro = plan === "PRO";
-  const teamLink = collaborativeHiringEnabled ? [{ label: "Hiring team", href: "/employer/team", icon: UserRoundPlus }] : [];
-  const links = isPro ? [...proOverflowLinks, ...teamLink, ...overflowLinks] : [...teamLink, ...overflowLinks];
+  const teamLink: NavEntry[] = collaborativeHiringEnabled
+    ? [{ label: "Hiring team", href: "/employer/team", icon: UserRoundPlus }]
+    : [];
+  const links: NavEntry[] = [...easyAiLink(!isPro), ...teamLink, ...overflowLinks];
   const overflowActive = links.some((link) => isActive(pathname, link.href));
 
   return (
@@ -90,6 +104,7 @@ export default function EmployerMobileNav({ plan = "FREE", collaborativeHiringEn
               const Icon = link.icon;
               const active = isActive(pathname, link.href);
               const isEasyAi = link.href === "/employer/easy-ai";
+              const locked = link.locked === true;
               return (
                 <Link
                   key={link.href}
@@ -98,13 +113,22 @@ export default function EmployerMobileNav({ plan = "FREE", collaborativeHiringEn
                   className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
                     active
                       ? "bg-teal/10 text-teal"
-                      : isEasyAi
-                        ? "text-teal"
-                        : "text-ink/70 hover:bg-ink/[0.03]"
+                      : locked
+                        ? "text-ink/35 hover:bg-ink/[0.03] hover:text-ink/55"
+                        : isEasyAi
+                          ? "text-teal"
+                          : "text-ink/70 hover:bg-ink/[0.03]"
                   }`}
                 >
                   <Icon className="h-4 w-4" strokeWidth={2} />
-                  {link.label}
+                  <span className="flex flex-1 items-center gap-1.5">
+                    {link.label}
+                    {locked && (
+                      <span className="rounded-full bg-ink/8 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-ink/45">
+                        Pro
+                      </span>
+                    )}
+                  </span>
                 </Link>
               );
             })}
