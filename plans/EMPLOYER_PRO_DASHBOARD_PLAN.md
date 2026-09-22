@@ -9,11 +9,21 @@
 > `EmployerProNavbar`, `lib/employer/pro-nav-items.ts` and every `.pro-nav-link`
 > rule were dead and have been removed.
 >
-> This guide's own thesis — *premium through workflows, not decoration* (§1) — now
-> governs the component tree too. **Decorative Pro duplicates are removed; only
-> layouts that are genuinely different in structure survive** (§4, the keep-list).
-> Pro is a capability flag, not a skin. Rationale and phasing:
-> `docs/employer-pro-collapse-plan.md`.
+> **The Pro visual treatment itself stays.** A proposal to unify Free and Pro onto a
+> single workspace look was **rejected by the product owner on 2026-09-22**: the
+> visual difference is intended as a visible separation between Pro and non-Pro
+> employers, and Pro's treatment is not to be downgraded or given away.
+>
+> What was removed is dead code and upsell chrome only — the cancelled navbar, six
+> `Pro*PerkStrip` components plus their loading skeleton, and six Pro dashboard
+> components with no importer at all. None of that touched the look. The parallel
+> Free/Pro component trees remain by design, and so does their build cost; that is
+> an accepted trade, not an oversight.
+>
+> §1's thesis still holds for **pricing**: Pro is sold on instant publish, unlimited
+> roles, Easy AI, analytics, CSV and saved lists — never on the skin. The billing
+> page says as much ("You're paying for workflows, not a teal reskin"). The look is
+> a perk of the tier, not the reason to buy it.
 
 ---
 
@@ -132,11 +142,12 @@ These are navy-tinted flat shadows — not neomorphic extrusions. No `box-shadow
 | `<InlineStatRow>` | Pro page header stats re-created as ad-hoc JSX per page | `components/employer/ui/InlineStatRow.tsx` |
 | `<ProUsageBar>` | Easy AI usage panel has no quota progress | `components/employer/pro/ProUsageBar.tsx` |
 
-### Parallel Free / Pro components — the keep-list (2026-09-22)
+### Parallel Free / Pro components (intentional divergence — document only)
 
-**These four are the only sanctioned Pro duplicates.** They diverge in structure, not
-decoration, so they stay. Any other Pro component that differs from its Free
-counterpart only in styling is decoration and is removed.
+**Superseded 2026-09-22 — the keep-list is no longer a limit.** It briefly scoped a
+merge that was then rejected; the parallel trees stay in full. This table remains as
+documentation of the four pairs whose divergence is *structural* rather than visual,
+which is still useful when deciding where a new Pro surface belongs.
 
 | Free | Pro | Notes |
 |------|-----|-------|
