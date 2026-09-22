@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { Sparkles } from "lucide-react";
 import ProPageHeader from "@/components/employer/pro-dashboard/ProPageHeader";
-import ProApplicantsPerkStrip from "@/components/employer/pro-dashboard/ProApplicantsPerkStrip";
 import ProButton from "@/components/employer/pro/ProButton";
 import ExportCsvLink from "@/components/employer/ui/ExportCsvLink";
 import type { EmployerJobsSummary } from "@/lib/employer-jobs";
@@ -69,7 +68,6 @@ export default function ProApplicantsPageHeader({
           </>
         }
       />
-      <ProApplicantsPerkStrip />
     </>
   );
 }

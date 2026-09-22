@@ -1,8 +1,19 @@
 # EasyHire Employer Pro — Implementation Guide
 
-**Last reconciled:** 2026-08-17  
-**Direction:** Clean SaaS workspace — Pro top navbar, standard grid, premium through workflows  
-**Status key:** ✅ Shipped · 🔧 In progress / partial · ☐ Not started
+**Last reconciled:** 2026-09-22  
+**Direction:** Clean SaaS workspace — shared shell, standard grid, premium through workflows  
+**Status key:** ✅ Shipped · 🔧 In progress / partial · ☐ Not started · ⛔ Removed
+
+> **2026-09-22 — Pro top navbar cancelled; UI split narrowed.** The Pro shell was
+> dropped: Pro and Free render the same `Sidebar` and `Topbar`, so
+> `EmployerProNavbar`, `lib/employer/pro-nav-items.ts` and every `.pro-nav-link`
+> rule were dead and have been removed.
+>
+> This guide's own thesis — *premium through workflows, not decoration* (§1) — now
+> governs the component tree too. **Decorative Pro duplicates are removed; only
+> layouts that are genuinely different in structure survive** (§4, the keep-list).
+> Pro is a capability flag, not a skin. Rationale and phasing:
+> `docs/employer-pro-collapse-plan.md`.
 
 ---
 
@@ -121,7 +132,11 @@ These are navy-tinted flat shadows — not neomorphic extrusions. No `box-shadow
 | `<InlineStatRow>` | Pro page header stats re-created as ad-hoc JSX per page | `components/employer/ui/InlineStatRow.tsx` |
 | `<ProUsageBar>` | Easy AI usage panel has no quota progress | `components/employer/pro/ProUsageBar.tsx` |
 
-### Parallel Free / Pro components (intentional divergence — document only)
+### Parallel Free / Pro components — the keep-list (2026-09-22)
+
+**These four are the only sanctioned Pro duplicates.** They diverge in structure, not
+decoration, so they stay. Any other Pro component that differs from its Free
+counterpart only in styling is decoration and is removed.
 
 | Free | Pro | Notes |
 |------|-----|-------|
@@ -130,9 +145,15 @@ These are navy-tinted flat shadows — not neomorphic extrusions. No `box-shadow
 | `DashboardHero` | `ProCompanyBand` | Fundamentally different layout |
 | `JobsPageHeader` | `ProJobsPageHeader` | Acceptable |
 
+**Removed as decoration:** the six `Pro*PerkStrip` components. Each rendered a row of
+static link cards advertising Pro features to companies that had already bought Pro —
+no data, no gate. Two of the six (`ProCompanyPerkStrip`, `ProReportsPerkStrip`) had
+already lost their call sites and were dead on arrival.
+
 ### Pro-only components (implemented ✅ unless noted)
 
-- `EmployerProNavbar` ✅ · `ProBadge` ✅ · `EasyAiChip` ✅ · `ProDashboardBoard` ✅
+- `EmployerProNavbar` ⛔ removed 2026-09-22 (Pro shell cancelled — Pro uses the shared `Sidebar`/`Topbar`)
+- `ProBadge` ✅ · `EasyAiChip` ✅ · `ProDashboardBoard` ✅
 - `ProCompanyBand` ✅ · `ProKpiRow` ✅ · `ProApplicantList` ✅ · `ProActiveJobsSection` ✅
 - `ProJobsPageHeader` ✅ · `ProApplicantsPageHeader` ✅ · `ProAttentionLinks` ✅
 - `ProPageHeader` ✅ · `ProReportsBoard` ✅ · `EasyAiUsagePanel` ✅
@@ -358,7 +379,7 @@ All 8 confirmed low-risk bugs fixed: ArrowLeft back link · Outreach Drafts href
 | Area | Paths |
 |------|-------|
 | Tokens + CSS | `app/globals.css` |
-| Shell | `components/employer/EmployerShell.tsx` · `pro-shell/EmployerProNavbar.tsx` · `EmployerMobileNav.tsx` · `EmployerPageContainer.tsx` |
+| Shell | `components/employer/EmployerShell.tsx` · `Sidebar.tsx` · `Topbar.tsx` · `EmployerMobileNav.tsx` · `EmployerPageContainer.tsx` |
 | Pro primitives | `components/employer/pro/` · `components/employer/pro-dashboard/` |
 | Billing logic | `lib/billing/subscriptions.ts` · `lib/billing/plan-comparison.ts` |
 | Analytics | `lib/employer/analytics.ts` · `lib/employer/cache.ts` · `lib/employer/dashboard-panels.ts` |

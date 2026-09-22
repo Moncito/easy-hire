@@ -2,7 +2,6 @@
 
 import Bone from "@/components/employer/skeletons/Bone";
 import ProPageHeaderSkeleton from "@/components/employer/skeletons/ProPageHeaderSkeleton";
-import ProPerkStripSkeleton from "@/components/employer/skeletons/ProPerkStripSkeleton";
 import { useEmployerShell } from "@/components/employer/EmployerShellContext";
 
 type Props = {
@@ -88,7 +87,6 @@ export default function ApplicantsHubSkeleton({ inline }: Props = {}) {
     return (
       <>
         <ProPageHeaderSkeleton />
-        <ProPerkStripSkeleton />
         <ApplicantsBoardBones pro rows={5} />
       </>
     );

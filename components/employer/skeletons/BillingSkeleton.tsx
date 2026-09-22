@@ -2,14 +2,12 @@
 
 import Bone from "@/components/employer/skeletons/Bone";
 import ProPageHeaderSkeleton from "@/components/employer/skeletons/ProPageHeaderSkeleton";
-import ProPerkStripSkeleton from "@/components/employer/skeletons/ProPerkStripSkeleton";
 import { useEmployerShell } from "@/components/employer/EmployerShellContext";
 
 function ProBillingSkeleton() {
   return (
     <div className="pb-6">
       <ProPageHeaderSkeleton actions={0} />
-      <ProPerkStripSkeleton />
       <section className="pro-card mb-5 overflow-hidden p-5 sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="space-y-2">
