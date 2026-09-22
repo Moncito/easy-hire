@@ -26,6 +26,42 @@ export type EmailAttachment = {
   contentType?: string;
 };
 
+export type ResolvedRecipient = {
+  recipient: string;
+  /** True when `recipient` differs from `to` because of EMAIL_TEST_RECIPIENT — drives the "[to: ...]" subject prefix. */
+  overridden: boolean;
+};
+
+/**
+ * Decides the actual send-to address. EMAIL_TEST_RECIPIENT exists so a
+ * verified sender address (e.g. onboarding@resend.dev) can redirect all mail
+ * to one inbox in development. In production it is ignored outright — if it
+ * were ever honored there, every seeker/employer email would silently go to
+ * one inbox with no error or visible symptom. A console.warn fires whenever
+ * it's set-but-ignored so a leaked env var in production is discoverable
+ * instead of silent.
+ */
+export function resolveRecipient(
+  to: string,
+  testRecipient: string | undefined,
+  nodeEnv: string | undefined
+): ResolvedRecipient {
+  const trimmed = testRecipient?.trim();
+
+  if (!trimmed) {
+    return { recipient: to, overridden: false };
+  }
+
+  if (nodeEnv === "production") {
+    console.warn(
+      "[email] EMAIL_TEST_RECIPIENT is set in production — ignoring it and sending to the real recipient. Unset this variable in production."
+    );
+    return { recipient: to, overridden: false };
+  }
+
+  return { recipient: trimmed, overridden: trimmed.toLowerCase() !== to.toLowerCase() };
+}
+
 export async function sendEmail(
   to: string,
   subject: string,
@@ -39,12 +75,12 @@ export async function sendEmail(
 
   // onboarding@resend.dev can only deliver to the Resend account email.
   // Set EMAIL_TEST_RECIPIENT to that address until a domain is verified.
-  const testRecipient = process.env.EMAIL_TEST_RECIPIENT?.trim();
-  const recipient = testRecipient || to;
-  const testSubject =
-    testRecipient && testRecipient.toLowerCase() !== to.toLowerCase()
-      ? `[to: ${to}] ${subject}`
-      : subject;
+  const { recipient, overridden } = resolveRecipient(
+    to,
+    process.env.EMAIL_TEST_RECIPIENT,
+    process.env.NODE_ENV
+  );
+  const testSubject = overridden ? `[to: ${to}] ${subject}` : subject;
 
   const { error } = await resend.emails.send({
     from: fromAddress,
