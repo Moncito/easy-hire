@@ -1590,15 +1590,6 @@ backdrop-filter:blur(6px);
   border-color: var(--pro-border);
 }
 
-.employer-pro-workspace[data-employer-theme="dark"] .pro-nav-link {
-  color: rgb(245 246 244 / 0.55);
-}
-
-.employer-pro-workspace[data-employer-theme="dark"] .pro-nav-link:hover,
-.employer-pro-workspace[data-employer-theme="dark"] .pro-nav-link[aria-current="page"] {
-  color: var(--ew-text);
-}
-
 .employer-pro-workspace .employer-pro-canvas {
   padding-top: 2rem;
   padding-bottom: 2rem;
@@ -1670,42 +1661,5 @@ backdrop-filter:blur(6px);
 .employer-pro-workspace button.rounded-xl.bg-teal.py-2\.5:hover {
   background-color: rgb(242 169 59 / 0.9);
   color: #20242b;
-}
-
-.employer-pro-workspace .pro-nav-link {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  padding: 0.5rem 0.875rem;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: rgb(32 36 43 / 0.55);
-  transition: color 0.15s ease;
-}
-
-.employer-pro-workspace button.pro-nav-link {
-  background: transparent;
-  border: none;
-  cursor: pointer;
-}
-
-.employer-pro-workspace .pro-nav-link:hover {
-  color: var(--ew-text);
-}
-
-.employer-pro-workspace .pro-nav-link[aria-current="page"] {
-  color: var(--ew-text);
-  font-weight: 600;
-}
-
-.employer-pro-workspace .pro-nav-link[aria-current="page"]::after {
-  content: "";
-  position: absolute;
-  right: 0.875rem;
-  bottom: 0.25rem;
-  left: 0.875rem;
-  height: 2px;
-  border-radius: 9999px;
-  background-color: var(--pro-accent);
 }
 

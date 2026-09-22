@@ -1,8 +1,3 @@
-export const EMPLOYER_RAIL_WIDTH = 60;
-export const EMPLOYER_RAIL_EXPANDED_WIDTH = 208;
-/** Sidebar visible at lg+; below this, bottom tab bar is used. */
-export const EMPLOYER_MOBILE_BREAKPOINT = "lg";
-
 export type EmployerNavItem = {
   label: string;
   href: string;
