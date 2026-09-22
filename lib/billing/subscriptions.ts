@@ -5,12 +5,36 @@ export type SubscriptionPlan = "FREE" | "PRO";
 
 const JOB_LISTING_DAYS = 90;
 
+/** How many days a PAST_DUE Pro subscription still counts as PRO after its currentPeriodEnd. */
+export const PAST_DUE_GRACE_DAYS = 14;
+
+/**
+ * Pure so this is unit-testable without touching Prisma. A failed card
+ * shouldn't instantly revoke a paid workspace mid-hire, so PAST_DUE gets a
+ * short grace window after the period it already paid for ends. With no
+ * `currentPeriodEnd` to measure from, there's nothing to be lenient about.
+ */
+export function isWithinPastDueGrace(currentPeriodEnd: Date | null, now: Date): boolean {
+  if (!currentPeriodEnd) return false;
+  const graceEnd = new Date(currentPeriodEnd);
+  graceEnd.setDate(graceEnd.getDate() + PAST_DUE_GRACE_DAYS);
+  return now <= graceEnd;
+}
+
 export async function getCompanyPlan(companyId: string): Promise<SubscriptionPlan> {
-  const active = await prisma.subscription.findFirst({
-    where: { companyId, status: "ACTIVE", planType: "PRO" },
-    select: { id: true },
+  const subscriptions = await prisma.subscription.findMany({
+    where: { companyId, planType: "PRO", status: { in: ["ACTIVE", "PAST_DUE"] } },
+    select: { status: true, currentPeriodEnd: true },
   });
-  return active ? "PRO" : "FREE";
+
+  const now = new Date();
+  const isPro = subscriptions.some(
+    (sub) =>
+      sub.status === "ACTIVE" ||
+      (sub.status === "PAST_DUE" && isWithinPastDueGrace(sub.currentPeriodEnd, now))
+  );
+
+  return isPro ? "PRO" : "FREE";
 }
 
 export async function isEmployerPro(companyId: string): Promise<boolean> {

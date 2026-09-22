@@ -6,7 +6,7 @@ import {
   getPublishMode,
   verificationLabels,
 } from "@/lib/employer/billing-helpers";
-import type { SubscriptionPlan } from "@/lib/subscriptions";
+import type { SubscriptionPlan } from "@/lib/billing/subscriptions";
 
 const verificationDotColor: Record<string, "teal" | "navy" | "ember" | "muted"> = {
   APPROVED: "teal",

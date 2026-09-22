@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { Check, Minus } from "lucide-react";
 import { PLAN_COMPARISON_FEATURES } from "@/lib/billing/plan-comparison";
-import type { SubscriptionPlan } from "@/lib/subscriptions";
+import type { SubscriptionPlan } from "@/lib/billing/subscriptions";
 
 type Props = {
   title?: string;

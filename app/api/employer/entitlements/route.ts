@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/Auth";
 import { errorResponse } from "@/lib/api-error";
 import { requireEmployerCompany } from "@/lib/employer-auth";
-import { canAutoPublishJob, getCompanyPlan } from "@/lib/subscriptions";
+import { canAutoPublishJob, getCompanyPlan } from "@/lib/billing/subscriptions";
 import { canCreateOrActivateJob, FREE_ACTIVE_JOB_SOFT_CAP } from "@/lib/billing/entitlements";
 
 /**

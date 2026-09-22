@@ -2,7 +2,7 @@ import { cache } from "react";
 import { redirect } from "next/navigation";
 import { auth } from "@/Auth";
 import { getEmployerNavCountsCached } from "@/lib/employer-cache";
-import { getCompanyPlan, type SubscriptionPlan } from "@/lib/subscriptions";
+import { getCompanyPlan, type SubscriptionPlan } from "@/lib/billing/subscriptions";
 import { getEmployerCompanyByUserId } from "@/lib/auth/employer-company";
 import { ensureEmployerCompany } from "@/lib/employer/companies";
 import { isCollaborativeHiringEnabled } from "@/lib/collaborative-hiring";
