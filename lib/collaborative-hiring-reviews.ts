@@ -155,7 +155,7 @@ export async function updateCollaborativePipeline(companyId: string, actorUserId
       id: true,
       status: true,
       firstEmployerResponseAt: true,
-      seeker: { select: { fullName: true, user: { select: { id: true, email: true } } } },
+      seeker: { select: { fullName: true, user: { select: { id: true, email: true, notifyApplicationUpdates: true } } } },
       job: { select: { title: true, company: { select: { companyName: true } } } },
     },
   });
@@ -189,6 +189,7 @@ export async function updateCollaborativePipeline(companyId: string, actorUserId
     seekerName: application.seeker.fullName,
     jobTitle: application.job.title,
     companyName: application.job.company.companyName,
+    seekerNotifyApplicationUpdates: application.seeker.user.notifyApplicationUpdates,
   });
 
   // Recorded after the $transaction array commits — see the rule in lib/admin/events.ts.

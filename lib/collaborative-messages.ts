@@ -278,10 +278,15 @@ export async function sendCollaborativeMessage(companyId: string, actorUserId: s
           id: { not: message.id },
         },
       }),
-      prisma.user.findUnique({ where: { id: seekerUserId }, select: { email: true } }),
+      prisma.user.findUnique({ where: { id: seekerUserId }, select: { email: true, notifyMessages: true } }),
     ]);
     if (!recipient || !shouldSendNewMessageEmail(earlierUnreadCount)) return;
-    await sendNewMessageEmail({ to: recipient.email, recipientRole: "SEEKER", senderName: companyName });
+    await sendNewMessageEmail({
+      to: recipient.email,
+      recipientRole: "SEEKER",
+      senderName: companyName,
+      notifyMessages: recipient.notifyMessages,
+    });
   })().catch((err) => console.error("[collaborative-messages] new-message email failed:", err));
 
   invalidateEmployerNav(companyId);

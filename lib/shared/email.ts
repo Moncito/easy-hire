@@ -8,6 +8,7 @@ import { generateInterviewIcs } from "@/lib/shared/calendar-invite";
 import { formatInterviewWhenUtc, interviewFormatLabel } from "@/lib/shared/interview-format";
 import { notificationHref, type NotificationRecipientRole } from "@/lib/shared/notifications";
 import { APP_URL } from "@/lib/shared/app-url";
+import { sendCategorizedEmail } from "@/lib/shared/email-preferences";
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 const fromAddress = process.env.EMAIL_FROM ?? "EasyHire <onboarding@resend.dev>";
@@ -66,7 +67,9 @@ export async function sendEmail(
   to: string,
   subject: string,
   html: string,
-  attachments?: EmailAttachment[]
+  attachments?: EmailAttachment[],
+  /** Raw email headers, e.g. `List-Unsubscribe` / `List-Unsubscribe-Post` on digest sends (see sendJobAlertEmail, sendWeeklyDigestForCompany). */
+  headers?: Record<string, string>
 ): Promise<boolean> {
   if (!resend) {
     console.warn("[email] RESEND_API_KEY not set — skipped:", subject, "→", to);
@@ -87,6 +90,7 @@ export async function sendEmail(
     to: recipient,
     subject: testSubject,
     html,
+    ...(headers ? { headers } : {}),
     ...(attachments && attachments.length > 0
       ? {
           attachments: attachments.map((attachment) => ({
@@ -130,6 +134,7 @@ export async function sendCollaborativeHiringInvitation(ctx: {
   );
 }
 
+/** Account-security mail — EmailCategory "SECURITY", never gated by any notification preference (see lib/shared/email-preferences.ts). */
 export async function sendPasswordResetEmail(ctx: { to: string; token: string }) {
   const resetUrl = `${appUrl}/reset-password/${encodeURIComponent(ctx.token)}`;
   await sendEmail(
@@ -148,9 +153,10 @@ export async function sendPasswordResetEmail(ctx: { to: string; token: string })
 }
 
 /**
- * Account-security confirmation, not a notification — always sent after a
- * successful change-password (lib/account/change-password.ts), regardless
- * of any notification preference. Mirrors the "if you didn't request this"
+ * Account-security confirmation, not a notification — EmailCategory
+ * "SECURITY", always sent after a successful change-password
+ * (lib/account/change-password.ts), regardless of any notification
+ * preference. Mirrors the "if you didn't request this"
  * reassurance copy in sendPasswordResetEmail, but points at the forgot-
  * password flow (no reset token in hand here) so a genuine account-takeover
  * victim has an immediate next step.
@@ -172,6 +178,7 @@ export async function sendPasswordChangedEmail(ctx: { to: string }) {
   );
 }
 
+/** Account-security mail — EmailCategory "SECURITY", never gated by any notification preference (see lib/shared/email-preferences.ts). */
 export async function sendEmailVerificationEmail(ctx: { to: string; token: string }) {
   const verifyUrl = `${appUrl}/api/auth/verify-email/${encodeURIComponent(ctx.token)}`;
   await sendEmail(
@@ -202,6 +209,7 @@ export async function sendEmailVerificationEmail(ctx: { to: string; token: strin
 // message a brand-new account actually needs. requestEmailVerification's
 // own plain "Verify your email address" template (used for resends from an
 // existing, already-onboarded account) is untouched.
+/** Account-security mail — EmailCategory "SECURITY", never gated by any notification preference (see lib/shared/email-preferences.ts). */
 export async function sendWelcomeVerificationEmail(ctx: {
   to: string;
   token: string;
@@ -251,8 +259,15 @@ type ApplicationEmailContext = {
   employerEmail: string;
   seekerEmail: string;
   jobId: string;
+  /** Each recipient's own flag — the employer's "new applicant" email and the seeker's "application submitted" email are gated independently. */
+  employerNotifyApplicationUpdates: boolean;
+  seekerNotifyApplicationUpdates: boolean;
 };
 
+// EmailCategory "APPLICATION_UPDATES" (lib/shared/email-preferences.ts) —
+// gated by each recipient's own notifyApplicationUpdates. The two
+// createNotification calls stay outside sendCategorizedEmail and
+// unconditional: muting mail must never erase either party's in-app record.
 export async function notifyApplicationSubmitted(ctx: ApplicationEmailContext) {
   await Promise.all([
     createNotification(
@@ -265,43 +280,48 @@ export async function notifyApplicationSubmitted(ctx: ApplicationEmailContext) {
       "APPLICATION_SUBMITTED",
       `Your application to "${ctx.jobTitle}" at ${ctx.companyName} was submitted.`
     ),
-    sendEmail(
-      ctx.employerEmail,
-      `New applicant for ${ctx.jobTitle}`,
-      renderEmailLayout({
-        preview: `${ctx.seekerName} applied to ${ctx.jobTitle}.`,
-        heading: "New applicant",
-        bodyHtml: `
-          <p style="margin:0 0 16px;">
-            <strong>${escapeHtml(ctx.seekerName)}</strong> applied to your role.
-          </p>
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:8px 0 16px;">
-            ${emailDetailRow("Role", escapeHtml(ctx.jobTitle))}
-          </table>
-          <p style="margin:0;color:#5c6370;font-size:14px;">
-            Review their profile and resume when you’re ready — nothing here is auto-decided.
-          </p>
-        `,
-        cta: {
-          label: "Review applicants",
-          href: `${appUrl}/employer/jobs/${ctx.jobId}/applicants`,
-        },
-      })
+    sendCategorizedEmail("APPLICATION_UPDATES", ctx.employerNotifyApplicationUpdates, () =>
+      sendEmail(
+        ctx.employerEmail,
+        `New applicant for ${ctx.jobTitle}`,
+        renderEmailLayout({
+          preview: `${ctx.seekerName} applied to ${ctx.jobTitle}.`,
+          heading: "New applicant",
+          bodyHtml: `
+            <p style="margin:0 0 16px;">
+              <strong>${escapeHtml(ctx.seekerName)}</strong> applied to your role.
+            </p>
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:8px 0 16px;">
+              ${emailDetailRow("Role", escapeHtml(ctx.jobTitle))}
+            </table>
+            <p style="margin:0;color:#5c6370;font-size:14px;">
+              Review their profile and resume when you’re ready — nothing here is auto-decided.
+            </p>
+          `,
+          cta: {
+            label: "Review applicants",
+            href: `${appUrl}/employer/jobs/${ctx.jobId}/applicants`,
+          },
+        })
+      )
     ),
-    sendEmail(
-      ctx.seekerEmail,
-      `Application submitted — ${ctx.jobTitle}`,
-      renderApplicationReceivedEmail({
-        preview: `Your application to ${ctx.companyName} was received.`,
-        applicantFirstName: escapeHtml(ctx.seekerName.split(/\s+/)[0] || ctx.seekerName),
-        companyName: escapeHtml(ctx.companyName),
-        jobTitle: escapeHtml(ctx.jobTitle),
-        dashboardUrl: `${appUrl}/seeker/dashboard`,
-      })
+    sendCategorizedEmail("APPLICATION_UPDATES", ctx.seekerNotifyApplicationUpdates, () =>
+      sendEmail(
+        ctx.seekerEmail,
+        `Application submitted — ${ctx.jobTitle}`,
+        renderApplicationReceivedEmail({
+          preview: `Your application to ${ctx.companyName} was received.`,
+          applicantFirstName: escapeHtml(ctx.seekerName.split(/\s+/)[0] || ctx.seekerName),
+          companyName: escapeHtml(ctx.companyName),
+          jobTitle: escapeHtml(ctx.jobTitle),
+          dashboardUrl: `${appUrl}/seeker/dashboard`,
+        })
+      )
     ),
   ]);
 }
 
+// EmailCategory "APPLICATION_UPDATES" — gated by the seeker's own notifyApplicationUpdates.
 export async function notifyApplicationRejected(ctx: {
   seekerUserId: string;
   seekerEmail: string;
@@ -309,6 +329,7 @@ export async function notifyApplicationRejected(ctx: {
   jobTitle: string;
   companyName: string;
   rejectionReason: string | null;
+  seekerNotifyApplicationUpdates: boolean;
 }) {
   const reasonBlock = ctx.rejectionReason
     ? `<p style="margin:0 0 8px;font-size:14px;"><strong>Feedback from the employer:</strong></p>
@@ -321,35 +342,57 @@ export async function notifyApplicationRejected(ctx: {
       "APPLICATION_REJECTED",
       `Your application to ${ctx.companyName} for "${ctx.jobTitle}" was not selected.`
     ),
-    sendEmail(
-      ctx.seekerEmail,
-      `Update on your application — ${ctx.jobTitle}`,
-      renderEmailLayout({
-        preview: `Update on your application to ${ctx.companyName}.`,
-        heading: "Application update",
-        bodyHtml: `
-          <p style="margin:0 0 16px;">Hi ${escapeHtml(ctx.seekerName)},</p>
-          <p style="margin:0 0 16px;">
-            Thank you for applying to <strong>${escapeHtml(ctx.companyName)}</strong> for
-            <strong>${escapeHtml(ctx.jobTitle)}</strong>. After review, the employer has decided
-            not to move forward at this time.
-          </p>
-          ${reasonBlock}
-        `,
-        cta: {
-          label: "Browse other roles",
-          href: `${appUrl}/jobs`,
-        },
-      })
+    sendCategorizedEmail("APPLICATION_UPDATES", ctx.seekerNotifyApplicationUpdates, () =>
+      sendEmail(
+        ctx.seekerEmail,
+        `Update on your application — ${ctx.jobTitle}`,
+        renderEmailLayout({
+          preview: `Update on your application to ${ctx.companyName}.`,
+          heading: "Application update",
+          bodyHtml: `
+            <p style="margin:0 0 16px;">Hi ${escapeHtml(ctx.seekerName)},</p>
+            <p style="margin:0 0 16px;">
+              Thank you for applying to <strong>${escapeHtml(ctx.companyName)}</strong> for
+              <strong>${escapeHtml(ctx.jobTitle)}</strong>. After review, the employer has decided
+              not to move forward at this time.
+            </p>
+            ${reasonBlock}
+          `,
+          cta: {
+            label: "Browse other roles",
+            href: `${appUrl}/jobs`,
+          },
+        })
+      )
     ),
   ]);
 }
 
+/**
+ * `List-Unsubscribe` / `List-Unsubscribe-Post` for a recurring digest send
+ * (see sendJobAlertEmail below and sendWeeklyDigestForCompany in
+ * lib/ai/digest.ts) — `List-Unsubscribe-Post: List-Unsubscribe=One-Click`
+ * is what lets a mail client fire the RFC 8058 one-click unsubscribe as a
+ * bare POST with no session, which is why app/api/unsubscribe/[token]/route.ts
+ * accepts POST as well as GET.
+ */
+export function listUnsubscribeHeaders(unsubscribeUrl: string): Record<string, string> {
+  return {
+    "List-Unsubscribe": `<${unsubscribeUrl}>`,
+    "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+  };
+}
+
+// EmailCategory "PRODUCT_DIGEST" — gating happens in the caller
+// (lib/seeker/job-alerts-digest.ts), which needs the flag before deciding
+// whether to do the match-computation and unsubscribe-token work at all.
 export async function sendJobAlertEmail(ctx: {
   to: string;
   seekerName: string;
   frequency: "DAILY" | "WEEKLY";
   jobs: Array<{ id: string; title: string; companyName: string; location: string }>;
+  /** Present once lib/account/notification-preferences.ts's getOrCreateUnsubscribeToken has issued a token for this recipient. */
+  unsubscribeUrl?: string;
 }): Promise<boolean> {
   if (!resend) {
     console.warn("[email] RESEND_API_KEY not set — skipped job alert digest");
@@ -381,7 +424,10 @@ export async function sendJobAlertEmail(ctx: {
         label: "Browse all jobs",
         href: `${appUrl}/jobs`,
       },
-    })
+      unsubscribeUrl: ctx.unsubscribeUrl,
+    }),
+    undefined,
+    ctx.unsubscribeUrl ? listUnsubscribeHeaders(ctx.unsubscribeUrl) : undefined
   );
 }
 
@@ -392,6 +438,9 @@ export async function sendJobAlertEmail(ctx: {
 // these emails and the read-only summary in lib/seeker/dashboard.ts
 // (getSeekerInterviews). Never include InterviewParticipant.notes, outcome,
 // or scorecard data here — those are the employer's private hiring notes.
+// EmailCategory "INTERVIEW" (lib/shared/email-preferences.ts) — a calendar
+// commitment the other party is relying on, never gated by any notification
+// preference.
 
 type InterviewEmailContext = {
   interviewId: string;
@@ -754,6 +803,8 @@ export function notifyApplicationStatusTransition(ctx: {
   seekerName: string;
   jobTitle: string;
   companyName: string;
+  /** The seeker's own notifyApplicationUpdates — passed through to whichever of the two notify* calls below fires. */
+  seekerNotifyApplicationUpdates: boolean;
 }): void {
   const becameRejected = ctx.nextStatus === "REJECTED" && ctx.previousStatus !== "REJECTED";
   const becameOtherStatus =
@@ -769,6 +820,7 @@ export function notifyApplicationStatusTransition(ctx: {
       jobTitle: ctx.jobTitle,
       companyName: ctx.companyName,
       rejectionReason: ctx.rejectionReason,
+      seekerNotifyApplicationUpdates: ctx.seekerNotifyApplicationUpdates,
     }).catch((err) => console.error("[applications] rejection notify failed:", err));
   } else if (becameOtherStatus) {
     void notifyApplicationStatusChanged({
@@ -778,10 +830,12 @@ export function notifyApplicationStatusTransition(ctx: {
       jobTitle: ctx.jobTitle,
       companyName: ctx.companyName,
       status: ctx.nextStatus as NonRejectionApplicationStatus,
+      seekerNotifyApplicationUpdates: ctx.seekerNotifyApplicationUpdates,
     }).catch((err) => console.error("[applications] status-change notify failed:", err));
   }
 }
 
+// EmailCategory "APPLICATION_UPDATES" — gated by the seeker's own notifyApplicationUpdates.
 export async function notifyApplicationStatusChanged(ctx: {
   seekerUserId: string;
   seekerEmail: string;
@@ -789,6 +843,7 @@ export async function notifyApplicationStatusChanged(ctx: {
   jobTitle: string;
   companyName: string;
   status: NonRejectionApplicationStatus;
+  seekerNotifyApplicationUpdates: boolean;
 }) {
   const copy = APPLICATION_STATUS_COPY[ctx.status];
 
@@ -798,28 +853,30 @@ export async function notifyApplicationStatusChanged(ctx: {
       "APPLICATION_STATUS_CHANGED",
       `${ctx.companyName} ${copy.sentence} for "${ctx.jobTitle}".`
     ),
-    sendEmail(
-      ctx.seekerEmail,
-      `${copy.subject} — ${ctx.jobTitle}`,
-      renderEmailLayout({
-        preview: `${ctx.companyName} ${copy.sentence} for ${ctx.jobTitle}.`,
-        heading: copy.heading,
-        badge: "APPLICATION",
-        bodyHtml: `
-          <p style="margin:0 0 16px;">Hi ${escapeHtml(ctx.seekerName)},</p>
-          <p style="margin:0 0 16px;">
-            <strong>${escapeHtml(ctx.companyName)}</strong> ${copy.sentence} for
-            <strong>${escapeHtml(ctx.jobTitle)}</strong>.
-          </p>
-          <p style="margin:0;color:#5c6370;font-size:14px;">
-            Check your dashboard for the latest on this application.
-          </p>
-        `,
-        cta: {
-          label: "View my applications",
-          href: `${appUrl}${notificationHref("APPLICATION_STATUS_CHANGED", "SEEKER")}`,
-        },
-      })
+    sendCategorizedEmail("APPLICATION_UPDATES", ctx.seekerNotifyApplicationUpdates, () =>
+      sendEmail(
+        ctx.seekerEmail,
+        `${copy.subject} — ${ctx.jobTitle}`,
+        renderEmailLayout({
+          preview: `${ctx.companyName} ${copy.sentence} for ${ctx.jobTitle}.`,
+          heading: copy.heading,
+          badge: "APPLICATION",
+          bodyHtml: `
+            <p style="margin:0 0 16px;">Hi ${escapeHtml(ctx.seekerName)},</p>
+            <p style="margin:0 0 16px;">
+              <strong>${escapeHtml(ctx.companyName)}</strong> ${copy.sentence} for
+              <strong>${escapeHtml(ctx.jobTitle)}</strong>.
+            </p>
+            <p style="margin:0;color:#5c6370;font-size:14px;">
+              Check your dashboard for the latest on this application.
+            </p>
+          `,
+          cta: {
+            label: "View my applications",
+            href: `${appUrl}${notificationHref("APPLICATION_STATUS_CHANGED", "SEEKER")}`,
+          },
+        })
+      )
     ),
   ]);
 }
@@ -832,14 +889,17 @@ export async function notifyApplicationStatusChanged(ctx: {
 // this for every message). This only sends the email, and only when the
 // caller has already determined (via shouldSendNewMessageEmail) that this
 // is the recipient's first unread message in the conversation.
+// EmailCategory "MESSAGES" — gated by the recipient's own notifyMessages.
 
 export async function sendNewMessageEmail(ctx: {
   to: string;
   recipientRole: NotificationRecipientRole;
   senderName: string;
+  notifyMessages: boolean;
 }) {
   const href = `${appUrl}${notificationHref("NEW_MESSAGE", ctx.recipientRole)}`;
-  await sendEmail(
+  await sendCategorizedEmail("MESSAGES", ctx.notifyMessages, () =>
+    sendEmail(
     ctx.to,
     `New message from ${ctx.senderName}`,
     renderEmailLayout({
@@ -856,5 +916,6 @@ export async function sendNewMessageEmail(ctx: {
       `,
       cta: { label: "Open conversation", href },
     })
+    )
   );
 }

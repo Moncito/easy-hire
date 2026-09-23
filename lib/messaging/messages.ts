@@ -549,10 +549,15 @@ export async function sendMessage(
             id: { not: message.id },
           },
         }),
-        prisma.user.findUnique({ where: { id: recipientUserId }, select: { email: true } }),
+        prisma.user.findUnique({ where: { id: recipientUserId }, select: { email: true, notifyMessages: true } }),
       ]);
       if (!recipient || !shouldSendNewMessageEmail(earlierUnreadCount)) return;
-      await sendNewMessageEmail({ to: recipient.email, recipientRole, senderName });
+      await sendNewMessageEmail({
+        to: recipient.email,
+        recipientRole,
+        senderName,
+        notifyMessages: recipient.notifyMessages,
+      });
     })().catch((err) => console.error("[messages] new-message email failed:", err));
   }
 

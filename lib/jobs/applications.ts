@@ -62,7 +62,7 @@ export async function createApplication(seekerUserId: string, raw: unknown) {
 
   const seeker = await prisma.seekerProfile.findUnique({
     where: { userId: seekerUserId },
-    include: { user: { select: { email: true } } },
+    include: { user: { select: { email: true, notifyApplicationUpdates: true } } },
   });
 
   if (!seeker) {
@@ -82,7 +82,7 @@ export async function createApplication(seekerUserId: string, raw: unknown) {
     },
     include: {
       company: {
-        include: { user: { select: { id: true, email: true } } },
+        include: { user: { select: { id: true, email: true, notifyApplicationUpdates: true } } },
       },
       screeningQuestions: true,
     },
@@ -147,6 +147,8 @@ export async function createApplication(seekerUserId: string, raw: unknown) {
       employerEmail: job.company.user.email,
       seekerEmail: seeker.user.email,
       jobId: job.id,
+      employerNotifyApplicationUpdates: job.company.user.notifyApplicationUpdates,
+      seekerNotifyApplicationUpdates: seeker.user.notifyApplicationUpdates,
     });
 
     invalidateEmployerWorkspace(job.companyId);
@@ -235,7 +237,7 @@ export async function updateApplication(applicationId: string, raw: unknown) {
     include: {
       seeker: {
         include: {
-          user: { select: { id: true, email: true } },
+          user: { select: { id: true, email: true, notifyApplicationUpdates: true } },
         },
       },
       job: {
@@ -291,6 +293,7 @@ export async function updateApplication(applicationId: string, raw: unknown) {
     seekerName: existing.seeker.fullName,
     jobTitle: existing.job.title,
     companyName: existing.job.company.companyName,
+    seekerNotifyApplicationUpdates: existing.seeker.user.notifyApplicationUpdates,
   });
 
   if (becameHired) {

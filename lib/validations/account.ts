@@ -30,3 +30,25 @@ export const changePasswordRequestSchema = z.object({
 });
 
 export type ChangePasswordRequest = z.infer<typeof changePasswordRequestSchema>;
+
+/**
+ * A PATCH may toggle just one preference — every field is optional, but at
+ * least one must be present, or there's nothing to update. Same
+ * `.partial().refine(...)` shape as updateJobAlertSchema
+ * (lib/validations/job-alert.ts).
+ */
+export const notificationPreferencesUpdateSchema = z
+  .object({
+    notifyMessages: z.boolean().optional(),
+    notifyApplicationUpdates: z.boolean().optional(),
+    notifyProductDigest: z.boolean().optional(),
+  })
+  .refine(
+    (data) =>
+      data.notifyMessages !== undefined ||
+      data.notifyApplicationUpdates !== undefined ||
+      data.notifyProductDigest !== undefined,
+    { message: "Provide at least one preference to update" }
+  );
+
+export type NotificationPreferencesUpdateRequest = z.infer<typeof notificationPreferencesUpdateSchema>;
