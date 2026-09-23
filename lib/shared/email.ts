@@ -147,6 +147,31 @@ export async function sendPasswordResetEmail(ctx: { to: string; token: string })
   );
 }
 
+/**
+ * Account-security confirmation, not a notification — always sent after a
+ * successful change-password (lib/account/change-password.ts), regardless
+ * of any notification preference. Mirrors the "if you didn't request this"
+ * reassurance copy in sendPasswordResetEmail, but points at the forgot-
+ * password flow (no reset token in hand here) so a genuine account-takeover
+ * victim has an immediate next step.
+ */
+export async function sendPasswordChangedEmail(ctx: { to: string }) {
+  await sendEmail(
+    ctx.to,
+    "Your EasyHire password was changed",
+    renderEmailLayout({
+      preview: "Your EasyHire password was just changed.",
+      heading: "Password changed",
+      badge: "SECURITY",
+      bodyHtml: `
+        <p style="margin:0 0 16px;">This confirms the password on your EasyHire account was just changed.</p>
+        <p style="margin:0;color:#5c6370;font-size:14px;">If you made this change, no action is needed. If you didn’t, reset your password immediately — someone else may have access to your account.</p>
+      `,
+      cta: { label: "Reset password", href: `${appUrl}/login/forgot` },
+    })
+  );
+}
+
 export async function sendEmailVerificationEmail(ctx: { to: string; token: string }) {
   const verifyUrl = `${appUrl}/api/auth/verify-email/${encodeURIComponent(ctx.token)}`;
   await sendEmail(
