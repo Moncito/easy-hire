@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, CheckCircle2, Eye, Info, KeyRound, Loader2, MailCheck, Trash2 } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Eye, Info, KeyRound, Loader2, MailCheck, ShieldOff, Trash2 } from "lucide-react";
 import { submitUserSupportAction, startImpersonationSession } from "./api";
 import { useDialogFocusTrap } from "@/components/admin/useDialogFocusTrap";
 import ModalPortal from "@/components/admin/ui/ModalPortal";
@@ -23,6 +23,19 @@ import type { Role, SerializedAccountDeletionResult } from "./types";
  * dialog (components/admin/queue/BulkBar.tsx's `TypedConfirmDialog`) — here
  * the operator must type the account's exact email rather than a count,
  * since there is only ever one item to confirm.
+ *
+ * `disable_two_factor` sits between those two tiers: it strips a security
+ * control off someone's account (wrong target = silently weakened, not
+ * merely inconvenienced), but it's reversible — the user re-enrolls — unlike
+ * `delete`, so a typed-phrase confirmation would be theatre. It gets a plain
+ * confirm dialog (same weight as `ImpersonationStartDialog` below, no typed
+ * input) rather than firing immediately like password_reset/
+ * resend_verification. `lib/admin/users.ts`'s `performUserSupportAction`
+ * emails the affected user automatically when this succeeds — that's stated
+ * both in the confirm dialog and as a standing caption under the action row,
+ * so the operator isn't surprised by it after the fact. Backend no-ops (does
+ * not error) when the target has no 2FA enrolled; the result banner reports
+ * that plainly instead of implying something was removed.
  *
  * `canImpersonate` is resolved server-side by `app/admin/users/[id]/page.tsx`
  * via the real `hasPermission(ctx.access, "impersonate")` export and handed
@@ -112,6 +125,84 @@ function DeleteConfirmDialog({ email, submitting, error, onCancel, onConfirm }: 
           >
             {submitting && <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />}
             Delete permanently
+          </button>
+        </div>
+      </div>
+    </div>
+    </ModalPortal>
+  );
+}
+
+type TwoFactorDisableDialogProps = {
+  email: string;
+  submitting: boolean;
+  error: string | null;
+  onCancel: () => void;
+  onConfirm: () => void;
+};
+
+/**
+ * The middle-tier confirm step described in this file's module doc comment —
+ * plain Cancel/Confirm, no typed input. Styled with navy (the same weight
+ * `ImpersonationStartDialog` uses for a sensitive-but-reversible action),
+ * never ember: ember is reserved for the irreversible `delete` path per
+ * CLAUDE.md's brand rule ("Ember for genuine warnings/rejections" /
+ * destructive actions only), and this action is neither.
+ */
+function TwoFactorDisableConfirmDialog({ email, submitting, error, onCancel, onConfirm }: TwoFactorDisableDialogProps) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useDialogFocusTrap(dialogRef, onCancel);
+
+  return (
+    <ModalPortal>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-ink/40 backdrop-blur-sm px-4" onClick={onCancel}>
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="disable-2fa-confirm-title"
+        aria-describedby="disable-2fa-confirm-body"
+        className="w-full max-w-md rounded-2xl border border-ink/10 bg-white p-6 shadow-lg admin-dark:border-white/10 admin-dark:bg-admin-dark-surface"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-3 flex items-start gap-3">
+          <ShieldOff className="mt-0.5 h-5 w-5 shrink-0 text-navy admin-dark:text-teal" aria-hidden="true" />
+          <div>
+            <h2 id="disable-2fa-confirm-title" className="font-display text-lg font-bold text-ink admin-dark:text-mist">
+              Remove two-factor for {email}?
+            </h2>
+            <p id="disable-2fa-confirm-body" className="mt-1 text-sm text-ink/65 admin-dark:text-mist/65">
+              This clears their authenticator enrollment, letting them sign in with password alone until they set up
+              2FA again. Use this only after you&rsquo;ve verified the request yourself — this console cannot confirm
+              identity for you. <strong className="text-ink admin-dark:text-mist">The account holder will be emailed
+              automatically</strong> to let them know support removed it.
+            </p>
+          </div>
+        </div>
+
+        {error && (
+          <p role="alert" className="mt-2 text-xs text-ember">
+            {error}
+          </p>
+        )}
+
+        <div className="mt-4 flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={onCancel}
+            aria-label="Cancel removing two-factor"
+            className="rounded-xl border border-ink/10 px-4 py-2 text-sm font-semibold text-ink/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy admin-dark:border-white/15 admin-dark:text-mist/65 admin-dark:hover:bg-white/10"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            disabled={submitting}
+            onClick={onConfirm}
+            className="inline-flex items-center gap-1.5 rounded-xl bg-navy px-4 py-2 text-sm font-semibold text-white disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy focus-visible:ring-offset-2 admin-dark:bg-teal"
+          >
+            {submitting && <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />}
+            Remove two-factor
           </button>
         </div>
       </div>
@@ -242,6 +333,7 @@ export type SupportActionsProps = {
 
 const IMPERSONATE_ADMIN_TARGET_REASON_ID = "impersonate-admin-target-reason";
 const IMPERSONATE_NO_PERMISSION_REASON_ID = "impersonate-no-permission-reason";
+const TWO_FACTOR_DISABLE_CAPTION_ID = "disable-2fa-email-notice";
 
 export default function SupportActions({
   userId,
@@ -252,10 +344,14 @@ export default function SupportActions({
   onDeleted,
 }: SupportActionsProps) {
   const router = useRouter();
-  const [pending, setPending] = useState<"password_reset" | "resend_verification" | "delete" | null>(null);
+  const [pending, setPending] = useState<
+    "password_reset" | "resend_verification" | "disable_two_factor" | "delete" | null
+  >(null);
   const [announce, setAnnounce] = useState("");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [twoFactorDialogOpen, setTwoFactorDialogOpen] = useState(false);
+  const [twoFactorError, setTwoFactorError] = useState<string | null>(null);
   const [impersonateDialogOpen, setImpersonateDialogOpen] = useState(false);
   const [impersonateSubmitting, setImpersonateSubmitting] = useState(false);
   const [impersonateError, setImpersonateError] = useState<string | null>(null);
@@ -304,6 +400,23 @@ export default function SupportActions({
       res.result.action === "resend_verification" && res.result.status === "already_verified"
         ? "This account is already verified — no email was sent."
         : "Verification email sent."
+    );
+  }
+
+  async function handleConfirmDisableTwoFactor() {
+    setPending("disable_two_factor");
+    setTwoFactorError(null);
+    const res = await submitUserSupportAction(userId, "disable_two_factor");
+    setPending(null);
+    if (!res.ok) {
+      setTwoFactorError(res.error);
+      return;
+    }
+    setTwoFactorDialogOpen(false);
+    setAnnounce(
+      res.result.action === "disable_two_factor" && res.result.status === "not_enrolled"
+        ? "This account doesn't have two-factor enabled — nothing was removed."
+        : "Two-factor removed. The account holder has been emailed."
     );
   }
 
@@ -385,6 +498,23 @@ export default function SupportActions({
         <button
           type="button"
           disabled={pending !== null}
+          aria-describedby={TWO_FACTOR_DISABLE_CAPTION_ID}
+          onClick={() => {
+            setTwoFactorError(null);
+            setTwoFactorDialogOpen(true);
+          }}
+          className="inline-flex items-center gap-1.5 rounded-xl border border-navy/20 px-3.5 py-2 text-sm font-semibold text-navy hover:bg-navy/5 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy admin-dark:border-teal/30 admin-dark:text-teal admin-dark:hover:bg-teal/10"
+        >
+          {pending === "disable_two_factor" ? (
+            <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+          ) : (
+            <ShieldOff className="h-4 w-4" aria-hidden="true" />
+          )}
+          Remove two-factor…
+        </button>
+        <button
+          type="button"
+          disabled={pending !== null}
           onClick={() => {
             setDeleteError(null);
             setDeleteDialogOpen(true);
@@ -414,6 +544,14 @@ export default function SupportActions({
           You do not hold the impersonate permission — this is SUPER_ADMIN-only.
         </p>
       )}
+      <p
+        id={TWO_FACTOR_DISABLE_CAPTION_ID}
+        className="mt-2 flex items-start gap-1.5 text-xs text-ink/50 admin-dark:text-mist/50"
+      >
+        <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+        Removing two-factor emails the account holder automatically to let them know support did it. If this account
+        has no 2FA enrolled, the action is a safe no-op.
+      </p>
 
       {deleteDialogOpen && (
         <DeleteConfirmDialog
@@ -422,6 +560,16 @@ export default function SupportActions({
           error={deleteError}
           onCancel={() => setDeleteDialogOpen(false)}
           onConfirm={() => void handleConfirmDelete()}
+        />
+      )}
+
+      {twoFactorDialogOpen && (
+        <TwoFactorDisableConfirmDialog
+          email={email}
+          submitting={pending === "disable_two_factor"}
+          error={twoFactorError}
+          onCancel={() => setTwoFactorDialogOpen(false)}
+          onConfirm={() => void handleConfirmDisableTwoFactor()}
         />
       )}
 
