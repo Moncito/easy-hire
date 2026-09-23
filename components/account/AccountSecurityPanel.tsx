@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useState } from "react";
 import type { FormEvent } from "react";
-import { Copy, Download, Info, KeyRound, Loader2, Mail, ShieldCheck, ShieldOff } from "lucide-react";
+import { Copy, Download, Loader2, Mail, ShieldCheck, ShieldOff } from "lucide-react";
 
 type Role = "SEEKER" | "EMPLOYER";
 
@@ -87,7 +87,6 @@ function sanitizeCodeInput(raw: string): string {
 
 export default function AccountSecurityPanel({ role, hasPassword, passwordChangedLabel }: Props) {
   const isEmployer = role === "EMPLOYER";
-  const accentBg = isEmployer ? "bg-teal/15 text-teal" : "bg-marigold/20 text-[#9A5B12]";
   const accentButton = isEmployer ? "bg-teal hover:bg-teal/90" : "bg-navy hover:bg-navy/90";
   const accentFocus = isEmployer
     ? "focus:border-teal focus:ring-teal/20"
@@ -106,7 +105,6 @@ export default function AccountSecurityPanel({ role, hasPassword, passwordChange
   const newPasswordId = useId();
   const confirmPasswordId = useId();
   const errorId = useId();
-  const headingId = useId();
 
   // --- Two-factor state ---
   const [twoFactor, setTwoFactor] = useState<TwoFactorStatus | null>(null);
@@ -437,35 +435,27 @@ export default function AccountSecurityPanel({ role, hasPassword, passwordChange
     disableSubmitting || (disableMode === "password" ? disablePassword.length === 0 : disableCode.length !== 6);
 
   return (
-    <section
-      className={`rounded-2xl border p-5 sm:p-6 ${
-        isEmployer ? "border-teal/15 bg-teal/[0.04]" : "border-marigold/20 bg-marigold/[0.05]"
-      }`}
-      aria-labelledby={headingId}
-    >
-      <div
-        className={`flex h-10 w-10 items-center justify-center rounded-xl ${
-          isEmployer ? "bg-teal/15 text-teal" : "bg-marigold/20 text-[#9A5B12]"
-        }`}
-      >
-        <KeyRound className="h-5 w-5" strokeWidth={2} aria-hidden="true" />
-      </div>
-      <h2 id={headingId} className="mt-3 font-display text-lg font-bold text-ink">
-        Security
-      </h2>
-
+    <div className="overflow-hidden rounded-2xl border border-ink/10 bg-white">
       <div role="status" aria-live="polite" className="sr-only">
         {status}
       </div>
+
+      {/* Password row */}
+      <div className="px-5 py-5 sm:px-6">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+          <h3 className="text-sm font-semibold text-ink">Password</h3>
+          {hasPassword && (
+            <span className="text-xs text-ink/40">
+              {passwordChangedLabel ? `Last changed ${passwordChangedLabel}` : "Last change not recorded"}
+            </span>
+          )}
+        </div>
 
       {hasPassword ? (
         <>
           <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-ink/60">
             Changing your password does not sign out other devices — anywhere you&apos;re
             already signed in stays signed in.
-          </p>
-          <p className="mt-2 text-xs text-ink/40">
-            {passwordChangedLabel ? `Last changed ${passwordChangedLabel}` : "Last change not recorded"}
           </p>
 
           <form onSubmit={handleChangePassword} className="mt-4 flex max-w-sm flex-col gap-4" noValidate>
@@ -570,48 +560,36 @@ export default function AccountSecurityPanel({ role, hasPassword, passwordChange
           </div>
         </>
       )}
+      </div>
 
-      {/* Two-factor authentication */}
-      <div className="mt-6 border-t border-ink/10 pt-6">
-        <div className="flex items-start gap-3">
-          <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${accentBg}`}>
-            <ShieldCheck className="h-5 w-5" strokeWidth={2} aria-hidden="true" />
-          </div>
-          <div className="min-w-0">
-            <h3 id={twoFactorHeadingId} className="font-display text-base font-bold text-ink">
-              Two-factor authentication
-            </h3>
-            <p className="mt-1 max-w-2xl text-sm leading-relaxed text-ink/60">
-              Require a 6-digit code from an authenticator app, in addition to your password, when
-              signing in.
-            </p>
-          </div>
-        </div>
+      {/* Two-factor authentication row */}
+      <div className="border-t border-ink/[0.06] px-5 py-5 sm:px-6">
+        <h3 id={twoFactorHeadingId} className="text-sm font-semibold text-ink">
+          Two-factor authentication
+        </h3>
+        <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-ink/60">
+          Require a 6-digit code from an authenticator app, in addition to your password, when
+          signing in.
+        </p>
 
         <div role="status" aria-live="polite" className="sr-only">
           {twoFactorStatusMsg}
         </div>
 
-        {/* Honesty notices — always visible, not tucked behind any state */}
-        <div className="mt-3 max-w-2xl space-y-2.5 rounded-xl border border-navy/15 bg-navy/[0.04] p-3.5 text-sm leading-relaxed text-ink/70">
-          <p className="flex gap-2">
-            <Info className="mt-0.5 h-4 w-4 shrink-0 text-navy" strokeWidth={2} aria-hidden="true" />
-            <span>
-              <strong className="font-semibold text-ink">Google sign-in isn&apos;t covered.</strong> This
-              code is only checked when you sign in with your password. If your account also has Google
-              linked, signing in with Google still skips it — we can&apos;t add a second step to a login
-              we don&apos;t control.
-            </span>
-          </p>
-          <p className="flex gap-2">
-            <Info className="mt-0.5 h-4 w-4 shrink-0 text-navy" strokeWidth={2} aria-hidden="true" />
-            <span>
-              <strong className="font-semibold text-ink">Not required yet.</strong> Setup is available
-              now; we&apos;ll start requiring your code at sign-in shortly. Turning this on today
-              doesn&apos;t change how you log in.
-            </span>
-          </p>
-        </div>
+        {/* Honesty notices — plain text, not a tinted box, so this doesn't read as a card inside a card */}
+        <ul className="mt-3 max-w-2xl list-disc space-y-1.5 pl-5 text-sm leading-relaxed text-ink/55">
+          <li>
+            <strong className="font-medium text-ink/75">Google sign-in isn&apos;t covered.</strong> This
+            code is only checked when you sign in with your password. If your account also has Google
+            linked, signing in with Google still skips it — we can&apos;t add a second step to a login
+            we don&apos;t control.
+          </li>
+          <li>
+            <strong className="font-medium text-ink/75">Required at sign-in.</strong> Once this is
+            on, you&apos;ll need your authenticator app (or a recovery code) every time you sign in
+            with your password — not just when setting it up.
+          </li>
+        </ul>
 
         <div className="mt-4">
           {twoFactor === null && !twoFactorLoadError && (
@@ -783,7 +761,7 @@ export default function AccountSecurityPanel({ role, hasPassword, passwordChange
           {/* Enrolled */}
           {twoFactor && twoFactor.enabled && setupStep === "idle" && (
             <div className="max-w-sm">
-              <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-ink/10 bg-white/60 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
                 <span className="inline-flex items-center gap-2 text-sm font-medium text-ink">
                   <ShieldCheck
                     className={`h-4 w-4 ${isEmployer ? "text-teal" : "text-[#9A5B12]"}`}
@@ -911,6 +889,6 @@ export default function AccountSecurityPanel({ role, hasPassword, passwordChange
           )}
         </div>
       </div>
-    </section>
+    </div>
   );
 }

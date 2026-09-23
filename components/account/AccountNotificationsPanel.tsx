@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useState } from "react";
-import { Bell, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 type Role = "SEEKER" | "EMPLOYER";
 
@@ -60,7 +60,7 @@ export default function AccountNotificationsPanel({ role }: { role: Role }) {
   const [fieldError, setFieldError] = useState<string | null>(null);
   const [status, setStatus] = useState("");
 
-  const headingId = useId();
+  const baseId = useId();
 
   useEffect(() => {
     let cancelled = false;
@@ -121,39 +121,26 @@ export default function AccountNotificationsPanel({ role }: { role: Role }) {
   }
 
   return (
-    <section
-      className={`rounded-2xl border p-5 sm:p-6 ${
-        isEmployer ? "border-teal/15 bg-teal/[0.04]" : "border-marigold/20 bg-marigold/[0.05]"
-      }`}
-      aria-labelledby={headingId}
-    >
-      <div
-        className={`flex h-10 w-10 items-center justify-center rounded-xl ${
-          isEmployer ? "bg-teal/15 text-teal" : "bg-marigold/20 text-[#9A5B12]"
-        }`}
-      >
-        <Bell className="h-5 w-5" strokeWidth={2} aria-hidden="true" />
+    <div className="overflow-hidden rounded-2xl border border-ink/10 bg-white">
+      <div className="px-5 pt-5 sm:px-6">
+        <p className="max-w-2xl text-sm leading-relaxed text-ink/60">
+          Choose what EasyHire emails you about. Account-security emails and interview
+          invitations are always sent and can&apos;t be turned off here.
+        </p>
       </div>
-      <h2 id={headingId} className="mt-3 font-display text-lg font-bold text-ink">
-        Notifications
-      </h2>
-      <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-ink/60">
-        Choose what EasyHire emails you about. Account-security emails and interview
-        invitations are always sent and can&apos;t be turned off here.
-      </p>
 
       <div role="status" aria-live="polite" className="sr-only">
         {status}
       </div>
 
       {loadError && (
-        <div role="alert" className="mt-4 rounded-xl border border-ember/25 bg-ember/5 px-4 py-3 text-sm text-ember">
+        <div role="alert" className="mx-5 mt-4 mb-5 rounded-xl border border-ember/25 bg-ember/5 px-4 py-3 text-sm text-ember sm:mx-6 sm:mb-6">
           {loadError}
         </div>
       )}
 
       {loading && !loadError && (
-        <div className="mt-5 space-y-3" aria-hidden="true">
+        <div className="space-y-3 px-5 py-5 sm:px-6" aria-hidden="true">
           {[0, 1, 2].map((i) => (
             <div key={i} className="h-14 animate-pulse rounded-xl bg-ink/[0.05]" />
           ))}
@@ -161,16 +148,16 @@ export default function AccountNotificationsPanel({ role }: { role: Role }) {
       )}
 
       {!loading && preferences && (
-        <ul className="mt-5 divide-y divide-ink/8">
+        <ul className="mt-4 divide-y divide-ink/[0.06] px-5 pb-5 sm:px-6 sm:pb-6">
           {FIELD_ORDER.map((field) => {
             const { title, description } = labelsForRole(role)[field];
             const checked = preferences[field];
             const busy = pendingField === field;
-            const switchId = `${headingId}-${field}`;
+            const switchId = `${baseId}-${field}`;
             const labelId = `${switchId}-label`;
 
             return (
-              <li key={field} className="flex items-center justify-between gap-4 py-3.5 first:pt-0 last:pb-0">
+              <li key={field} className="flex items-center justify-between gap-4 py-3.5">
                 <div className="min-w-0">
                   <label id={labelId} htmlFor={switchId} className="block cursor-pointer text-sm font-semibold text-ink">
                     {title}
@@ -208,10 +195,10 @@ export default function AccountNotificationsPanel({ role }: { role: Role }) {
       )}
 
       {fieldError && (
-        <p role="alert" className="mt-3 text-sm text-ember">
+        <p role="alert" className="px-5 pb-5 text-sm text-ember sm:px-6 sm:pb-6">
           {fieldError}
         </p>
       )}
-    </section>
+    </div>
   );
 }

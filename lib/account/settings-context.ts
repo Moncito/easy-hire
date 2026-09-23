@@ -15,6 +15,8 @@ export type AccountSettingsContext = {
    * rather than inventing an age.
    */
   passwordChangedAt: Date | null;
+  /** Account creation — "Joined <month> <year>" on the profile card. */
+  createdAt: Date;
 };
 
 /**
@@ -35,6 +37,7 @@ export async function getAccountSettingsContext(
       passwordHash: true,
       emailVerifiedAt: true,
       passwordChangedAt: true,
+      createdAt: true,
     },
   });
 
@@ -46,5 +49,6 @@ export async function getAccountSettingsContext(
     avatarUrl: user.avatarUrl,
     emailVerifiedAt: user.emailVerifiedAt,
     passwordChangedAt: user.passwordChangedAt,
+    createdAt: user.createdAt,
   };
 }

@@ -3,10 +3,20 @@ import { requireSeekerPageContext } from "@/lib/auth/seeker-session";
 import { getAccountSettingsContext } from "@/lib/account/settings-context";
 import { SeekerNavBandBleed } from "@/components/seeker/SeekerNavBand";
 import AccountSettingsSections from "@/components/account/AccountSettingsSections";
+import { parseAccountSettingsSection } from "@/components/account/AccountSettingsNav";
 
-export default async function SeekerSettingsPage() {
+export default async function SeekerSettingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ section?: string | string[] }>;
+}) {
   const { userId, session } = await requireSeekerPageContext();
   const account = await getAccountSettingsContext(userId);
+  const joinedLabel = account
+    ? new Date(account.createdAt).toLocaleDateString("en-US", { month: "long", year: "numeric" })
+    : null;
+  const { section } = await searchParams;
+  const activeSection = parseAccountSettingsSection(section);
 
   return (
     <>
@@ -20,11 +30,13 @@ export default async function SeekerSettingsPage() {
 
         <AccountSettingsSections
           role="SEEKER"
+          activeSection={activeSection}
           hasPassword={account?.hasPassword ?? false}
           email={account?.email ?? session.user.email ?? ""}
           avatarUrl={account?.avatarUrl ?? null}
           emailVerifiedAt={account?.emailVerifiedAt ?? null}
           passwordChangedAt={account?.passwordChangedAt ?? null}
+          joinedLabel={joinedLabel}
         />
       </div>
     </>
