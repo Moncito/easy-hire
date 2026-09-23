@@ -14,6 +14,7 @@ import {
   hashRecoveryCode,
   findMatchingRecoveryCode,
   hasTwoFactorEnrollmentArtifact,
+  classifyTwoFactorCodeInput,
 } from "@/lib/auth/two-factor";
 
 // getEncryptionKey() (lib/auth/two-factor.ts) is read fresh from
@@ -264,6 +265,58 @@ describe("hasTwoFactorEnrollmentArtifact", () => {
 // lib/account/account-deletion.test.ts, which likewise only unit-test the
 // pure guards their DB-touching functions depend on, not the DB path
 // itself).
+// classifyTwoFactorCodeInput is what Auth.ts's authorize() (Phase 2) uses
+// to decide whether a login-time 2FA input should go to verifyTotpCode or
+// consumeRecoveryCode, without trying both blindly.
+describe("classifyTwoFactorCodeInput", () => {
+  it("classifies a bare 6-digit string as totp", () => {
+    expect(classifyTwoFactorCodeInput("123456")).toBe("totp");
+    expect(classifyTwoFactorCodeInput("000000")).toBe("totp");
+  });
+
+  it("classifies a canonical xxxxx-xxxxx hex recovery code as recovery", () => {
+    expect(classifyTwoFactorCodeInput("abcde-12345")).toBe("recovery");
+  });
+
+  it("classifies a recovery code regardless of casing, spacing, or missing dash", () => {
+    expect(classifyTwoFactorCodeInput("ABCDE-12345")).toBe("recovery");
+    expect(classifyTwoFactorCodeInput(" abcde 12345 ")).toBe("recovery");
+    expect(classifyTwoFactorCodeInput("abcde12345")).toBe("recovery");
+  });
+
+  it("never classifies a 6-digit code as a recovery code, even though digits are valid hex", () => {
+    // Would-be ambiguous input: 6 digits could theoretically also satisfy a
+    // relaxed hex check, but the shape rule is exact-length-6 => totp first.
+    expect(classifyTwoFactorCodeInput("123456")).not.toBe("recovery");
+  });
+
+  it("rejects a 5-digit string (too short to be either shape)", () => {
+    expect(classifyTwoFactorCodeInput("12345")).toBe("unrecognized");
+  });
+
+  it("rejects a 7-digit string (too long to be a totp code)", () => {
+    expect(classifyTwoFactorCodeInput("1234567")).toBe("unrecognized");
+  });
+
+  it("rejects non-numeric input that isn't 10 hex characters either", () => {
+    expect(classifyTwoFactorCodeInput("abcdef")).toBe("unrecognized");
+    expect(classifyTwoFactorCodeInput("not-a-code-at-all")).toBe("unrecognized");
+  });
+
+  it("rejects an empty string", () => {
+    expect(classifyTwoFactorCodeInput("")).toBe("unrecognized");
+  });
+
+  it("rejects a recovery-shaped string containing a non-hex character", () => {
+    expect(classifyTwoFactorCodeInput("zzzzz-11111")).toBe("unrecognized");
+  });
+
+  it("classifies a real generated recovery code plaintext as recovery", () => {
+    const plain = generateRecoveryCodePlaintext();
+    expect(classifyTwoFactorCodeInput(plain)).toBe("recovery");
+  });
+});
+
 describe("confirm gate — wrong code never satisfies the enable condition", () => {
   it("a code for a different secret cannot pass the gate confirmTwoFactor relies on", async () => {
     const enrolledSecret = generateTotpSecret();

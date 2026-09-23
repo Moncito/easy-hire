@@ -6,18 +6,13 @@ import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/lib/api-error";
 
 /**
- * TOTP TWO-FACTOR — PHASE 1 (enrollment storage only)
+ * TOTP TWO-FACTOR — PHASE 1 (enrollment) + PHASE 2 (enforcement)
  * ======================================================
  * See docs/two-factor-auth-plan.md for the full design. Phase 1 covers
- * enroll -> confirm -> view recovery codes -> disable. `Auth.ts` is
- * deliberately untouched by this module and by every caller of it: nothing
- * here is wired into `authorize()` yet, so `totpEnabledAt` being set has no
- * effect on sign-in until Phase 2 gets its own explicit sign-off.
- *
- * `verifyTotpCode` and `consumeRecoveryCode` near the bottom are exported
- * for that future Phase 2 to call — nothing in this codebase invokes them
- * yet, but they're covered by tests now so Phase 2 isn't the first time
- * they run.
+ * enroll -> confirm -> view recovery codes -> disable. Phase 2 wires
+ * `verifyTotpCode`, `consumeRecoveryCode`, and `classifyTwoFactorCodeInput`
+ * (near the bottom) into `Auth.ts`'s `authorize()`, so a confirmed
+ * `totpEnabledAt` now gates Credentials sign-in.
  */
 
 // ============================================================================
@@ -490,8 +485,35 @@ export async function getTwoFactorStatus(userId: string): Promise<TwoFactorStatu
 }
 
 // ============================================================================
-// Phase 2 exports — unused today, needed once `Auth.ts` starts enforcing
+// Phase 2 — sign-in enforcement, called from `Auth.ts`'s `authorize()`
 // ============================================================================
+
+const RECOVERY_CODE_NORMALIZED_PATTERN = /^[0-9a-f]{10}$/;
+
+export type TwoFactorCodeKind = "totp" | "recovery" | "unrecognized";
+
+/**
+ * Pure shape check — no DB access, directly unit-testable (same rationale
+ * as `findMatchingRecoveryCode` and `hasTwoFactorEnrollmentArtifact` above).
+ * `Auth.ts`'s `authorize()` uses this to decide which verifier to call for a
+ * login-time 2FA code, rather than trying both blindly: a TOTP code is
+ * exactly 6 digits; a recovery code is 10 hex characters, canonically
+ * formatted `xxxxx-xxxxx` but accepted in whatever casing/spacing
+ * `normalizeRecoveryCode` already tolerates. Skipping `consumeRecoveryCode`
+ * for input that plainly isn't shaped like a recovery code matters because
+ * that call bcrypt-compares against every one of the user's stored recovery
+ * code hashes — calling it on every failed 6-digit guess would waste that
+ * work on every single login attempt for no security benefit.
+ */
+export function classifyTwoFactorCodeInput(raw: string): TwoFactorCodeKind {
+  if (/^\d{6}$/.test(raw)) {
+    return "totp";
+  }
+  if (RECOVERY_CODE_NORMALIZED_PATTERN.test(normalizeRecoveryCode(raw))) {
+    return "recovery";
+  }
+  return "unrecognized";
+}
 
 /**
  * Verifies a code against a user's stored, confirmed secret. Returns
@@ -500,8 +522,8 @@ export async function getTwoFactorStatus(userId: string): Promise<TwoFactorStatu
  * make `authorize()` handle two different error shapes for what is, from
  * the login form's perspective, the same outcome: access denied.
  *
- * Not called anywhere yet — Phase 2 wires this into `Auth.ts`'s
- * `authorize()`. See docs/two-factor-auth-plan.md §6.
+ * Wired into `Auth.ts`'s `authorize()` as of Phase 2. See
+ * docs/two-factor-auth-plan.md §6.
  */
 export async function verifyTotpCode(userId: string, code: string): Promise<boolean> {
   const user = await prisma.user.findUnique({
@@ -522,8 +544,9 @@ export async function verifyTotpCode(userId: string, code: string): Promise<bool
  * `resetPassword`'s token consume in lib/auth/credentials-recovery.ts — two
  * concurrent requests racing the same code can't both succeed.
  *
- * Not called anywhere yet — Phase 2 wires this into `Auth.ts`'s
- * `authorize()` as the "lost my phone" fallback. See
+ * Wired into `Auth.ts`'s `authorize()` as of Phase 2, as the "lost my
+ * phone" fallback — only ever called there after `classifyTwoFactorCodeInput`
+ * has already decided the input is shaped like a recovery code. See
  * docs/two-factor-auth-plan.md §6.
  */
 export async function consumeRecoveryCode(userId: string, code: string): Promise<boolean> {
