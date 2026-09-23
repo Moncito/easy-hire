@@ -33,6 +33,19 @@ model User {
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
 
+  // Email opt-outs (Sprint 12). These gate EMAIL only — the matching
+  // `notifications` row is always written, or muting mail would erase the
+  // user's in-app record of what happened. Account-security mail (verify,
+  // password reset, deletion) and interview scheduling ignore these
+  // entirely: see the build plan's Sprint 12 entry for that boundary.
+  notifyMessages           Boolean @default(true) @map("notify_messages")
+  notifyApplicationUpdates Boolean @default(true) @map("notify_application_updates")
+  notifyProductDigest      Boolean @default(true) @map("notify_product_digest")
+  // Unsubscribe must work for a logged-out recipient, and List-Unsubscribe
+  // needs a URL. Backfilled lazily on first send rather than for every
+  // existing row up front.
+  unsubscribeToken         String? @unique @map("unsubscribe_token")
+
   // Relations
   seekerProfile      SeekerProfile?
   company            Company?
@@ -805,6 +818,9 @@ model JobAlert {
   category   String?
   frequency  AlertFrequency
   lastSentAt DateTime?      @map("last_sent_at")
+  // Lets a seeker stop one digest without deleting the alert and losing its
+  // keywords and filters — previously the only way off was deletion.
+  paused     Boolean        @default(false)
   createdAt  DateTime       @default(now()) @map("created_at")
   updatedAt  DateTime       @updatedAt @map("updated_at")
 
