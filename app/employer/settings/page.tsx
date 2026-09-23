@@ -1,20 +1,25 @@
 import { requireEmployerPageContext } from "@/lib/employer-session";
-import { accountHasPassword } from "@/lib/account/auth-method";
+import { getAccountSettingsContext } from "@/lib/account/settings-context";
 import EmployerPageHeader from "@/components/employer/ui/EmployerPageHeader";
-import AccountDataRightsPanel from "@/components/account/AccountDataRightsPanel";
+import AccountSettingsSections from "@/components/account/AccountSettingsSections";
 
 export default async function EmployerSettingsPage() {
   const { session } = await requireEmployerPageContext();
-  const hasPassword = await accountHasPassword(session.user.id);
+  const account = await getAccountSettingsContext(session.user.id);
 
   return (
     <>
       <EmployerPageHeader
         title="Account settings"
-        description="Manage your data and account."
+        description="Your profile, password, notifications, and data."
       />
 
-      <AccountDataRightsPanel role="EMPLOYER" hasPassword={hasPassword} />
+      <AccountSettingsSections
+        role="EMPLOYER"
+        hasPassword={account?.hasPassword ?? false}
+        email={account?.email ?? session.user.email ?? ""}
+        avatarUrl={account?.avatarUrl ?? null}
+      />
     </>
   );
 }
