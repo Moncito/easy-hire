@@ -41,6 +41,12 @@ model User {
   notifyMessages           Boolean @default(true) @map("notify_messages")
   notifyApplicationUpdates Boolean @default(true) @map("notify_application_updates")
   notifyProductDigest      Boolean @default(true) @map("notify_product_digest")
+  // Holds a requested new address until the user proves they control it.
+  // Swapping `email` immediately would mean a typo leaves the account with
+  // a login address nobody can receive — and the correction goes to the
+  // wrong mailbox. VerificationToken has no payload column, so the address
+  // cannot ride on the token itself.
+  pendingEmail             String? @map("pending_email")
   // Unsubscribe must work for a logged-out recipient, and List-Unsubscribe
   // needs a URL. Backfilled lazily on first send rather than for every
   // existing row up front.
@@ -82,6 +88,7 @@ enum ProfileVisibility {
 enum VerificationPurpose {
   EMAIL_VERIFY
   PASSWORD_RESET
+  EMAIL_CHANGE
 }
 
 model VerificationToken {
