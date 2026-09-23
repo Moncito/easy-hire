@@ -371,6 +371,39 @@ async function assertReauthenticatedForDisable(
 }
 
 /**
+ * Pure — whether a user has ANY 2FA enrollment artifact worth clearing: a
+ * confirmed enrollment (`totpEnabledAt` set) or an abandoned one
+ * (`totpSecret` set, never confirmed). Shared by the self-serve
+ * `disableTwoFactor` below and the admin support path
+ * (`disableTwoFactorForSupport`) so both agree on exactly one definition of
+ * "this account has nothing to disable" — same no-DB-access, directly
+ * unit-testable shape as `findMatchingRecoveryCode` above.
+ */
+export function hasTwoFactorEnrollmentArtifact(user: {
+  totpSecret: string | null;
+  totpEnabledAt: Date | null;
+}): boolean {
+  return Boolean(user.totpSecret || user.totpEnabledAt);
+}
+
+/**
+ * The three writes every "turn 2FA off" path needs, and ONLY those three, in
+ * one transaction: clear `totpSecret`, clear `totpEnabledAt`, delete every
+ * `TwoFactorRecoveryCode` row for the user. A half-cleared state (e.g. secret
+ * gone but recovery codes still present) would be confusing and useless, so
+ * this never runs as two separate statements. Callers are responsible for
+ * their own authorization/re-authentication and for deciding whether there's
+ * anything to clear at all (`hasTwoFactorEnrollmentArtifact`) — this function
+ * itself performs no checks, just the writes.
+ */
+async function clearTwoFactorState(userId: string): Promise<void> {
+  await prisma.$transaction(async (tx) => {
+    await tx.user.update({ where: { id: userId }, data: { totpSecret: null, totpEnabledAt: null } });
+    await tx.twoFactorRecoveryCode.deleteMany({ where: { userId } });
+  });
+}
+
+/**
  * Disables 2FA: clears `totpSecret` and `totpEnabledAt`, and deletes the
  * user's recovery codes, after re-authentication succeeds. Also allowed
  * when enrollment was never confirmed (`totpSecret` set, `totpEnabledAt`
@@ -388,16 +421,50 @@ export async function disableTwoFactor(
   if (!user) {
     throw new ApiError("User not found", 404);
   }
-  if (!user.totpSecret && !user.totpEnabledAt) {
+  if (!hasTwoFactorEnrollmentArtifact(user)) {
     throw new ApiError("Two-factor authentication is not enabled.", 400);
   }
 
   await assertReauthenticatedForDisable(user, credentials);
 
-  await prisma.$transaction(async (tx) => {
-    await tx.user.update({ where: { id: userId }, data: { totpSecret: null, totpEnabledAt: null } });
-    await tx.twoFactorRecoveryCode.deleteMany({ where: { userId } });
+  await clearTwoFactorState(userId);
+}
+
+export type DisableTwoFactorForSupportResult = {
+  /** False when the account had no `totpSecret` and no `totpEnabledAt` — the no-op case. Nothing was written, and no notification email should be sent. */
+  wasEnrolled: boolean;
+};
+
+/**
+ * Admin support path — clears a target user's TOTP secret, enabled
+ * timestamp, and recovery codes with NO re-authentication of that user.
+ * `disableTwoFactor` above cannot serve this case: it requires the target's
+ * own current password or a valid TOTP code, which is exactly what a user
+ * who has lost their authenticator and spent their recovery codes cannot
+ * supply. Authorization here is entirely the caller's responsibility — this
+ * function performs no permission check itself. See
+ * `performUserSupportAction` in lib/admin/users.ts, the only caller, which
+ * gates on an admin permission and writes the audit trail before/after
+ * calling this.
+ *
+ * No-op-but-successful (does not throw) when the account has no 2FA
+ * enrollment artifact at all — an admin clicking "disable 2FA" on an account
+ * that was never enrolled must not get an error.
+ */
+export async function disableTwoFactorForSupport(userId: string): Promise<DisableTwoFactorForSupportResult> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { totpSecret: true, totpEnabledAt: true },
   });
+  if (!user) {
+    throw new ApiError("User not found", 404);
+  }
+  if (!hasTwoFactorEnrollmentArtifact(user)) {
+    return { wasEnrolled: false };
+  }
+
+  await clearTwoFactorState(userId);
+  return { wasEnrolled: true };
 }
 
 export type TwoFactorStatus = {

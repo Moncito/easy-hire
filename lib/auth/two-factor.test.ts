@@ -13,6 +13,7 @@ import {
   generateRecoveryCodes,
   hashRecoveryCode,
   findMatchingRecoveryCode,
+  hasTwoFactorEnrollmentArtifact,
 } from "@/lib/auth/two-factor";
 
 // getEncryptionKey() (lib/auth/two-factor.ts) is read fresh from
@@ -226,6 +227,30 @@ describe("hashRecoveryCode", () => {
     const plain = generateRecoveryCodePlaintext();
     const hash = await hashRecoveryCode(plain);
     await expect(bcrypt.compare(normalizeRecoveryCode(plain), hash)).resolves.toBe(true);
+  });
+});
+
+// hasTwoFactorEnrollmentArtifact gates both disableTwoFactor (self-serve,
+// lib/auth/two-factor.ts) and disableTwoFactorForSupport (the admin support
+// path, called from lib/admin/users.ts's performUserSupportAction) — it is
+// the one place that decides "does this account have anything to clear."
+describe("hasTwoFactorEnrollmentArtifact", () => {
+  it("is false for an account with neither a secret nor an enabled timestamp — the no-op case", () => {
+    expect(hasTwoFactorEnrollmentArtifact({ totpSecret: null, totpEnabledAt: null })).toBe(false);
+  });
+
+  it("is true for a fully confirmed enrollment (secret + enabledAt)", () => {
+    expect(
+      hasTwoFactorEnrollmentArtifact({ totpSecret: "encrypted", totpEnabledAt: new Date() })
+    ).toBe(true);
+  });
+
+  it("is true for an abandoned, never-confirmed enrollment (secret set, enabledAt null)", () => {
+    expect(hasTwoFactorEnrollmentArtifact({ totpSecret: "encrypted", totpEnabledAt: null })).toBe(true);
+  });
+
+  it("is true for the (shouldn't-happen-but-defend-anyway) case of enabledAt set with no secret", () => {
+    expect(hasTwoFactorEnrollmentArtifact({ totpSecret: null, totpEnabledAt: new Date() })).toBe(true);
   });
 });
 

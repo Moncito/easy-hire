@@ -178,6 +178,33 @@ export async function sendPasswordChangedEmail(ctx: { to: string }) {
   );
 }
 
+/**
+ * Account-security confirmation — EmailCategory "SECURITY", always sent
+ * after an admin support action clears a user's two-factor authentication
+ * (lib/admin/users.ts's `performUserSupportAction`, "disable_two_factor"
+ * branch), regardless of any notification preference. Same "if you didn't
+ * expect this" framing as `sendPasswordChangedEmail`: whoever's account this
+ * is has no way to notice their second factor was removed except this email,
+ * and a removed second factor with no notice is exactly the scenario an
+ * account-takeover victim would rely on staying quiet.
+ */
+export async function sendTwoFactorDisabledByAdminEmail(ctx: { to: string }) {
+  await sendEmail(
+    ctx.to,
+    "Two-factor authentication was removed from your EasyHire account",
+    renderEmailLayout({
+      preview: "Two-factor authentication on your EasyHire account was removed by support.",
+      heading: "Two-factor authentication removed",
+      badge: "SECURITY",
+      bodyHtml: `
+        <p style="margin:0 0 16px;">EasyHire support removed two-factor authentication from your account, along with any remaining recovery codes.</p>
+        <p style="margin:0;color:#5c6370;font-size:14px;">If you requested this (for example, because you lost access to your authenticator app), no action is needed — you can re-enroll in two-factor authentication from your account settings at any time. If you did NOT request this, reset your password immediately — someone else may have access to your account.</p>
+      `,
+      cta: { label: "Sign in to EasyHire", href: `${appUrl}/login` },
+    })
+  );
+}
+
 /** Account-security mail — EmailCategory "SECURITY", never gated by any notification preference (see lib/shared/email-preferences.ts). */
 export async function sendEmailVerificationEmail(ctx: { to: string; token: string }) {
   const verifyUrl = `${appUrl}/api/auth/verify-email/${encodeURIComponent(ctx.token)}`;

@@ -8,7 +8,8 @@ import { performUserSupportAction } from "@/lib/admin/users";
 
 /**
  * POST /api/admin/users/[id]/actions — support actions (docs/ADMIN-CONSOLE-PLAN.md
- * §4.3): password reset, resend verification, delete. Suspend/restore and
+ * §4.3): password reset, resend verification, disable two-factor, delete.
+ * Suspend/restore and
  * impersonate are deliberately not here — see lib/admin/users.ts's module
  * doc comment for why (no status column yet; impersonation is Phase 5).
  * Thin handler: auth, parse the body, call lib/admin/users.ts, respond.
