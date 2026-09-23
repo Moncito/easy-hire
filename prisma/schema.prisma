@@ -54,6 +54,16 @@ model User {
   // recorded" — existing accounts have no known date and inventing one would
   // make the UI lie.
   passwordChangedAt        DateTime? @map("password_changed_at")
+
+  // Two-factor (TOTP), Phase 1 — see docs/two-factor-auth-plan.md.
+  // totpSecret is AES-256-GCM encrypted with TOTP_ENCRYPTION_KEY and is
+  // NEVER stored raw: a plaintext secret makes one database leak worse than
+  // having no 2FA, since users would believe they were protected.
+  totpSecret               String?   @map("totp_secret")
+  // Null means not enrolled OR enrolled-but-unconfirmed. Enforcement must
+  // read this and never the presence of totpSecret alone, so an abandoned
+  // half-finished enrollment can never gate a login.
+  totpEnabledAt            DateTime? @map("totp_enabled_at")
   // Unsubscribe must work for a logged-out recipient, and List-Unsubscribe
   // needs a URL. Backfilled lazily on first send rather than for every
   // existing row up front.
@@ -67,6 +77,7 @@ model User {
   exportAuditLogs    ExportAuditLog[]
   companyMemberships CompanyMember[]
   verificationTokens VerificationToken[]
+  recoveryCodes      TwoFactorRecoveryCode[]
   reviewsAuthored    Review[]
   adminProfile       AdminProfile?
 
@@ -96,6 +107,28 @@ enum VerificationPurpose {
   EMAIL_VERIFY
   PASSWORD_RESET
   EMAIL_CHANGE
+}
+
+/**
+ * Single-use fallback codes for TOTP two-factor — see
+ * docs/two-factor-auth-plan.md. Without these a lost phone is a permanent
+ * lockout, and there is no admin override yet.
+ *
+ * `codeHash` is a hash, never the code itself: these are credentials in
+ * exactly the way a password is. A separate table rather than an array
+ * column on `users` so each code's consumption is individually recordable.
+ */
+model TwoFactorRecoveryCode {
+  id        String    @id @default(cuid())
+  userId    String    @map("user_id")
+  codeHash  String    @map("code_hash")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("two_factor_recovery_codes")
 }
 
 model VerificationToken {
