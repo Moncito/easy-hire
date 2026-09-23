@@ -128,7 +128,10 @@ export async function resetPassword(rawToken: string, newPassword: string): Prom
       throw new ApiError(INVALID_OR_EXPIRED_MESSAGE, 400);
     }
 
-    const updatedUser = await tx.user.update({ where: { id: record.userId }, data: { passwordHash } });
+    const updatedUser = await tx.user.update({
+      where: { id: record.userId },
+      data: { passwordHash, passwordChangedAt: new Date() },
+    });
 
     // Invalidate any other outstanding reset tokens for this user.
     await tx.verificationToken.updateMany({

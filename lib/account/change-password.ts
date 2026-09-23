@@ -97,7 +97,10 @@ export async function changePassword(
   // multi-statement write here that needs one.
   const passwordHash = await bcrypt.hash(parsedNewPassword, 10);
 
-  await prisma.user.update({ where: { id: userId }, data: { passwordHash } });
+  await prisma.user.update({
+    where: { id: userId },
+    data: { passwordHash, passwordChangedAt: new Date() },
+  });
 
   // SESSION INVALIDATION — NOT DONE, BY NECESSITY:
   // Auth.ts uses `session: { strategy: "jwt" }` and there is no `Session`

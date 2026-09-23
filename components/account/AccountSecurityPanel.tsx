@@ -16,6 +16,17 @@ type Props = {
    * Prisma or the session itself.
    */
   hasPassword: boolean;
+  /**
+   * Pre-formatted relative-time string ("24d ago"), or null when
+   * unavailable. Computed server-side (see AccountSettingsSections) so this
+   * client component never calls `Date.now()` during render — doing that
+   * here would risk a hydration mismatch between the server-rendered HTML
+   * and the client's first render. Null covers two distinct cases that
+   * must not be conflated: a Google-only account with no password at all,
+   * and a credentials account whose change date predates the column and so
+   * is genuinely unknown — never treat null as "never changed".
+   */
+  passwordChangedLabel: string | null;
 };
 
 /** Same `Retry-After` → human label approach as AccountDataRightsPanel's retryWindowLabel. Kept local rather than shared/exported since this is UI-only glue, not business logic. */
@@ -42,7 +53,7 @@ function newPasswordIssue(value: string): string | null {
   return null;
 }
 
-export default function AccountSecurityPanel({ role, hasPassword }: Props) {
+export default function AccountSecurityPanel({ role, hasPassword, passwordChangedLabel }: Props) {
   const isEmployer = role === "EMPLOYER";
 
   const [currentPassword, setCurrentPassword] = useState("");
@@ -174,6 +185,9 @@ export default function AccountSecurityPanel({ role, hasPassword }: Props) {
           <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-ink/60">
             Changing your password does not sign out other devices — anywhere you&apos;re
             already signed in stays signed in.
+          </p>
+          <p className="mt-2 text-xs text-ink/40">
+            {passwordChangedLabel ? `Last changed ${passwordChangedLabel}` : "Last change not recorded"}
           </p>
 
           <form onSubmit={handleChangePassword} className="mt-4 flex max-w-sm flex-col gap-4" noValidate>

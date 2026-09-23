@@ -47,6 +47,13 @@ model User {
   // wrong mailbox. VerificationToken has no payload column, so the address
   // cannot ride on the token itself.
   pendingEmail             String? @map("pending_email")
+  // Stamped on every password change or reset. Surfaces "last changed N days
+  // ago", but the real reason it exists is session invalidation: Auth.ts uses
+  // a JWT strategy with no Session model, so revoking a token needs a
+  // passwordChangedAt claim compared in the jwt callback. Null means "never
+  // recorded" — existing accounts have no known date and inventing one would
+  // make the UI lie.
+  passwordChangedAt        DateTime? @map("password_changed_at")
   // Unsubscribe must work for a logged-out recipient, and List-Unsubscribe
   // needs a URL. Backfilled lazily on first send rather than for every
   // existing row up front.

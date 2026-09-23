@@ -7,6 +7,14 @@ export type AccountSettingsContext = {
   hasPassword: boolean;
   email: string;
   avatarUrl: string | null;
+  /** Null means unverified — drives the "Email verified" badge on the profile card. */
+  emailVerifiedAt: Date | null;
+  /**
+   * Null means "never recorded", not "never changed" — accounts predating
+   * the column have no known date. Consumers must render that as unknown
+   * rather than inventing an age.
+   */
+  passwordChangedAt: Date | null;
 };
 
 /**
@@ -21,7 +29,13 @@ export async function getAccountSettingsContext(
 ): Promise<AccountSettingsContext | null> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { email: true, avatarUrl: true, passwordHash: true },
+    select: {
+      email: true,
+      avatarUrl: true,
+      passwordHash: true,
+      emailVerifiedAt: true,
+      passwordChangedAt: true,
+    },
   });
 
   if (!user) return null;
@@ -30,5 +44,7 @@ export async function getAccountSettingsContext(
     hasPassword: Boolean(user.passwordHash),
     email: user.email,
     avatarUrl: user.avatarUrl,
+    emailVerifiedAt: user.emailVerifiedAt,
+    passwordChangedAt: user.passwordChangedAt,
   };
 }

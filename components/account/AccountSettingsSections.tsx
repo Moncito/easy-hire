@@ -1,8 +1,11 @@
+import { CheckCircle2 } from "lucide-react";
 import ProfilePhotoForm from "@/components/account/ProfilePhotoForm";
 import AccountSecurityPanel from "@/components/account/AccountSecurityPanel";
 import AccountNotificationsPanel from "@/components/account/AccountNotificationsPanel";
 import AccountDataRightsPanel from "@/components/account/AccountDataRightsPanel";
 import AccountSettingsNav, { ACCOUNT_SETTINGS_SECTIONS } from "@/components/account/AccountSettingsNav";
+import Badge from "@/components/ui/Badge";
+import { relativeTime } from "@/lib/time-ago";
 
 type Role = "SEEKER" | "EMPLOYER";
 
@@ -11,6 +14,16 @@ type Props = {
   hasPassword: boolean;
   email: string;
   avatarUrl: string | null;
+  /** Null renders a quiet "Not verified" state — never a scary warning. */
+  emailVerifiedAt: Date | null;
+  /**
+   * Null means "never recorded" (accounts predating the column), not "never
+   * changed" — AccountSecurityPanel is responsible for rendering that
+   * honestly. Formatted to a string here, server-side, so the client panel
+   * never computes relative time from `Date.now()` at render and risks a
+   * hydration mismatch.
+   */
+  passwordChangedAt: Date | null;
 };
 
 /**
@@ -21,9 +34,17 @@ type Props = {
  * app/seeker/settings/page.tsx, each supplying their own page chrome
  * (EmployerPageHeader vs SeekerNavBandBleed) around this.
  */
-export default function AccountSettingsSections({ role, hasPassword, email, avatarUrl }: Props) {
+export default function AccountSettingsSections({
+  role,
+  hasPassword,
+  email,
+  avatarUrl,
+  emailVerifiedAt,
+  passwordChangedAt,
+}: Props) {
   const isEmployer = role === "EMPLOYER";
   const [profileSection, securitySection, notificationsSection, privacySection] = ACCOUNT_SETTINGS_SECTIONS;
+  const passwordChangedLabel = passwordChangedAt ? relativeTime(passwordChangedAt.toISOString()) : null;
 
   return (
     <div className="grid gap-8 lg:grid-cols-[200px_minmax(0,1fr)] lg:items-start lg:gap-10">
@@ -48,7 +69,17 @@ export default function AccountSettingsSections({ role, hasPassword, email, avat
 
               <div className="mt-5 flex items-center justify-between gap-4 border-t border-ink/8 pt-4">
                 <span className="text-sm font-medium text-ink/50">Email address</span>
-                <span className="truncate text-sm text-ink">{email}</span>
+                <span className="flex min-w-0 items-center gap-2">
+                  <span className="truncate text-sm text-ink">{email}</span>
+                  {emailVerifiedAt ? (
+                    <Badge tone="teal" size="sm" className="shrink-0">
+                      <CheckCircle2 className="h-3 w-3" strokeWidth={2.5} aria-hidden="true" />
+                      Verified
+                    </Badge>
+                  ) : (
+                    <span className="shrink-0 text-xs font-medium text-ink/40">Not verified</span>
+                  )}
+                </span>
               </div>
             </div>
           </section>
@@ -57,7 +88,7 @@ export default function AccountSettingsSections({ role, hasPassword, email, avat
             <h2 id={`${securitySection.id}-heading`} className="sr-only">
               {securitySection.label}
             </h2>
-            <AccountSecurityPanel role={role} hasPassword={hasPassword} />
+            <AccountSecurityPanel role={role} hasPassword={hasPassword} passwordChangedLabel={passwordChangedLabel} />
           </section>
 
           <section

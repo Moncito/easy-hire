@@ -23,6 +23,8 @@ export default async function SeekerSettingsPage() {
           hasPassword={account?.hasPassword ?? false}
           email={account?.email ?? session.user.email ?? ""}
           avatarUrl={account?.avatarUrl ?? null}
+          emailVerifiedAt={account?.emailVerifiedAt ?? null}
+          passwordChangedAt={account?.passwordChangedAt ?? null}
         />
       </div>
     </>
