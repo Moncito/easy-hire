@@ -52,3 +52,31 @@ export const notificationPreferencesUpdateSchema = z
   );
 
 export type NotificationPreferencesUpdateRequest = z.infer<typeof notificationPreferencesUpdateSchema>;
+
+/** POST /api/account/2fa/confirm — a bare 6-digit TOTP code, nothing else. */
+export const twoFactorConfirmRequestSchema = z.object({
+  code: z.string().trim().regex(/^\d{6}$/, "Enter the 6-digit code from your authenticator app."),
+});
+
+export type TwoFactorConfirmRequest = z.infer<typeof twoFactorConfirmRequestSchema>;
+
+/**
+ * POST /api/account/2fa/disable — re-authentication, same "one of these two
+ * fields" shape as accountDeletionRequestSchema above. Which one is valid
+ * for a given account (e.g. a Google-only account has no password) is
+ * decided after loading the user row in lib/auth/two-factor.ts, not here.
+ */
+export const twoFactorDisableRequestSchema = z
+  .object({
+    password: z.string().min(1).max(200).optional(),
+    code: z
+      .string()
+      .trim()
+      .regex(/^\d{6}$/, "Enter the 6-digit code from your authenticator app.")
+      .optional(),
+  })
+  .refine((data) => Boolean(data.password) || Boolean(data.code), {
+    message: "Enter your current password or a 2FA code to continue.",
+  });
+
+export type TwoFactorDisableRequest = z.infer<typeof twoFactorDisableRequestSchema>;
