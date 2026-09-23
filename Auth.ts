@@ -8,6 +8,7 @@ import { normalizeEmail } from "@/lib/email-address";
 import { checkRateLimit, clientKeyFromRequest } from "@/lib/rate-limit";
 import { resolveGoogleAccountLinkingAction } from "@/lib/auth/google-account-linking";
 import { recordUserLoggedIn, recordUserLoggedOut, recordUserLoginFailed } from "@/lib/auth/auth-events";
+import { classifyTwoFactorCodeInput, consumeRecoveryCode, verifyTotpCode } from "@/lib/auth/two-factor";
 import { authConfig } from "./auth.config";
 
 // Brute-force / credential-stuffing guard for the Credentials provider.
@@ -28,9 +29,44 @@ const LOGIN_RATE_WINDOW_SECONDS = 15 * 60;
  * The client (components/auth/LoginForm.tsx) doesn't discriminate on the
  * error code today, so this can't leak "you're rate-limited" info to an
  * attacker — it just logs which guard tripped for server-side observability.
+ *
+ * Phase 2 (TOTP two-factor, see docs/two-factor-auth-plan.md §5-6) narrows
+ * this rule by exactly two codes: `totp_required` and `totp_invalid`
+ * (below) are the only codes the client is allowed to discriminate on — the
+ * login form needs to know to reveal a code field and resubmit. Every other
+ * code, including this one, must keep rendering as an indistinguishable
+ * generic failure. Don't add a third exception without re-deriving why
+ * those two are safe to reveal and this one isn't: `rate_limited` stays
+ * hidden because revealing it would let an attacker tell "you're
+ * rate-limited" apart from "wrong password" before they've proven anything.
+ * `totp_required`/`totp_invalid` are only ever thrown *after* the password
+ * has already checked out (see the ordering comment in `authorize` below),
+ * so revealing them doesn't hand an attacker anything they didn't already
+ * have to prove first.
  */
 class LoginRateLimited extends CredentialsSignin {
   code = "rate_limited";
+}
+
+/**
+ * Thrown when the password was correct but the account has a confirmed TOTP
+ * enrollment (`totpEnabledAt` set) and no `totpCode` was submitted. The
+ * login form is expected to catch `totp_required` specifically and re-render
+ * with a code field, then resubmit email + password + totpCode together —
+ * see the comment on `LoginRateLimited` above for why this and
+ * `TwoFactorInvalid` are the only two codes allowed to be client-visible.
+ */
+class TwoFactorRequired extends CredentialsSignin {
+  code = "totp_required";
+}
+
+/**
+ * Thrown when the password was correct, a `totpCode` was submitted, but it
+ * matched neither a valid TOTP code nor an unused recovery code. See the
+ * comment on `LoginRateLimited` above.
+ */
+class TwoFactorInvalid extends CredentialsSignin {
+  code = "totp_invalid";
 }
 
 async function resolveDbUser(email?: string | null, userId?: string | null) {
@@ -249,6 +285,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
+        // Optional — only meaningful once the password has already checked
+        // out. Accepts either a 6-digit TOTP code or an `xxxxx-xxxxx`
+        // recovery code; see classifyTwoFactorCodeInput in
+        // lib/auth/two-factor.ts for how the two are told apart.
+        totpCode: { label: "Two-factor code", type: "text" },
       },
       async authorize(credentials, request) {
         if (!credentials?.email || !credentials?.password) {
@@ -282,6 +323,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           where: { email },
         });
 
+        // No account, or a Google-only account with no password set at all
+        // (`passwordHash` null). Google sign-in is a separate provider above
+        // and never reaches this branch, so a Google-only account simply
+        // can't authenticate via Credentials here — by design, this also
+        // means Google sign-in bypasses TOTP entirely (see
+        // docs/two-factor-auth-plan.md §1 and the settings UI, which states
+        // this plainly to users who link both).
         if (!user || !user.passwordHash) {
           recordUserLoginFailed();
           return null;
@@ -295,6 +343,41 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         if (!isValid) {
           recordUserLoginFailed(user.id, user.role);
           return null;
+        }
+
+        // Password verified — only from this point on may this request
+        // learn anything about whether 2FA is enabled for the account. This
+        // must never move earlier: throwing TwoFactorRequired off of email
+        // alone (before the password check) would let anyone probe which
+        // accounts have 2FA enabled, an account-enumeration vector. See the
+        // comment on LoginRateLimited above for the client-visibility rule
+        // this depends on.
+        if (!user.totpEnabledAt) {
+          return {
+            id: user.id,
+            email: user.email,
+            role: user.role,
+          };
+        }
+
+        const totpInput = typeof credentials.totpCode === "string" ? credentials.totpCode : "";
+
+        if (!totpInput) {
+          recordUserLoginFailed(user.id, user.role);
+          throw new TwoFactorRequired();
+        }
+
+        const codeKind = classifyTwoFactorCodeInput(totpInput);
+        const codeIsValid =
+          codeKind === "totp"
+            ? await verifyTotpCode(user.id, totpInput)
+            : codeKind === "recovery"
+              ? await consumeRecoveryCode(user.id, totpInput)
+              : false;
+
+        if (!codeIsValid) {
+          recordUserLoginFailed(user.id, user.role);
+          throw new TwoFactorInvalid();
         }
 
         return {

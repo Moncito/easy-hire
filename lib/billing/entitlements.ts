@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 import { ApiError } from "@/lib/api-error";
 import { getCompanyPlan, isEmployerPro } from "@/lib/billing/subscriptions";
 
@@ -11,9 +12,33 @@ const SOFT_CAP_STATUSES: Array<"PENDING_REVIEW" | "ACTIVE"> = ["PENDING_REVIEW",
 /** How long a featured placement lasts once set, in days. */
 export const FEATURED_JOB_DURATION_DAYS = 30;
 
+/**
+ * Where-clause for "does this job occupy a Free-plan soft-cap slot" — the
+ * same liveness predicate the public board (baseActiveJobWhere in
+ * lib/jobs/public-listing.ts) and the apply-path guard
+ * (lib/jobs/applications.ts) already use for `expiresAt`. Without this
+ * branch, a job past its expiresAt is invisible on the board and already
+ * rejects applications, but keeps counting against the cap forever — a Free
+ * employer with only expired jobs would be locked out by jobs that do
+ * nothing. PENDING_REVIEW jobs have no expiresAt yet (it's set at approval),
+ * so the `expiresAt: null` branch correctly keeps them counted.
+ */
+export function buildSoftCapJobWhere(
+  companyId: string,
+  options: { excludeJobId?: string; now?: Date } = {}
+): Prisma.JobWhereInput {
+  const now = options.now ?? new Date();
+  return {
+    companyId,
+    status: { in: SOFT_CAP_STATUSES },
+    OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
+    ...(options.excludeJobId ? { id: { not: options.excludeJobId } } : {}),
+  };
+}
+
 export async function getActiveJobCount(companyId: string): Promise<number> {
   return prisma.job.count({
-    where: { companyId, status: { in: SOFT_CAP_STATUSES } },
+    where: buildSoftCapJobWhere(companyId),
   });
 }
 
@@ -42,11 +67,7 @@ export async function canCreateOrActivateJob(
   }
 
   const activeJobCount = await prisma.job.count({
-    where: {
-      companyId,
-      status: { in: SOFT_CAP_STATUSES },
-      ...(options.excludeJobId ? { id: { not: options.excludeJobId } } : {}),
-    },
+    where: buildSoftCapJobWhere(companyId, options),
   });
 
   const allowed = activeJobCount < FREE_ACTIVE_JOB_SOFT_CAP;

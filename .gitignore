@@ -32,6 +32,10 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# ...opting in for the template, which is useless to a fresh clone while ignored.
+# It holds no secrets: every value is blank except localhost and the public
+# Resend sandbox sender.
+!.env.example
 
 # vercel
 .vercel

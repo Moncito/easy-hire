@@ -5,7 +5,7 @@ import {
   cancelProSubscription,
   getStripeClient,
   syncSubscriptionFromStripe,
-} from "@/lib/stripe-billing";
+} from "@/lib/billing/stripe-billing";
 
 const WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET;
 

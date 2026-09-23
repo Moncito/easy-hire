@@ -151,7 +151,7 @@ export type SerializedUserRecord = {
 // lib/validations/admin.ts's adminUserActionSchema
 // ============================================================================
 
-export const USER_SUPPORT_ACTIONS = ["password_reset", "resend_verification", "delete"] as const;
+export const USER_SUPPORT_ACTIONS = ["password_reset", "resend_verification", "disable_two_factor", "delete"] as const;
 export type UserSupportAction = (typeof USER_SUPPORT_ACTIONS)[number];
 export type { AdminUserActionInput };
 
@@ -166,6 +166,8 @@ export type SerializedUserSupportActionResult =
   | { action: "password_reset"; status: "sent" }
   | { action: "resend_verification"; status: "sent" }
   | { action: "resend_verification"; status: "already_verified" }
+  | { action: "disable_two_factor"; status: "disabled" }
+  | { action: "disable_two_factor"; status: "not_enrolled" }
   | { action: "delete"; status: "deleted"; result: SerializedAccountDeletionResult };
 
 // ============================================================================

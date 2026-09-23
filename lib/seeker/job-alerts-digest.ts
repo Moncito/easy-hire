@@ -1,5 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { sendJobAlertEmail } from "@/lib/email";
+import { shouldSendCategoryEmail } from "@/lib/shared/email-preferences";
+import { getOrCreateUnsubscribeToken } from "@/lib/account/notification-preferences";
+import { APP_URL } from "@/lib/shared/app-url";
 
 export type JobAlertDigestFrequency = "DAILY" | "WEEKLY";
 
@@ -38,13 +41,22 @@ export async function sendJobAlertDigests(
   const alerts = await prisma.jobAlert.findMany({
     where: {
       frequency,
+      // A paused alert keeps its keywords/filters — it just stops sending
+      // until the seeker unpauses it (see the JobAlert.paused schema
+      // comment) — never delete it here.
+      paused: false,
       // Database-level half of the duplicate-send guard — keeps the
       // fetched set small. shouldSendJobAlertDigest() re-checks each row
       // below so the two never drift apart.
       OR: [{ lastSentAt: null }, { lastSentAt: { lt: since } }],
     },
     include: {
-      seeker: { select: { fullName: true, user: { select: { email: true } } } },
+      seeker: {
+        select: {
+          fullName: true,
+          user: { select: { id: true, email: true, notifyProductDigest: true, unsubscribeToken: true } },
+        },
+      },
     },
   });
 
@@ -82,6 +94,15 @@ export async function sendJobAlertDigests(
         const email = alert.seeker.user.email;
         if (!email) return "skipped";
 
+        // EmailCategory "PRODUCT_DIGEST" — checked before doing any of the
+        // match computation or unsubscribe-token work below, since a seeker
+        // with digests off needs neither. lastSentAt is intentionally left
+        // untouched: this isn't a send failure, so the next window should
+        // check again rather than treat this as "delivered".
+        if (!shouldSendCategoryEmail("PRODUCT_DIGEST", alert.seeker.user.notifyProductDigest)) {
+          return "skipped";
+        }
+
         const keywords = alert.keywords.toLowerCase().split(/\s+/).filter(Boolean);
         const matches = newJobs.filter((job) => {
           if (alert.category && job.category !== alert.category) return false;
@@ -91,6 +112,11 @@ export async function sendJobAlertDigests(
         });
 
         if (matches.length === 0) return "skipped";
+
+        // Lazily issued the first time this seeker actually gets a digest —
+        // see getOrCreateUnsubscribeToken's doc comment.
+        const unsubscribeToken =
+          alert.seeker.user.unsubscribeToken ?? (await getOrCreateUnsubscribeToken(alert.seeker.user.id));
 
         const ok = await sendJobAlertEmail({
           to: email,
@@ -102,6 +128,7 @@ export async function sendJobAlertDigests(
             companyName: j.company.companyName,
             location: j.location,
           })),
+          unsubscribeUrl: `${APP_URL}/api/unsubscribe/${encodeURIComponent(unsubscribeToken)}`,
         });
 
         if (!ok) return "skipped";

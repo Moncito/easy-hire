@@ -340,7 +340,12 @@ export type AdminUserActivityQuery = z.infer<typeof adminUserActivityQuerySchema
  * reference), same field name/shape as the existing `note` on
  * `RecordAdminActionInput` in lib/admin/audit.ts.
  */
-export const ADMIN_USER_SUPPORT_ACTIONS = ["password_reset", "resend_verification", "delete"] as const;
+export const ADMIN_USER_SUPPORT_ACTIONS = [
+  "password_reset",
+  "resend_verification",
+  "disable_two_factor",
+  "delete",
+] as const;
 
 export const adminUserActionSchema = z.object({
   action: z.enum(ADMIN_USER_SUPPORT_ACTIONS),

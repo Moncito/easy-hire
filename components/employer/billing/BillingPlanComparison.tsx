@@ -1,7 +1,7 @@
 import Link from "next/link";
 import PlanComparisonTable from "@/components/pricing/PlanComparisonTable";
 import { isStripeCheckoutEnabled } from "@/lib/billing/plan-comparison";
-import type { SubscriptionPlan } from "@/lib/subscriptions";
+import type { SubscriptionPlan } from "@/lib/billing/subscriptions";
 
 type Props = {
   plan: SubscriptionPlan;

@@ -33,6 +33,42 @@ model User {
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
 
+  // Email opt-outs (Sprint 12). These gate EMAIL only — the matching
+  // `notifications` row is always written, or muting mail would erase the
+  // user's in-app record of what happened. Account-security mail (verify,
+  // password reset, deletion) and interview scheduling ignore these
+  // entirely: see the build plan's Sprint 12 entry for that boundary.
+  notifyMessages           Boolean @default(true) @map("notify_messages")
+  notifyApplicationUpdates Boolean @default(true) @map("notify_application_updates")
+  notifyProductDigest      Boolean @default(true) @map("notify_product_digest")
+  // Holds a requested new address until the user proves they control it.
+  // Swapping `email` immediately would mean a typo leaves the account with
+  // a login address nobody can receive — and the correction goes to the
+  // wrong mailbox. VerificationToken has no payload column, so the address
+  // cannot ride on the token itself.
+  pendingEmail             String? @map("pending_email")
+  // Stamped on every password change or reset. Surfaces "last changed N days
+  // ago", but the real reason it exists is session invalidation: Auth.ts uses
+  // a JWT strategy with no Session model, so revoking a token needs a
+  // passwordChangedAt claim compared in the jwt callback. Null means "never
+  // recorded" — existing accounts have no known date and inventing one would
+  // make the UI lie.
+  passwordChangedAt        DateTime? @map("password_changed_at")
+
+  // Two-factor (TOTP), Phase 1 — see docs/two-factor-auth-plan.md.
+  // totpSecret is AES-256-GCM encrypted with TOTP_ENCRYPTION_KEY and is
+  // NEVER stored raw: a plaintext secret makes one database leak worse than
+  // having no 2FA, since users would believe they were protected.
+  totpSecret               String?   @map("totp_secret")
+  // Null means not enrolled OR enrolled-but-unconfirmed. Enforcement must
+  // read this and never the presence of totpSecret alone, so an abandoned
+  // half-finished enrollment can never gate a login.
+  totpEnabledAt            DateTime? @map("totp_enabled_at")
+  // Unsubscribe must work for a logged-out recipient, and List-Unsubscribe
+  // needs a URL. Backfilled lazily on first send rather than for every
+  // existing row up front.
+  unsubscribeToken         String? @unique @map("unsubscribe_token")
+
   // Relations
   seekerProfile      SeekerProfile?
   company            Company?
@@ -41,6 +77,7 @@ model User {
   exportAuditLogs    ExportAuditLog[]
   companyMemberships CompanyMember[]
   verificationTokens VerificationToken[]
+  recoveryCodes      TwoFactorRecoveryCode[]
   reviewsAuthored    Review[]
   adminProfile       AdminProfile?
 
@@ -69,6 +106,29 @@ enum ProfileVisibility {
 enum VerificationPurpose {
   EMAIL_VERIFY
   PASSWORD_RESET
+  EMAIL_CHANGE
+}
+
+/**
+ * Single-use fallback codes for TOTP two-factor — see
+ * docs/two-factor-auth-plan.md. Without these a lost phone is a permanent
+ * lockout, and there is no admin override yet.
+ *
+ * `codeHash` is a hash, never the code itself: these are credentials in
+ * exactly the way a password is. A separate table rather than an array
+ * column on `users` so each code's consumption is individually recordable.
+ */
+model TwoFactorRecoveryCode {
+  id        String    @id @default(cuid())
+  userId    String    @map("user_id")
+  codeHash  String    @map("code_hash")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("two_factor_recovery_codes")
 }
 
 model VerificationToken {
@@ -805,6 +865,9 @@ model JobAlert {
   category   String?
   frequency  AlertFrequency
   lastSentAt DateTime?      @map("last_sent_at")
+  // Lets a seeker stop one digest without deleting the alert and losing its
+  // keywords and filters — previously the only way off was deletion.
+  paused     Boolean        @default(false)
   createdAt  DateTime       @default(now()) @map("created_at")
   updatedAt  DateTime       @updatedAt @map("updated_at")
 

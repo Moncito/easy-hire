@@ -1,5 +1,5 @@
 import { requireEmployerPageContext } from "@/lib/employer-session";
-import { getCompanySubscription } from "@/lib/subscriptions";
+import { getCompanySubscription } from "@/lib/billing/subscriptions";
 import BillingPlanComparison from "@/components/employer/billing/BillingPlanComparison";
 import BillingStatusStrip from "@/components/employer/billing/BillingStatusStrip";
 import EmployerPageHeader from "@/components/employer/ui/EmployerPageHeader";

@@ -1,6 +1,5 @@
 import { Plus } from "lucide-react";
 import ProPageHeader from "@/components/employer/pro-dashboard/ProPageHeader";
-import ProJobsPerkStrip from "@/components/employer/pro-dashboard/ProJobsPerkStrip";
 import ProButton from "@/components/employer/pro/ProButton";
 import type { EmployerJobsSummary } from "@/lib/employer-jobs";
 import Link from "next/link";
@@ -52,7 +51,6 @@ export default function ProJobsPageHeader({ summary, companyVerified }: Props) {
           </ProButton>
         }
       />
-      <ProJobsPerkStrip companyVerified={companyVerified} />
     </>
   );
 }

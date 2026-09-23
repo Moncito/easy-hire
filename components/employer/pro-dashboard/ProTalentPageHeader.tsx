@@ -1,6 +1,5 @@
 import { Bookmark, Sparkles } from "lucide-react";
 import ProPageHeader from "@/components/employer/pro-dashboard/ProPageHeader";
-import ProTalentPerkStrip from "@/components/employer/pro-dashboard/ProTalentPerkStrip";
 import ProButton from "@/components/employer/pro/ProButton";
 
 type Props = {
@@ -50,7 +49,6 @@ export default function ProTalentPageHeader({ resultCount, savedMode = false }: 
           </>
         }
       />
-      <ProTalentPerkStrip />
     </>
   );
 }

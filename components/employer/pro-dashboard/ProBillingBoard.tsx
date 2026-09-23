@@ -1,5 +1,4 @@
 import ProPageHeader from "@/components/employer/pro-dashboard/ProPageHeader";
-import ProBillingPerkStrip from "@/components/employer/pro-dashboard/ProBillingPerkStrip";
 import ProBillingPlanCard from "@/components/employer/pro-dashboard/ProBillingPlanCard";
 import ProBillingIncludedList from "@/components/employer/pro-dashboard/ProBillingIncludedList";
 import BillingStatusStrip from "@/components/employer/billing/BillingStatusStrip";
@@ -69,8 +68,6 @@ export default function ProBillingBoard({
       />
 
       {showWelcome && <BillingUpgradeWelcome show />}
-
-      <ProBillingPerkStrip companyVerified={verified} />
 
       <ProBillingPlanCard
         companyVerified={verified}

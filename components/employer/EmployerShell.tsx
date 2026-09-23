@@ -63,7 +63,11 @@ function EmployerShellInner({
         suppressHydrationWarning
       >
         <Sidebar navCounts={navCounts} plan={plan} collaborativeHiringEnabled={collaborativeHiringEnabled} />
-        <EmployerMobileNav plan={plan} collaborativeHiringEnabled={collaborativeHiringEnabled} />
+        <EmployerMobileNav
+          plan={plan}
+          collaborativeHiringEnabled={collaborativeHiringEnabled}
+          navCounts={navCounts}
+        />
         <div
           className={`relative flex min-w-0 flex-1 flex-col transition-[padding] duration-200 ease-out ${
             expanded ? "lg:pl-52" : "lg:pl-[60px]"
@@ -104,7 +108,11 @@ function EmployerShellInner({
       suppressHydrationWarning
     >
       <Sidebar navCounts={navCounts} plan={plan} collaborativeHiringEnabled={collaborativeHiringEnabled} />
-      <EmployerMobileNav plan={plan} collaborativeHiringEnabled={collaborativeHiringEnabled} />
+      <EmployerMobileNav
+        plan={plan}
+        collaborativeHiringEnabled={collaborativeHiringEnabled}
+        navCounts={navCounts}
+      />
       <div
         className={`relative flex min-w-0 flex-1 flex-col transition-[padding] duration-200 ease-out ${
           expanded ? "lg:pl-52" : "lg:pl-[60px]"

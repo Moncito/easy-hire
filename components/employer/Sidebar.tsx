@@ -2,43 +2,17 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  LayoutDashboard,
-  Briefcase,
-  Building2,
-  Users,
-  UserRoundPlus,
-  BarChart3,
-  LogOut,
-  MessageSquare,
-  Search,
-  PanelLeft,
-  CreditCard,
-  Sparkles,
-  Settings,
-} from "lucide-react";
+import { LogOut, PanelLeft, Sparkles, Lock } from "lucide-react";
 import { useEmployerShell } from "@/components/employer/EmployerShellContext";
 import { useRailTooltip } from "@/components/workspaces/useRailTooltip";
 import { useSignOut } from "@/components/ui/useSignOut";
 import ProBadge from "@/components/employer/pro/ProBadge";
-
-type NavCounts = {
-  activeJobs: number;
-  needsReview: number;
-  unreadMessages: number;
-};
-
-const navItems = [
-  { label: "Dashboard", href: "/employer/dashboard", icon: LayoutDashboard, badgeKey: null as keyof NavCounts | null },
-  { label: "Jobs", href: "/employer/jobs", icon: Briefcase, badgeKey: "activeJobs" as const },
-  { label: "Applicants", href: "/employer/applicants", icon: Users, badgeKey: "needsReview" as const },
-  { label: "Messages", href: "/employer/messages", icon: MessageSquare, badgeKey: "unreadMessages" as const },
-  { label: "Talent", href: "/employer/talent", icon: Search, badgeKey: null },
-  { label: "Company", href: "/employer/company-profile", icon: Building2, badgeKey: null },
-  { label: "Reports", href: "/employer/reports", icon: BarChart3, badgeKey: null },
-  { label: "Billing", href: "/employer/billing", icon: CreditCard, badgeKey: null },
-  { label: "Settings", href: "/employer/settings", icon: Settings, badgeKey: null },
-];
+import {
+  visibleEmployerNav,
+  isEmployerNavActive,
+  type NavCounts,
+  type EmployerNavItem,
+} from "@/lib/employer/nav";
 
 function NavLink({
   item,
@@ -47,7 +21,7 @@ function NavLink({
   badge,
   isPro,
 }: {
-  item: (typeof navItems)[number];
+  item: EmployerNavItem;
   isActive: boolean;
   expanded: boolean;
   badge?: number;
@@ -201,57 +175,100 @@ export default function Sidebar({
       )}
 
       <nav
-        className={`flex flex-1 flex-col gap-1 overflow-y-auto overflow-x-hidden py-3 ${
-          expanded ? "px-3" : "items-center px-2"
+        className={`flex flex-1 flex-col overflow-y-auto overflow-x-hidden py-3 ${
+          expanded ? "gap-4 px-3" : "gap-2 items-center px-2"
         }`}
       >
-        {navItems.map((item) => {
-          const isActive =
-            pathname === item.href ||
-            (item.href !== "/employer/dashboard" && pathname.startsWith(item.href));
+        {visibleEmployerNav(collaborativeHiringEnabled).map((group, groupIndex) => {
+          const items = (
+            <div className={`flex flex-col gap-1 ${expanded ? "" : "items-center"}`}>
+              {group.items.map((item) => (
+                <NavLink
+                  key={item.href}
+                  item={item}
+                  isActive={isEmployerNavActive(pathname, item.href)}
+                  expanded={expanded}
+                  badge={item.badgeKey ? navCounts[item.badgeKey] : undefined}
+                  isPro={isPro}
+                />
+              ))}
+            </div>
+          );
+
+          if (!group.label) {
+            return <div key="dashboard">{items}</div>;
+          }
 
           return (
-            <NavLink
-              key={item.href}
-              item={item}
-              isActive={isActive}
-              expanded={expanded}
-              badge={item.badgeKey ? navCounts[item.badgeKey] : undefined}
-              isPro={isPro}
-            />
+            <div key={group.label} role="group" aria-label={group.label}>
+              {expanded ? (
+                <p
+                  aria-hidden="true"
+                  className={`mb-1.5 px-3 text-[10px] font-bold uppercase tracking-wider ${
+                    isPro ? "text-ink/35" : "text-mist/35"
+                  }`}
+                >
+                  {group.label}
+                </p>
+              ) : (
+                groupIndex > 0 && (
+                  <div
+                    aria-hidden="true"
+                    className={`mb-2 h-px w-8 ${isPro ? "bg-ink/10" : "bg-white/10"}`}
+                  />
+                )
+              )}
+              {items}
+            </div>
           );
         })}
-        {collaborativeHiringEnabled && (
-          <NavLink
-            item={{ label: "Team", href: "/employer/team", icon: UserRoundPlus, badgeKey: null }}
-            isActive={pathname === "/employer/team"}
-            expanded={expanded}
-            isPro={isPro}
-          />
-        )}
       </nav>
 
-      {isPro && (
-        <div className={`shrink-0 py-2 ${expanded ? "px-3" : "flex justify-center px-2"}`}>
-          <Link
-            href="/employer/easy-ai"
-            title={expanded ? undefined : "Easy AI"}
-            className={`group relative flex items-center rounded-xl text-[var(--pro-accent-ink,#9a5b12)] transition-colors ${
-              pathname.startsWith("/employer/easy-ai")
-                ? "bg-marigold/20"
-                : "hover:bg-marigold/10"
-            } ${expanded ? "gap-3 px-3 py-2.5" : "h-10 w-10 justify-center"}`}
-          >
+      <div className={`shrink-0 py-2 ${expanded ? "px-3" : "flex justify-center px-2"}`}>
+        <Link
+          href="/employer/easy-ai"
+          title={expanded ? undefined : isPro ? "Easy AI" : "Easy AI — Employer Pro"}
+          className={`group relative flex items-center rounded-xl transition-colors ${
+            expanded ? "gap-3 border px-3 py-2.5" : "h-10 w-10 justify-center"
+          } ${
+            isPro
+              ? `text-[var(--pro-accent-ink,#9a5b12)] ${
+                  expanded ? "border-marigold/20" : ""
+                } ${pathname.startsWith("/employer/easy-ai") ? "bg-marigold/20" : "bg-marigold/5 hover:bg-marigold/10"}`
+              : `text-mist/35 ${expanded ? "border-white/8" : ""} ${
+                  pathname.startsWith("/employer/easy-ai")
+                    ? "bg-white/8 text-mist/60"
+                    : "hover:bg-white/8 hover:text-mist/60"
+                }`
+          }`}
+        >
+          {isPro ? (
             <Sparkles className="h-[18px] w-[18px] shrink-0" strokeWidth={2} />
-            {expanded && <span className="text-sm font-semibold">Easy AI</span>}
-            {!expanded && (
-              <span className="pointer-events-none absolute left-full z-50 ml-3 whitespace-nowrap rounded-lg bg-ink px-2.5 py-1.5 text-xs font-medium text-mist opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100">
+          ) : (
+            <Lock className="h-[18px] w-[18px] shrink-0" strokeWidth={2} />
+          )}
+          {expanded && (
+            <span className="flex min-w-0 flex-1 flex-col">
+              <span className="flex items-center gap-1.5 truncate text-sm font-semibold">
                 Easy AI
+                {!isPro && (
+                  <span className="shrink-0 rounded-full bg-white/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-mist/60">
+                    Pro
+                  </span>
+                )}
               </span>
-            )}
-          </Link>
-        </div>
-      )}
+              <span className={`truncate text-[11px] font-medium ${isPro ? "text-ink/40" : "text-mist/30"}`}>
+                Your hiring copilot
+              </span>
+            </span>
+          )}
+          {!expanded && (
+            <span className="pointer-events-none absolute left-full z-50 ml-3 whitespace-nowrap rounded-lg bg-ink px-2.5 py-1.5 text-xs font-medium text-mist opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100">
+              {isPro ? "Easy AI" : "Easy AI — Employer Pro"}
+            </span>
+          )}
+        </Link>
+      </div>
 
       <div
         className={`shrink-0 py-3 ${isPro ? "border-t border-ink/[0.06]" : "border-t border-white/5"} ${expanded ? "px-3" : "flex justify-center px-2"}`}

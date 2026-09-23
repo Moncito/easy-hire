@@ -2,7 +2,7 @@
 
 import { useId, useState } from "react";
 import type { FormEvent } from "react";
-import { Download, ShieldAlert, TriangleAlert } from "lucide-react";
+import { Download, ShieldAlert } from "lucide-react";
 import { useSignOut } from "@/components/ui/useSignOut";
 
 type Role = "SEEKER" | "EMPLOYER";
@@ -156,46 +156,36 @@ export default function AccountDataRightsPanel({ role, hasPassword }: Props) {
     : confirmationPhrase.trim().toUpperCase() === DELETE_CONFIRMATION_PHRASE;
 
   return (
-    <div className="flex flex-col gap-6">
-      {/* Export section */}
-      <section
-        className={`rounded-2xl border p-5 sm:p-6 ${
-          isEmployer ? "border-teal/15 bg-teal/[0.04]" : "border-marigold/20 bg-marigold/[0.05]"
-        }`}
-        aria-labelledby="export-my-data-heading"
-      >
-        <div
-          className={`flex h-10 w-10 items-center justify-center rounded-xl ${
-            isEmployer ? "bg-teal/15 text-teal" : "bg-marigold/20 text-[#9A5B12]"
-          }`}
-        >
-          <Download className="h-5 w-5" strokeWidth={2} aria-hidden="true" />
-        </div>
-        <h2 id="export-my-data-heading" className="mt-3 font-display text-lg font-bold text-ink">
-          Export my data
-        </h2>
-        <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-ink/60">
-          Download a copy of the personal data associated with your account as a JSON file, in line
-          with your rights under the Data Privacy Act (RA 10173). You can request this up to 3 times
-          per hour.
-        </p>
+    <div className="flex flex-col gap-8">
+      {/* Export */}
+      <div className="overflow-hidden rounded-2xl border border-ink/10 bg-white px-5 py-5 sm:px-6">
+        <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+          <div className="min-w-0">
+            <h3 className="text-sm font-semibold text-ink">Export my data</h3>
+            <p className="mt-1 max-w-2xl text-sm leading-relaxed text-ink/55">
+              Download a copy of the personal data associated with your account as a JSON file, in line
+              with your rights under the Data Privacy Act (RA 10173). You can request this up to 3 times
+              per hour.
+            </p>
+          </div>
 
-        <div role="status" aria-live="polite" className="sr-only">
-          {exportStatus}
-        </div>
+          <div role="status" aria-live="polite" className="sr-only">
+            {exportStatus}
+          </div>
 
-        <button
-          type="button"
-          onClick={handleExport}
-          disabled={exportLoading}
-          aria-busy={exportLoading}
-          className={`mt-4 inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 ${
-            isEmployer ? "bg-teal hover:bg-teal/90" : "bg-navy hover:bg-navy/90"
-          }`}
-        >
-          <Download className="h-4 w-4" strokeWidth={2.25} aria-hidden="true" />
-          {exportLoading ? "Preparing your export…" : "Download my data"}
-        </button>
+          <button
+            type="button"
+            onClick={handleExport}
+            disabled={exportLoading}
+            aria-busy={exportLoading}
+            className={`inline-flex shrink-0 items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 ${
+              isEmployer ? "bg-teal hover:bg-teal/90" : "bg-navy hover:bg-navy/90"
+            }`}
+          >
+            <Download className="h-4 w-4" strokeWidth={2.25} aria-hidden="true" />
+            {exportLoading ? "Preparing your export…" : "Download my data"}
+          </button>
+        </div>
 
         {exportError && (
           <p role="alert" className="mt-3 text-sm text-ember">
@@ -205,19 +195,17 @@ export default function AccountDataRightsPanel({ role, hasPassword }: Props) {
         {!exportError && exportStatus && !exportLoading && (
           <p className="mt-3 text-sm text-ink/50">{exportStatus}</p>
         )}
-      </section>
+      </div>
 
-      {/* Delete section */}
+      {/* Danger zone */}
       <section
-        className="rounded-2xl border border-ember/25 bg-ember/[0.04] p-5 sm:p-6"
+        className="rounded-2xl border border-ember/25 px-5 py-5 sm:px-6"
         aria-labelledby={deleteHeadingId}
       >
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-ember/15 text-ember">
-          <TriangleAlert className="h-5 w-5" strokeWidth={2} aria-hidden="true" />
-        </div>
-        <h2 id={deleteHeadingId} className="mt-3 font-display text-lg font-bold text-ink">
-          Delete my account
+        <h2 id={deleteHeadingId} className="font-display text-base font-bold text-ember">
+          Danger zone
         </h2>
+        <p className="mt-1 text-sm font-semibold text-ink">Delete my account</p>
 
         <div className="mt-2 max-w-2xl space-y-1.5 text-sm leading-relaxed text-ink/65">
           <p>This is permanent and cannot be undone. Deleting your account will:</p>
