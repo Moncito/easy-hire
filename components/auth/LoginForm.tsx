@@ -65,11 +65,21 @@ export default function LoginForm({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusCodeToken, codeMode]);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  /**
+   * `codeOverride` exists because the OtpInput auto-submits the moment its
+   * sixth digit lands, in the same event that calls `setTotpCode`. React
+   * hasn't re-rendered at that point, so a submit reading `totpCode` from
+   * state would send the previous five-character value — which `Auth.ts`
+   * classifies as neither a TOTP nor a recovery code and rejects, making a
+   * perfectly correct code look wrong. The completed value is passed
+   * straight through instead.
+   */
+  async function submitCredentials(codeOverride?: string) {
     setError("");
     setCodeError("");
     setLoading(true);
+
+    const submittedCode = codeOverride ?? totpCode;
 
     // next-auth's client `signIn` serializes this object via
     // `new URLSearchParams({...})`, which stringifies `undefined` to the
@@ -80,7 +90,7 @@ export default function LoginForm({
     const result = await signIn("credentials", {
       email,
       password,
-      totpCode: step === "code" ? totpCode.trim() : "",
+      totpCode: step === "code" ? submittedCode.trim() : "",
       redirect: false,
     });
 
@@ -107,6 +117,11 @@ export default function LoginForm({
 
     onSuccess?.();
     router.push("/dashboard");
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    await submitCredentials();
   }
 
   function handleUseDifferentEmail() {
@@ -224,8 +239,11 @@ export default function LoginForm({
                   name="totpCode"
                   value={totpCode}
                   onChange={setTotpCode}
-                  onComplete={() => {
-                    if (!loading) formRef.current?.requestSubmit();
+                  onComplete={(code) => {
+                    // Pass the completed value through rather than going via
+                    // requestSubmit — the submit handler would read stale
+                    // state and send five digits. See submitCredentials.
+                    if (!loading) void submitCredentials(code);
                   }}
                   autoFocus
                   accent="marigold"

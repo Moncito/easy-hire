@@ -286,11 +286,18 @@ export default function AccountSecurityPanel({ role, hasPassword, passwordChange
     setTwoFactorStatusMsg("");
   }
 
-  async function handleConfirmCode(event: FormEvent) {
-    event.preventDefault();
+  /**
+   * `codeOverride` exists because OtpInput auto-submits as its sixth digit
+   * lands, in the same event that calls `setCode`. React hasn't re-rendered
+   * yet, so reading `code` from state here would send the previous
+   * five-character value and reject a correct code.
+   */
+  async function submitConfirmCode(codeOverride?: string) {
     setSetupError(null);
 
-    if (code.length !== 6) {
+    const submittedCode = codeOverride ?? code;
+
+    if (submittedCode.length !== 6) {
       setSetupError("Enter the 6-digit code from your authenticator app.");
       return;
     }
@@ -301,7 +308,7 @@ export default function AccountSecurityPanel({ role, hasPassword, passwordChange
       const res = await fetch("/api/account/2fa/confirm", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code }),
+        body: JSON.stringify({ code: submittedCode }),
       });
       const data = await res.json().catch(() => null);
 
@@ -332,6 +339,11 @@ export default function AccountSecurityPanel({ role, hasPassword, passwordChange
     } finally {
       setConfirmSubmitting(false);
     }
+  }
+
+  async function handleConfirmCode(event: FormEvent) {
+    event.preventDefault();
+    await submitConfirmCode();
   }
 
   async function copyRecoveryCodes() {
@@ -664,8 +676,11 @@ export default function AccountSecurityPanel({ role, hasPassword, passwordChange
                     id={codeInputId}
                     value={code}
                     onChange={setCode}
-                    onComplete={() => {
-                      if (!confirmSubmitting) confirmFormRef.current?.requestSubmit();
+                    onComplete={(completed) => {
+                      // Pass the completed value through rather than going
+                      // via requestSubmit — the handler would read stale
+                      // state and send five digits. See submitConfirmCode.
+                      if (!confirmSubmitting) void submitConfirmCode(completed);
                     }}
                     disabled={confirmSubmitting}
                     accent={isEmployer ? "teal" : "marigold"}
