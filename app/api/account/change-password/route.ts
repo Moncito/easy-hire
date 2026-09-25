@@ -5,6 +5,7 @@ import { clientKeyFromRequest, enforceRateLimit } from "@/lib/rate-limit";
 import { parseJsonBody } from "@/lib/parse-json-body";
 import { changePasswordRequestSchema } from "@/lib/validations/account";
 import { changePassword } from "@/lib/account/change-password";
+import { keepCurrentSession } from "@/lib/auth/keep-current-session";
 
 // Guards password-guessing via repeated "current password" attempts — same
 // shape as /api/account/delete's re-auth cap.
@@ -34,6 +35,9 @@ export async function POST(req: Request) {
 
     const body = changePasswordRequestSchema.parse(await parseJsonBody(req));
     const result = await changePassword(session.user.id, body);
+    if (result.outcome === "changed") {
+      await keepCurrentSession(session.user.id);
+    }
 
     return NextResponse.json({ ok: true, ...result });
   } catch (error) {

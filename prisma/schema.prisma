@@ -68,6 +68,13 @@ model User {
   // needs a URL. Backfilled lazily on first send rather than for every
   // existing row up front.
   unsubscribeToken         String? @unique @map("unsubscribe_token")
+  // Session revocation cutoff. Any JWT issued before this instant is
+  // rejected by the jwt callback in Auth.ts (see lib/auth/session-revocation.ts).
+  // Stamped on password change, password reset, a Google eviction of an
+  // unverified password, and "Sign out of other devices". Kept separate
+  // from passwordChangedAt so signing out elsewhere doesn't change the
+  // "last changed" date the security panel shows.
+  sessionsValidAfter       DateTime? @map("sessions_valid_after")
 
   // Relations
   seekerProfile      SeekerProfile?

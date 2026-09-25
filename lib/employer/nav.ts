@@ -110,6 +110,8 @@ export function getEmployerPageTitle(pathname: string): string {
   if (pathname === "/employer/company-profile") return "Company profile";
   if (pathname === "/employer/reports") return "Reports";
   if (pathname === "/employer/billing") return "Billing";
+  if (pathname === "/employer/team") return "Team";
+  if (pathname === "/employer/settings") return "Settings";
   if (pathname === "/employer/easy-ai") return "Easy AI";
   return "Employer";
 }

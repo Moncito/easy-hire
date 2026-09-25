@@ -19,5 +19,7 @@ declare module "next-auth/jwt" {
     role: "SEEKER" | "EMPLOYER" | "ADMIN";
     idVerified?: boolean;
     roleRefreshedAt?: number;
+    /** Epoch ms the session began (or was re-issued) — compared to users.sessions_valid_after, see lib/auth/session-revocation.ts. */
+    sessionIssuedAt?: number;
   }
 }

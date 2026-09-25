@@ -118,7 +118,7 @@ export default function AccountSettingsSections({
               <h2 id="security-heading" className="font-display text-xl font-bold text-ink">
                 Security
               </h2>
-              <p className="mt-1 text-sm text-ink/55">Manage your password and two-factor authentication.</p>
+              <p className="mt-1 text-sm text-ink/55">Manage your password, two-factor authentication, and signed-in devices.</p>
               <div className="mt-5">
                 <AccountSecurityPanel role={role} hasPassword={hasPassword} passwordChangedLabel={passwordChangedLabel} />
               </div>
