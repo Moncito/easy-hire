@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { Copy, Download, Loader2, Mail, ShieldCheck, ShieldOff } from "lucide-react";
+import OtpInput from "@/components/ui/OtpInput";
 
 type Role = "SEEKER" | "EMPLOYER";
 
@@ -116,6 +117,7 @@ export default function AccountSecurityPanel({ role, hasPassword, passwordChange
   const [setupError, setSetupError] = useState<string | null>(null);
   const [code, setCode] = useState("");
   const [confirmSubmitting, setConfirmSubmitting] = useState(false);
+  const confirmFormRef = useRef<HTMLFormElement>(null);
 
   const [recoveryCodes, setRecoveryCodes] = useState<string[] | null>(null);
   const [recoveryAcknowledged, setRecoveryAcknowledged] = useState(false);
@@ -648,21 +650,27 @@ export default function AccountSecurityPanel({ role, hasPassword, passwordChange
                 </div>
               </div>
 
-              <form onSubmit={handleConfirmCode} className="mt-5 flex flex-col gap-4" noValidate>
+              <form
+                ref={confirmFormRef}
+                onSubmit={handleConfirmCode}
+                className="mt-5 flex flex-col gap-4"
+                noValidate
+              >
                 <div>
                   <label htmlFor={codeInputId} className="mb-1.5 block text-sm font-medium text-ink/80">
                     6-digit code
                   </label>
-                  <input
+                  <OtpInput
                     id={codeInputId}
-                    type="text"
-                    inputMode="numeric"
-                    autoComplete="one-time-code"
                     value={code}
-                    onChange={(event) => setCode(sanitizeCodeInput(event.target.value))}
-                    placeholder="000000"
+                    onChange={setCode}
+                    onComplete={() => {
+                      if (!confirmSubmitting) confirmFormRef.current?.requestSubmit();
+                    }}
+                    disabled={confirmSubmitting}
+                    accent={isEmployer ? "teal" : "marigold"}
+                    hasError={!!setupError}
                     aria-describedby={setupError ? setupErrorId : undefined}
-                    className={`w-full max-w-[10rem] rounded-xl border border-ink/12 px-4 py-2.5 text-center font-data text-lg tracking-[0.3em] text-ink outline-none transition-colors focus:ring-2 ${accentFocus}`}
                   />
                 </div>
 

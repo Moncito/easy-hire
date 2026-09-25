@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import OtpInput, { type OtpInputHandle } from "@/components/ui/OtpInput";
 
 type Props = {
   onSuccess?: () => void;
@@ -18,6 +19,11 @@ type Props = {
 // only two error codes this form is allowed to branch on.
 type Step = "password" | "code";
 
+// Which widget the code step shows. `Auth.ts` classifies whatever string
+// lands in `totpCode` by shape (6 digits vs `xxxxx-xxxxx`) — this only
+// controls which input is on screen, never the submitted field name/value.
+type CodeMode = "totp" | "recovery";
+
 export default function LoginForm({
   onSuccess,
   showSignupLink = true,
@@ -25,6 +31,7 @@ export default function LoginForm({
 }: Props) {
   const router = useRouter();
   const [step, setStep] = useState<Step>("password");
+  const [codeMode, setCodeMode] = useState<CodeMode>("totp");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [totpCode, setTotpCode] = useState("");
@@ -38,16 +45,25 @@ export default function LoginForm({
   const [codeError, setCodeError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const codeInputRef = useRef<HTMLInputElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
+  const otpRef = useRef<OtpInputHandle>(null);
+  const recoveryInputRef = useRef<HTMLInputElement>(null);
   const [focusCodeToken, setFocusCodeToken] = useState(0);
 
   useEffect(() => {
-    if (step === "code") {
-      codeInputRef.current?.focus();
-      codeInputRef.current?.select();
+    if (step !== "code") return;
+    if (codeMode === "totp") {
+      otpRef.current?.focus();
+    } else {
+      recoveryInputRef.current?.focus();
+      recoveryInputRef.current?.select();
     }
+    // Re-focuses on: entering the code step (totp_required), a rejected
+    // code (totp_invalid bumps focusCodeToken), and switching between the
+    // 6-box and recovery-code widgets (codeMode) — deliberately not on
+    // every `step` render, same as before this component had a mode toggle.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [focusCodeToken]);
+  }, [focusCodeToken, codeMode]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -95,14 +111,24 @@ export default function LoginForm({
 
   function handleUseDifferentEmail() {
     setStep("password");
+    setCodeMode("totp");
     setTotpCode("");
     setCodeError("");
     setError("");
   }
 
+  function handleToggleCodeMode() {
+    setCodeMode((m) => (m === "totp" ? "recovery" : "totp"));
+    // The two modes hold differently-shaped values (6 digits vs
+    // xxxxx-xxxxx) — carrying one over into the other widget would just be
+    // confusing leftover text, not a usable partial code.
+    setTotpCode("");
+    setCodeError("");
+  }
+
   return (
     <div>
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
+      <form ref={formRef} onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
         {step === "password" && (
           <>
             <div>
@@ -163,37 +189,75 @@ export default function LoginForm({
             </div>
 
             <div>
-              <label
-                htmlFor={`${idPrefix}-totp`}
-                className="mb-1.5 block text-sm font-medium text-ink/80"
-              >
-                Two-factor code
-              </label>
+              <div className="mb-1.5 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                <label
+                  htmlFor={`${idPrefix}-totp`}
+                  className="block text-sm font-medium text-ink/80"
+                >
+                  {codeMode === "totp" ? "Two-factor code" : "Recovery code"}
+                </label>
+                <button
+                  type="button"
+                  onClick={handleToggleCodeMode}
+                  className="cursor-pointer text-xs font-semibold text-ink/60 underline hover:text-ink"
+                >
+                  {codeMode === "totp"
+                    ? "Use a recovery code instead"
+                    : "Use your authenticator app instead"}
+                </button>
+              </div>
               <p className="mb-2 text-xs text-ink/55">
-                Enter the 6-digit code from your authenticator app, or one of your recovery
-                codes (formatted like <span className="font-data">xxxxx-xxxxx</span>) if
-                you&apos;ve lost access to it.
+                {codeMode === "totp" ? (
+                  "Enter the 6-digit code from your authenticator app."
+                ) : (
+                  <>
+                    Enter one of your recovery codes (formatted like{" "}
+                    <span className="font-data">xxxxx-xxxxx</span>) — use this if you&apos;ve
+                    lost access to your authenticator app.
+                  </>
+                )}
               </p>
-              <input
-                ref={codeInputRef}
-                id={`${idPrefix}-totp`}
-                name="totpCode"
-                type="text"
-                autoComplete="one-time-code"
-                autoCapitalize="none"
-                autoCorrect="off"
-                spellCheck={false}
-                placeholder="123456 or xxxxx-xxxxx"
-                value={totpCode}
-                onChange={(e) => setTotpCode(e.target.value)}
-                required
-                aria-describedby={
-                  codeError
-                    ? `${idPrefix}-totp-error ${idPrefix}-totp-rate-note`
-                    : `${idPrefix}-totp-rate-note`
-                }
-                className="w-full rounded-xl border border-ink/15 px-4 py-3 font-data text-sm tracking-wide text-ink outline-none transition-colors focus:border-marigold focus:ring-2 focus:ring-marigold/20"
-              />
+              {codeMode === "totp" ? (
+                <OtpInput
+                  ref={otpRef}
+                  id={`${idPrefix}-totp`}
+                  name="totpCode"
+                  value={totpCode}
+                  onChange={setTotpCode}
+                  onComplete={() => {
+                    if (!loading) formRef.current?.requestSubmit();
+                  }}
+                  autoFocus
+                  accent="marigold"
+                  hasError={!!codeError}
+                  aria-describedby={
+                    codeError
+                      ? `${idPrefix}-totp-error ${idPrefix}-totp-rate-note`
+                      : `${idPrefix}-totp-rate-note`
+                  }
+                />
+              ) : (
+                <input
+                  ref={recoveryInputRef}
+                  id={`${idPrefix}-totp`}
+                  name="totpCode"
+                  type="text"
+                  autoComplete="one-time-code"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  placeholder="xxxxx-xxxxx"
+                  value={totpCode}
+                  onChange={(e) => setTotpCode(e.target.value)}
+                  required
+                  aria-describedby={
+                    codeError
+                      ? `${idPrefix}-totp-error ${idPrefix}-totp-rate-note`
+                      : `${idPrefix}-totp-rate-note`
+                  }
+                  className="w-full rounded-xl border border-ink/15 px-4 py-3 font-data text-sm tracking-wide text-ink outline-none transition-colors focus:border-marigold focus:ring-2 focus:ring-marigold/20"
+                />
+              )}
             </div>
 
             {codeError && (
