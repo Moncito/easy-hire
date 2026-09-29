@@ -228,8 +228,8 @@ export default function AccountDataRightsPanel({ role, hasPassword }: Props) {
             {isEmployer && (
               <li>
                 Remove your membership from any other company&apos;s hiring team you belong to. If you are
-                the sole owner of a company with other active team members, you&apos;ll need to transfer
-                ownership first.
+                the sole owner of a company with other active team members, transfer ownership to one of
+                them from Team first.
               </li>
             )}
           </ul>

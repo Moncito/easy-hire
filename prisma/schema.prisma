@@ -275,6 +275,13 @@ model Company {
   instagramUrl                String?            @map("instagram_url")
   xUrl                        String?            @map("x_url")
   verificationRejectionReason String?            @map("verification_rejection_reason")
+  // Ownership transfer offer (lib/company-ownership-transfer.ts). The owner
+  // nominates an active team member; nothing moves until that member accepts.
+  // No FK on purpose: acceptance re-checks the nominee is still an ACTIVE
+  // member, which already covers a deleted or removed account. Offers lapse
+  // OWNERSHIP_TRANSFER_TTL_DAYS after ownerTransferRequestedAt.
+  pendingOwnerUserId          String?            @map("pending_owner_user_id")
+  ownerTransferRequestedAt    DateTime?          @map("owner_transfer_requested_at")
 
   // Relations
   user                       User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -315,6 +322,8 @@ model Company {
   // Sprint 10b follow-up — nightly rollup counts new companies per day
   // (lib/admin/rollups.ts); no supporting index on this column before.
   @@index([createdAt])
+  // Nominee's "ownership offers waiting for me" lookup on /hiring.
+  @@index([pendingOwnerUserId])
   @@map("companies")
 }
 
