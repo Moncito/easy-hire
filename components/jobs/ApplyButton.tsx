@@ -66,6 +66,8 @@ export default function ApplyButton({
   const [error, setError] = useState("");
   const [applied, setApplied] = useState(false);
   const [justSubmitted, setJustSubmitted] = useState(false);
+  /** The company's note to applicants (hiring defaults), shown once right after submitting. */
+  const [applicantNote, setApplicantNote] = useState<string | null>(null);
   const [hasResume, setHasResume] = useState<boolean | null>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -212,6 +214,7 @@ export default function ApplyButton({
 
       setApplied(true);
       setJustSubmitted(true);
+      setApplicantNote(result.data.applicantNote ?? null);
       toast.success("Application submitted — check your email for confirmation");
     } catch {
       const msg = "Network error — please try again.";
@@ -331,6 +334,16 @@ export default function ApplyButton({
                       <p className="mt-1 text-sm text-ink/55">
                         The employer will review your profile soon.
                       </p>
+                      {justSubmitted && applicantNote && (
+                        <div className="mx-auto mt-4 max-w-md border-l-2 border-marigold pl-3 text-left">
+                          <p className="text-[11px] font-bold uppercase tracking-wider text-ink/45">
+                            A note from {companyName}
+                          </p>
+                          <p className="mt-1 whitespace-pre-line text-sm leading-relaxed text-ink/75">
+                            {applicantNote}
+                          </p>
+                        </div>
+                      )}
                       <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-center">
                         <Link
                           href="/seeker/dashboard"

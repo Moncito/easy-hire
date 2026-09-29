@@ -4,6 +4,8 @@ import { ArrowRight, CheckCircle2, Lock } from "lucide-react";
 import Badge from "@/components/ui/Badge";
 import type { WorkspaceSettingsSectionId } from "@/components/account/AccountSettingsNav";
 import type { BillingSettingsSummary, TeamSettingsSummary } from "@/lib/employer/workspace-settings";
+import type { HiringDefaults } from "@/lib/validations/hiring-defaults";
+import HiringDefaultsForm from "@/components/employer/settings/HiringDefaultsForm";
 
 type CompanyInfo = {
   id: string;
@@ -13,12 +15,17 @@ type CompanyInfo = {
 
 export type WorkspaceSettingsData =
   | { section: "company"; company: CompanyInfo }
+  | { section: "hiring"; defaults: HiringDefaults }
   | { section: "team"; collaborativeHiringEnabled: false }
   | { section: "team"; collaborativeHiringEnabled: true; team: TeamSettingsSummary }
   | { section: "billing"; plan: "FREE" | "PRO"; billing: BillingSettingsSummary; periodEndLabel: string | null };
 
 const HEADINGS: Record<WorkspaceSettingsSectionId, { title: string; description: string }> = {
   company: { title: "Company", description: "How your company appears to job seekers, and where verification stands." },
+  hiring: {
+    title: "Hiring defaults",
+    description: "Starting points for new jobs, rejections, and the message applicants get. Everything stays editable where it's used.",
+  },
   team: { title: "Team", description: "Who can work in your hiring workspace, and who owns it." },
   billing: { title: "Plan & billing", description: "Your plan and what it's billed at." },
 };
@@ -102,6 +109,8 @@ export default function WorkspaceSettingsSection({ data }: { data: WorkspaceSett
           </Action>
         </>
       )}
+
+      {data.section === "hiring" && <HiringDefaultsForm initialDefaults={data.defaults} />}
 
       {data.section === "team" && !data.collaborativeHiringEnabled && (
         <>

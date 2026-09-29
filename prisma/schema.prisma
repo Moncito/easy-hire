@@ -297,6 +297,7 @@ model Company {
   collaborativeHiringEnabled Boolean                @default(false) @map("collaborative_hiring_enabled")
   members                    CompanyMember[]
   invitations                CompanyInvitation[]
+  hiringDefaults             CompanyHiringDefaults?
   reviewsReceived            Review[]
 
   // Denormalized public "response metrics" rollup (Phase 4.3), recomputed nightly by
@@ -361,6 +362,35 @@ model CompanyMember {
   @@index([companyId, status])
   @@index([userId, status])
   @@map("company_members")
+}
+
+// Hiring defaults (lib/employer/hiring-defaults.ts). Pre-fill values only:
+// new jobs copy them at creation, the reject dialog starts from the
+// rejection message, and the applicant note rides along on the "application
+// received" email. Editing a default never changes an existing job or a
+// message already sent. One row per company, created on first save — a
+// company with no row simply has no defaults.
+model CompanyHiringDefaults {
+  id                 String          @id @default(cuid())
+  companyId          String          @unique @map("company_id")
+  category           String?
+  industry           String?
+  employmentType     EmploymentType? @map("employment_type")
+  remoteType         RemoteType?     @map("remote_type")
+  salaryPeriod       SalaryPeriod?   @map("salary_period")
+  location           String?
+  // [{ prompt: string, required: boolean }], same shape and limits as a
+  // job's ScreeningQuestion rows (lib/validations/job.ts). JSON rather than a
+  // child table: it's a template that's only ever read and written whole.
+  screeningQuestions Json            @default("[]") @map("screening_questions")
+  rejectionMessage   String?         @map("rejection_message")
+  applicantNote      String?         @map("applicant_note")
+  createdAt          DateTime        @default(now()) @map("created_at")
+  updatedAt          DateTime        @updatedAt @map("updated_at")
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@map("company_hiring_defaults")
 }
 
 model CompanyInvitation {

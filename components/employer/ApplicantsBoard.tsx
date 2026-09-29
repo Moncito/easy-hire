@@ -27,6 +27,8 @@ type Props = {
   needsAttention?: boolean;
   employerName: string;
   initialApplications: Application[];
+  /** Hiring-defaults rejection message; the reject dialog opens with it, still editable. */
+  defaultRejectionMessage?: string | null;
 };
 
 type PendingReject = {
@@ -48,6 +50,7 @@ export default function ApplicantsBoard({
   needsAttention = false,
   employerName,
   initialApplications,
+  defaultRejectionMessage,
 }: Props) {
   const { isPro } = useEmployerShell();
   const router = useRouter();
@@ -390,6 +393,7 @@ export default function ApplicantsBoard({
           setRejectError("");
         }}
         onConfirm={confirmReject}
+        defaultReason={defaultRejectionMessage ?? ""}
       />
     </div>
   );

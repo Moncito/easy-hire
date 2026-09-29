@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Bell, Building2, CreditCard, Download, KeyRound, User, UsersRound } from "lucide-react";
+import { Bell, Building2, CreditCard, Download, KeyRound, SlidersHorizontal, User, UsersRound } from "lucide-react";
 
 export type AccountSettingsRole = "SEEKER" | "EMPLOYER";
 
@@ -20,6 +20,7 @@ export const ACCOUNT_SETTINGS_SECTIONS = [
   { id: "notifications", label: "Notifications", icon: Bell, group: "account" },
   { id: "privacy", label: "Privacy & data", icon: Download, group: "account" },
   { id: "company", label: "Company", icon: Building2, group: "workspace" },
+  { id: "hiring", label: "Hiring defaults", icon: SlidersHorizontal, group: "workspace" },
   { id: "team", label: "Team", icon: UsersRound, group: "workspace" },
   { id: "billing", label: "Plan & billing", icon: CreditCard, group: "workspace" },
 ] as const;

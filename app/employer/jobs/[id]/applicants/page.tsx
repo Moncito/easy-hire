@@ -5,6 +5,7 @@ import { listJobApplications } from "@/lib/applications";
 import { getEmployerJobForApplicants } from "@/lib/employer-jobs";
 import { listReviewableApplications } from "@/lib/reviews";
 import ReviewablePromptList from "@/components/reviews/ReviewablePromptList";
+import { getHiringDefaults } from "@/lib/employer/hiring-defaults";
 
 const PAGE_SIZE = 50;
 
@@ -26,9 +27,10 @@ export default async function ApplicantsPage({
     redirect("/employer/jobs");
   }
 
-  const [{ applications, total, totalPages }, jobReviewablePrompts] = await Promise.all([
+  const [{ applications, total, totalPages }, jobReviewablePrompts, hiringDefaults] = await Promise.all([
     listJobApplications(job.id, page, PAGE_SIZE),
     listReviewableApplications(session.user.id, { jobId: job.id }),
+    getHiringDefaults(company.id),
   ]);
 
   // Wall-clock read for the "days left"/"auto-reveals in" labels below —
@@ -95,6 +97,7 @@ export default async function ApplicantsPage({
         needsAttention={needsAttention}
         employerName={company?.companyName ?? "Team"}
         initialApplications={JSON.parse(JSON.stringify(applications))}
+        defaultRejectionMessage={hiringDefaults.rejectionMessage}
       />
     </>
   );

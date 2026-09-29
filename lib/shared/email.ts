@@ -332,6 +332,8 @@ type ApplicationEmailContext = {
   /** Each recipient's own flag — the employer's "new applicant" email and the seeker's "application submitted" email are gated independently. */
   employerNotifyApplicationUpdates: boolean;
   seekerNotifyApplicationUpdates: boolean;
+  /** The company's hiring-defaults note to applicants, raw text. Escaped here before rendering. */
+  applicantNote?: string | null;
 };
 
 // EmailCategory "APPLICATION_UPDATES" (lib/shared/email-preferences.ts) —
@@ -385,6 +387,7 @@ export async function notifyApplicationSubmitted(ctx: ApplicationEmailContext) {
           companyName: escapeHtml(ctx.companyName),
           jobTitle: escapeHtml(ctx.jobTitle),
           dashboardUrl: `${appUrl}/seeker/dashboard`,
+          applicantNote: ctx.applicantNote ? escapeHtml(ctx.applicantNote) : null,
         })
       )
     ),

@@ -1,6 +1,7 @@
 import { requireEmployerPageContext } from "@/lib/employer-session";
 import { getAccountSettingsContext } from "@/lib/account/settings-context";
 import { getBillingSettingsSummary, getTeamSettingsSummary } from "@/lib/employer/workspace-settings";
+import { getHiringDefaults } from "@/lib/employer/hiring-defaults";
 import EmployerPageHeader from "@/components/employer/ui/EmployerPageHeader";
 import AccountSettingsSections from "@/components/account/AccountSettingsSections";
 import {
@@ -23,6 +24,9 @@ async function loadWorkspaceData(
       section,
       company: { id: company.id, companyName: company.companyName, verifiedStatus: company.verifiedStatus },
     };
+  }
+  if (section === "hiring") {
+    return { section, defaults: await getHiringDefaults(company.id) };
   }
   if (section === "team") {
     if (!collaborativeHiringEnabled) return { section, collaborativeHiringEnabled: false };
