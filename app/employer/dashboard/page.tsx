@@ -24,6 +24,7 @@ import DashboardSurface from "@/components/employer/dashboard/DashboardSurface";
 import DashboardApplicantQueue from "@/components/employer/dashboard/DashboardApplicantQueue";
 import DashboardJobPerformance from "@/components/employer/dashboard/DashboardJobPerformance";
 import WeeklyTrendChart from "@/components/employer/charts/WeeklyTrendChart";
+import { getDashboardInsights, parseDashboardRange } from "@/lib/employer/dashboard-insights";
 import {
   getJobPerformanceRows,
   shouldShowApplicantQueue,
@@ -75,12 +76,20 @@ function VerificationBanners({
   return null;
 }
 
-export default async function EmployerDashboardPage() {
+export default async function EmployerDashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ range?: string | string[] }>;
+}) {
   const { company, plan } = await requireEmployerPageContext();
   const isPro = plan === "PRO";
-  const [analytics, applicantQueue] = await Promise.all([
+  // The Pro dashboard's date range (7/30/60 days, default 30). Read here so
+  // every section fetches on the server for the same window.
+  const range = parseDashboardRange((await searchParams).range);
+  const [analytics, applicantQueue, proInsights] = await Promise.all([
     getEmployerAnalyticsCached(company.id),
     getDashboardApplicantQueueCached(company.id),
+    isPro ? getDashboardInsights(company.id) : Promise.resolve([]),
   ]);
   const { metrics, weeklyTrend, insights } = analytics;
 
@@ -119,9 +128,7 @@ export default async function EmployerDashboardPage() {
           company={{
             companyName: company.companyName,
             logoUrl: company.logoUrl,
-            description: company.description,
             headquarters: company.headquarters,
-            industry: company.industry,
             verifiedStatus: company.verifiedStatus,
           }}
           analytics={analytics}
@@ -129,10 +136,10 @@ export default async function EmployerDashboardPage() {
           chartData={chartData}
           sparse={sparse}
           scoreHint={scoreHint}
-          chartIsEmpty={chartIsEmpty}
           showGettingStarted={showGettingStarted}
           gettingStartedSteps={gettingStartedSteps}
-          onboardingItems={onboardingItems}
+          insights={proInsights}
+          range={range}
         />
       ) : sparse && chartIsEmpty ? (
         <DashboardSparseBoard

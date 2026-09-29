@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 
-import type { AttentionItem, EmployerAnalytics } from "@/lib/employer-analytics";
+import type { EmployerAnalytics } from "@/lib/employer-analytics";
 import type { DashboardApplicantItem } from "@/lib/employer/dashboard-panels";
 import type { GettingStartedStep } from "@/lib/employer/dashboard-sparse";
+import type { DashboardInsight, DashboardRange } from "@/lib/employer/dashboard-insights";
 import type { ProWeeklyPoint } from "@/components/employer/charts/pro/ProMonoWeeklyChart";
 import { shouldShowApplicantQueue } from "@/lib/employer/dashboard-panels";
 
@@ -12,17 +13,14 @@ import ProMonoFunnel from "@/components/employer/charts/pro/ProMonoFunnel";
 import ProCompanyBand from "@/components/employer/pro-dashboard/ProCompanyBand";
 import ProJobsTable from "@/components/employer/pro-dashboard/ProJobsTable";
 import ProApplicantList from "@/components/employer/pro-dashboard/ProApplicantList";
-import ProPlaybookRow from "@/components/employer/pro-dashboard/ProPlaybookRow";
-import ProAttentionStrip from "@/components/employer/pro-dashboard/ProAttentionStrip";
+import ProInsightCard from "@/components/employer/pro-dashboard/ProInsightCard";
 import ProGettingStarted from "@/components/employer/pro-dashboard/ProGettingStarted";
 import RecentActivity from "@/components/employer/dashboard/RecentActivity";
 
 type Company = {
   companyName: string;
   logoUrl?: string | null;
-  description?: string | null;
   headquarters?: string | null;
-  industry?: string | null;
   verifiedStatus: string;
 };
 
@@ -33,10 +31,10 @@ type Props = {
   chartData: ProWeeklyPoint[];
   sparse: boolean;
   scoreHint: string | null;
-  chartIsEmpty: boolean;
   showGettingStarted: boolean;
   gettingStartedSteps: GettingStartedStep[];
-  onboardingItems: AttentionItem[];
+  insights: DashboardInsight[];
+  range: DashboardRange;
 };
 
 function Kpi({
@@ -74,12 +72,12 @@ export default function ProDashboardBoard({
   chartData,
   sparse,
   scoreHint,
-  chartIsEmpty,
   showGettingStarted,
   gettingStartedSteps,
-  onboardingItems,
+  insights,
+  range,
 }: Props) {
-  const { metrics, insights, funnel } = analytics;
+  const { metrics, insights: analyticsInsights, funnel } = analytics;
   const showApplicants = shouldShowApplicantQueue(metrics.totalApplicants);
   const weekApps = chartData.reduce((sum, day) => sum + day.applications, 0);
   const weekHint =
@@ -90,29 +88,21 @@ export default function ProDashboardBoard({
   const interviewChange = formatChange(metrics.interviewsChange);
 
   return (
-    <div className="flex flex-col gap-8 pb-8">
+    <div className="flex flex-col gap-5 pb-8">
       <ProCompanyBand
         companyName={company.companyName}
         companyLogoUrl={company.logoUrl}
-        description={company.description}
         headquarters={company.headquarters}
-        industry={company.industry}
         verifiedStatus={company.verifiedStatus}
-        analytics={analytics}
+        range={range}
       />
 
-      <ProAttentionStrip items={analytics.attentionItems} fallbackItems={onboardingItems} />
+      {/* One place for "what needs you": replaces the dark pill, the pink
+          ACTION REQUIRED banner, and the Easy AI line under the name, which
+          all repeated the same waiting-applicant count. */}
+      <ProInsightCard insights={insights} />
 
       {showGettingStarted && <ProGettingStarted steps={gettingStartedSteps} />}
-
-      {chartIsEmpty && <ProPlaybookRow />}
-
-      {insights.actionRequired && (
-        <div className="rounded-[var(--pro-radius,1.75rem)] border border-ember/20 bg-ember/[0.05] px-5 py-4">
-          <p className="text-xs font-bold uppercase tracking-wider text-ember">Action required</p>
-          <p className="mt-1 text-sm leading-relaxed text-ink/75">{insights.actionRequired}</p>
-        </div>
-      )}
 
       <section
         aria-labelledby="pro-week-heading"
@@ -165,8 +155,8 @@ export default function ProDashboardBoard({
                 : null
             }
           />
-          {insights.marketInsight && (
-            <p className="mt-3 text-xs leading-relaxed text-ink/45">{insights.marketInsight}</p>
+          {analyticsInsights.marketInsight && (
+            <p className="mt-3 text-xs leading-relaxed text-ink/45">{analyticsInsights.marketInsight}</p>
           )}
         </aside>
       </section>

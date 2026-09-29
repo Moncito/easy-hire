@@ -29,6 +29,8 @@ type Props = {
   initialApplications: Application[];
   /** Hiring-defaults rejection message; the reject dialog opens with it, still editable. */
   defaultRejectionMessage?: string | null;
+  /** `?application=` from a deep link (e.g. the dashboard's Easy AI card): opens that candidate's panel on load. */
+  initialSelectedId?: string | null;
 };
 
 type PendingReject = {
@@ -51,12 +53,15 @@ export default function ApplicantsBoard({
   employerName,
   initialApplications,
   defaultRejectionMessage,
+  initialSelectedId = null,
 }: Props) {
   const { isPro } = useEmployerShell();
   const router = useRouter();
   const [applications, setApplications] = useState<Application[]>(initialApplications);
   const [activeStage, setActiveStage] = useState<string | null>(null);
-  const [selectedApp, setSelectedApp] = useState<Application | null>(null);
+  const [selectedApp, setSelectedApp] = useState<Application | null>(
+    () => initialApplications.find((a) => a.id === initialSelectedId) ?? null
+  );
   const [noteInput, setNoteInput] = useState("");
   const [savingNotes, setSavingNotes] = useState(false);
   const [selectionMode, setSelectionMode] = useState(false);

@@ -14,11 +14,11 @@ export default async function ApplicantsPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string; application?: string }>;
 }) {
   const { company, session } = await requireEmployerPageContext();
   const { id } = await params;
-  const { page: pageParam } = await searchParams;
+  const { page: pageParam, application: applicationParam } = await searchParams;
   const page = Math.max(1, Number(pageParam) || 1);
 
   const job = await getEmployerJobForApplicants(company.id, id);
@@ -98,6 +98,7 @@ export default async function ApplicantsPage({
         employerName={company?.companyName ?? "Team"}
         initialApplications={JSON.parse(JSON.stringify(applications))}
         defaultRejectionMessage={hiringDefaults.rejectionMessage}
+        initialSelectedId={applicationParam ?? null}
       />
     </>
   );
