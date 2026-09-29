@@ -1,9 +1,11 @@
+import type { ReactNode } from "react";
 import { CheckCircle2 } from "lucide-react";
 import ProfilePhotoForm from "@/components/account/ProfilePhotoForm";
 import AccountSecurityPanel from "@/components/account/AccountSecurityPanel";
 import AccountNotificationsPanel from "@/components/account/AccountNotificationsPanel";
 import AccountDataRightsPanel from "@/components/account/AccountDataRightsPanel";
 import AccountSettingsNav, {
+  isWorkspaceSection,
   type AccountSettingsSectionId,
 } from "@/components/account/AccountSettingsNav";
 import Badge from "@/components/ui/Badge";
@@ -35,6 +37,13 @@ type Props = {
    * reason as passwordChangedLabel below.
    */
   joinedLabel: string | null;
+  /**
+   * Rendered in the content column when `activeSection` is a workspace
+   * section (Company, Team, Plan & billing). The employer page builds it,
+   * because it needs company, plan, and team data this shared component
+   * shouldn't know how to load. Seekers never have a workspace section.
+   */
+  workspaceContent?: ReactNode;
 };
 
 /**
@@ -58,6 +67,7 @@ export default function AccountSettingsSections({
   emailVerifiedAt,
   passwordChangedAt,
   joinedLabel,
+  workspaceContent,
 }: Props) {
   const isEmployer = role === "EMPLOYER";
   const passwordChangedLabel = passwordChangedAt ? relativeTime(passwordChangedAt.toISOString()) : null;
@@ -151,6 +161,8 @@ export default function AccountSettingsSections({
               </div>
             </section>
           )}
+
+          {isWorkspaceSection(activeSection) && workspaceContent}
         </div>
       </div>
     </>
