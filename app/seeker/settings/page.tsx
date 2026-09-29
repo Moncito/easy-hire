@@ -16,7 +16,7 @@ export default async function SeekerSettingsPage({
     ? new Date(account.createdAt).toLocaleDateString("en-US", { month: "long", year: "numeric" })
     : null;
   const { section } = await searchParams;
-  const activeSection = parseAccountSettingsSection(section);
+  const activeSection = parseAccountSettingsSection(section, "SEEKER");
 
   return (
     <>

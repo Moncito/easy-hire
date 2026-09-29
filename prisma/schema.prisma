@@ -68,6 +68,13 @@ model User {
   // needs a URL. Backfilled lazily on first send rather than for every
   // existing row up front.
   unsubscribeToken         String? @unique @map("unsubscribe_token")
+  // Session revocation cutoff. Any JWT issued before this instant is
+  // rejected by the jwt callback in Auth.ts (see lib/auth/session-revocation.ts).
+  // Stamped on password change, password reset, a Google eviction of an
+  // unverified password, and "Sign out of other devices". Kept separate
+  // from passwordChangedAt so signing out elsewhere doesn't change the
+  // "last changed" date the security panel shows.
+  sessionsValidAfter       DateTime? @map("sessions_valid_after")
 
   // Relations
   seekerProfile      SeekerProfile?
@@ -268,6 +275,13 @@ model Company {
   instagramUrl                String?            @map("instagram_url")
   xUrl                        String?            @map("x_url")
   verificationRejectionReason String?            @map("verification_rejection_reason")
+  // Ownership transfer offer (lib/company-ownership-transfer.ts). The owner
+  // nominates an active team member; nothing moves until that member accepts.
+  // No FK on purpose: acceptance re-checks the nominee is still an ACTIVE
+  // member, which already covers a deleted or removed account. Offers lapse
+  // OWNERSHIP_TRANSFER_TTL_DAYS after ownerTransferRequestedAt.
+  pendingOwnerUserId          String?            @map("pending_owner_user_id")
+  ownerTransferRequestedAt    DateTime?          @map("owner_transfer_requested_at")
 
   // Relations
   user                       User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -283,6 +297,7 @@ model Company {
   collaborativeHiringEnabled Boolean                @default(false) @map("collaborative_hiring_enabled")
   members                    CompanyMember[]
   invitations                CompanyInvitation[]
+  hiringDefaults             CompanyHiringDefaults?
   reviewsReceived            Review[]
 
   // Denormalized public "response metrics" rollup (Phase 4.3), recomputed nightly by
@@ -308,6 +323,8 @@ model Company {
   // Sprint 10b follow-up — nightly rollup counts new companies per day
   // (lib/admin/rollups.ts); no supporting index on this column before.
   @@index([createdAt])
+  // Nominee's "ownership offers waiting for me" lookup on /hiring.
+  @@index([pendingOwnerUserId])
   @@map("companies")
 }
 
@@ -345,6 +362,35 @@ model CompanyMember {
   @@index([companyId, status])
   @@index([userId, status])
   @@map("company_members")
+}
+
+// Hiring defaults (lib/employer/hiring-defaults.ts). Pre-fill values only:
+// new jobs copy them at creation, the reject dialog starts from the
+// rejection message, and the applicant note rides along on the "application
+// received" email. Editing a default never changes an existing job or a
+// message already sent. One row per company, created on first save — a
+// company with no row simply has no defaults.
+model CompanyHiringDefaults {
+  id                 String          @id @default(cuid())
+  companyId          String          @unique @map("company_id")
+  category           String?
+  industry           String?
+  employmentType     EmploymentType? @map("employment_type")
+  remoteType         RemoteType?     @map("remote_type")
+  salaryPeriod       SalaryPeriod?   @map("salary_period")
+  location           String?
+  // [{ prompt: string, required: boolean }], same shape and limits as a
+  // job's ScreeningQuestion rows (lib/validations/job.ts). JSON rather than a
+  // child table: it's a template that's only ever read and written whole.
+  screeningQuestions Json            @default("[]") @map("screening_questions")
+  rejectionMessage   String?         @map("rejection_message")
+  applicantNote      String?         @map("applicant_note")
+  createdAt          DateTime        @default(now()) @map("created_at")
+  updatedAt          DateTime        @updatedAt @map("updated_at")
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@map("company_hiring_defaults")
 }
 
 model CompanyInvitation {

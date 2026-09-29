@@ -9,6 +9,7 @@ import { checkRateLimit, clientKeyFromRequest } from "@/lib/rate-limit";
 import { resolveGoogleAccountLinkingAction } from "@/lib/auth/google-account-linking";
 import { recordUserLoggedIn, recordUserLoggedOut, recordUserLoginFailed } from "@/lib/auth/auth-events";
 import { classifyTwoFactorCodeInput, consumeRecoveryCode, verifyTotpCode } from "@/lib/auth/two-factor";
+import { isSessionRevoked, verifySessionReissueProof } from "@/lib/auth/session-revocation";
 import { authConfig } from "./auth.config";
 
 // Brute-force / credential-stuffing guard for the Credentials provider.
@@ -69,11 +70,13 @@ class TwoFactorInvalid extends CredentialsSignin {
   code = "totp_invalid";
 }
 
+const DB_USER_SELECT = { id: true, role: true, sessionsValidAfter: true } as const;
+
 async function resolveDbUser(email?: string | null, userId?: string | null) {
   if (email) {
     const byEmail = await prisma.user.findUnique({
       where: { email: normalizeEmail(email) },
-      select: { id: true, role: true },
+      select: DB_USER_SELECT,
     });
     if (byEmail) return byEmail;
   }
@@ -81,7 +84,7 @@ async function resolveDbUser(email?: string | null, userId?: string | null) {
   if (userId) {
     return prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, role: true },
+      select: DB_USER_SELECT,
     });
   }
 
@@ -90,7 +93,7 @@ async function resolveDbUser(email?: string | null, userId?: string | null) {
 
 // This file runs in the Node.js runtime only (API routes, Server Components,
 // Server Actions) — never imported directly by middleware.ts / proxy.ts.
-export const { handlers, signIn, signOut, auth } = NextAuth({
+export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
   ...authConfig,
   session: { strategy: "jwt" },
   events: {
@@ -119,7 +122,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     },
   },
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
       const ROLE_REFRESH_MS = 15 * 60 * 1000;
       // When a token has never been DB-verified (initial resolve failed, e.g. a
       // transient connection-pool timeout) we still want to retry — but on a
@@ -151,6 +154,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           token.idVerified = false;
         }
 
+        token.sessionIssuedAt = Date.now();
         token.roleRefreshedAt = Date.now();
         return token;
       }
@@ -158,8 +162,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       const lastRefresh = (token.roleRefreshedAt as number | undefined) ?? 0;
       const interval = token.idVerified === true ? ROLE_REFRESH_MS : UNVERIFIED_RETRY_MS;
       const needsRefresh = Date.now() - lastRefresh > interval;
+      // Updates always hit the DB: they're rare, and the server-side
+      // re-issue in keepCurrentSession must be checked against the live
+      // cutoff, not a cached one.
+      const isUpdate = trigger === "update";
 
-      if (!needsRefresh && token.id && token.role) {
+      if (!isUpdate && !needsRefresh && token.id && token.role) {
         return token;
       }
 
@@ -170,6 +178,24 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         );
 
         if (dbUser) {
+          // Session revocation — see lib/auth/session-revocation.ts. A valid
+          // proof can only come from keepCurrentSession on the server; it
+          // moves this token up to the cutoff so the device that asked for
+          // the revocation stays signed in. Returning null clears the cookie.
+          // A failed lookup (catch below) keeps the token, same as the role
+          // refresh has always done: a DB blip must not sign everyone out.
+          const reissue = (session as { sessionReissue?: unknown } | undefined)?.sessionReissue;
+          if (
+            isUpdate &&
+            dbUser.sessionsValidAfter &&
+            verifySessionReissueProof(dbUser.id, dbUser.sessionsValidAfter, reissue)
+          ) {
+            token.sessionIssuedAt = dbUser.sessionsValidAfter.getTime();
+          }
+          if (isSessionRevoked(token.sessionIssuedAt as number | undefined, dbUser.sessionsValidAfter)) {
+            return null;
+          }
+
           token.id = dbUser.id;
           token.role = dbUser.role;
           token.idVerified = true;
@@ -243,9 +269,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
               `[auth] account-linking eviction: unverified password claim replaced by verified Google sign-in for userId=${action.userId}`
             );
             const [updatedUser] = await prisma.$transaction([
+              // sessionsValidAfter also ends any session the squatter
+              // already holds — clearing the password alone wouldn't.
               prisma.user.update({
                 where: { id: action.userId },
-                data: { passwordHash: null, emailVerifiedAt: new Date() },
+                data: { passwordHash: null, emailVerifiedAt: new Date(), sessionsValidAfter: new Date() },
                 include: { seekerProfile: true },
               }),
               prisma.verificationToken.deleteMany({ where: { userId: action.userId } }),

@@ -4,11 +4,16 @@ import { ArrowLeft, Bell, BriefcaseBusiness, ShieldCheck, Sparkles } from "lucid
 import { auth } from "@/Auth";
 import { getHiringWorkspacesForUser } from "@/lib/collaborative-hiring";
 import HiringWorkspacePicker, { type WorkspaceCard } from "@/components/hiring/HiringWorkspacePicker";
+import OwnershipOfferPrompt from "@/components/hiring/OwnershipOfferPrompt";
+import { listOwnershipOffersForUser } from "@/lib/company-ownership-transfer";
 
 export default async function HiringWorkspacesPage() {
   const session = await auth();
   if (!session?.user) redirect("/login?callbackUrl=/hiring");
-  const workspaces = await getHiringWorkspacesForUser(session.user.id);
+  const [workspaces, offers] = await Promise.all([
+    getHiringWorkspacesForUser(session.user.id),
+    listOwnershipOffersForUser(session.user.id),
+  ]);
   const accountHref = session.user.role === "SEEKER" ? "/seeker/dashboard" : "/employer/dashboard";
 
   const cards: WorkspaceCard[] = workspaces.map((w) => ({
@@ -40,6 +45,7 @@ export default async function HiringWorkspacesPage() {
             </div>
           </div>
         </div>
+        <OwnershipOfferPrompt offers={JSON.parse(JSON.stringify(offers))} />
         <div className="grid items-center gap-10 lg:grid-cols-[.85fr_1.15fr] lg:gap-16">
           <section>
             <p className="inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.16em] text-[#9A5B12]">

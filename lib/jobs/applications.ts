@@ -82,7 +82,10 @@ export async function createApplication(seekerUserId: string, raw: unknown) {
     },
     include: {
       company: {
-        include: { user: { select: { id: true, email: true, notifyApplicationUpdates: true } } },
+        include: {
+          user: { select: { id: true, email: true, notifyApplicationUpdates: true } },
+          hiringDefaults: { select: { applicantNote: true } },
+        },
       },
       screeningQuestions: true,
     },
@@ -110,6 +113,10 @@ export async function createApplication(seekerUserId: string, raw: unknown) {
   const answersToCreate = input.answers.filter(
     (a) => validQuestionIds.has(a.questionId) && a.answerText.trim().length > 0
   );
+
+  // The company's hiring-defaults note, read at apply time: editing it later
+  // never changes what earlier applicants were sent.
+  const applicantNote = job.company.hiringDefaults?.applicantNote ?? null;
 
   try {
     const application = await prisma.$transaction(async (tx) => {
@@ -149,6 +156,7 @@ export async function createApplication(seekerUserId: string, raw: unknown) {
       jobId: job.id,
       employerNotifyApplicationUpdates: job.company.user.notifyApplicationUpdates,
       seekerNotifyApplicationUpdates: seeker.user.notifyApplicationUpdates,
+      applicantNote,
     });
 
     invalidateEmployerWorkspace(job.companyId);
@@ -163,7 +171,8 @@ export async function createApplication(seekerUserId: string, raw: unknown) {
       metadata: { jobId: job.id },
     });
 
-    return application;
+    // Returned so the apply screen can show the same note the email carries.
+    return { ...application, applicantNote };
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
       throw new ApiError("You have already applied to this job", 409);

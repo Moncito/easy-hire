@@ -28,7 +28,7 @@ export async function submitApplication(body: {
     body: JSON.stringify(body),
   });
   const data = await parseJsonBody(res);
-  return { ok: res.ok, status: res.status, data: data as { error?: string } };
+  return { ok: res.ok, status: res.status, data: data as { error?: string; applicantNote?: string | null } };
 }
 
 export async function withdrawApplication(id: string) {

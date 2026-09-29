@@ -1,9 +1,11 @@
+import type { ReactNode } from "react";
 import { CheckCircle2 } from "lucide-react";
 import ProfilePhotoForm from "@/components/account/ProfilePhotoForm";
 import AccountSecurityPanel from "@/components/account/AccountSecurityPanel";
 import AccountNotificationsPanel from "@/components/account/AccountNotificationsPanel";
 import AccountDataRightsPanel from "@/components/account/AccountDataRightsPanel";
 import AccountSettingsNav, {
+  isWorkspaceSection,
   type AccountSettingsSectionId,
 } from "@/components/account/AccountSettingsNav";
 import Badge from "@/components/ui/Badge";
@@ -35,6 +37,13 @@ type Props = {
    * reason as passwordChangedLabel below.
    */
   joinedLabel: string | null;
+  /**
+   * Rendered in the content column when `activeSection` is a workspace
+   * section (Company, Team, Plan & billing). The employer page builds it,
+   * because it needs company, plan, and team data this shared component
+   * shouldn't know how to load. Seekers never have a workspace section.
+   */
+  workspaceContent?: ReactNode;
 };
 
 /**
@@ -58,6 +67,7 @@ export default function AccountSettingsSections({
   emailVerifiedAt,
   passwordChangedAt,
   joinedLabel,
+  workspaceContent,
 }: Props) {
   const isEmployer = role === "EMPLOYER";
   const passwordChangedLabel = passwordChangedAt ? relativeTime(passwordChangedAt.toISOString()) : null;
@@ -118,7 +128,7 @@ export default function AccountSettingsSections({
               <h2 id="security-heading" className="font-display text-xl font-bold text-ink">
                 Security
               </h2>
-              <p className="mt-1 text-sm text-ink/55">Manage your password and two-factor authentication.</p>
+              <p className="mt-1 text-sm text-ink/55">Manage your password, two-factor authentication, and signed-in devices.</p>
               <div className="mt-5">
                 <AccountSecurityPanel role={role} hasPassword={hasPassword} passwordChangedLabel={passwordChangedLabel} />
               </div>
@@ -151,6 +161,8 @@ export default function AccountSettingsSections({
               </div>
             </section>
           )}
+
+          {isWorkspaceSection(activeSection) && workspaceContent}
         </div>
       </div>
     </>

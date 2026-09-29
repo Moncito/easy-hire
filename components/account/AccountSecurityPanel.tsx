@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import type { FormEvent } from "react";
-import { Copy, Download, Loader2, Mail, ShieldCheck, ShieldOff } from "lucide-react";
+import { Copy, Download, Loader2, LogOut, Mail, ShieldCheck, ShieldOff } from "lucide-react";
+import OtpInput from "@/components/ui/OtpInput";
 
 type Role = "SEEKER" | "EMPLOYER";
 
@@ -116,6 +117,7 @@ export default function AccountSecurityPanel({ role, hasPassword, passwordChange
   const [setupError, setSetupError] = useState<string | null>(null);
   const [code, setCode] = useState("");
   const [confirmSubmitting, setConfirmSubmitting] = useState(false);
+  const confirmFormRef = useRef<HTMLFormElement>(null);
 
   const [recoveryCodes, setRecoveryCodes] = useState<string[] | null>(null);
   const [recoveryAcknowledged, setRecoveryAcknowledged] = useState(false);
@@ -127,6 +129,13 @@ export default function AccountSecurityPanel({ role, hasPassword, passwordChange
   const [disableCode, setDisableCode] = useState("");
   const [disableSubmitting, setDisableSubmitting] = useState(false);
   const [disableError, setDisableError] = useState<string | null>(null);
+
+  // --- Other sessions state ---
+  const [revokeConfirming, setRevokeConfirming] = useState(false);
+  const [revokeSubmitting, setRevokeSubmitting] = useState(false);
+  const [revokeError, setRevokeError] = useState<string | null>(null);
+  const [revokeStatus, setRevokeStatus] = useState("");
+  const [revokeDone, setRevokeDone] = useState(false);
 
   const twoFactorHeadingId = useId();
   const codeInputId = useId();
@@ -284,11 +293,18 @@ export default function AccountSecurityPanel({ role, hasPassword, passwordChange
     setTwoFactorStatusMsg("");
   }
 
-  async function handleConfirmCode(event: FormEvent) {
-    event.preventDefault();
+  /**
+   * `codeOverride` exists because OtpInput auto-submits as its sixth digit
+   * lands, in the same event that calls `setCode`. React hasn't re-rendered
+   * yet, so reading `code` from state here would send the previous
+   * five-character value and reject a correct code.
+   */
+  async function submitConfirmCode(codeOverride?: string) {
     setSetupError(null);
 
-    if (code.length !== 6) {
+    const submittedCode = codeOverride ?? code;
+
+    if (submittedCode.length !== 6) {
       setSetupError("Enter the 6-digit code from your authenticator app.");
       return;
     }
@@ -299,7 +315,7 @@ export default function AccountSecurityPanel({ role, hasPassword, passwordChange
       const res = await fetch("/api/account/2fa/confirm", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code }),
+        body: JSON.stringify({ code: submittedCode }),
       });
       const data = await res.json().catch(() => null);
 
@@ -330,6 +346,11 @@ export default function AccountSecurityPanel({ role, hasPassword, passwordChange
     } finally {
       setConfirmSubmitting(false);
     }
+  }
+
+  async function handleConfirmCode(event: FormEvent) {
+    event.preventDefault();
+    await submitConfirmCode();
   }
 
   async function copyRecoveryCodes() {
@@ -431,6 +452,35 @@ export default function AccountSecurityPanel({ role, hasPassword, passwordChange
     }
   }
 
+  async function handleRevokeSessions() {
+    setRevokeError(null);
+    setRevokeSubmitting(true);
+    setRevokeStatus("Signing out your other devices…");
+    try {
+      const res = await fetch("/api/account/sessions/revoke", { method: "POST" });
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        const message =
+          res.status === 429
+            ? `You've reached the limit for this. Try again ${retryWindowLabel(res)}.`
+            : ((body as { error?: string } | null)?.error ??
+              "Couldn't sign out your other devices. Please try again.");
+        setRevokeError(message);
+        setRevokeStatus(message);
+        return;
+      }
+      setRevokeConfirming(false);
+      setRevokeDone(true);
+      setRevokeStatus("Your other devices will be signed out within 15 minutes.");
+    } catch {
+      const message = "Couldn't sign out your other devices. Please check your connection and try again.";
+      setRevokeError(message);
+      setRevokeStatus(message);
+    } finally {
+      setRevokeSubmitting(false);
+    }
+  }
+
   const disableSubmitDisabled =
     disableSubmitting || (disableMode === "password" ? disablePassword.length === 0 : disableCode.length !== 6);
 
@@ -454,8 +504,8 @@ export default function AccountSecurityPanel({ role, hasPassword, passwordChange
       {hasPassword ? (
         <>
           <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-ink/60">
-            Changing your password does not sign out other devices — anywhere you&apos;re
-            already signed in stays signed in.
+            Changing your password signs you out everywhere else within 15 minutes. This device
+            stays signed in.
           </p>
 
           <form onSubmit={handleChangePassword} className="mt-4 flex max-w-sm flex-col gap-4" noValidate>
@@ -532,7 +582,7 @@ export default function AccountSecurityPanel({ role, hasPassword, passwordChange
           <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-ink/60">
             Your account signs in with Google, so there&apos;s no password to change directly.
             You can set one so you can also sign in with your email address — we&apos;ll email
-            you a link to finish. Changing your password later won&apos;t sign out other devices.
+            you a link to finish. Setting it signs you out of every device, including this one.
           </p>
 
           {error && (
@@ -648,21 +698,30 @@ export default function AccountSecurityPanel({ role, hasPassword, passwordChange
                 </div>
               </div>
 
-              <form onSubmit={handleConfirmCode} className="mt-5 flex flex-col gap-4" noValidate>
+              <form
+                ref={confirmFormRef}
+                onSubmit={handleConfirmCode}
+                className="mt-5 flex flex-col gap-4"
+                noValidate
+              >
                 <div>
                   <label htmlFor={codeInputId} className="mb-1.5 block text-sm font-medium text-ink/80">
                     6-digit code
                   </label>
-                  <input
+                  <OtpInput
                     id={codeInputId}
-                    type="text"
-                    inputMode="numeric"
-                    autoComplete="one-time-code"
                     value={code}
-                    onChange={(event) => setCode(sanitizeCodeInput(event.target.value))}
-                    placeholder="000000"
+                    onChange={setCode}
+                    onComplete={(completed) => {
+                      // Pass the completed value through rather than going
+                      // via requestSubmit — the handler would read stale
+                      // state and send five digits. See submitConfirmCode.
+                      if (!confirmSubmitting) void submitConfirmCode(completed);
+                    }}
+                    disabled={confirmSubmitting}
+                    accent={isEmployer ? "teal" : "marigold"}
+                    hasError={!!setupError}
                     aria-describedby={setupError ? setupErrorId : undefined}
-                    className={`w-full max-w-[10rem] rounded-xl border border-ink/12 px-4 py-2.5 text-center font-data text-lg tracking-[0.3em] text-ink outline-none transition-colors focus:ring-2 ${accentFocus}`}
                   />
                 </div>
 
@@ -888,6 +947,64 @@ export default function AccountSecurityPanel({ role, hasPassword, passwordChange
             </div>
           )}
         </div>
+      </div>
+
+      {/* Other sessions row */}
+      <div className="border-t border-ink/[0.06] px-5 py-5 sm:px-6">
+        <div role="status" aria-live="polite" className="sr-only">
+          {revokeStatus}
+        </div>
+
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
+            <h3 className="text-sm font-semibold text-ink">Other devices</h3>
+            <p className="mt-1.5 max-w-xl text-sm leading-relaxed text-ink/60">
+              {revokeDone
+                ? "Done. Anywhere else you were signed in will be signed out within 15 minutes."
+                : "Signed in on a shared or lost device? Sign out everywhere except here. It takes effect within 15 minutes."}
+            </p>
+          </div>
+
+          {!revokeConfirming ? (
+            <button
+              type="button"
+              onClick={() => {
+                setRevokeConfirming(true);
+                setRevokeError(null);
+              }}
+              className="inline-flex shrink-0 items-center gap-2 self-start rounded-xl border border-ink/15 px-4 py-2 text-sm font-semibold text-ink/75 transition hover:bg-ink/[0.04] active:scale-[0.98]"
+            >
+              <LogOut className="h-4 w-4" strokeWidth={2.25} aria-hidden="true" />
+              Sign out other devices
+            </button>
+          ) : (
+            <div className="flex shrink-0 flex-wrap gap-2 self-start">
+              <button
+                type="button"
+                onClick={handleRevokeSessions}
+                disabled={revokeSubmitting}
+                aria-busy={revokeSubmitting}
+                className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold text-white shadow-sm transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 ${accentButton}`}
+              >
+                {revokeSubmitting ? "Signing out…" : "Confirm sign out"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setRevokeConfirming(false)}
+                disabled={revokeSubmitting}
+                className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold text-ink/60 transition hover:bg-ink/[0.04] hover:text-ink disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Cancel
+              </button>
+            </div>
+          )}
+        </div>
+
+        {revokeError && (
+          <p role="alert" className="mt-3 text-sm text-ember">
+            {revokeError}
+          </p>
+        )}
       </div>
     </div>
   );

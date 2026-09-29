@@ -134,6 +134,49 @@ export async function sendCollaborativeHiringInvitation(ctx: {
   );
 }
 
+/** Ownership offers change who controls a company, so they're sent like security mail — never gated by a preference. */
+export async function sendOwnershipTransferOfferEmail(ctx: {
+  to: string;
+  companyName: string;
+  fromEmail: string;
+  willConvertToEmployer: boolean;
+}) {
+  await sendEmail(
+    ctx.to,
+    `You’ve been offered ownership of ${ctx.companyName} on EasyHire`,
+    renderEmailLayout({
+      preview: `${ctx.fromEmail} wants to hand ${ctx.companyName} over to you.`,
+      heading: "You’ve been offered company ownership",
+      bodyHtml: `
+        <p style="margin:0 0 16px;"><strong>${escapeHtml(ctx.fromEmail)}</strong> wants to make you the owner of <strong>${escapeHtml(ctx.companyName)}</strong>. You’d take over its jobs, billing, and hiring team.</p>
+        ${
+          ctx.willConvertToEmployer
+            ? `<p style="margin:0 0 16px;">Accepting turns your EasyHire account into an employer account. Your job-seeker profile and applications are kept, but you won’t be able to reach them while your account is an employer account.</p>`
+            : ""
+        }
+        <p style="margin:0;color:#5c6370;font-size:14px;">Nothing changes unless you accept. This offer expires in 7 days.</p>
+      `,
+      cta: { label: "Review the offer", href: `${appUrl}/hiring` },
+    })
+  );
+}
+
+export async function sendOwnershipTransferAcceptedEmail(ctx: { to: string; companyName: string; newOwnerEmail: string }) {
+  await sendEmail(
+    ctx.to,
+    `${ctx.companyName} has a new owner`,
+    renderEmailLayout({
+      preview: `${ctx.newOwnerEmail} accepted ownership of ${ctx.companyName}.`,
+      heading: "Ownership transferred",
+      bodyHtml: `
+        <p style="margin:0 0 16px;"><strong>${escapeHtml(ctx.newOwnerEmail)}</strong> accepted ownership of <strong>${escapeHtml(ctx.companyName)}</strong>. You’re now a recruiter on its hiring team.</p>
+        <p style="margin:0;color:#5c6370;font-size:14px;">If you didn’t expect this, contact EasyHire support right away.</p>
+      `,
+      cta: { label: "Open hiring workspaces", href: `${appUrl}/hiring` },
+    })
+  );
+}
+
 /** Account-security mail — EmailCategory "SECURITY", never gated by any notification preference (see lib/shared/email-preferences.ts). */
 export async function sendPasswordResetEmail(ctx: { to: string; token: string }) {
   const resetUrl = `${appUrl}/reset-password/${encodeURIComponent(ctx.token)}`;
@@ -289,6 +332,8 @@ type ApplicationEmailContext = {
   /** Each recipient's own flag — the employer's "new applicant" email and the seeker's "application submitted" email are gated independently. */
   employerNotifyApplicationUpdates: boolean;
   seekerNotifyApplicationUpdates: boolean;
+  /** The company's hiring-defaults note to applicants, raw text. Escaped here before rendering. */
+  applicantNote?: string | null;
 };
 
 // EmailCategory "APPLICATION_UPDATES" (lib/shared/email-preferences.ts) —
@@ -342,6 +387,7 @@ export async function notifyApplicationSubmitted(ctx: ApplicationEmailContext) {
           companyName: escapeHtml(ctx.companyName),
           jobTitle: escapeHtml(ctx.jobTitle),
           dashboardUrl: `${appUrl}/seeker/dashboard`,
+          applicantNote: ctx.applicantNote ? escapeHtml(ctx.applicantNote) : null,
         })
       )
     ),

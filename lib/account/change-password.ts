@@ -97,20 +97,15 @@ export async function changePassword(
   // multi-statement write here that needs one.
   const passwordHash = await bcrypt.hash(parsedNewPassword, 10);
 
+  // Same instant for both: a new password ends every existing session (see
+  // lib/auth/session-revocation.ts). The route re-issues the caller's own
+  // token afterwards so the device that changed it stays signed in.
+  const changedAt = new Date();
   await prisma.user.update({
     where: { id: userId },
-    data: { passwordHash, passwordChangedAt: new Date() },
+    data: { passwordHash, passwordChangedAt: changedAt, sessionsValidAfter: changedAt },
   });
 
-  // SESSION INVALIDATION — NOT DONE, BY NECESSITY:
-  // Auth.ts uses `session: { strategy: "jwt" }` and there is no `Session`
-  // model in prisma/schema.prisma, so existing JWTs for this user on other
-  // devices/browsers cannot be revoked server-side — the token itself is
-  // the credential and remains valid until it expires on its own. Changing
-  // passwordHash here does not (and cannot) invalidate it. A real fix would
-  // need a server-side session/deny-list (e.g. a `passwordChangedAt` claim
-  // checked in the `jwt` callback against a stored timestamp), which is out
-  // of scope for this change.
   recordEvent({
     eventType: "PASSWORD_CHANGED",
     actorType: actorTypeForRole(user.role),

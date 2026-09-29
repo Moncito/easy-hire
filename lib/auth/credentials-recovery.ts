@@ -128,9 +128,12 @@ export async function resetPassword(rawToken: string, newPassword: string): Prom
       throw new ApiError(INVALID_OR_EXPIRED_MESSAGE, 400);
     }
 
+    // A reset is the "someone may have my password" path, so it also ends
+    // every existing session — nobody is signed in here to keep.
+    const resetAt = new Date();
     const updatedUser = await tx.user.update({
       where: { id: record.userId },
-      data: { passwordHash, passwordChangedAt: new Date() },
+      data: { passwordHash, passwordChangedAt: resetAt, sessionsValidAfter: resetAt },
     });
 
     // Invalidate any other outstanding reset tokens for this user.

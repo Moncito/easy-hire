@@ -9,7 +9,8 @@ import { EmployerShellProvider } from "@/components/employer/EmployerShellContex
 type Props = {
   companyId: string;
   jobId?: string;
-  initialData?: JobFormData;
+  /** Full job when editing; the company's hiring-defaults pre-fill when creating. */
+  initialData?: Partial<JobFormData>;
 };
 
 async function saveJob(companyId: string, data: JobFormData, jobId?: string) {
