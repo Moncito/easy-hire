@@ -40,7 +40,7 @@ export default function ProApplicantList({ items, needsReview }: Props) {
         <div>
           <h2
             id="pro-applicant-list-heading"
-            className="font-display text-xl font-black tracking-tighter text-ink"
+            className="text-base font-semibold text-ink"
           >
             {needsReview > 0 ? "Applicants waiting" : "Recent applicants"}
           </h2>
@@ -63,7 +63,7 @@ export default function ProApplicantList({ items, needsReview }: Props) {
         <ProEmptyState
           embedded
           compact
-          className="rounded-[1.75rem] border border-dashed border-ink/10 bg-white/60"
+          className="rounded-[var(--pro-radius,1.75rem)] border border-dashed border-ink/10 bg-white/60"
           icon={<Users className="h-9 w-9" strokeWidth={1.5} />}
           title="No applicants yet"
           description="Share a listing or browse talent to get started."

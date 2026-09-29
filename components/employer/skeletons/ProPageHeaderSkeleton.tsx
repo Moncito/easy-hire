@@ -5,13 +5,13 @@ type Props = {
   stats?: number;
 };
 
-/** Mirrors `ProPageHeader` — large display title, description, stats, pill actions. */
+/** Mirrors `ProPageHeader` — display title, description, stats, pill actions. */
 export default function ProPageHeaderSkeleton({ actions = 1, stats = 3 }: Props) {
   return (
-    <header className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+    <header className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
       <div className="min-w-0">
-        <Bone className="h-10 w-52 sm:h-12 sm:w-72" />
-        <Bone className="mt-3 h-4 w-full max-w-xl" />
+        <Bone className="h-8 w-44 sm:h-9 sm:w-56" />
+        <Bone className="mt-2.5 h-3.5 w-full max-w-lg" />
         {stats > 0 && (
           <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1">
             {Array.from({ length: stats }).map((_, i) => (

@@ -1437,6 +1437,10 @@ backdrop-filter:blur(6px);
   --pro-accent-ink: #20242b;
   --pro-border: rgb(32 36 43 / 0.08);
   --pro-shadow: 0 1px 2px rgb(32 36 43 / 0.04), 0 8px 24px -8px rgb(32 36 43 / 0.08);
+  /* One corner radius for every Pro surface (cards, tiles, empty states).
+     Was 1.75rem, which read as pills on short cards and clashed with the
+     1rem tiles beside them. */
+  --pro-radius: 1.25rem;
 
   --font-display: var(--font-inter), Inter, sans-serif;
   --font-body: var(--font-inter), Inter, sans-serif;
@@ -1486,7 +1490,7 @@ backdrop-filter:blur(6px);
 }
 
 .employer-pro-workspace .pro-card {
-  border-radius: 1.75rem;
+  border-radius: var(--pro-radius);
   border: 1px solid var(--pro-border);
   background-color: var(--pro-surface);
   box-shadow: var(--pro-shadow);
@@ -1559,10 +1563,14 @@ backdrop-filter:blur(6px);
   color: #20242b !important;
 }
 
-.employer-pro-workspace .font-display,
-.employer-pro-workspace h1 {
-  font-weight: 900;
-  letter-spacing: -0.045em;
+/* Default weight and tracking for Pro headings. Wrapped in :where() so it
+   has zero specificity: a component's own font-weight / tracking utility
+   always wins. It used to be a plain selector forcing 900 and -0.045em,
+   which beat every Tailwind weight class and made every Pro heading
+   heavier than its component asked for. */
+:where(.employer-pro-workspace) :where(.font-display, h1) {
+  font-weight: 600;
+  letter-spacing: -0.02em;
 }
 
 .employer-pro-workspace .employer-pro-navbar {

@@ -32,7 +32,7 @@ export default function ProJobsTable({ jobs, companyVerified, showPostAnother = 
     <section aria-labelledby="pro-jobs-heading">
       <div className="mb-4 flex items-end justify-between gap-3">
         <div>
-          <h2 id="pro-jobs-heading" className="font-display text-xl font-black tracking-tighter text-ink">
+          <h2 id="pro-jobs-heading" className="text-base font-semibold text-ink">
             Active roles
           </h2>
           <p className="mt-0.5 text-sm text-ink/45">Review, share, or refresh each listing from here.</p>

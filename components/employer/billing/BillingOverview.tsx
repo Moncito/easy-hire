@@ -1,7 +1,6 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { CreditCard, FileText, Landmark, Lock } from "lucide-react";
-import ProBadge from "@/components/employer/pro/ProBadge";
 import ProButton from "@/components/employer/pro/ProButton";
 import type { BillingUsage } from "@/lib/employer/billing-overview";
 
@@ -21,14 +20,19 @@ type Props = {
   usage: BillingUsage;
 };
 
+/** Surfaces share one radius per plan: Pro's --pro-radius, Free's 1rem. */
+const SURFACE: Record<Variant, string> = {
+  pro: "pro-card",
+  free: "rounded-2xl border border-ink/10 bg-white",
+};
 const CARD: Record<Variant, string> = {
-  pro: "pro-card p-5 sm:p-6",
-  free: "rounded-2xl border border-ink/10 bg-white p-5 sm:p-6",
+  pro: `${SURFACE.pro} p-5 sm:p-6`,
+  free: `${SURFACE.free} p-5 sm:p-6`,
 };
 
 function SectionTitle({ icon, children }: { icon: ReactNode; children: ReactNode }) {
   return (
-    <h2 className="flex items-center gap-2 font-display text-base font-bold text-ink">
+    <h2 className="flex items-center gap-2 text-[15px] font-semibold text-ink">
       {icon}
       {children}
     </h2>
@@ -45,12 +49,14 @@ function StatusPill({ tone, children }: { tone: "teal" | "ember" | "ink"; childr
 }
 
 function UsageTile({
+  surface,
   label,
   value,
   detail,
   meter,
   locked,
 }: {
+  surface: string;
   label: string;
   value?: ReactNode;
   detail: string;
@@ -59,15 +65,15 @@ function UsageTile({
   locked?: boolean;
 }) {
   return (
-    <div className="rounded-2xl bg-ink/[0.03] px-4 py-4">
-      <p className="text-xs font-semibold uppercase tracking-wider text-ink/45">{label}</p>
+    <div className={`${surface} px-4 py-3.5`}>
+      <p className="text-[13px] font-medium text-ink/60">{label}</p>
       {locked ? (
-        <p className="mt-2 flex items-center gap-1.5 text-sm font-semibold text-ink/50">
+        <p className="mt-1.5 flex items-center gap-1.5 text-sm font-medium text-ink/45">
           <Lock className="h-3.5 w-3.5" aria-hidden="true" />
           Included in Pro
         </p>
       ) : (
-        <p className="mt-1.5 font-data text-2xl font-bold text-ink">{value}</p>
+        <p className="mt-1 font-data text-xl font-semibold text-ink">{value}</p>
       )}
       {meter && (
         <div
@@ -134,10 +140,9 @@ export default function BillingOverview({
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <h2 id="billing-plan-heading" className="font-display text-2xl font-black tracking-tight text-ink">
+              <h2 id="billing-plan-heading" className="font-display text-xl font-semibold tracking-tight text-ink">
                 {isPro ? "Employer Pro" : "Free"}
               </h2>
-              {isPro && <ProBadge />}
               {pastDue ? (
                 <StatusPill tone="ember">Payment overdue</StatusPill>
               ) : cancelled ? (
@@ -202,13 +207,14 @@ export default function BillingOverview({
       {/* Usage */}
       <section aria-labelledby="billing-usage-heading">
         <div className="mb-3 flex items-baseline justify-between gap-3">
-          <h2 id="billing-usage-heading" className="font-display text-base font-bold text-ink">
+          <h2 id="billing-usage-heading" className="text-[15px] font-semibold text-ink">
             Usage
           </h2>
           <span className="text-xs text-ink/40">AI and exports: last {usage.windowDays} days</span>
         </div>
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           <UsageTile
+            surface={SURFACE[variant]}
             label="Active jobs"
             value={isPro ? usage.activeJobs : `${usage.activeJobs} / ${usage.freeActiveJobCap}`}
             detail={
@@ -225,60 +231,51 @@ export default function BillingOverview({
             }
           />
           <UsageTile
+            surface={SURFACE[variant]}
             label="Team seats"
             value={usage.teamSeats}
             detail={usage.teamSeats === 1 ? "Just you." : "Including you."}
             locked={!isPro && usage.teamSeats <= 1}
           />
-          <UsageTile label="Easy AI runs" value={usage.aiRuns} detail="Drafts, rankings, and kits." locked={!isPro} />
-          <UsageTile label="CSV exports" value={usage.csvExports} detail="Applicant exports." locked={!isPro} />
+          <UsageTile surface={SURFACE[variant]} label="Easy AI runs" value={usage.aiRuns} detail="Drafts, rankings, and kits." locked={!isPro} />
+          <UsageTile surface={SURFACE[variant]} label="CSV exports" value={usage.csvExports} detail="Applicant exports." locked={!isPro} />
         </div>
       </section>
 
-      {/* Payment + details */}
-      <div className="grid gap-5 lg:grid-cols-2">
-        <section aria-labelledby="billing-payment-heading" className={card}>
-          <SectionTitle icon={<CreditCard className="h-4 w-4 text-ink/45" aria-hidden="true" />}>
-            <span id="billing-payment-heading">Payment method</span>
-          </SectionTitle>
-          <p className="mt-3 text-sm leading-relaxed text-ink/60">
-            {canManageBilling
-              ? "Your card is kept by our payment provider. Change it in Manage billing."
-              : isPro
-                ? "No card on file. You'll add one when paid plans open, before anything is charged."
-                : "No card needed on Free."}
-          </p>
-        </section>
+      {/* Payment and billing details — one card: a lone "no card on file"
+          line stretched to match the details card looked unfinished. */}
+      <section aria-labelledby="billing-details-heading" className={card}>
+        <SectionTitle icon={<Landmark className="h-4 w-4 text-ink/45" aria-hidden="true" />}>
+          <span id="billing-details-heading">Payment and billing details</span>
+        </SectionTitle>
+        <div className="mt-2">
+          <DetailRow label="Payment method">
+            <span className="inline-flex items-center gap-1.5">
+              <CreditCard className="h-3.5 w-3.5 text-ink/40" aria-hidden="true" />
+              {canManageBilling ? (
+                "Card on file"
+              ) : (
+                <span className="text-ink/45">{isPro ? "Added when paid plans open" : "Not needed on Free"}</span>
+              )}
+            </span>
+          </DetailRow>
+          <DetailRow label="Billed to">{companyName || <span className="text-ink/40">Company name not set</span>}</DetailRow>
+          <DetailRow label="Billing email">{billingEmail}</DetailRow>
+          <DetailRow label="TIN">
+            <span className="text-ink/45">Asked for when paid plans open</span>
+          </DetailRow>
+        </div>
+      </section>
 
-        <section aria-labelledby="billing-details-heading" className={card}>
-          <SectionTitle icon={<Landmark className="h-4 w-4 text-ink/45" aria-hidden="true" />}>
-            <span id="billing-details-heading">Billing details</span>
-          </SectionTitle>
-          <div className="mt-2">
-            <DetailRow label="Billed to">{companyName || <span className="text-ink/40">Company name not set</span>}</DetailRow>
-            <DetailRow label="Billing email">{billingEmail}</DetailRow>
-            <DetailRow label="TIN">
-              <span className="text-ink/40">Asked for when paid plans open</span>
-            </DetailRow>
-          </div>
-        </section>
-      </div>
-
-      {/* Invoices */}
+      {/* Invoices — column headers only make sense once there are rows. */}
       <section aria-labelledby="billing-invoices-heading" className={card}>
         <SectionTitle icon={<FileText className="h-4 w-4 text-ink/45" aria-hidden="true" />}>
           <span id="billing-invoices-heading">Invoices and receipts</span>
         </SectionTitle>
-        <div className="mt-4 hidden grid-cols-[1fr_2fr_1fr_auto] gap-4 border-b border-ink/[0.06] pb-2 text-xs font-semibold uppercase tracking-wider text-ink/40 sm:grid">
-          <span>Date</span>
-          <span>Description</span>
-          <span>Amount</span>
-          <span>Receipt</span>
-        </div>
-        <p className="mt-4 text-sm text-ink/55">
+        <p className="mt-2 text-sm text-ink/55">
           {isPro
-            ? "Invoices and official receipts will show up here after your first payment."
-            : "You haven't been billed. Invoices will show up here if you move to Pro."}
+            ? "No invoices yet. Invoices and official receipts will show up here after your first payment."
+            : "No invoices. You haven't been billed on Free."}
         </p>
       </section>
     </div>

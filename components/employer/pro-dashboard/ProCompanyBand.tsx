@@ -46,7 +46,7 @@ export default function ProCompanyBand({
           fallbackClassName="bg-marigold text-ink text-xl font-bold"
         />
         <div className="min-w-0">
-          <h1 className="line-clamp-2 font-display text-3xl font-black tracking-tighter text-ink sm:text-4xl sm:leading-[0.95]">
+          <h1 className="line-clamp-2 font-display text-2xl font-semibold tracking-tight text-ink sm:text-3xl">
             {companyName}
           </h1>
           <p className="mt-1 line-clamp-1 text-sm text-ink/50">{tagline}</p>

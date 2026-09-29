@@ -18,7 +18,7 @@ export default function ProGettingStarted({ steps }: Props) {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-xs font-bold uppercase tracking-wider text-ink/40">Getting started</p>
-          <h2 className="mt-1 font-display text-lg font-black tracking-tighter text-ink">
+          <h2 className="mt-1 text-base font-semibold text-ink">
             Set up your hiring workspace
           </h2>
           <p className="mt-1 text-xs leading-relaxed text-ink/55">

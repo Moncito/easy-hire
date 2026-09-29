@@ -118,7 +118,7 @@ export default function ProCompanyIdentityCard({
 
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <h2 className="font-display text-xl font-black tracking-tight text-ink sm:text-2xl">
+            <h2 className="font-display text-xl font-semibold tracking-tight text-ink">
               {companyName || "Your Company"}
             </h2>
             {statusChip(verificationStatus)}

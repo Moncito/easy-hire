@@ -18,7 +18,7 @@ export default function ProBillingIncludedList() {
     <details className="group pro-card p-5 sm:p-6">
       <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-marigold focus-visible:ring-offset-2 [&::-webkit-details-marker]:hidden">
         <span>
-          <span className="block font-display text-base font-bold text-ink">What&apos;s included in Pro</span>
+          <span className="block text-[15px] font-semibold text-ink">What&apos;s included in Pro</span>
           <span className="mt-0.5 block text-sm text-ink/50">{included.length} features on your plan</span>
         </span>
         <ChevronDown

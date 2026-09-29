@@ -32,7 +32,7 @@ export default function ProPlaybookRow() {
   return (
     <section aria-labelledby="pro-playbook-heading">
       <div className="mb-3">
-        <h2 id="pro-playbook-heading" className="font-display text-lg font-black tracking-tighter text-ink">
+        <h2 id="pro-playbook-heading" className="text-base font-semibold text-ink">
           Hiring playbook
         </h2>
         <p className="mt-0.5 text-sm text-ink/45">Jump-start the pipeline from here.</p>

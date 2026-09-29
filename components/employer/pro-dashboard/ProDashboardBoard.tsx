@@ -108,7 +108,7 @@ export default function ProDashboardBoard({
       {chartIsEmpty && <ProPlaybookRow />}
 
       {insights.actionRequired && (
-        <div className="rounded-[1.75rem] border border-ember/20 bg-ember/[0.05] px-5 py-4">
+        <div className="rounded-[var(--pro-radius,1.75rem)] border border-ember/20 bg-ember/[0.05] px-5 py-4">
           <p className="text-xs font-bold uppercase tracking-wider text-ember">Action required</p>
           <p className="mt-1 text-sm leading-relaxed text-ink/75">{insights.actionRequired}</p>
         </div>
@@ -121,7 +121,7 @@ export default function ProDashboardBoard({
         <div className="pro-card p-5 sm:p-6">
           <div className="mb-4 flex items-end justify-between gap-3">
             <div>
-              <h2 id="pro-week-heading" className="font-display text-xl font-black tracking-tighter text-ink">
+              <h2 id="pro-week-heading" className="text-base font-semibold text-ink">
                 This week
               </h2>
               <p className="mt-0.5 text-sm text-ink/45">{weekHint}</p>
@@ -185,7 +185,7 @@ export default function ProDashboardBoard({
         <section className="pro-card p-5 sm:p-6" aria-labelledby="pro-pipeline-heading">
           <div className="mb-4 flex items-end justify-between gap-3">
             <div>
-              <h2 id="pro-pipeline-heading" className="font-display text-lg font-black tracking-tighter text-ink">
+              <h2 id="pro-pipeline-heading" className="text-base font-semibold text-ink">
                 Pipeline
               </h2>
               <p className="mt-0.5 text-sm text-ink/45">One bar. Four stages.</p>
