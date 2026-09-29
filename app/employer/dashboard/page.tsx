@@ -116,23 +116,14 @@ export default async function EmployerDashboardPage() {
 
       {isPro ? (
         <ProDashboardBoard
-          company={{
-            companyName: company.companyName,
-            logoUrl: company.logoUrl,
-            description: company.description,
-            headquarters: company.headquarters,
-            industry: company.industry,
-            verifiedStatus: company.verifiedStatus,
-          }}
+          companyName={company.companyName}
+          companyVerified={company.verifiedStatus === "APPROVED"}
+          medianResponseMinutes={company.medianResponseMinutes}
           analytics={analytics}
           applicantQueue={applicantQueue}
-          chartData={chartData}
           sparse={sparse}
-          scoreHint={scoreHint}
-          chartIsEmpty={chartIsEmpty}
           showGettingStarted={showGettingStarted}
           gettingStartedSteps={gettingStartedSteps}
-          onboardingItems={onboardingItems}
         />
       ) : sparse && chartIsEmpty ? (
         <DashboardSparseBoard
