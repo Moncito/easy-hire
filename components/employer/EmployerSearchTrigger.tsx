@@ -15,7 +15,7 @@ export default function EmployerSearchTrigger({ className }: Props) {
     <button
       type="button"
       onClick={openPalette}
-      className={`employer-topbar-search hidden w-full max-w-md items-center gap-2 rounded-xl border px-3.5 py-2 text-sm shadow-sm transition md:flex ${className ?? ""}`}
+      className={`employer-topbar-search hidden w-full max-w-md items-center gap-2 rounded-control border px-3.5 py-2 text-sm shadow-sm transition md:flex ${className ?? ""}`}
     >
       <Search className="h-4 w-4 shrink-0" />
       <span className="flex-1 text-left">Search jobs, applicants, or skills…</span>
