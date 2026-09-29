@@ -25,6 +25,7 @@ import DashboardApplicantQueue from "@/components/employer/dashboard/DashboardAp
 import DashboardJobPerformance from "@/components/employer/dashboard/DashboardJobPerformance";
 import WeeklyTrendChart from "@/components/employer/charts/WeeklyTrendChart";
 import { getDashboardInsights, parseDashboardRange } from "@/lib/employer/dashboard-insights";
+import { getDashboardKpis } from "@/lib/employer/dashboard-kpis";
 import {
   getJobPerformanceRows,
   shouldShowApplicantQueue,
@@ -86,10 +87,11 @@ export default async function EmployerDashboardPage({
   // The Pro dashboard's date range (7/30/60 days, default 30). Read here so
   // every section fetches on the server for the same window.
   const range = parseDashboardRange((await searchParams).range);
-  const [analytics, applicantQueue, proInsights] = await Promise.all([
+  const [analytics, applicantQueue, proInsights, proKpis] = await Promise.all([
     getEmployerAnalyticsCached(company.id),
     getDashboardApplicantQueueCached(company.id),
     isPro ? getDashboardInsights(company.id) : Promise.resolve([]),
+    isPro ? getDashboardKpis(company.id, range) : Promise.resolve(null),
   ]);
   const { metrics, weeklyTrend, insights } = analytics;
 
@@ -135,10 +137,10 @@ export default async function EmployerDashboardPage({
           applicantQueue={applicantQueue}
           chartData={chartData}
           sparse={sparse}
-          scoreHint={scoreHint}
           showGettingStarted={showGettingStarted}
           gettingStartedSteps={gettingStartedSteps}
           insights={proInsights}
+          kpis={proKpis!}
           range={range}
         />
       ) : sparse && chartIsEmpty ? (

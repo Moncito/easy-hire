@@ -5,6 +5,7 @@ import type { EmployerAnalytics } from "@/lib/employer-analytics";
 import type { DashboardApplicantItem } from "@/lib/employer/dashboard-panels";
 import type { GettingStartedStep } from "@/lib/employer/dashboard-sparse";
 import type { DashboardInsight, DashboardRange } from "@/lib/employer/dashboard-insights";
+import type { DashboardKpis } from "@/lib/employer/dashboard-kpis";
 import type { ProWeeklyPoint } from "@/components/employer/charts/pro/ProMonoWeeklyChart";
 import { shouldShowApplicantQueue } from "@/lib/employer/dashboard-panels";
 
@@ -14,6 +15,7 @@ import ProCompanyBand from "@/components/employer/pro-dashboard/ProCompanyBand";
 import ProJobsTable from "@/components/employer/pro-dashboard/ProJobsTable";
 import ProApplicantList from "@/components/employer/pro-dashboard/ProApplicantList";
 import ProInsightCard from "@/components/employer/pro-dashboard/ProInsightCard";
+import ProKpiStrip from "@/components/employer/pro-dashboard/ProKpiStrip";
 import ProGettingStarted from "@/components/employer/pro-dashboard/ProGettingStarted";
 import RecentActivity from "@/components/employer/dashboard/RecentActivity";
 
@@ -30,34 +32,12 @@ type Props = {
   applicantQueue: DashboardApplicantItem[];
   chartData: ProWeeklyPoint[];
   sparse: boolean;
-  scoreHint: string | null;
   showGettingStarted: boolean;
   gettingStartedSteps: GettingStartedStep[];
   insights: DashboardInsight[];
+  kpis: DashboardKpis;
   range: DashboardRange;
 };
-
-function Kpi({
-  label,
-  value,
-  hint,
-  accent,
-}: {
-  label: string;
-  value: number;
-  hint?: string | null;
-  accent?: boolean;
-}) {
-  return (
-    <div className="border-b border-ink/[0.06] py-3.5 last:border-0 last:pb-0 first:pt-0">
-      <p className="text-xs font-bold uppercase tracking-wider text-ink/40">{label}</p>
-      <p className={`mt-1 font-data text-3xl font-bold tabular-nums ${accent ? "text-ember" : "text-ink"}`}>
-        {value}
-      </p>
-      {hint ? <p className="mt-1 text-xs leading-relaxed text-ink/45">{hint}</p> : null}
-    </div>
-  );
-}
 
 function formatChange(change: number | null) {
   if (change === null) return null;
@@ -71,13 +51,13 @@ export default function ProDashboardBoard({
   applicantQueue,
   chartData,
   sparse,
-  scoreHint,
   showGettingStarted,
   gettingStartedSteps,
   insights,
+  kpis,
   range,
 }: Props) {
-  const { metrics, insights: analyticsInsights, funnel } = analytics;
+  const { metrics, funnel } = analytics;
   const showApplicants = shouldShowApplicantQueue(metrics.totalApplicants);
   const weekApps = chartData.reduce((sum, day) => sum + day.applications, 0);
   const weekHint =
@@ -104,10 +84,11 @@ export default function ProDashboardBoard({
 
       {showGettingStarted && <ProGettingStarted steps={gettingStartedSteps} />}
 
-      <section
-        aria-labelledby="pro-week-heading"
-        className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_220px]"
-      >
+      {/* Replaces the old KPI column beside the chart, including the "Score"
+          nobody could explain. */}
+      <ProKpiStrip kpis={kpis} range={range} />
+
+      <section aria-labelledby="pro-week-heading">
         <div className="pro-card p-5 sm:p-6">
           <div className="mb-4 flex items-end justify-between gap-3">
             <div>
@@ -140,25 +121,6 @@ export default function ProDashboardBoard({
             </p>
           </div>
         </div>
-
-        <aside className="pro-card flex flex-col justify-center p-5 sm:p-6">
-          <Kpi label="Score" value={analytics.hiringScore} hint={scoreHint} />
-          <Kpi label="Active jobs" value={metrics.activeJobs} />
-          <Kpi label="Applicants" value={metrics.totalApplicants} />
-          <Kpi
-            label="Needs review"
-            value={metrics.needsReview}
-            accent={metrics.hasOverdueUnreviewed}
-            hint={
-              metrics.hasOverdueUnreviewed
-                ? `Oldest wait is ${metrics.oldestUnreviewedAgeDays} days`
-                : null
-            }
-          />
-          {analyticsInsights.marketInsight && (
-            <p className="mt-3 text-xs leading-relaxed text-ink/45">{analyticsInsights.marketInsight}</p>
-          )}
-        </aside>
       </section>
 
       <ProJobsTable
