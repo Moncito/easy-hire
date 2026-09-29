@@ -13,6 +13,7 @@ import { hydrateResumeFields } from "@/lib/seeker/resume-urls";
 import { recomputeVerificationScore } from "@/lib/seeker/identity-verification";
 import { isFirstEmployerResponseTransition } from "@/lib/employer/response-metrics";
 import { recordEvent } from "@/lib/admin/events";
+import { stageChangeActivityData } from "@/lib/jobs/stage-history";
 
 const candidateSeekerSelect = {
   id: true,
@@ -276,21 +277,38 @@ export async function updateApplication(applicationId: string, raw: unknown) {
     Boolean(existing.firstEmployerResponseAt)
   );
 
-  const updated = await prisma.application.update({
-    where: { id: applicationId },
-    data: {
-      ...(data.status !== undefined ? { status: data.status } : {}),
-      ...(data.internalNotes !== undefined ? { internalNotes: data.internalNotes } : {}),
-      ...(data.rating !== undefined ? { rating: data.rating } : {}),
-      ...(data.rejectionReason !== undefined ? { rejectionReason: data.rejectionReason } : {}),
-      ...(becameHired ? { hiredAt: new Date() } : {}),
-      ...(becameResponded ? { firstEmployerResponseAt: new Date() } : {}),
-    },
-    include: {
-      seeker: {
-        select: candidateSeekerSelect,
+  const statusChanged = data.status !== undefined && data.status !== existing.status;
+
+  // Stage history is written in the same transaction as the status, so the
+  // log can never disagree with the application (see lib/jobs/stage-history.ts).
+  const updated = await prisma.$transaction(async (tx) => {
+    const row = await tx.application.update({
+      where: { id: applicationId },
+      data: {
+        ...(data.status !== undefined ? { status: data.status } : {}),
+        ...(data.internalNotes !== undefined ? { internalNotes: data.internalNotes } : {}),
+        ...(data.rating !== undefined ? { rating: data.rating } : {}),
+        ...(data.rejectionReason !== undefined ? { rejectionReason: data.rejectionReason } : {}),
+        ...(becameHired ? { hiredAt: new Date() } : {}),
+        ...(becameResponded ? { firstEmployerResponseAt: new Date() } : {}),
       },
-    },
+      include: {
+        seeker: {
+          select: candidateSeekerSelect,
+        },
+      },
+    });
+    if (statusChanged) {
+      await tx.applicationActivity.create({
+        data: stageChangeActivityData({
+          applicationId,
+          fromStatus: existing.status,
+          toStatus: data.status!,
+          actorMemberId: null,
+        }),
+      });
+    }
+    return row;
   });
 
   notifyApplicationStatusTransition({

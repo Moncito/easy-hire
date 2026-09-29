@@ -12,6 +12,76 @@
    itself via the `:where(...)`. */
 @custom-variant admin-dark (&:where([data-admin-theme="dark"], [data-admin-theme="dark"] *));
 
+/* ==========================================================================
+   EMPLOYER WORKSPACE DESIGN SYSTEM (dashboard revamp, Phase 1)
+   --------------------------------------------------------------------------
+   Utilities below are global names, but their colours resolve to --eh-*
+   variables that are only defined inside `.employer-workspace` (see the
+   block near the other employer styles). Used anywhere else they resolve to
+   nothing, so they can't leak into seeker, public, or admin pages.
+
+   Values are the EasyHire brand (Mist, Deep Ink, Harbor Navy, Marigold,
+   Signal Teal, Ember), not the revamp mock's substitutes. The mock's
+   "success" green has no brand equivalent, so success maps to Signal Teal.
+   ========================================================================== */
+@theme inline {
+  --color-eh-bg: var(--eh-bg);
+  --color-eh-surface: var(--eh-surface);
+  --color-eh-surface-2: var(--eh-surface-2);
+  --color-eh-ink: var(--eh-ink);
+  --color-eh-ink-2: var(--eh-ink-2);
+  --color-eh-muted: var(--eh-muted);
+  --color-eh-line: var(--eh-line);
+  --color-eh-navy: var(--eh-navy);
+  --color-eh-marigold: var(--eh-marigold);
+  --color-eh-marigold-strong: var(--eh-marigold-strong);
+  --color-eh-marigold-tint: var(--eh-marigold-tint);
+  --color-eh-marigold-ink: var(--eh-marigold-ink);
+  --color-eh-teal: var(--eh-teal);
+  --color-eh-teal-tint: var(--eh-teal-tint);
+  --color-eh-teal-ink: var(--eh-teal-ink);
+  --color-eh-danger: var(--eh-danger);
+  --color-eh-danger-tint: var(--eh-danger-tint);
+  --color-eh-success: var(--eh-success);
+  --color-eh-success-tint: var(--eh-success-tint);
+}
+
+@theme {
+  /* Corner radii — cards 12px, buttons and inputs 8px, chips 6px. Full
+     rounding (rounded-full) is for avatars and status dots only. */
+  --radius-card: 12px;
+  --radius-control: 8px;
+  --radius-chip: 6px;
+
+  /* Type scale. Body copy is 14px; card titles 15/600; page title 24/600;
+     KPI values 30/600. */
+  --text-micro: 11.5px;
+  --text-micro--line-height: 1.4;
+  --text-small: 12.5px;
+  --text-small--line-height: 1.45;
+  --text-ui: 13px;
+  --text-ui--line-height: 1.45;
+  --text-body: 14px;
+  --text-body--line-height: 1.45;
+  --text-card-title: 15px;
+  --text-card-title--line-height: 1.35;
+  --text-card-title--font-weight: 600;
+  --text-page-title: 24px;
+  --text-page-title--line-height: 1.2;
+  --text-page-title--font-weight: 600;
+  --text-page-title--letter-spacing: -0.01em;
+  --text-kpi: 30px;
+  --text-kpi--line-height: 1.1;
+  --text-kpi--font-weight: 600;
+  --text-kpi--letter-spacing: -0.02em;
+}
+
+/* Tabular figures so numbers line up in columns and don't jitter as they
+   change. Use on every number in the employer dashboard. */
+@utility num {
+  font-variant-numeric: tabular-nums;
+}
+
 @theme {
   --color-mist: #F5F6F4;
   --color-ink: #20242B;
@@ -1076,6 +1146,29 @@ backdrop-filter:blur(6px);
   --pro-surface: var(--ew-surface-solid);
   --pro-accent: #f2a93b;
   --pro-border: var(--ew-border-subtle);
+
+  /* Design-system tokens (see the @theme inline block at the top). Brand
+     values; the dark theme below overrides them. */
+  --eh-bg: #f5f6f4;
+  --eh-surface: #ffffff;
+  --eh-surface-2: #f9faf8;
+  --eh-ink: #20242b;
+  --eh-ink-2: #3b404a;
+  --eh-muted: #6b7078;
+  --eh-line: #e4e6e2;
+  --eh-navy: #1e3a5f;
+  --eh-marigold: #f2a93b;
+  --eh-marigold-strong: #dd9424;
+  --eh-marigold-tint: #fef4e3;
+  --eh-marigold-ink: #8a5300;
+  --eh-teal: #1f8073;
+  --eh-teal-tint: #e6f2f0;
+  --eh-teal-ink: #155f55;
+  --eh-danger: #d9553a;
+  --eh-danger-tint: #fbece8;
+  --eh-success: #1f8073;
+  --eh-success-tint: #e6f2f0;
+
   background-color: var(--ew-bg);
   color: var(--ew-text);
   transition: background-color 0.3s ease, color 0.3s ease;
@@ -1102,6 +1195,26 @@ backdrop-filter:blur(6px);
   --pro-chart-tick: rgb(244 244 245 / 0.45);
   --pro-chart-grid: rgb(244 244 245 / 0.08);
   --pro-chart-cursor: rgb(244 244 245 / 0.06);
+
+  --eh-bg: #12151c;
+  --eh-surface: #1a1f2a;
+  --eh-surface-2: #20252f;
+  --eh-ink: #f5f6f4;
+  --eh-ink-2: #c7cbd3;
+  --eh-muted: #9aa1ac;
+  --eh-line: #2a303b;
+  --eh-navy: #8fb0d6;
+  --eh-marigold: #f2a93b;
+  --eh-marigold-strong: #f5b95e;
+  --eh-marigold-tint: #3a2a12;
+  --eh-marigold-ink: #f6c27a;
+  --eh-teal: #3db5a5;
+  --eh-teal-tint: #10302d;
+  --eh-teal-ink: #7ed9cf;
+  --eh-danger: #f07a5f;
+  --eh-danger-tint: #3a1e18;
+  --eh-success: #3db5a5;
+  --eh-success-tint: #10302d;
 }
 
 .employer-ws-surface {
@@ -1438,9 +1551,9 @@ backdrop-filter:blur(6px);
   --pro-border: rgb(32 36 43 / 0.08);
   --pro-shadow: 0 1px 2px rgb(32 36 43 / 0.04), 0 8px 24px -8px rgb(32 36 43 / 0.08);
   /* One corner radius for every Pro surface (cards, tiles, empty states).
-     Was 1.75rem, which read as pills on short cards and clashed with the
-     1rem tiles beside them. */
-  --pro-radius: 1.25rem;
+     12px, matching --radius-card in the employer design system. Was
+     1.75rem, then 1.25rem; both read as soft/consumer on a working tool. */
+  --pro-radius: 12px;
 
   --font-display: var(--font-inter), Inter, sans-serif;
   --font-body: var(--font-inter), Inter, sans-serif;
