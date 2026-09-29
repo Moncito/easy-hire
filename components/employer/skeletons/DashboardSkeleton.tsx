@@ -9,100 +9,120 @@ function Surface({ children, className = "" }: { children: ReactNode; className?
   return <EmployerSkeletonSurface className={className}>{children}</EmployerSkeletonSurface>;
 }
 
-/** Mirrors ProDashboardBoard: header, attention list, KPI row, roles beside pipeline and recent applicants. */
 function ProDashboardSkeleton() {
   return (
-    <div className="flex flex-col gap-6 pb-8">
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <Bone className="h-8 w-40 sm:h-9" />
-          <Bone className="mt-2 h-4 w-52" />
+    <div className="flex flex-col gap-8 pb-8">
+      <header className="flex flex-col gap-4 border-b border-ink/[0.06] pb-5 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
+        <div className="flex min-w-0 gap-4">
+          <Bone className="h-14 w-14 shrink-0 rounded-xl sm:h-16 sm:w-16" />
+          <div className="min-w-0 flex-1">
+            <Bone className="h-9 w-64 max-w-full sm:h-10" />
+            <Bone className="mt-2 h-4 w-48 max-w-full" />
+            <div className="mt-2 flex gap-3">
+              <Bone className="h-4 w-20" />
+              <Bone className="h-4 w-36" />
+            </div>
+            <Bone className="mt-3 h-4 w-72 max-w-full" />
+          </div>
         </div>
         <div className="flex shrink-0 flex-wrap gap-2">
-          <Bone className="h-11 w-40 rounded-full" />
           <Bone className="h-11 w-32 rounded-full" />
+          <Bone className="h-11 w-40 rounded-full" />
         </div>
       </header>
 
-      <section className="pro-card overflow-hidden !p-0">
-        <Bone className="mx-5 mb-3 mt-4 h-5 w-44 sm:mx-6" />
-        {Array.from({ length: 2 }).map((_, i) => (
-          <div key={i} className="flex items-center gap-3 border-t border-ink/[0.06] px-5 py-3.5 sm:px-6">
-            <Bone className="h-8 w-8 shrink-0 rounded-lg" />
-            <div className="flex-1 space-y-1.5">
-              <Bone className="h-4 w-56 max-w-full" />
-              <Bone className="h-3 w-36" />
-            </div>
-            <Bone className="h-4 w-16" />
-          </div>
-        ))}
-      </section>
-
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="pro-card px-4 py-3.5 sm:px-5">
-            <Bone className="h-3.5 w-24" />
-            <Bone className="mt-2 h-7 w-12" />
-            <Bone className="mt-2 h-3 w-28" />
-          </div>
-        ))}
+      <div className="flex gap-2 overflow-hidden">
+        <Bone className="h-9 w-40 shrink-0 rounded-full" />
+        <Bone className="h-9 w-36 shrink-0 rounded-full" />
       </div>
 
-      <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-        <section>
-          <div className="mb-4 flex items-end justify-between">
-            <div>
-              <Bone className="h-5 w-28" />
-              <Bone className="mt-2 h-4 w-32" />
+      <section>
+        <Bone className="h-6 w-40" />
+        <Bone className="mt-1.5 h-4 w-56" />
+        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="pro-card p-4">
+              <Bone className="h-9 w-9 rounded-xl" />
+              <Bone className="mt-3 h-4 w-24" />
+              <Bone className="mt-2 h-3 w-full" />
+              <Bone className="mt-1 h-3 w-4/5" />
             </div>
-            <Bone className="h-4 w-16" />
+          ))}
+        </div>
+      </section>
+
+      <section className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_220px]">
+        <div className="pro-card p-5 sm:p-6">
+          <div className="mb-4 flex items-end justify-between gap-3">
+            <div>
+              <Bone className="h-6 w-28" />
+              <Bone className="mt-2 h-4 w-52" />
+            </div>
+            <Bone className="h-4 w-24" />
           </div>
-          <div className="pro-card overflow-hidden !p-0">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="flex items-center gap-4 border-b border-ink/[0.06] px-5 py-4 last:border-0">
-                <div className="flex-1 space-y-1.5">
-                  <Bone className="h-4 w-40" />
-                  <Bone className="h-3 w-28" />
-                </div>
-                <Bone className="h-4 w-8" />
-                <Bone className="h-4 w-8" />
-                <Bone className="h-4 w-24" />
-              </div>
+          <div className="flex gap-4">
+            <Bone className="h-3 w-24" />
+            <Bone className="h-3 w-20" />
+          </div>
+          <Bone className="mt-4 h-[220px] w-full rounded-xl" />
+          <div className="mt-4 flex gap-6 border-t border-ink/[0.06] pt-4">
+            <Bone className="h-4 w-32" />
+            <Bone className="h-4 w-28" />
+          </div>
+        </div>
+        <aside className="pro-card flex flex-col justify-center p-5 sm:p-6">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="border-b border-ink/[0.06] py-3.5 last:border-0 last:pb-0 first:pt-0">
+              <Bone className="h-3 w-20" />
+              <Bone className="mt-2 h-8 w-14" />
+            </div>
+          ))}
+        </aside>
+      </section>
+
+      <section>
+        <div className="mb-4 flex items-end justify-between">
+          <div>
+            <Bone className="h-6 w-32" />
+            <Bone className="mt-2 h-4 w-56" />
+          </div>
+          <Bone className="h-4 w-20" />
+        </div>
+        <div className="pro-card overflow-hidden !p-0">
+          <div className="grid grid-cols-6 gap-3 border-b border-ink/[0.06] px-5 py-3">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <Bone key={i} className="h-3 w-12" />
             ))}
           </div>
-        </section>
-        <div className="flex flex-col gap-6">
-          <section>
-            <Bone className="mb-2 h-5 w-24" />
-            <Bone className="mb-4 h-4 w-28" />
-            <div className="pro-card space-y-4 p-5">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <div key={i}>
-                  <div className="flex justify-between">
-                    <Bone className="h-3.5 w-28" />
-                    <Bone className="h-3.5 w-6" />
-                  </div>
-                  <Bone className="mt-2 h-1.5 w-full rounded-full" />
-                </div>
-              ))}
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="grid grid-cols-6 items-center gap-3 border-b border-ink/[0.06] px-5 py-4 last:border-0">
+              <Bone className="col-span-2 h-4 w-40" />
+              <Bone className="h-4 w-8 justify-self-end" />
+              <Bone className="h-4 w-8 justify-self-end" />
+              <Bone className="h-4 w-8 justify-self-end" />
+              <Bone className="h-8 w-20 justify-self-end rounded-full" />
             </div>
-          </section>
-          <section>
-            <Bone className="mb-2 h-5 w-36" />
-            <Bone className="mb-4 h-4 w-40" />
-            <div className="pro-card overflow-hidden !p-0">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="flex items-center gap-3 border-b border-ink/[0.06] px-4 py-3.5 last:border-0">
-                  <Bone className="h-9 w-9 shrink-0 rounded-full" />
-                  <div className="flex-1 space-y-1.5">
-                    <Bone className="h-3.5 w-32" />
-                    <Bone className="h-3 w-24" />
-                  </div>
-                  <Bone className="h-5 w-16 rounded-md" />
-                </div>
-              ))}
+          ))}
+        </div>
+      </section>
+
+      <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-2">
+        <div className="pro-card p-5 sm:p-6">
+          <Bone className="h-5 w-24" />
+          <Bone className="mt-2 h-4 w-40" />
+          <Bone className="mt-6 h-10 w-full rounded-full" />
+        </div>
+        <div className="pro-card p-5 sm:p-6">
+          <Bone className="mb-4 h-5 w-32" />
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="mb-3 flex gap-3 last:mb-0">
+              <Bone className="h-8 w-8 shrink-0 rounded-full" />
+              <div className="flex-1 space-y-1.5">
+                <Bone className="h-3 w-full" />
+                <Bone className="h-3 w-20" />
+              </div>
             </div>
-          </section>
+          ))}
         </div>
       </div>
     </div>

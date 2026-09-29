@@ -12,7 +12,7 @@ export default function ProPageHeader({ title, description, stats, actions }: Pr
   return (
     <header className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
       <div className="min-w-0">
-        <h1 className="font-display text-2xl font-bold tracking-tight text-ink sm:text-3xl">{title}</h1>
+        <h1 className="font-display text-2xl font-semibold tracking-tight text-ink sm:text-3xl">{title}</h1>
         {description && (
           <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-ink/55">{description}</p>
         )}

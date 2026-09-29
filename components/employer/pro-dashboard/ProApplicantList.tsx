@@ -7,7 +7,7 @@ import ProEmptyState from "@/components/employer/pro/ProEmptyState";
 import ProButton from "@/components/employer/pro/ProButton";
 
 const STATUS_STYLES: Record<string, string> = {
-  APPLIED: "bg-marigold/15 text-[#81510d]",
+  APPLIED: "bg-ink/8 text-ink/65",
   SHORTLISTED: "bg-navy/10 text-navy",
   INTERVIEW: "bg-teal/10 text-teal",
   HIRED: "bg-teal text-white",
@@ -42,17 +42,17 @@ export default function ProApplicantList({ items, needsReview }: Props) {
             id="pro-applicant-list-heading"
             className="text-base font-semibold text-ink"
           >
-            Recent applicants
+            {needsReview > 0 ? "Applicants waiting" : "Recent applicants"}
           </h2>
           <p className="mt-0.5 text-sm text-ink/45">
             {needsReview > 0
-              ? `Newest first · ${needsReview} waiting for review`
-              : "Newest first"}
+              ? `${needsReview} waiting for a decision`
+              : "Latest pipeline activity, including hires"}
           </p>
         </div>
         <Link
           href="/employer/applicants"
-          className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap text-sm font-semibold text-ink/60 transition hover:text-ink"
+          className="inline-flex items-center gap-1 text-sm font-semibold text-ink/60 transition hover:text-ink"
         >
           View all
           <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
@@ -91,7 +91,7 @@ export default function ProApplicantList({ items, needsReview }: Props) {
                   </div>
                   <div className="shrink-0 text-right">
                     <span
-                      className={`inline-block rounded-md px-2 py-0.5 text-xs font-medium ${
+                      className={`inline-block rounded-md px-2 py-0.5 text-xs font-bold uppercase tracking-wide ${
                         STATUS_STYLES[item.status] ?? STATUS_STYLES.APPLIED
                       }`}
                     >
@@ -99,6 +99,9 @@ export default function ProApplicantList({ items, needsReview }: Props) {
                     </span>
                     <p className="mt-1 text-xs text-ink/35">{formatRelativeTime(item.appliedAt)}</p>
                   </div>
+                  <span className="hidden shrink-0 text-xs font-semibold text-[#9A5B12] opacity-0 transition group-hover:opacity-100 sm:inline">
+                    Review →
+                  </span>
                 </Link>
               </li>
             ))}
