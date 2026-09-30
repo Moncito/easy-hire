@@ -1,12 +1,11 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { ExternalLink, Plus } from "lucide-react";
+import { ExternalLink, Plus, Users } from "lucide-react";
 import CompanyProfileEditor from "@/components/employer/CompanyProfileEditor";
 import { requireEmployerPageContext } from "@/lib/employer-session";
 import { getEmployerCompanyProfile } from "@/lib/companies";
-import ProPageHeader from "@/components/employer/pro-dashboard/ProPageHeader";
-import ProButton from "@/components/employer/pro/ProButton";
+import { Button, PageHeader } from "@/components/employer/system";
 import EmployerPageHeader from "@/components/employer/ui/EmployerPageHeader";
 import Bone from "@/components/employer/skeletons/Bone";
 import { isCollaborativeHiringEnabled } from "@/lib/collaborative-hiring";
@@ -58,30 +57,6 @@ async function CompanyProfileContent() {
     REJECTED: "rejected" as const,
   };
 
-  const profileStats = (
-    <>
-      <span>
-        <span className="font-data font-semibold text-ink">{activeJobsCount}</span>{" "}
-        active role{activeJobsCount === 1 ? "" : "s"}
-      </span>
-      <span>
-        <span className="font-data font-semibold text-ink">{totalApplicantsCount}</span>{" "}
-        applicant{totalApplicantsCount === 1 ? "" : "s"}
-      </span>
-      {verified ? (
-        <span className="font-semibold text-teal">Verified</span>
-      ) : company.verifiedStatus === "REJECTED" ? (
-        <a href="#verification" className="font-semibold text-ember hover:underline">
-          Verification needs an update
-        </a>
-      ) : (
-        <a href="#verification" className="font-semibold text-[#9A5B12] hover:underline">
-          Verification pending
-        </a>
-      )}
-    </>
-  );
-
   const proDescription = verified
     ? "This is what VAs see. Verified Pro listings skip the admin queue and go live instantly."
     : company.verifiedStatus === "REJECTED"
@@ -92,29 +67,52 @@ async function CompanyProfileContent() {
     <>
       {plan === "PRO" ? (
         <>
-          <ProPageHeader
+          <PageHeader
+            className="mb-6"
             title="Company"
             description={proDescription}
-            stats={profileStats}
+            meta={
+              <>
+                <span>
+                  <b className="num font-semibold text-eh-ink">{activeJobsCount}</b> active role
+                  {activeJobsCount === 1 ? "" : "s"}
+                </span>
+                <span aria-hidden="true" className="hidden sm:inline">
+                  ·
+                </span>
+                <span>
+                  <b className="num font-semibold text-eh-ink">{totalApplicantsCount}</b> applicant
+                  {totalApplicantsCount === 1 ? "" : "s"}
+                </span>
+                <span aria-hidden="true" className="hidden sm:inline">
+                  ·
+                </span>
+                {verified ? (
+                  <span className="font-medium text-eh-success">Verified</span>
+                ) : company.verifiedStatus === "REJECTED" ? (
+                  <a href="#verification" className="font-medium text-eh-danger hover:underline">
+                    Verification needs an update
+                  </a>
+                ) : (
+                  <a href="#verification" className="font-medium text-eh-marigold-ink hover:underline">
+                    Verification pending
+                  </a>
+                )}
+              </>
+            }
             actions={
               <>
                 {collaborativeHiringEnabled && (
-                  <ProButton href="/employer/team" variant="secondary">Manage team</ProButton>
+                  <Button href="/employer/team" icon={<Users />}>
+                    Manage team
+                  </Button>
                 )}
-                <ProButton
-                  href={`/companies/${company.id}`}
-                  variant="secondary"
-                  icon={<ExternalLink className="h-4 w-4" aria-hidden="true" />}
-                >
+                <Button href={`/companies/${company.id}`} icon={<ExternalLink />}>
                   View public page
-                </ProButton>
-                <ProButton
-                  href="/employer/jobs/new"
-                  variant="primary"
-                  icon={<Plus className="h-4 w-4" strokeWidth={2.5} aria-hidden="true" />}
-                >
+                </Button>
+                <Button href="/employer/jobs/new" variant="primary" icon={<Plus />}>
                   Post a job
-                </ProButton>
+                </Button>
               </>
             }
           />
