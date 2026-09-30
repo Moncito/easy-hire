@@ -35,13 +35,14 @@ export default function MessageSeekerButton({ seekerId, jobId }: { seekerId: str
       type="button"
       onClick={handleStartConversation}
       disabled={loading}
-      className={`inline-flex cursor-pointer items-center gap-1.5 px-3.5 py-2 text-xs font-semibold transition-colors disabled:opacity-60 ${
+      aria-busy={loading || undefined}
+      className={`inline-flex cursor-pointer items-center gap-1.5 transition-colors disabled:opacity-60 ${
         isPro
-          ? "rounded-full bg-marigold text-ink shadow-sm shadow-marigold/20 hover:bg-marigold/90"
-          : "rounded-xl bg-teal text-white shadow-xs hover:bg-teal/95"
+          ? "h-8 rounded-control border border-eh-marigold bg-eh-marigold px-3 text-ui font-semibold text-[#241500] hover:border-eh-marigold-strong hover:bg-eh-marigold-strong"
+          : "rounded-xl bg-teal px-3.5 py-2 text-xs font-semibold text-white shadow-xs hover:bg-teal/95"
       }`}
     >
-      <MessageSquare className="h-3.5 w-3.5" />
+      <MessageSquare className={isPro ? "h-4 w-4" : "h-3.5 w-3.5"} aria-hidden="true" />
       {loading ? "Opening..." : "Message"}
     </button>
   );

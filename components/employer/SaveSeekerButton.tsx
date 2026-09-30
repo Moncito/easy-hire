@@ -42,19 +42,24 @@ export default function SaveSeekerButton({ seekerId, saved, onToggle }: Props) {
       type="button"
       onClick={toggle}
       disabled={pending}
-      className={`inline-flex cursor-pointer items-center gap-1.5 border px-3.5 py-2 text-xs font-semibold transition-colors disabled:opacity-60 ${
-        isPro ? "rounded-full" : "rounded-xl"
+      aria-pressed={localSaved}
+      className={`inline-flex cursor-pointer items-center gap-1.5 border transition-colors disabled:opacity-60 ${
+        isPro ? "h-8 rounded-control px-3 text-ui font-medium" : "rounded-xl px-3.5 py-2 text-xs font-semibold"
       } ${
         localSaved
           ? isPro
-            ? "border-marigold/40 bg-marigold/15 text-[#9A5B12]"
+            ? "border-[color-mix(in_srgb,var(--eh-marigold)_55%,var(--eh-line))] bg-eh-marigold-tint text-eh-marigold-ink"
             : "border-teal/30 bg-teal/8 text-teal"
           : isPro
-            ? "border-ink/10 text-ink/70 hover:border-ink/20 hover:bg-ink/[0.02]"
+            ? "border-eh-line bg-eh-surface text-eh-ink hover:bg-eh-surface-2"
             : "border-ink/10 text-ink/70 hover:border-teal/30"
       }`}
     >
-      {localSaved ? <BookmarkCheck className="h-3.5 w-3.5" /> : <Bookmark className="h-3.5 w-3.5" />}
+      {localSaved ? (
+        <BookmarkCheck className={isPro ? "h-4 w-4" : "h-3.5 w-3.5"} aria-hidden="true" />
+      ) : (
+        <Bookmark className={isPro ? "h-4 w-4" : "h-3.5 w-3.5"} aria-hidden="true" />
+      )}
       {localSaved ? "Saved" : "Save"}
     </button>
   );
