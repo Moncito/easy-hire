@@ -68,12 +68,23 @@ export function PipelineSummary({
  * bar plus a screen-reader sentence. Segments are proportional to counts;
  * an empty pipeline shows an empty track.
  */
-export function PipelineMini({ stages, className }: { stages: PipelineStage[]; className?: string }) {
+export function PipelineMini({
+  stages,
+  showSummary = false,
+  emptyLabel = "No applicants",
+  className,
+}: {
+  stages: PipelineStage[];
+  /** Print the stage counts under the bar instead of only for screen readers. */
+  showSummary?: boolean;
+  emptyLabel?: string;
+  className?: string;
+}) {
   const total = stages.reduce((sum, s) => sum + s.value, 0);
-  const summary = stages.filter((s) => s.value > 0).map((s) => `${s.value} ${s.label.toLowerCase()}`).join(", ");
+  const summary = stages.filter((s) => s.value > 0).map((s) => `${s.value} ${s.label.toLowerCase()}`).join(" · ");
   return (
     <div className={cx("min-w-[96px]", className)}>
-      <div className="flex h-1.5 overflow-hidden rounded-full bg-eh-line" aria-hidden="true" title={summary || "No applicants"}>
+      <div className="flex h-1.5 overflow-hidden rounded-full bg-eh-line" aria-hidden="true" title={summary || emptyLabel}>
         {total > 0 &&
           stages.map((s) =>
             s.value > 0 ? (
@@ -81,7 +92,7 @@ export function PipelineMini({ stages, className }: { stages: PipelineStage[]; c
             ) : null
           )}
       </div>
-      <span className="sr-only">{summary || "No applicants"}</span>
+      <span className={showSummary ? "mt-1.5 block text-small text-eh-muted" : "sr-only"}>{summary || emptyLabel}</span>
     </div>
   );
 }

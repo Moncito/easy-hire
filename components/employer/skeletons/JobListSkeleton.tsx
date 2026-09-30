@@ -3,6 +3,7 @@
 import Bone from "@/components/employer/skeletons/Bone";
 import ProPageHeaderSkeleton from "@/components/employer/skeletons/ProPageHeaderSkeleton";
 import { useEmployerShell } from "@/components/employer/EmployerShellContext";
+import { JobCardSkeleton } from "@/components/employer/system";
 
 type Props = {
   inline?: boolean;
@@ -33,7 +34,28 @@ function JobCardBones({ pro }: { pro: boolean }) {
   );
 }
 
+/** Pro: filter pills, search + sort, then JobCard-shaped placeholders. */
+function ProJobBoardBones() {
+  return (
+    <>
+      <div className="flex flex-wrap items-center gap-2">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <Bone key={i} className="h-8 w-20 rounded-full" />
+        ))}
+        <Bone className="h-9 w-72 rounded-control min-[1181px]:ml-auto" />
+        <Bone className="h-9 w-40 rounded-control" />
+      </div>
+      <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2 min-[1181px]:grid-cols-3">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <JobCardSkeleton key={i} />
+        ))}
+      </div>
+    </>
+  );
+}
+
 function JobBoardBones({ pro }: { pro: boolean }) {
+  if (pro) return <ProJobBoardBones />;
   return (
     <>
       <div className="mb-6 flex flex-wrap gap-2">

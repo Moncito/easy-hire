@@ -30,7 +30,8 @@ export function getEmployerNavCountsCached(companyId: string) {
 export function getEmployerJobsWithMetricsCached(companyId: string) {
   return unstable_cache(
     async () => getEmployerJobsWithMetrics(companyId),
-    [`employer-jobs-metrics`, companyId],
+    // v2: job cards carry oldestUnreviewedAt; the old cached shape lacks it.
+    [`employer-jobs-metrics-v2`, companyId],
     { revalidate: JOBS_REVALIDATE, tags: [employerJobsTag(companyId)] }
   )();
 }

@@ -9,7 +9,7 @@ import IconButton from "@/components/employer/system/IconButton";
 import { cx } from "@/components/employer/system/cx";
 
 export type MenuItem =
-  | { label: string; href: string; tone?: "default" | "danger"; hidden?: boolean }
+  | { label: string; href: string; external?: boolean; tone?: "default" | "danger"; hidden?: boolean }
   | { label: string; onSelect: () => void; tone?: "default" | "danger"; hidden?: boolean };
 
 /**
@@ -124,7 +124,14 @@ export default function DropdownMenu({
           >
             {visible.map((item) =>
               "href" in item ? (
-                <Link key={item.label} role="menuitem" href={item.href} className={itemClass(item.tone)}>
+                <Link
+                  key={item.label}
+                  role="menuitem"
+                  href={item.href}
+                  className={itemClass(item.tone)}
+                  onClick={() => setOpen(false)}
+                  {...(item.external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+                >
                   {item.label}
                 </Link>
               ) : (

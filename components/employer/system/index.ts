@@ -40,6 +40,7 @@ export { default as TrendBarChart } from "@/components/employer/system/TrendBarC
 export type { ChartSeries } from "@/components/employer/system/TrendBarChart";
 export { PipelineSummary, PipelineMini } from "@/components/employer/system/Pipeline";
 export type { PipelineStage, PipelineStageTone } from "@/components/employer/system/Pipeline";
+export { default as JobCard } from "@/components/employer/system/JobCard";
 export { Table, Th, Tr, Td, StackedRow } from "@/components/employer/system/Table";
 
 export { default as StatusBadge, ApplicationStatusBadge, APPLICATION_STATUS_BADGE } from "@/components/employer/system/StatusBadge";

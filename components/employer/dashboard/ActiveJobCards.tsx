@@ -40,6 +40,7 @@ function toCardData(job: EmployerAnalytics["activeJobs"][number]): EmployerJobCa
     hiredCount: job.hiredCount,
     targetHireCount: job.targetHireCount,
     needsAttention: job.needsAttention,
+    oldestUnreviewedAt: null,
     pipeline: { applied: 0, shortlisted: 0, interview: 0, hired: job.hiredCount },
     screeningQuestions: [],
   };

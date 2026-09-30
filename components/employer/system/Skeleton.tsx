@@ -67,16 +67,26 @@ export function PipelineSkeleton({ stages = 4 }: { stages?: number }) {
   );
 }
 
+/** Mirrors JobCard: title, meta, salary, three numbers, pipeline, action row. */
 export function JobCardSkeleton() {
   return (
-    <Card>
-      <Skeleton className="h-5 w-48" />
-      <Skeleton className="mt-2 h-3.5 w-32" />
-      <div className="mt-5 flex gap-6">
-        <Skeleton className="h-8 w-12" />
-        <Skeleton className="h-8 w-12" />
+    <Card as="div" padded={false} className="flex min-h-[300px] flex-col p-5">
+      <Skeleton className="h-5 w-3/4" />
+      <Skeleton className="mt-2 h-3.5 w-1/2" />
+      <Skeleton className="mt-1.5 h-3.5 w-1/3" />
+      <div className="mt-5 grid grid-cols-3 gap-3 border-t border-eh-line pt-4">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div key={i}>
+            <Skeleton className="h-6 w-10" />
+            <Skeleton className="mt-1.5 h-3 w-14" />
+          </div>
+        ))}
       </div>
-      <Skeleton className="mt-5 h-9 w-full rounded-control" />
+      <Skeleton className="mt-4 h-1.5 w-full rounded-full" />
+      <div className="mt-auto flex gap-2 pt-5">
+        <Skeleton className="h-9 flex-1 rounded-control" />
+        <Skeleton className="h-9 w-9 rounded-control" />
+      </div>
     </Card>
   );
 }
