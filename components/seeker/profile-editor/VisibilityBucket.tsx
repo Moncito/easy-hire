@@ -5,11 +5,12 @@ import type { UpdateField } from "./shared";
 
 type Props = {
   visibility: ProfileVisibilityLevel;
-  profileId?: string;
+  /** Null unless the *saved* visibility is PUBLIC — /seekers/[id] 404s otherwise. */
+  publicProfileHref: string | null;
   onChange: UpdateField;
 };
 
-export default function VisibilityBucket({ visibility, profileId, onChange }: Props) {
+export default function VisibilityBucket({ visibility, publicProfileHref, onChange }: Props) {
   return (
     <div className="space-y-3">
       {VISIBILITY_OPTIONS.map((opt) => {
@@ -37,19 +38,23 @@ export default function VisibilityBucket({ visibility, profileId, onChange }: Pr
           </button>
         );
       })}
-      {visibility === "PUBLIC" && profileId && (
+      {visibility === "PUBLIC" && (
         <div className="mt-4 rounded-xl border border-teal/20 bg-teal/5 px-4 py-3 text-sm text-ink/70">
           <p className="font-semibold text-ink">Public profile link</p>
           <p className="mt-1 text-xs text-ink/55">
-            Anyone with the link can view your public portfolio page.
+            {publicProfileHref
+              ? "Anyone with the link can view your public portfolio page."
+              : "Save your profile to publish your public portfolio page."}
           </p>
-          <Link
-            href={`/seekers/${profileId}`}
-            target="_blank"
-            className="mt-2 inline-block cursor-pointer text-sm font-semibold text-teal hover:underline"
-          >
-            View public page
-          </Link>
+          {publicProfileHref && (
+            <Link
+              href={publicProfileHref}
+              target="_blank"
+              className="mt-2 inline-block cursor-pointer text-sm font-semibold text-teal hover:underline"
+            >
+              View public page
+            </Link>
+          )}
         </div>
       )}
     </div>

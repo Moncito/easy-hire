@@ -41,7 +41,10 @@ export default async function SeekerProfilePage({
     label: b.label,
     complete: isBucketComplete(b.id, bucketState),
   }));
-  const publicProfileHref = `/seekers/${profile.id}`;
+  // /seekers/[id] only serves PUBLIC profiles (anything else 404s so ids
+  // can't be probed), so there's no page to link to until the *saved*
+  // visibility is PUBLIC — an unsaved toggle in the editor doesn't count.
+  const publicProfileHref = profile.visibility === "PUBLIC" ? `/seekers/${profile.id}` : null;
 
   return (
     <>
@@ -59,7 +62,7 @@ export default async function SeekerProfilePage({
       </div>
       <SeekerProfileAccountLinks />
       <SeekerProfileEditor
-        profileId={profile.id}
+        publicProfileHref={publicProfileHref}
         profileUpdatedAt={profile.updatedAt.toISOString()}
         initialBucket={parseInitialBucket(bucket)}
         idVerificationStatus={profile.idVerificationStatus}
