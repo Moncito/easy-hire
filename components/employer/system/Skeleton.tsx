@@ -70,7 +70,7 @@ export function PipelineSkeleton({ stages = 4 }: { stages?: number }) {
 /** Mirrors JobCard: title, meta, salary, three numbers, pipeline, action row. */
 export function JobCardSkeleton() {
   return (
-    <Card as="div" padded={false} className="flex min-h-[300px] flex-col p-5">
+    <Card as="div" padded={false} className="flex min-h-[380px] flex-col p-5">
       <Skeleton className="h-5 w-3/4" />
       <Skeleton className="mt-2 h-3.5 w-1/2" />
       <Skeleton className="mt-1.5 h-3.5 w-1/3" />

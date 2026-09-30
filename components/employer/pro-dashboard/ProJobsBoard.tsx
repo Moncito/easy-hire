@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { Briefcase, Plus, SearchX } from "lucide-react";
 import { Button, Card, EmptyState, FilterButton, SearchInput } from "@/components/employer/system";
 import type { SortOption } from "@/components/employer/JobsBoardToolbar";
@@ -15,23 +14,6 @@ const SORT_OPTIONS: Array<{ value: SortOption; label: string }> = [
   { value: "applicants", label: "Most applicants" },
   { value: "attention", label: "Needs attention" },
 ];
-
-function PostAnotherRoleCard() {
-  return (
-    <Link
-      href="/employer/jobs/new"
-      className="group flex h-full min-h-[160px] flex-col md:min-h-[280px] items-center justify-center gap-2 rounded-card border border-dashed border-eh-line bg-transparent p-6 text-center transition-colors duration-150 hover:border-eh-muted hover:bg-eh-surface"
-    >
-      <span className="grid h-10 w-10 place-items-center rounded-full bg-eh-marigold text-[#241500]" aria-hidden="true">
-        <Plus className="h-5 w-5" strokeWidth={2.25} />
-      </span>
-      <span className="mt-1 text-body font-semibold text-eh-ink">Post another role</span>
-      <span className="max-w-[240px] text-small text-eh-muted">
-        Pro has no live-job cap. More listings mean more VAs find you.
-      </span>
-    </Link>
-  );
-}
 
 /**
  * Pro job postings: status filters, search and sort over state-aware
@@ -138,7 +120,7 @@ export default function ProJobsBoard({
           />
         </Card>
       ) : (
-        <div className="mt-6 grid grid-cols-1 items-stretch gap-4 md:grid-cols-2 min-[1181px]:grid-cols-3">
+        <div className="mt-6 grid grid-cols-1 items-stretch gap-5 md:grid-cols-2 lg:grid-cols-3">
           {displayedJobs.map((job) => (
             <ProJobCard
               key={job.id}
@@ -151,7 +133,6 @@ export default function ProJobsBoard({
               onDelete={() => board.setPending({ kind: "delete", job })}
             />
           ))}
-          {filter === FILTER_ALL && !searching && <PostAnotherRoleCard />}
         </div>
       )}
 

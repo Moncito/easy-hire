@@ -45,7 +45,7 @@ function ProJobBoardBones() {
         <Bone className="h-9 w-72 rounded-control min-[1181px]:ml-auto" />
         <Bone className="h-9 w-40 rounded-control" />
       </div>
-      <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2 min-[1181px]:grid-cols-3">
+      <div className="mt-6 grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
         {Array.from({ length: 6 }).map((_, i) => (
           <JobCardSkeleton key={i} />
         ))}

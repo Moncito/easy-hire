@@ -89,7 +89,6 @@ export default function ProJobCard({
 
   const menuItems: MenuItem[] = [
     { label: "View applicants", href: applicantsHref, hidden: primary.href === applicantsHref || isDraft },
-    { label: "View listing", href: `/jobs/${job.id}`, external: true, hidden: !state.isPublic },
     { label: "Share listing", onSelect: () => void shareListing(job), hidden: !state.isPublic || primary.kind === "share" },
     { label: "Edit listing", href: `/employer/jobs/${job.id}/edit`, hidden: isDraft },
     { label: "Duplicate", onSelect: onDuplicate },
@@ -110,7 +109,7 @@ export default function ProJobCard({
   const icon = primary.kind === "edit" ? <Pencil /> : primary.kind === "share" ? <Share2 /> : <Users />;
   const primaryAction =
     primary.kind === "share" ? (
-      <Button variant="secondary" icon={icon} onClick={() => void shareListing(job)}>
+      <Button variant={primary.emphasis} icon={icon} onClick={() => void shareListing(job)}>
         {primary.label}
       </Button>
     ) : (
@@ -161,6 +160,7 @@ export default function ProJobCard({
       waiting={state.waiting}
       notice={(job.reviewRejectionReason && isDraft) || (tips && tips.length > 0) ? notice : undefined}
       primaryAction={primaryAction}
+      publicHref={state.isPublic ? `/jobs/${job.id}` : null}
       menuItems={menuItems}
       footnote={`Updated ${new Date(job.updatedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}`}
       loading={loading}

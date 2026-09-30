@@ -14,11 +14,11 @@ const base = {
 };
 
 describe("jobCardState", () => {
-  it("keeps a healthy active job quiet: no waiting, secondary View applicants", () => {
+  it("gives a healthy active job no waiting state and a marigold View applicants", () => {
     const s = jobCardState(base, true, now);
     expect(s.lifecycle).toBe("active");
     expect(s.waiting).toBeNull();
-    expect(s.primary).toMatchObject({ kind: "view", emphasis: "secondary" });
+    expect(s.primary).toMatchObject({ kind: "view", emphasis: "primary" });
     expect(s.isPublic).toBe(true);
   });
 

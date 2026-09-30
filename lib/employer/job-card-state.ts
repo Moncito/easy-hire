@@ -14,9 +14,10 @@ import type { EmployerJobCardData } from "@/lib/employer/jobs-board";
  *    A healthy active job shows no badge — only exceptions are labelled.
  *  - waiting: unreviewed applicants, with the shared two-level severity
  *    (marigold from 3 days, Ember past 14). Only on active listings.
- *  - primary: the single main action. Marigold ("primary") only when
- *    something is waiting on you or a draft needs finishing; otherwise
- *    the quiet secondary button.
+ *  - primary: the single main action, filled marigold for anything that
+ *    moves hiring forward (review, view applicants, share, finish a
+ *    draft); the quiet secondary button only for pending and closed
+ *    listings, where there is nothing to push.
  */
 
 export type JobLifecycle = "active" | "unlisted" | "draft" | "revision" | "pending" | "closed";
@@ -71,9 +72,9 @@ export function jobCardState(job: Input, companyVerified: boolean, now: Date): J
   } else if (job.unreviewedCount > 0) {
     primary = { kind: "review", label: "Review applicants", href: applicantsHref, emphasis: "primary" };
   } else if (job.applicantCount === 0 && isPublic) {
-    primary = { kind: "share", label: "Share listing", href: `/jobs/${job.id}`, emphasis: "secondary" };
+    primary = { kind: "share", label: "Share listing", href: `/jobs/${job.id}`, emphasis: "primary" };
   } else {
-    primary = { kind: "view", label: "View applicants", href: applicantsHref, emphasis: "secondary" };
+    primary = { kind: "view", label: "View applicants", href: applicantsHref, emphasis: "primary" };
   }
 
   return { lifecycle, waiting, primary, isPublic };

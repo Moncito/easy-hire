@@ -61,9 +61,9 @@ function RolePipeline({ row }: { row: RoleRow }) {
     <PipelineMini
       stages={[
         { label: "Applied", value: applied, tone: "muted" },
-        { label: "Shortlisted", value: shortlisted, tone: "ink" },
+        { label: "Shortlisted", value: shortlisted, tone: "teal-soft" },
         { label: "Interview", value: interview, tone: "teal" },
-        { label: "Hired", value: hired, tone: "marigold" },
+        { label: "Hired", value: hired, tone: "teal-strong" },
       ]}
     />
   );
