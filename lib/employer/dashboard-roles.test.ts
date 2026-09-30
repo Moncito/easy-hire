@@ -26,13 +26,21 @@ describe("buildRoleRow", () => {
     expect(row.conversion).toBe(20);
   });
 
-  it("flags pending applications, overdue only past the 14-day target, and makes Review primary", () => {
-    const fresh = buildRoleRow({ ...base, pending: 1, oldestPendingAt: daysAgo(3) }, true, now);
-    expect(fresh.status).toEqual({ kind: "needs-review", count: 1, overdue: false });
-    expect(fresh.primary.kind).toBe("review");
+  it("flags pending applications with the two-level wait severity, and makes Review primary", () => {
+    const today = buildRoleRow({ ...base, pending: 1, oldestPendingAt: daysAgo(1) }, true, now);
+    expect(today.status).toEqual({ kind: "needs-review", count: 1, oldestDays: 1, severity: "none" });
+    expect(today.primary.kind).toBe("review");
+
+    const waiting = buildRoleRow({ ...base, pending: 1, oldestPendingAt: daysAgo(3) }, true, now);
+    expect(waiting.status).toMatchObject({ severity: "attention", oldestDays: 3 });
 
     const stale = buildRoleRow({ ...base, pending: 2, oldestPendingAt: daysAgo(38) }, true, now);
-    expect(stale.status).toEqual({ kind: "needs-review", count: 2, overdue: true });
+    expect(stale.status).toEqual({ kind: "needs-review", count: 2, oldestDays: 38, severity: "critical" });
+  });
+
+  it("reports where each application currently sits", () => {
+    const row = buildRoleRow({ ...base, pending: 1, oldestPendingAt: daysAgo(1), shortlisted: 2, interview: 1, hired: 1 }, true, now);
+    expect(row.pipeline).toEqual({ applied: 1, shortlisted: 2, interview: 1, hired: 1 });
   });
 
   it("flags a role with no applicants and offers Share listing once verified", () => {

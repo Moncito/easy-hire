@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { SegmentedControl } from "@/components/employer/system";
 import { DASHBOARD_RANGES, type DashboardRange } from "@/lib/employer/dashboard-insights";
 
 /**
@@ -8,28 +8,10 @@ import { DASHBOARD_RANGES, type DashboardRange } from "@/lib/employer/dashboard-
  */
 export default function ProRangeControl({ range }: { range: DashboardRange }) {
   return (
-    <nav
-      aria-label="Date range"
-      className="inline-flex rounded-control border border-eh-line bg-eh-surface p-0.5"
-    >
-      {DASHBOARD_RANGES.map((value) => {
-        const active = value === range;
-        return (
-          <Link
-            key={value}
-            href={`?range=${value}`}
-            scroll={false}
-            aria-current={active ? "true" : undefined}
-            className={`num rounded-[6px] px-2.5 py-[5px] text-ui transition-colors ${
-              active
-                ? "bg-eh-surface-2 font-semibold text-eh-ink shadow-[inset_0_0_0_1px_var(--eh-line)]"
-                : "text-eh-muted hover:text-eh-ink"
-            }`}
-          >
-            {value}d
-          </Link>
-        );
-      })}
-    </nav>
+    <SegmentedControl
+      label="Date range"
+      value={String(range)}
+      options={DASHBOARD_RANGES.map((value) => ({ value: String(value), label: `${value}d`, href: `?range=${value}` }))}
+    />
   );
 }

@@ -50,7 +50,7 @@ export default function ProDashboardBoard({
   range,
 }: Props) {
   return (
-    <div className="flex flex-col gap-5 pb-8">
+    <div className="flex flex-col gap-6 pb-10 min-[861px]:gap-8">
       <ProCompanyBand
         companyName={company.companyName}
         companyLogoUrl={company.logoUrl}
@@ -69,14 +69,14 @@ export default function ProDashboardBoard({
       <ProKpiStrip kpis={kpis} range={range} />
 
       {/* Chart 2/3 + funnel 1/3; stacked below 1180px. */}
-      <div className="grid grid-cols-1 gap-3 min-[1181px]:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+      <div className="grid grid-cols-1 gap-6 min-[1181px]:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         <ProApplicationsCard chart={chart} range={range} />
         <ProPipelineFunnel funnel={funnel} />
       </div>
 
       {/* Decision queue 2/3 + recent activity 1/3; stacked below 1180px. The old
           applicant list and activity feed listed the same applications twice. */}
-      <div className="grid grid-cols-1 items-start gap-3 min-[1181px]:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+      <div className="grid grid-cols-1 items-start gap-6 min-[1181px]:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         <ProDecisionQueue
           queue={decisions.queue}
           queueTotal={decisions.queueTotal}

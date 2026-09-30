@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { Sparkles } from "lucide-react";
+import { Button } from "@/components/employer/system";
 import type { DashboardInsight } from "@/lib/employer/dashboard-insights";
 
 /**
@@ -13,7 +13,7 @@ export default function ProInsightCard({ insights }: { insights: DashboardInsigh
   return (
     <section
       aria-label="Easy AI suggestions"
-      className="grid grid-cols-[auto_1fr] gap-3.5 rounded-card border border-[color-mix(in_srgb,var(--eh-teal)_22%,transparent)] bg-eh-teal-tint px-4 py-3.5"
+      className="grid grid-cols-[auto_1fr] gap-3.5 rounded-card border border-[color-mix(in_srgb,var(--eh-teal)_22%,transparent)] bg-eh-teal-tint px-5 py-4"
     >
       <span className="grid h-8 w-8 place-items-center rounded-control bg-eh-teal text-white">
         <Sparkles className="h-4 w-4" strokeWidth={1.75} aria-hidden="true" />
@@ -30,12 +30,9 @@ export default function ProInsightCard({ insights }: { insights: DashboardInsigh
               <b className="font-semibold text-eh-ink">{insight.lead}</b>
               {insight.rest}
             </p>
-            <Link
-              href={insight.href}
-              className="inline-flex h-[30px] items-center rounded-control border border-[color-mix(in_srgb,var(--eh-teal)_25%,var(--eh-line))] bg-eh-surface px-2.5 text-small font-medium text-eh-ink transition hover:bg-eh-surface-2"
-            >
+            <Button href={insight.href} size="sm">
               {insight.actionLabel}
-            </Link>
+            </Button>
           </li>
         ))}
       </ul>

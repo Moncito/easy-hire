@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { CRITICAL_AFTER_DAYS } from "@/lib/employer/attention";
 
 /**
  * EASY AI INSIGHTS (rules-based)
@@ -10,8 +11,8 @@ import { prisma } from "@/lib/prisma";
  * card doesn't render at all.
  */
 
-/** An application waiting longer than this for a first decision gets flagged. */
-export const DECISION_TARGET_DAYS = 14;
+/** An application waiting longer than this for a first decision gets flagged — the shared "critical" threshold. */
+export const DECISION_TARGET_DAYS = CRITICAL_AFTER_DAYS;
 /** A live listing with no applicants after this long gets flagged. */
 export const QUIET_LISTING_DAYS = 7;
 

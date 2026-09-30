@@ -18,6 +18,9 @@ export function Table({ children, minWidth, caption }: { children: ReactNode; mi
   );
 }
 
+/** 16px between columns; the first and last cells line up with the Card's 20 / 24px padding. */
+const CELL_X = "px-4 first:pl-5 last:pr-5 sm:first:pl-6 sm:last:pr-6";
+
 export function Th({
   align = "left",
   children,
@@ -29,7 +32,7 @@ export function Th({
       scope="col"
       {...rest}
       className={cx(
-        "whitespace-nowrap border-b border-eh-line bg-eh-surface-2 px-5 py-2.5 text-small font-medium text-eh-muted",
+        "whitespace-nowrap border-b border-eh-line bg-eh-surface-2 py-2.5 text-small font-medium text-eh-muted", CELL_X,
         align === "right" ? "text-right" : "text-left",
         className
       )}
@@ -63,7 +66,7 @@ export function Td({
   return (
     <td
       {...rest}
-      className={cx("px-5 py-3 align-middle", (align === "right" || numeric) && "text-right", numeric && "num", className)}
+      className={cx("py-3 align-middle", CELL_X, (align === "right" || numeric) && "text-right", numeric && "num", className)}
     >
       {children}
     </td>
@@ -92,7 +95,7 @@ export function StackedRow({
     <li className="border-b border-eh-line px-5 py-4 last:border-0">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="truncate font-semibold text-eh-ink">{title}</p>
+          <p className="break-words font-semibold text-eh-ink">{title}</p>
           {meta && <p className="mt-0.5 text-small text-eh-muted">{meta}</p>}
         </div>
         {aside && <div className="shrink-0">{aside}</div>}

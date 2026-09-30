@@ -1,41 +1,12 @@
-import type { ReactNode } from "react";
 import { Briefcase, Check, Clock, MessageSquare, Users } from "lucide-react";
+import { MetricCard, TrendIndicator } from "@/components/employer/system";
+import { waitSeverity } from "@/lib/employer/attention";
 import type { DashboardKpis } from "@/lib/employer/dashboard-kpis";
 import { waitBarGeometry } from "@/lib/employer/dashboard-kpis";
 import type { DashboardRange } from "@/lib/employer/dashboard-insights";
 
 function plural(n: number, one: string, many = `${one}s`) {
   return `${n} ${n === 1 ? one : many}`;
-}
-
-function Tile({
-  label,
-  icon,
-  urgent = false,
-  children,
-}: {
-  label: string;
-  icon: ReactNode;
-  urgent?: boolean;
-  children: ReactNode;
-}) {
-  return (
-    <div
-      className={`flex min-h-[118px] flex-col gap-1.5 rounded-card border bg-eh-surface px-[18px] py-4 shadow-[0_1px_2px_rgba(16,24,40,0.04)] ${
-        urgent ? "border-[color-mix(in_srgb,var(--eh-danger)_35%,var(--eh-line))]" : "border-eh-line"
-      }`}
-    >
-      <p className="flex items-center gap-1.5 text-ui text-eh-muted">
-        {icon}
-        {label}
-      </p>
-      {children}
-    </div>
-  );
-}
-
-function Footer({ children }: { children: ReactNode }) {
-  return <p className="mt-auto text-small text-eh-muted [&_b]:font-medium [&_b]:text-eh-ink-2">{children}</p>;
 }
 
 /** Server-rendered sparkline — no client JS for a 28px line. */
@@ -58,24 +29,20 @@ function Sparkline({ series }: { series: number[] }) {
   );
 }
 
-function DeltaChip({ current, previous, range }: { current: number; previous: number; range: DashboardRange }) {
+function Delta({ current, previous, range }: { current: number; previous: number; range: DashboardRange }) {
   const diff = current - previous;
   const text = diff === 0 ? "±0" : diff > 0 ? `+${diff}` : `−${Math.abs(diff)}`;
   return (
-    <span
-      className={`num rounded-chip px-1.5 py-px text-xs font-medium ${
-        diff > 0
-          ? "bg-eh-success-tint text-eh-success"
-          : "border border-eh-line bg-eh-surface-2 text-eh-muted"
-      }`}
+    <TrendIndicator
+      direction={diff > 0 ? "up" : diff < 0 ? "down" : "flat"}
       title={`${plural(current, "application")} in the last ${range} days, ${previous} in the ${range} days before`}
     >
       {text} vs prev {range}d
-    </span>
+    </TrendIndicator>
   );
 }
 
-const iconClass = "h-4 w-4 shrink-0";
+const iconProps = { strokeWidth: 1.75, "aria-hidden": true } as const;
 
 /**
  * Five KPI tiles (see lib/employer/dashboard-kpis.ts for exactly what each
@@ -86,43 +53,50 @@ export default function ProKpiStrip({ kpis, range }: { kpis: DashboardKpis; rang
   const { activeJobs, applicants, needsReview, interview, hired } = kpis;
   const waiting = needsReview.count > 0 && needsReview.oldestDays !== null;
   const wait = waiting ? waitBarGeometry(needsReview.oldestDays!, needsReview.targetDays) : null;
-  // Red only once the oldest wait is past the 14-day target: a two-day-old
-  // application is routine, and Ember is reserved for genuine warnings.
-  const urgent = wait?.overdue ?? false;
+  // The shared two-level rule: marigold from 3 days, Ember only past the
+  // 14-day target — a day-old application is routine.
+  const severity = waiting ? waitSeverity(needsReview.oldestDays) : "none";
+  const tone = severity === "none" ? "default" : severity;
 
   return (
     <section
       aria-label="Key numbers"
-      className="grid grid-cols-1 gap-3 min-[521px]:grid-cols-2 min-[861px]:grid-cols-3 min-[1181px]:grid-cols-5"
+      className="grid grid-cols-1 gap-4 min-[521px]:grid-cols-2 min-[861px]:grid-cols-3 min-[1181px]:grid-cols-5"
     >
-      <Tile label="Active jobs" icon={<Briefcase className={iconClass} strokeWidth={1.75} aria-hidden="true" />}>
-        <p className="num text-kpi text-eh-ink">{activeJobs.count}</p>
-        <Footer>
-          <b className="num">{activeJobs.openings}</b> {activeJobs.openings === 1 ? "opening" : "openings"} ·{" "}
-          <b className="num">{activeJobs.filled}</b> filled
-        </Footer>
-      </Tile>
+      <MetricCard
+        label="Active jobs"
+        icon={<Briefcase {...iconProps} />}
+        value={activeJobs.count}
+        description={
+          <>
+            <b className="num">{activeJobs.openings}</b> {activeJobs.openings === 1 ? "opening" : "openings"} ·{" "}
+            <b className="num">{activeJobs.filled}</b> filled
+          </>
+        }
+      />
 
-      <Tile label="Applicants" icon={<Users className={iconClass} strokeWidth={1.75} aria-hidden="true" />}>
-        <p className="flex flex-wrap items-center gap-2">
-          <span className="num text-kpi text-eh-ink">{applicants.total}</span>
-          <DeltaChip current={applicants.inRange} previous={applicants.previousRange} range={range} />
-        </p>
-        <Sparkline series={applicants.series} />
-      </Tile>
-
-      <Tile
-        label="Needs review"
-        urgent={urgent}
-        icon={<Clock className={iconClass} strokeWidth={1.75} aria-hidden="true" />}
+      <MetricCard
+        label="Applicants"
+        icon={<Users {...iconProps} />}
+        value={applicants.total}
+        trend={<Delta current={applicants.inRange} previous={applicants.previousRange} range={range} />}
       >
-        <p className={`num text-kpi ${urgent ? "text-eh-danger" : "text-eh-ink"}`}>{needsReview.count}</p>
-        {wait ? (
+        <Sparkline series={applicants.series} />
+      </MetricCard>
+
+      <MetricCard
+        label="Needs review"
+        icon={<Clock {...iconProps} />}
+        value={needsReview.count}
+        tone={tone}
+        description={wait ? undefined : "All caught up"}
+      >
+        {wait && (
           <div className="mt-auto">
             <div className="relative mt-1 h-1.5 overflow-hidden rounded-full bg-eh-line" aria-hidden="true">
               <i
                 className={`absolute inset-y-0 left-0 rounded-full motion-safe:transition-[width] motion-safe:duration-500 ${
-                  urgent ? "bg-eh-danger" : "bg-eh-marigold"
+                  severity === "none" ? "bg-eh-muted" : severity === "critical" ? "bg-eh-danger" : "bg-eh-marigold"
                 }`}
                 style={{ width: `${Math.round(wait.fill * 100)}%` }}
               />
@@ -137,44 +111,54 @@ export default function ProKpiStrip({ kpis, range }: { kpis: DashboardKpis; rang
             <p className="mt-1.5 flex flex-wrap justify-between gap-x-2 text-micro text-eh-muted">
               <span className="whitespace-nowrap">
                 Oldest waiting{" "}
-                <b className={`num font-semibold ${urgent ? "text-eh-danger" : "text-eh-ink-2"}`}>
+                <b
+                  className={`num font-semibold ${
+                    severity === "critical"
+                      ? "text-eh-danger"
+                      : severity === "attention"
+                        ? "text-eh-marigold-ink"
+                        : "text-eh-ink-2"
+                  }`}
+                >
                   {plural(needsReview.oldestDays!, "day")}
                 </b>
               </span>
               <span className="num whitespace-nowrap">target {needsReview.targetDays}d</span>
             </p>
           </div>
-        ) : (
-          <Footer>All caught up</Footer>
         )}
-      </Tile>
+      </MetricCard>
 
-      <Tile label="In interview" icon={<MessageSquare className={iconClass} strokeWidth={1.75} aria-hidden="true" />}>
-        <p className="num text-kpi text-eh-ink">{interview.count}</p>
-        <Footer>
-          {interview.count === 0 ? (
+      <MetricCard
+        label="In interview"
+        icon={<MessageSquare {...iconProps} />}
+        value={interview.count}
+        description={
+          interview.count === 0 ? (
             "None right now"
           ) : (
             <>
               <b className="num">{interview.candidates}</b> {interview.candidates === 1 ? "candidate" : "candidates"} across{" "}
               <b className="num">{interview.roles}</b> {interview.roles === 1 ? "role" : "roles"}
             </>
-          )}
-        </Footer>
-      </Tile>
+          )
+        }
+      />
 
-      <Tile label="Hired" icon={<Check className={iconClass} strokeWidth={1.75} aria-hidden="true" />}>
-        <p className="num text-kpi text-eh-ink">{hired.count}</p>
-        <Footer>
-          {hired.rate === null ? (
+      <MetricCard
+        label="Hired"
+        icon={<Check {...iconProps} />}
+        value={hired.count}
+        description={
+          hired.rate === null ? (
             "No applicants yet"
           ) : (
             <>
               Hire rate <b className="num">{hired.rate}%</b> of applicants
             </>
-          )}
-        </Footer>
-      </Tile>
+          )
+        }
+      />
     </section>
   );
 }

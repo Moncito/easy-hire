@@ -1,5 +1,5 @@
 import Link from "next/link";
-import EmployerAvatar from "@/components/employer/ui/EmployerAvatar";
+import { Avatar, Card, CardHeader } from "@/components/employer/system";
 import type { ActivityEvent } from "@/lib/employer/dashboard-decisions";
 
 /**
@@ -9,25 +9,20 @@ import type { ActivityEvent } from "@/lib/employer/dashboard-decisions";
  */
 export default function ProRecentActivity({ events }: { events: ActivityEvent[] }) {
   return (
-    <section
-      aria-labelledby="pro-activity-heading"
-      className="rounded-card border border-eh-line bg-eh-surface shadow-[0_1px_2px_rgba(16,24,40,0.04)]"
-    >
-      <h2 id="pro-activity-heading" className="px-5 pt-4 text-card-title text-eh-ink">
-        Recent activity
-      </h2>
+    <Card aria-labelledby="pro-activity-heading" padded={false} className="px-5 pb-2 pt-5 sm:px-6">
+      <CardHeader id="pro-activity-heading" title="Recent activity" />
       {events.length === 0 ? (
-        <p className="px-5 pb-5 pt-3 text-ui text-eh-muted">
+        <p className="pb-4 pt-3 text-ui text-eh-muted">
           Nothing yet. Applications and stage changes will show up here.
         </p>
       ) : (
-        <ol className="px-5 pb-4 pt-1.5">
+        <ol className="pt-2">
           {events.map((event, index) => (
             <li key={event.id} className="relative grid grid-cols-[auto_1fr] gap-2.5 py-2.5">
               {index < events.length - 1 && (
                 <span aria-hidden="true" className="absolute bottom-[-4px] left-[15px] top-[42px] w-px bg-eh-line" />
               )}
-              <EmployerAvatar name={event.seekerName} imageUrl={event.seekerPhotoUrl} size="sm" />
+              <Avatar name={event.seekerName} src={event.seekerPhotoUrl} size="sm" />
               <div className="min-w-0">
                 <Link href={event.href} className="text-ui text-eh-ink-2 transition hover:text-eh-ink">
                   <b className="font-semibold text-eh-ink">{event.seekerName}</b> {event.text}
@@ -40,6 +35,6 @@ export default function ProRecentActivity({ events }: { events: ActivityEvent[] 
           ))}
         </ol>
       )}
-    </section>
+    </Card>
   );
 }

@@ -1,65 +1,87 @@
 import Link from "next/link";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Inbox, Plus } from "lucide-react";
+import { AnalyticsCard, Button, TrendBarChart } from "@/components/employer/system";
 import type { ApplicationsChart } from "@/lib/employer/dashboard-pipeline";
 import { MIN_VIEWS_FOR_RATE } from "@/lib/employer/dashboard-pipeline";
 import type { DashboardRange } from "@/lib/employer/dashboard-insights";
-import ProApplicationsChart from "@/components/employer/pro-dashboard/ProApplicationsChart";
 
+/** Every day for a week; weekly for 30 days; every 10th day for 60. */
+const LABEL_EVERY: Record<DashboardRange, number> = { 7: 1, 30: 7, 60: 10 };
+
+/**
+ * Daily applications (ink) and moves to interview (marigold) on Recharts.
+ * Labels arrive pre-formatted from the server, so nothing here formats
+ * dates. With nothing in the range, a compact empty state with the next
+ * step replaces the chart — no flat, blank plot.
+ */
 export default function ProApplicationsCard({ chart, range }: { chart: ApplicationsChart; range: DashboardRange }) {
+  const empty = chart.days.every((d) => d.applications === 0 && d.interviews === 0);
+
   return (
-    <section
-      aria-labelledby="pro-applications-heading"
-      className="flex flex-col rounded-card border border-eh-line bg-eh-surface shadow-[0_1px_2px_rgba(16,24,40,0.04)]"
+    <AnalyticsCard
+      id="pro-applications-heading"
+      title="Applications"
+      description={`Last ${range} days`}
+      legend={[
+        { label: "Applications", tone: "ink" },
+        { label: "Moved to interview", tone: "marigold" },
+      ]}
+      empty={
+        empty
+          ? {
+              icon: <Inbox />,
+              title: "No applications in this range",
+              description: "Sharing a listing is the quickest way to get more — or try a longer range.",
+              action: (
+                <Button href="/employer/jobs" size="sm" icon={<Plus />}>
+                  Go to your listings
+                </Button>
+              ),
+            }
+          : null
+      }
+      footer={
+        <>
+          <span>
+            Total in range <b className="num">{chart.total}</b>
+          </span>
+          <span>
+            Busiest day <b>{chart.busiestDay ?? "—"}</b>
+          </span>
+          <span>
+            Views to applications{" "}
+            {chart.viewToApplyRate === null ? (
+              <b
+                className="cursor-help border-b border-dotted border-eh-muted !text-eh-muted"
+                title={`Fewer than ${MIN_VIEWS_FOR_RATE} views in this range — not enough to be meaningful`}
+              >
+                —
+              </b>
+            ) : (
+              <b className="num">{chart.viewToApplyRate}%</b>
+            )}
+          </span>
+          <Link href="/employer/reports" className="ml-auto inline-flex items-center gap-1 transition hover:text-eh-ink">
+            Full reports
+            <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
+          </Link>
+        </>
+      }
     >
-      <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 px-5 pt-4">
-        <h2 id="pro-applications-heading" className="text-card-title text-eh-ink">
-          Applications
-        </h2>
-        <span className="text-ui text-eh-muted">Last {range} days</span>
-        <div className="ml-auto flex gap-4 text-small text-eh-muted">
-          <span className="inline-flex items-center gap-1.5">
-            <i className="h-2 w-2 rounded-[2px] bg-eh-ink" aria-hidden="true" />
-            Applications
-          </span>
-          <span className="inline-flex items-center gap-1.5">
-            <i className="h-2 w-2 rounded-[2px] bg-eh-marigold" aria-hidden="true" />
-            Moved to interview
-          </span>
-        </div>
-      </div>
-
-      <div className="px-5 pb-5 pt-4">
-        <ProApplicationsChart days={chart.days} />
-      </div>
-
-      <div className="mt-auto flex flex-wrap items-center gap-x-6 gap-y-1 border-t border-eh-line px-5 py-3 text-ui text-eh-muted">
-        <span>
-          Total in range <b className="num font-semibold text-eh-ink">{chart.total}</b>
-        </span>
-        <span>
-          Busiest day <b className="font-semibold text-eh-ink">{chart.busiestDay ?? "—"}</b>
-        </span>
-        <span>
-          Views to applications{" "}
-          {chart.viewToApplyRate === null ? (
-            <b
-              className="cursor-help border-b border-dotted border-eh-muted font-semibold text-eh-muted"
-              title={`Fewer than ${MIN_VIEWS_FOR_RATE} views in this range — not enough to be meaningful`}
-            >
-              —
-            </b>
-          ) : (
-            <b className="num font-semibold text-eh-ink">{chart.viewToApplyRate}%</b>
-          )}
-        </span>
-        <Link
-          href="/employer/reports"
-          className="ml-auto inline-flex items-center gap-1 transition hover:text-eh-ink"
-        >
-          Full reports
-          <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
-        </Link>
-      </div>
-    </section>
+      <TrendBarChart
+        data={chart.days.map((d) => ({
+          label: d.label,
+          tooltipLabel: d.tooltipDate,
+          applications: d.applications,
+          interviews: d.interviews,
+        }))}
+        labelEvery={LABEL_EVERY[range]}
+        ariaLabel={`Applications and moves to interview per day, last ${range} days`}
+        series={[
+          { key: "applications", name: "Applications", tone: "ink" },
+          { key: "interviews", name: "Moved to interview", tone: "marigold" },
+        ]}
+      />
+    </AnalyticsCard>
   );
 }
