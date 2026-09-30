@@ -39,7 +39,7 @@ export default async function ApplicantsPage({
   // eslint-disable-next-line react-hooks/purity
   const nowMs = Date.now();
 
-  const staleThreshold = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
+  const staleThreshold = new Date(nowMs - 3 * 24 * 60 * 60 * 1000);
   const unreviewedStale = applications.filter(
     (a) => a.status === "APPLIED" && a.appliedAt < staleThreshold
   ).length;
@@ -99,6 +99,7 @@ export default async function ApplicantsPage({
         initialApplications={JSON.parse(JSON.stringify(applications))}
         defaultRejectionMessage={hiringDefaults.rejectionMessage}
         initialSelectedId={applicationParam ?? null}
+        nowMs={nowMs}
       />
     </>
   );

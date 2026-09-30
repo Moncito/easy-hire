@@ -20,7 +20,12 @@ type ItemBase = {
 };
 
 export type MenuItem =
-  | (ItemBase & { href: string; external?: boolean })
+  | (ItemBase & {
+      href: string;
+      external?: boolean;
+      /** Plain <a> instead of a Next.js Link — for downloads and API routes. */
+      native?: boolean;
+    })
   | (ItemBase & { onSelect: () => void });
 
 const GAP = 6;
@@ -185,7 +190,17 @@ export default function DropdownMenu({
             {visible.map((item) => (
               <div key={item.label}>
                 {item.separatorBefore && <div role="separator" className="-mx-1.5 my-1.5 h-px bg-eh-line" />}
-                {"href" in item ? (
+                {"href" in item && item.native ? (
+                  <a
+                    role="menuitem"
+                    href={item.href}
+                    className={itemClass(item.tone)}
+                    onClick={() => setOpen(false)}
+                  >
+                    {iconSlot(item)}
+                    {item.label}
+                  </a>
+                ) : "href" in item ? (
                   <Link
                     role="menuitem"
                     href={item.href}
