@@ -63,7 +63,15 @@ function NavLink({
         {...anchorProps}
         className={`group relative flex items-center transition-colors duration-150 ${
           isPro ? "rounded-control" : "rounded-xl"
-        } ${expanded ? "gap-3 px-3 py-2" : "h-10 w-10 justify-center"} ${
+        } ${
+          expanded
+            ? isPro
+              ? "min-h-10 gap-3 px-3 py-2.5"
+              : "gap-3 px-3 py-2"
+            : isPro
+              ? "h-11 w-11 justify-center"
+              : "h-10 w-10 justify-center"
+        } ${
           isActive
             ? isPro
               ? proActive
@@ -228,13 +236,19 @@ export default function Sidebar({
       )}
 
       <nav
-        className={`flex flex-1 flex-col overflow-y-auto overflow-x-hidden py-3 ${
-          expanded ? "gap-4 px-3" : "gap-2 items-center px-2"
+        className={`flex flex-1 flex-col overflow-y-auto overflow-x-hidden ${
+          isPro
+            ? expanded
+              ? "gap-6 px-3 py-5"
+              : "items-center gap-4 px-2 py-5"
+            : expanded
+              ? "gap-4 px-3 py-3"
+              : "items-center gap-2 px-2 py-3"
         }`}
       >
         {visibleEmployerNav(collaborativeHiringEnabled).map((group, groupIndex) => {
           const items = (
-            <div className={`flex flex-col gap-1 ${expanded ? "" : "items-center"}`}>
+            <div className={`flex flex-col ${isPro ? "gap-1.5" : "gap-1"} ${expanded ? "" : "items-center"}`}>
               {group.items.map((item) => (
                 <NavLink
                   key={item.href}
@@ -257,8 +271,8 @@ export default function Sidebar({
               {expanded ? (
                 <p
                   aria-hidden="true"
-                  className={`mb-1 px-3 ${
-                    isPro ? "text-xs text-eh-muted" : "text-[10px] font-bold uppercase tracking-wider text-mist/35"
+                  className={`px-3 ${
+                    isPro ? "mb-2 text-small font-medium text-eh-muted" : "mb-1 text-[10px] font-bold uppercase tracking-wider text-mist/35"
                   }`}
                 >
                   {group.label}
@@ -267,7 +281,7 @@ export default function Sidebar({
                 groupIndex > 0 && (
                   <div
                     aria-hidden="true"
-                    className={`mb-2 h-px w-8 ${isPro ? "bg-ink/10" : "bg-white/10"}`}
+                    className={`h-px w-8 ${isPro ? "mb-4 bg-ink/10" : "mb-2 bg-white/10"}`}
                   />
                 )
               )}
@@ -284,7 +298,7 @@ export default function Sidebar({
       )}
 
       <div
-        className={`shrink-0 py-3 ${isPro ? "border-t border-ink/[0.06]" : "border-t border-white/5"} ${expanded ? "px-3" : "flex justify-center px-2"}`}
+        className={`shrink-0 ${isPro ? "border-t border-ink/[0.06] py-4" : "border-t border-white/5 py-3"} ${expanded ? "px-3" : "flex justify-center px-2"}`}
       >
         <button
           type="button"
@@ -294,7 +308,15 @@ export default function Sidebar({
             isPro
               ? "rounded-control text-eh-muted hover:bg-eh-surface-2 hover:text-eh-ink"
               : "rounded-xl text-mist/50 hover:bg-ink/[0.04] hover:text-ink"
-          } ${expanded ? "gap-3 px-3 py-2" : "h-10 w-10 justify-center"}`}
+          } ${
+            expanded
+              ? isPro
+                ? "min-h-10 gap-3 px-3 py-2.5"
+                : "gap-3 px-3 py-2"
+              : isPro
+                ? "h-11 w-11 justify-center"
+                : "h-10 w-10 justify-center"
+          }`}
         >
           <LogOut className="h-[18px] w-[18px] shrink-0" strokeWidth={2} />
           {expanded && <span className="text-sm font-medium">Log out</span>}
