@@ -29,15 +29,21 @@ const FILL: Record<PipelineStageTone, string> = {
 export function PipelineSummary({
   stages,
   showConversion = false,
+  relativeTo = "first",
   note,
   className,
 }: {
   stages: PipelineStage[];
   showConversion?: boolean;
+  /**
+   * "first": bars sized against the first stage — a funnel that only
+   * shrinks. "max": against the largest stage — a current stage mix.
+   */
+  relativeTo?: "first" | "max";
   note?: string;
   className?: string;
 }) {
-  const base = Math.max(1, stages[0]?.value ?? 0);
+  const base = Math.max(1, relativeTo === "max" ? Math.max(0, ...stages.map((s) => s.value)) : (stages[0]?.value ?? 0));
   return (
     <div className={cx("flex flex-col gap-3.5", className)}>
       {stages.map((stage, i) => {
