@@ -26,6 +26,7 @@ import DashboardJobPerformance from "@/components/employer/dashboard/DashboardJo
 import WeeklyTrendChart from "@/components/employer/charts/WeeklyTrendChart";
 import { getDashboardInsights, parseDashboardRange } from "@/lib/employer/dashboard-insights";
 import { getDashboardKpis } from "@/lib/employer/dashboard-kpis";
+import { getDashboardPipeline } from "@/lib/employer/dashboard-pipeline";
 import {
   getJobPerformanceRows,
   shouldShowApplicantQueue,
@@ -87,11 +88,12 @@ export default async function EmployerDashboardPage({
   // The Pro dashboard's date range (7/30/60 days, default 30). Read here so
   // every section fetches on the server for the same window.
   const range = parseDashboardRange((await searchParams).range);
-  const [analytics, applicantQueue, proInsights, proKpis] = await Promise.all([
+  const [analytics, applicantQueue, proInsights, proKpis, proPipeline] = await Promise.all([
     getEmployerAnalyticsCached(company.id),
     getDashboardApplicantQueueCached(company.id),
     isPro ? getDashboardInsights(company.id) : Promise.resolve([]),
     isPro ? getDashboardKpis(company.id, range) : Promise.resolve(null),
+    isPro ? getDashboardPipeline(company.id, range) : Promise.resolve(null),
   ]);
   const { metrics, weeklyTrend, insights } = analytics;
 
@@ -135,12 +137,13 @@ export default async function EmployerDashboardPage({
           }}
           analytics={analytics}
           applicantQueue={applicantQueue}
-          chartData={chartData}
           sparse={sparse}
           showGettingStarted={showGettingStarted}
           gettingStartedSteps={gettingStartedSteps}
           insights={proInsights}
           kpis={proKpis!}
+          chart={proPipeline!.chart}
+          funnel={proPipeline!.funnel}
           range={range}
         />
       ) : sparse && chartIsEmpty ? (

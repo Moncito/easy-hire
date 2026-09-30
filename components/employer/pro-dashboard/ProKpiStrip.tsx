@@ -133,14 +133,15 @@ export default function ProKpiStrip({ kpis, range }: { kpis: DashboardKpis; rang
                 />
               )}
             </div>
-            <p className="mt-1.5 flex justify-between gap-2 whitespace-nowrap text-micro text-eh-muted">
-              <span className="min-w-0 truncate">
+            {/* Wraps to two lines in narrow tiles rather than truncating the day count. */}
+            <p className="mt-1.5 flex flex-wrap justify-between gap-x-2 text-micro text-eh-muted">
+              <span className="whitespace-nowrap">
                 Oldest waiting{" "}
                 <b className={`num font-semibold ${urgent ? "text-eh-danger" : "text-eh-ink-2"}`}>
                   {plural(needsReview.oldestDays!, "day")}
                 </b>
               </span>
-              <span className="num">target {needsReview.targetDays}d</span>
+              <span className="num whitespace-nowrap">target {needsReview.targetDays}d</span>
             </p>
           </div>
         ) : (

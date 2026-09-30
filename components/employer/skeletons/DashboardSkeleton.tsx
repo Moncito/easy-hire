@@ -37,16 +37,19 @@ function ProDashboardSkeleton() {
         ))}
       </div>
 
-      <section className="pro-card p-5 sm:p-6">
-        <div className="mb-4 flex items-end justify-between gap-3">
-          <div>
-            <Bone className="h-6 w-28" />
-            <Bone className="mt-2 h-4 w-52" />
-          </div>
-          <Bone className="h-4 w-24" />
-        </div>
-        <Bone className="mt-4 h-[220px] w-full rounded-control" />
-      </section>
+      {/* Applications chart (2/3) + pipeline funnel (1/3) */}
+      <div className="grid grid-cols-1 gap-3 min-[1181px]:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+        <section className="rounded-card border border-eh-line bg-eh-surface p-5">
+          <Bone className="h-5 w-40" />
+          <Bone className="mt-4 h-[220px] w-full rounded-control" />
+        </section>
+        <section className="rounded-card border border-eh-line bg-eh-surface p-5">
+          <Bone className="h-5 w-32" />
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Bone key={i} className="mt-5 h-[26px] w-full rounded-[6px]" />
+          ))}
+        </section>
+      </div>
 
       <section>
         <div className="mb-4 flex items-end justify-between">
