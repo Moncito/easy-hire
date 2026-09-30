@@ -86,10 +86,13 @@ export default function AccountSettingsNav({
   role,
   active,
   variant,
+  pro = false,
 }: {
   role: AccountSettingsRole;
   active: AccountSettingsSectionId;
   variant: "desktop" | "mobile";
+  /** Employer Pro: Inter group labels instead of tiny uppercase. */
+  pro?: boolean;
 }) {
   const isEmployer = role === "EMPLOYER";
   const sections = sectionsForRole(role);
@@ -134,18 +137,26 @@ export default function AccountSettingsNav({
 
   return (
     <div className="sticky top-24 hidden flex-col lg:flex">
-      <p className="font-display text-lg font-bold text-ink">Settings</p>
-      <p className="mt-1 text-sm leading-relaxed text-ink/55">
-        {isEmployer
-          ? "Your account, and the company workspace you run."
-          : "Manage your account, preferences, and security settings."}
-      </p>
-
-      <nav aria-label="Settings sections" className="mt-6 flex flex-col gap-5">
+      {/* The employer page already has a Settings header; seekers don't, so they keep this one. */}
+      {!isEmployer && (
+        <>
+          <p className="font-display text-lg font-bold text-ink">Settings</p>
+          <p className="mt-1 text-sm leading-relaxed text-ink/55">
+            Manage your account, preferences, and security settings.
+          </p>
+        </>
+      )}
+      <nav aria-label="Settings sections" className={`${isEmployer ? "" : "mt-6 "}flex flex-col gap-5`}>
         {groups.map(({ group, items }) => (
           <div key={group} className="flex flex-col gap-1">
             {showGroupLabels && (
-              <p className="px-3 pb-1 text-[10px] font-bold uppercase tracking-[0.14em] text-ink/40">
+              <p
+                className={
+                  pro
+                    ? "px-3 pb-1 text-small font-medium text-eh-muted"
+                    : "px-3 pb-1 text-[10px] font-bold uppercase tracking-[0.14em] text-ink/40"
+                }
+              >
                 {GROUP_LABELS[group]}
               </p>
             )}

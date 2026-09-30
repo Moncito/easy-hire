@@ -3,6 +3,7 @@ import { getAccountSettingsContext } from "@/lib/account/settings-context";
 import { getBillingSettingsSummary, getTeamSettingsSummary } from "@/lib/employer/workspace-settings";
 import { getHiringDefaults } from "@/lib/employer/hiring-defaults";
 import EmployerPageHeader from "@/components/employer/ui/EmployerPageHeader";
+import { PageHeader } from "@/components/employer/system";
 import AccountSettingsSections from "@/components/account/AccountSettingsSections";
 import {
   parseAccountSettingsSection,
@@ -57,7 +58,7 @@ export default async function EmployerSettingsPage({
   searchParams: Promise<{ section?: string | string[] }>;
 }) {
   const context = await requireEmployerPageContext();
-  const { session } = context;
+  const { session, plan } = context;
   const { section } = await searchParams;
   const activeSection = parseAccountSettingsSection(section, "EMPLOYER");
 
@@ -71,10 +72,11 @@ export default async function EmployerSettingsPage({
 
   return (
     <>
-      <EmployerPageHeader
-        title="Settings"
-        description="Your account, and the company workspace you run."
-      />
+      {plan === "PRO" ? (
+        <PageHeader className="mb-6" title="Settings" description="Your account, and the company workspace you run." />
+      ) : (
+        <EmployerPageHeader title="Settings" description="Your account, and the company workspace you run." />
+      )}
 
       <AccountSettingsSections
         role="EMPLOYER"
@@ -85,7 +87,8 @@ export default async function EmployerSettingsPage({
         emailVerifiedAt={account?.emailVerifiedAt ?? null}
         passwordChangedAt={account?.passwordChangedAt ?? null}
         joinedLabel={joinedLabel}
-        workspaceContent={workspaceData ? <WorkspaceSettingsSection data={workspaceData} /> : null}
+        workspaceContent={workspaceData ? <WorkspaceSettingsSection data={workspaceData} pro={plan === "PRO"} /> : null}
+        pro={plan === "PRO"}
       />
     </>
   );

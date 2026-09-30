@@ -1815,8 +1815,10 @@ backdrop-filter:blur(6px);
   box-shadow: var(--pro-shadow);
 }
 
-/* Pro shared surfaces follow the design system's 12px card radius. */
-.employer-workspace[data-employer-plan="pro"] .employer-ws-surface {
+/* Pro shared surfaces — and the legacy white cards restyled above — follow
+   the design system's 12px card radius. */
+.employer-workspace[data-employer-plan="pro"] .employer-ws-surface,
+.employer-workspace[data-employer-plan="pro"] main .rounded-2xl.bg-white {
   border-radius: var(--radius-card);
 }
 

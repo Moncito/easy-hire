@@ -72,13 +72,13 @@ const SUBSCRIPTION_STATUS_LABELS = { ACTIVE: "Active", CANCELLED: "Cancelled", P
  * place to edit anything. Server component — the page loads only the data
  * for the section being shown.
  */
-export default function WorkspaceSettingsSection({ data }: { data: WorkspaceSettingsData }) {
+export default function WorkspaceSettingsSection({ data, pro = false }: { data: WorkspaceSettingsData; pro?: boolean }) {
   const heading = HEADINGS[data.section];
   const headingId = `${data.section}-heading`;
 
   return (
     <section aria-labelledby={headingId}>
-      <h2 id={headingId} className="font-display text-xl font-bold text-ink">
+      <h2 id={headingId} className={pro ? "font-heading text-section text-eh-ink" : "font-display text-xl font-bold text-ink"}>
         {heading.title}
       </h2>
       <p className="mt-1 text-sm text-ink/55">{heading.description}</p>

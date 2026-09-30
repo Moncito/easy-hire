@@ -4,6 +4,8 @@ import { useId, useMemo, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import EmployerFormSelect from "@/components/employer/ui/EmployerFormSelect";
+import { Button, Select } from "@/components/employer/system";
+import { useEmployerShell } from "@/components/employer/EmployerShellContext";
 import { INDUSTRIES, ROLE_TYPES } from "@/lib/constants/job-categories";
 import {
   APPLICANT_NOTE_MAX,
@@ -83,15 +85,68 @@ function Group({ title, description, children }: { title: string; description: s
 }
 
 function FieldLabel({ htmlFor, children }: { htmlFor?: string; children: ReactNode }) {
+  const { isPro } = useEmployerShell();
   return (
-    <label htmlFor={htmlFor} className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-ink/45">
+    <label
+      htmlFor={htmlFor}
+      className={
+        isPro
+          ? "mb-1.5 block text-small font-medium text-eh-ink-2"
+          : "mb-1.5 block text-xs font-semibold uppercase tracking-wider text-ink/45"
+      }
+    >
       {children}
     </label>
   );
 }
 
-const inputClass =
+const FREE_INPUT =
   "w-full rounded-xl border border-ink/12 bg-white px-3.5 py-2.5 text-sm text-ink outline-none transition focus:border-teal focus:ring-2 focus:ring-teal/15";
+const PRO_INPUT =
+  "w-full rounded-control border border-eh-line bg-eh-surface px-3 py-2.5 text-ui text-eh-ink outline-none transition-colors duration-150 placeholder:text-eh-muted hover:border-[color-mix(in_srgb,var(--eh-ink)_22%,var(--eh-line))] focus-visible:border-eh-teal";
+
+/**
+ * A "default" picker: the workspace Select on Pro, the searchable
+ * EmployerFormSelect on Free. Both offer an empty "no default" choice.
+ */
+function DefaultPicker({
+  label,
+  value,
+  onChange,
+  placeholder,
+  options,
+  searchable,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder: string;
+  options: Array<{ value: string; label: string }>;
+  searchable?: boolean;
+}) {
+  const { isPro } = useEmployerShell();
+  if (isPro) {
+    return (
+      <Select
+        label={label}
+        value={value}
+        onChange={onChange}
+        options={[{ value: "", label: placeholder }, ...options.filter((o) => o.value !== "")]}
+        className="h-10 w-full"
+      />
+    );
+  }
+  return (
+    <EmployerFormSelect
+      ariaLabel={label}
+      value={value}
+      onChange={onChange}
+      placeholder={placeholder}
+      options={options}
+      searchable={searchable}
+    />
+  );
+}
 
 /**
  * Settings → Workspace → Hiring defaults. One form, one save: the four
@@ -99,6 +154,7 @@ const inputClass =
  * saves would only add buttons.
  */
 export default function HiringDefaultsForm({ initialDefaults }: { initialDefaults: HiringDefaults }) {
+  const { isPro } = useEmployerShell();
   const [saved, setSaved] = useState(() => toFormState(initialDefaults));
   const [form, setForm] = useState(saved);
   const [submitting, setSubmitting] = useState(false);
@@ -179,8 +235,8 @@ export default function HiringDefaultsForm({ initialDefaults }: { initialDefault
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <FieldLabel>Role type</FieldLabel>
-              <EmployerFormSelect
-                ariaLabel="Default role type"
+              <DefaultPicker
+                label="Default role type"
                 value={form.category}
                 onChange={(value) => update("category", value)}
                 placeholder="No default"
@@ -190,8 +246,8 @@ export default function HiringDefaultsForm({ initialDefaults }: { initialDefault
             </div>
             <div>
               <FieldLabel>Industry</FieldLabel>
-              <EmployerFormSelect
-                ariaLabel="Default industry"
+              <DefaultPicker
+                label="Default industry"
                 value={form.industry}
                 onChange={(value) => update("industry", value)}
                 placeholder="No default"
@@ -201,8 +257,8 @@ export default function HiringDefaultsForm({ initialDefaults }: { initialDefault
             </div>
             <div>
               <FieldLabel>Employment type</FieldLabel>
-              <EmployerFormSelect
-                ariaLabel="Default employment type"
+              <DefaultPicker
+                label="Default employment type"
                 value={form.employmentType}
                 onChange={(value) => update("employmentType", value)}
                 placeholder={noDefault.label}
@@ -211,8 +267,8 @@ export default function HiringDefaultsForm({ initialDefaults }: { initialDefault
             </div>
             <div>
               <FieldLabel>Work setup</FieldLabel>
-              <EmployerFormSelect
-                ariaLabel="Default work setup"
+              <DefaultPicker
+                label="Default work setup"
                 value={form.remoteType}
                 onChange={(value) => update("remoteType", value)}
                 placeholder={noDefault.label}
@@ -221,8 +277,8 @@ export default function HiringDefaultsForm({ initialDefaults }: { initialDefault
             </div>
             <div>
               <FieldLabel>Salary period</FieldLabel>
-              <EmployerFormSelect
-                ariaLabel="Default salary period"
+              <DefaultPicker
+                label="Default salary period"
                 value={form.salaryPeriod}
                 onChange={(value) => update("salaryPeriod", value)}
                 placeholder={noDefault.label}
@@ -237,7 +293,7 @@ export default function HiringDefaultsForm({ initialDefaults }: { initialDefault
                 onChange={(event) => update("location", event.target.value)}
                 maxLength={120}
                 placeholder="e.g. Anywhere in the Philippines"
-                className={inputClass}
+                className={isPro ? PRO_INPUT : FREE_INPUT}
               />
             </div>
           </div>
@@ -260,7 +316,7 @@ export default function HiringDefaultsForm({ initialDefaults }: { initialDefault
                   maxLength={QUESTION_MAX}
                   aria-label={`Question ${index + 1}`}
                   placeholder="e.g. How many years have you worked with Shopify?"
-                  className={`${inputClass} min-w-0 flex-1`}
+                  className={`${isPro ? PRO_INPUT : FREE_INPUT} min-w-0 flex-1`}
                 />
                 <div className="flex shrink-0 items-center gap-3">
                   <label className="flex items-center gap-1.5 text-sm text-ink/65">
@@ -315,7 +371,7 @@ export default function HiringDefaultsForm({ initialDefaults }: { initialDefault
             onChange={(event) => update("rejectionMessage", event.target.value.slice(0, REJECTION_MESSAGE_MAX))}
             rows={4}
             placeholder="e.g. Thank you for applying. We've decided to move forward with candidates whose experience more closely matches this role."
-            className={`${inputClass} resize-y`}
+            className={`${isPro ? PRO_INPUT : FREE_INPUT} resize-y`}
           />
           <p className="mt-1 text-right font-data text-[10px] text-ink/40">
             {form.rejectionMessage.length}/{REJECTION_MESSAGE_MAX}
@@ -333,7 +389,7 @@ export default function HiringDefaultsForm({ initialDefaults }: { initialDefault
             onChange={(event) => update("applicantNote", event.target.value.slice(0, APPLICANT_NOTE_MAX))}
             rows={3}
             placeholder="e.g. We review every application and reply within 5 business days."
-            className={`${inputClass} resize-y`}
+            className={`${isPro ? PRO_INPUT : FREE_INPUT} resize-y`}
           />
           <p className="mt-1 text-right font-data text-[10px] text-ink/40">
             {form.applicantNote.length}/{APPLICANT_NOTE_MAX}
@@ -348,15 +404,27 @@ export default function HiringDefaultsForm({ initialDefaults }: { initialDefault
       )}
 
       <div className="mt-4 flex flex-wrap items-center gap-3">
-        <button
-          type="submit"
-          disabled={!dirty || submitting}
-          aria-busy={submitting}
-          aria-describedby={error ? errorId : undefined}
-          className="inline-flex items-center gap-2 rounded-xl bg-teal px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-teal/90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {submitting ? "Saving…" : "Save defaults"}
-        </button>
+        {isPro ? (
+          <Button
+            type="submit"
+            variant="primary"
+            disabled={!dirty}
+            loading={submitting}
+            aria-describedby={error ? errorId : undefined}
+          >
+            {submitting ? "Saving…" : "Save defaults"}
+          </Button>
+        ) : (
+          <button
+            type="submit"
+            disabled={!dirty || submitting}
+            aria-busy={submitting}
+            aria-describedby={error ? errorId : undefined}
+            className="inline-flex items-center gap-2 rounded-xl bg-teal px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-teal/90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {submitting ? "Saving…" : "Save defaults"}
+          </button>
+        )}
         {dirty && !submitting && (
           <button
             type="button"
