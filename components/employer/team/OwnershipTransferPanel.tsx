@@ -3,7 +3,7 @@
 import { useId, useState } from "react";
 import type { FormEvent } from "react";
 import { Clock3, KeyRound } from "lucide-react";
-import EmployerFormSelect from "@/components/employer/ui/EmployerFormSelect";
+import { Button, Select } from "@/components/employer/system";
 
 type Candidate = { memberId: string; email: string; isSeeker: boolean; ownsCompany: boolean };
 export type OwnershipTransferState = {
@@ -117,21 +117,21 @@ export default function OwnershipTransferPanel({
   }
 
   return (
-    <section aria-labelledby={headingId} className="rounded-[20px] border border-ink/8 bg-white px-5 py-5 sm:px-6">
+    <section aria-labelledby={headingId} className="rounded-card border border-eh-line bg-eh-surface p-5 shadow-eh-sm sm:p-6">
       <div role="status" aria-live="polite" className="sr-only">
         {status}
       </div>
 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex min-w-0 gap-3">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-navy/[0.07] text-navy">
+          <div className="grid h-9 w-9 shrink-0 place-items-center rounded-control bg-[color-mix(in_srgb,var(--eh-navy)_10%,var(--eh-surface))] text-eh-navy">
             <KeyRound className="h-4 w-4" aria-hidden="true" />
           </div>
           <div className="min-w-0">
-            <h2 id={headingId} className="font-display text-lg font-bold text-ink">
+            <h2 id={headingId} className="font-heading text-[18px] font-semibold tracking-[-0.01em] text-eh-ink">
               Transfer ownership
             </h2>
-            <p className="mt-0.5 max-w-2xl text-sm leading-relaxed text-ink/55">
+            <p className="mt-0.5 max-w-2xl text-ui text-eh-muted">
               Hand this company, its jobs, billing, and hiring team to a teammate. They have to accept
               before anything changes, and you stay on the team as a recruiter.
             </p>
@@ -139,39 +139,30 @@ export default function OwnershipTransferPanel({
         </div>
 
         {!state.pending && !open && eligible.length > 0 && (
-          <button
-            type="button"
-            onClick={() => setOpen(true)}
-            className="inline-flex shrink-0 items-center gap-2 self-start rounded-xl border border-ink/15 px-4 py-2 text-sm font-semibold text-ink/75 transition hover:bg-ink/[0.04] active:scale-[0.98]"
-          >
+          <Button onClick={() => setOpen(true)} className="self-start">
             Choose a new owner
-          </button>
+          </Button>
         )}
       </div>
 
       {state.pending && (
-        <div className="mt-4 flex flex-col gap-3 border-t border-ink/[0.06] pt-4 sm:flex-row sm:items-center sm:justify-between">
-          <p className="flex min-w-0 items-start gap-2 text-sm text-ink/70">
-            <Clock3 className="mt-0.5 h-4 w-4 shrink-0 text-teal" aria-hidden="true" />
+        <div className="mt-4 flex flex-col gap-3 border-t border-eh-line pt-4 sm:flex-row sm:items-center sm:justify-between">
+          <p className="flex min-w-0 items-start gap-2 text-ui text-eh-ink-2">
+            <Clock3 className="mt-0.5 h-4 w-4 shrink-0 text-eh-teal" aria-hidden="true" />
             <span>
-              Waiting for <strong className="font-semibold text-ink">{state.pending.email}</strong> to accept.
+              Waiting for <strong className="font-semibold text-eh-ink">{state.pending.email}</strong> to accept.
               The offer expires{" "}
               <span suppressHydrationWarning>{new Date(state.pending.expiresAt).toLocaleDateString()}</span>.
             </span>
           </p>
-          <button
-            type="button"
-            onClick={handleWithdraw}
-            disabled={submitting}
-            className="inline-flex shrink-0 items-center gap-2 self-start rounded-xl px-4 py-2 text-sm font-semibold text-ink/60 transition hover:bg-ink/[0.04] hover:text-ink disabled:cursor-not-allowed disabled:opacity-60 sm:self-auto"
-          >
+          <Button variant="ghost" onClick={handleWithdraw} loading={submitting} className="self-start sm:self-auto">
             {submitting ? "Withdrawing…" : "Withdraw offer"}
-          </button>
+          </Button>
         </div>
       )}
 
       {!state.pending && eligible.length === 0 && (
-        <p className="mt-4 border-t border-ink/[0.06] pt-4 text-sm text-ink/55">
+        <p className="mt-4 border-t border-eh-line pt-4 text-ui text-eh-muted">
           {state.candidates.length === 0
             ? "Only an active teammate can take over. Invite someone to the team first."
             : "None of your teammates can take over right now. Each of them already owns a company, and an account can own only one."}
@@ -181,16 +172,19 @@ export default function OwnershipTransferPanel({
       {!state.pending && open && (
         <form
           onSubmit={handleSubmit}
-          className="mt-4 flex max-w-md flex-col gap-4 border-t border-ink/[0.06] pt-4"
+          className="mt-4 flex max-w-md flex-col gap-4 border-t border-eh-line pt-4"
           noValidate
         >
           <div>
-            <p className="mb-1.5 text-sm font-medium text-ink/80">New owner</p>
-            <EmployerFormSelect
-              ariaLabel="New owner"
+            <p className="mb-1.5 text-small font-medium text-eh-ink-2" aria-hidden="true">
+              New owner
+            </p>
+            <Select
+              label="New owner"
               value={memberId}
               onChange={setMemberId}
               placeholder="Choose a teammate"
+              className="h-10 w-full"
               options={eligible.map((c) => ({
                 value: c.memberId,
                 label: c.email,
@@ -198,15 +192,15 @@ export default function OwnershipTransferPanel({
               }))}
             />
             {ineligible.length > 0 && (
-              <p className="mt-1.5 text-xs text-ink/45">
+              <p className="mt-1.5 text-small text-eh-muted">
                 Not listed: {ineligible.map((c) => c.email).join(", ")}. They already own a company.
               </p>
             )}
           </div>
 
           {selected?.isSeeker && (
-            <p className="text-sm leading-relaxed text-ink/65">
-              <strong className="font-semibold text-ink">{selected.email}</strong> has a job-seeker account.
+            <p className="rounded-control border border-[color-mix(in_srgb,var(--eh-marigold)_45%,var(--eh-line))] bg-eh-marigold-tint px-3 py-2.5 text-ui text-eh-ink-2">
+              <strong className="font-semibold text-eh-ink">{selected.email}</strong> has a job-seeker account.
               Accepting turns it into an employer account. Their seeker profile and applications are kept,
               but they won&apos;t be able to reach them while it&apos;s an employer account. The offer email
               tells them this too.
@@ -214,7 +208,7 @@ export default function OwnershipTransferPanel({
           )}
 
           <div>
-            <label htmlFor={credentialId} className="mb-1.5 block text-sm font-medium text-ink/80">
+            <label htmlFor={credentialId} className="mb-1.5 block text-small font-medium text-eh-ink-2">
               {hasPassword ? "Your current password" : `Type “${CONFIRMATION_PHRASE}” to confirm`}
             </label>
             <input
@@ -227,39 +221,29 @@ export default function OwnershipTransferPanel({
               autoComplete={hasPassword ? "current-password" : "off"}
               spellCheck={false}
               aria-describedby={error ? errorId : undefined}
-              className="w-full rounded-xl border border-ink/12 px-4 py-2.5 text-sm text-ink outline-none transition-colors focus:border-teal focus:ring-2 focus:ring-teal/20"
+              className="h-10 w-full rounded-control border border-eh-line bg-eh-surface px-3 text-ui text-eh-ink outline-none transition-colors duration-150 hover:border-[color-mix(in_srgb,var(--eh-ink)_22%,var(--eh-line))] focus-visible:border-eh-teal"
             />
           </div>
 
           {error && (
-            <p id={errorId} role="alert" className="text-sm text-ember">
+            <p id={errorId} role="alert" className="text-ui text-eh-danger">
               {error}
             </p>
           )}
 
           <div className="flex flex-wrap gap-3">
-            <button
-              type="submit"
-              disabled={!canSubmit}
-              aria-busy={submitting}
-              className="inline-flex items-center gap-2 rounded-xl bg-teal px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-teal/90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
-            >
+            <Button type="submit" variant="primary" disabled={!canSubmit} loading={submitting}>
               {submitting ? "Sending…" : "Send ownership offer"}
-            </button>
-            <button
-              type="button"
-              onClick={reset}
-              disabled={submitting}
-              className="inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold text-ink/60 transition hover:bg-ink/[0.04] hover:text-ink disabled:cursor-not-allowed disabled:opacity-60"
-            >
+            </Button>
+            <Button variant="ghost" onClick={reset} disabled={submitting}>
               Cancel
-            </button>
+            </Button>
           </div>
         </form>
       )}
 
       {error && !open && (
-        <p role="alert" className="mt-3 text-sm text-ember">
+        <p role="alert" className="mt-3 text-ui text-eh-danger">
           {error}
         </p>
       )}
