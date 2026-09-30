@@ -25,7 +25,7 @@ const LIFECYCLE_BADGE: Record<JobLifecycle, { tone: StatusTone; label: string }>
 };
 
 /** Wait state wins over lifecycle: a live job with someone waiting says so. Icon + text, never colour alone. */
-function JobStatusBadge({ lifecycle, severity }: { lifecycle: JobLifecycle; severity: Severity }) {
+export function JobStatusBadge({ lifecycle, severity }: { lifecycle: JobLifecycle; severity: Severity }) {
   if (severity !== "none") {
     return (
       <StatusBadge tone={severity === "critical" ? "danger" : "warning"}>
@@ -112,7 +112,7 @@ function JobPipeline({ pipeline, applicants, severity }: { pipeline: Pipeline; a
   );
 }
 
-function JobAttentionMessage({ count, days, severity }: { count: number; days: number; severity: Severity }) {
+export function JobAttentionMessage({ count, days, severity }: { count: number; days: number; severity: Severity }) {
   const critical = severity === "critical";
   return (
     <p

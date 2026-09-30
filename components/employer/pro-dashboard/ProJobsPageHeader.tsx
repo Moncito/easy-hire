@@ -43,14 +43,14 @@ export default function ProJobsPageHeader({ summary, companyVerified, overdue, r
               <b className="num font-semibold text-eh-ink">{summary.active}</b> active{" "}
               {summary.active === 1 ? "job" : "jobs"}
             </span>
-            <span aria-hidden="true">·</span>
+            <span aria-hidden="true" className="hidden sm:inline">·</span>
             <span>
               <b className="num font-semibold text-eh-ink">{summary.totalApplicants}</b>{" "}
               {summary.totalApplicants === 1 ? "applicant" : "applicants"}
             </span>
             {summary.needsReviewApplicants > 0 && (
               <>
-                <span aria-hidden="true">·</span>
+                <span aria-hidden="true" className="hidden sm:inline">·</span>
                 <Link
                   href="/employer/applicants?filter=NEEDS_REVIEW"
                   className="font-medium text-eh-marigold-ink transition-colors duration-150 hover:text-eh-ink"

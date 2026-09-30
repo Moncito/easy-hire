@@ -130,6 +130,16 @@
     outline: 2px solid var(--eh-teal);
     outline-offset: 2px;
   }
+  /* Tailwind v4 leaves buttons on the default arrow cursor. Everything
+     clickable in the employer workspace — buttons, menu items (portalled
+     into the workspace root), selects — shows a pointer; disabled ones
+     don't. Zero specificity, so a component's own cursor-* still wins. */
+  :where(.employer-workspace) :where(button, [role="button"], [role="menuitem"], [role="radio"], select, summary) {
+    cursor: pointer;
+  }
+  :where(.employer-workspace) :where(button:disabled, [aria-disabled="true"]) {
+    cursor: not-allowed;
+  }
 }
 
 @theme {

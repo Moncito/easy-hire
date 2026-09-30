@@ -36,7 +36,15 @@ type Common = {
 };
 
 type AsButton = Common & Omit<ButtonHTMLAttributes<HTMLButtonElement>, "className" | "children"> & { href?: undefined };
-type AsLink = Common & { href: string; prefetch?: boolean; target?: string; rel?: string; "aria-label"?: string };
+type AsLink = Common & {
+  href: string;
+  prefetch?: boolean;
+  target?: string;
+  rel?: string;
+  "aria-label"?: string;
+  /** Render a plain <a> — for downloads and API routes Next.js shouldn't prefetch or route client-side. */
+  native?: boolean;
+};
 
 /**
  * The one button of the employer workspace. Four variants:
@@ -62,6 +70,13 @@ export default function Button(props: AsButton | AsLink) {
 
   if (props.href !== undefined) {
     const { href, prefetch, target, rel } = props;
+    if (props.native) {
+      return (
+        <a href={href} target={target} rel={rel} aria-label={props["aria-label"]} className={classes}>
+          {content}
+        </a>
+      );
+    }
     return (
       <Link
         href={href}
@@ -79,7 +94,7 @@ export default function Button(props: AsButton | AsLink) {
 
   // Pass through native button attributes only — not this component's own props.
   const rest: ButtonHTMLAttributes<HTMLButtonElement> = { ...props };
-  for (const key of ["variant", "size", "icon", "loading", "className", "children", "href"] as const) {
+  for (const key of ["variant", "size", "icon", "loading", "className", "children", "href", "native"] as const) {
     delete (rest as Record<string, unknown>)[key];
   }
   return (
