@@ -141,6 +141,7 @@ export default function ProJobsBoard({
         title={copy.title}
         subject={pending?.job.title}
         description={copy.description}
+        context={copy.context}
         confirmLabel={copy.confirmLabel}
         danger={copy.danger}
         loading={pending !== null && loadingId === pending.job.id}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Pencil, Share2, Users } from "lucide-react";
+import { Copy, Pencil, Share2, Sparkles, Star, Trash2, Users, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button, JobCard, type MenuItem } from "@/components/employer/system";
 import { callEasyAi } from "@/components/employer/pro/useEasyAi";
@@ -87,33 +87,44 @@ export default function ProJobCard({
   const isDraft = lifecycle === "draft" || lifecycle === "revision";
   const applicantsHref = `/employer/jobs/${job.id}/applicants`;
 
+  // Only actions valid for this state. Employers can close a live job but
+  // not reopen one (lib/jobs/status.ts), so a closed job offers no Reopen;
+  // its public page is gone, so no Share or View listing either.
   const menuItems: MenuItem[] = [
-    { label: "View applicants", href: applicantsHref, hidden: primary.href === applicantsHref || isDraft },
-    { label: "Share listing", onSelect: () => void shareListing(job), hidden: !state.isPublic || primary.kind === "share" },
-    { label: "Edit listing", href: `/employer/jobs/${job.id}/edit`, hidden: isDraft },
-    { label: "Duplicate", onSelect: onDuplicate },
+    { label: "Share listing", icon: <Share2 />, onSelect: () => void shareListing(job), hidden: !state.isPublic },
     {
-      label: featureBusy ? "Updating…" : featured ? "Remove featured" : "Feature job",
+      label: "Edit listing",
+      icon: <Pencil />,
+      href: `/employer/jobs/${job.id}/edit`,
+      hidden: !live && !isDraft,
+    },
+    { label: "Duplicate", icon: <Copy />, onSelect: onDuplicate },
+    {
+      label: featureBusy ? "Updating…" : featured ? "Unfeature job" : "Feature job",
+      icon: <Star />,
       onSelect: () => void toggleFeatured(),
-      hidden: lifecycle !== "active" && lifecycle !== "unlisted",
+      hidden: !live,
     },
     {
-      label: tipsBusy ? "Analyzing…" : "Easy AI tips",
+      // job-tips reads the listing's views vs applications and suggests
+      // changes; it doesn't edit anything, hence "Analyze".
+      label: tipsBusy ? "Analyzing…" : "Analyze with Easy AI",
+      icon: <Sparkles />,
       onSelect: () => void loadTips(),
       hidden: !live && lifecycle !== "closed",
     },
-    { label: "Close job", onSelect: onClose, tone: "danger", hidden: !live },
-    { label: "Delete draft", onSelect: onDelete, tone: "danger", hidden: !isDraft },
+    { label: "Close job", icon: <X />, onSelect: onClose, tone: "danger", separatorBefore: true, hidden: !live },
+    { label: "Delete draft", icon: <Trash2 />, onSelect: onDelete, tone: "danger", separatorBefore: true, hidden: !isDraft },
   ];
 
   const icon = primary.kind === "edit" ? <Pencil /> : primary.kind === "share" ? <Share2 /> : <Users />;
   const primaryAction =
     primary.kind === "share" ? (
-      <Button variant={primary.emphasis} icon={icon} onClick={() => void shareListing(job)}>
+      <Button size="lg" variant={primary.emphasis} icon={icon} onClick={() => void shareListing(job)}>
         {primary.label}
       </Button>
     ) : (
-      <Button href={primary.href} variant={primary.emphasis} icon={icon}>
+      <Button size="lg" href={primary.href} variant={primary.emphasis} icon={icon}>
         {primary.label}
       </Button>
     );
@@ -133,7 +144,7 @@ export default function ProJobCard({
       )}
       {tips && tips.length > 0 && (
         <div className="mt-2 rounded-control border border-[color-mix(in_srgb,var(--eh-teal)_22%,transparent)] bg-eh-teal-tint px-3 py-2 text-small text-eh-ink-2 first:mt-0">
-          <p className="font-semibold text-eh-teal-ink">Easy AI tips</p>
+          <p className="font-semibold text-eh-teal-ink">Easy AI analysis</p>
           <ul className="mt-1 list-disc space-y-1 pl-4">
             {tips.map((tip, i) => (
               <li key={i}>{tip}</li>

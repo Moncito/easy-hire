@@ -12,6 +12,8 @@ type Props = {
   /** Job name — shown under the title, never stuffed into the headline. */
   subject?: string;
   description: string;
+  /** Optional fact about what this affects, e.g. "2 applicants are in your hiring pipeline." */
+  context?: string;
   confirmLabel: string;
   loading?: boolean;
   danger?: boolean;
@@ -29,6 +31,7 @@ export default function EmployerConfirmModal({
   title,
   subject,
   description,
+  context,
   confirmLabel,
   loading = false,
   danger = false,
@@ -136,6 +139,15 @@ export default function EmployerConfirmModal({
           >
             {description}
           </p>
+          {context ? (
+            <p
+              className={`mt-3 rounded-lg px-3 py-2 text-sm font-medium ${
+                dark ? "bg-white/5 text-white/75" : "bg-ink/[0.04] text-ink/75"
+              }`}
+            >
+              {context}
+            </p>
+          ) : null}
         </div>
 
         <div

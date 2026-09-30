@@ -1,7 +1,7 @@
 import { Fragment } from "react";
 import { cx } from "@/components/employer/system/cx";
 
-export type PipelineStageTone = "ink" | "teal" | "marigold" | "muted" | "navy" | "teal-soft" | "teal-strong";
+export type PipelineStageTone = "ink" | "teal" | "marigold" | "muted" | "navy" | "teal-soft" | "teal-strong" | "danger";
 
 export type PipelineStage = {
   label: string;
@@ -18,6 +18,7 @@ const FILL: Record<PipelineStageTone, string> = {
   // Earlier progress in the same hue as later progress, so the bar reads as one movement.
   "teal-soft": "bg-[color-mix(in_srgb,var(--eh-teal)_45%,var(--eh-surface))]",
   "teal-strong": "bg-eh-teal-ink",
+  danger: "bg-eh-danger",
 };
 
 /**

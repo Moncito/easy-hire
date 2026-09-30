@@ -63,7 +63,7 @@ export default async function DesignSystemGalleryPage() {
       />
 
       <section className="flex flex-col gap-4">
-        <SectionHeader title="Buttons" description="Four variants, three sizes (32 / 36 / 44px), plus loading and disabled." />
+        <SectionHeader title="Buttons" description="Four variants, three sizes (32 / 36 / 40px), plus loading and disabled." />
         <div className="flex flex-wrap items-center gap-2">
           <Button variant="primary">Primary</Button>
           <Button variant="secondary">Secondary</Button>

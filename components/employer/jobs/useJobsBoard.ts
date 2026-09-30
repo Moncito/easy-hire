@@ -157,7 +157,14 @@ export function useJobsBoard(initialJobs: EmployerJobCardData[]) {
 }
 
 /** Title, copy and button label for the close / duplicate / delete confirmation. */
-export function pendingActionCopy(pending: PendingJobAction | null) {
+export function pendingActionCopy(pending: PendingJobAction | null): {
+  title: string;
+  description: string;
+  /** A fact about what the action affects, shown under the description. */
+  context?: string;
+  confirmLabel: string;
+  danger: boolean;
+} {
   if (!pending) return { title: "", description: "", confirmLabel: "", danger: false };
   if (pending.kind === "delete") {
     return {
@@ -168,10 +175,16 @@ export function pendingActionCopy(pending: PendingJobAction | null) {
     };
   }
   if (pending.kind === "close") {
+    const { applied, shortlisted, interview } = pending.job.pipeline;
+    const inPipeline = applied + shortlisted + interview;
     return {
       title: "Close this job?",
       description:
-        "It will stop accepting applications and move to Closed. Applicants already in the pipeline stay on file.",
+        "Closing this job stops new applications and removes it from active listings. Existing applicants stay accessible.",
+      context:
+        inPipeline > 0
+          ? `${inPipeline} ${inPipeline === 1 ? "applicant is" : "applicants are"} currently in your hiring pipeline.`
+          : undefined,
       confirmLabel: "Close job",
       danger: true,
     };

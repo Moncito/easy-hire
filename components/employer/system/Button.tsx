@@ -14,15 +14,15 @@ const VARIANT: Record<ButtonVariant, string> = {
   destructive: "border-eh-danger bg-eh-danger font-semibold text-white hover:opacity-90",
 };
 
-/** Heights 32 / 36 / 44px. */
+/** Heights 32 / 36 / 40px. `lg` is the card call-to-action size, matched by IconButton `lg`. */
 const SIZE: Record<ButtonSize, string> = {
   sm: "h-8 gap-1.5 px-3 text-ui",
   md: "h-9 gap-1.5 px-3.5 text-ui",
-  lg: "h-11 gap-2 px-4 text-body",
+  lg: "h-10 gap-2 px-4 text-ui",
 };
 
 const BASE =
-  "inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded-control border transition-colors duration-150 disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50";
+  "inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded-control border transition-[color,background-color,border-color,transform] duration-150 active:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50";
 
 type Common = {
   variant?: ButtonVariant;
