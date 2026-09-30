@@ -1,20 +1,19 @@
 import type { EmployerAnalytics } from "@/lib/employer-analytics";
-import type { DashboardApplicantItem } from "@/lib/employer/dashboard-panels";
+import type { DashboardDecisions } from "@/lib/employer/dashboard-decisions";
 import type { GettingStartedStep } from "@/lib/employer/dashboard-sparse";
 import type { DashboardInsight, DashboardRange } from "@/lib/employer/dashboard-insights";
 import type { DashboardKpis } from "@/lib/employer/dashboard-kpis";
 import type { ApplicationsChart, PipelineFunnel } from "@/lib/employer/dashboard-pipeline";
-import { shouldShowApplicantQueue } from "@/lib/employer/dashboard-panels";
 
 import ProCompanyBand from "@/components/employer/pro-dashboard/ProCompanyBand";
 import ProJobsTable from "@/components/employer/pro-dashboard/ProJobsTable";
-import ProApplicantList from "@/components/employer/pro-dashboard/ProApplicantList";
+import ProDecisionQueue from "@/components/employer/pro-dashboard/ProDecisionQueue";
+import ProRecentActivity from "@/components/employer/pro-dashboard/ProRecentActivity";
 import ProInsightCard from "@/components/employer/pro-dashboard/ProInsightCard";
 import ProKpiStrip from "@/components/employer/pro-dashboard/ProKpiStrip";
 import ProApplicationsCard from "@/components/employer/pro-dashboard/ProApplicationsCard";
 import ProPipelineFunnel from "@/components/employer/pro-dashboard/ProPipelineFunnel";
 import ProGettingStarted from "@/components/employer/pro-dashboard/ProGettingStarted";
-import RecentActivity from "@/components/employer/dashboard/RecentActivity";
 
 type Company = {
   companyName: string;
@@ -26,7 +25,8 @@ type Company = {
 type Props = {
   company: Company;
   analytics: EmployerAnalytics;
-  applicantQueue: DashboardApplicantItem[];
+  decisions: DashboardDecisions;
+  defaultRejectionMessage: string | null;
   sparse: boolean;
   showGettingStarted: boolean;
   gettingStartedSteps: GettingStartedStep[];
@@ -40,7 +40,8 @@ type Props = {
 export default function ProDashboardBoard({
   company,
   analytics,
-  applicantQueue,
+  decisions,
+  defaultRejectionMessage,
   sparse,
   showGettingStarted,
   gettingStartedSteps,
@@ -50,9 +51,6 @@ export default function ProDashboardBoard({
   funnel,
   range,
 }: Props) {
-  const { metrics } = analytics;
-  const showApplicants = shouldShowApplicantQueue(metrics.totalApplicants);
-
   return (
     <div className="flex flex-col gap-5 pb-8">
       <ProCompanyBand
@@ -78,15 +76,25 @@ export default function ProDashboardBoard({
         <ProPipelineFunnel funnel={funnel} />
       </div>
 
+      {/* Decision queue 2/3 + recent activity 1/3; stacked below 1180px. The old
+          applicant list and activity feed listed the same applications twice. */}
+      <div className="grid grid-cols-1 items-start gap-3 min-[1181px]:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+        <ProDecisionQueue
+          queue={decisions.queue}
+          queueTotal={decisions.queueTotal}
+          inProgress={decisions.inProgress}
+          inProgressCandidateCount={decisions.inProgressCandidateCount}
+          inProgressApplicationCount={decisions.inProgressApplicationCount}
+          defaultRejectionMessage={defaultRejectionMessage}
+        />
+        <ProRecentActivity events={decisions.activity} />
+      </div>
+
       <ProJobsTable
         jobs={analytics.activeJobs}
         companyVerified={analytics.companyVerified}
         showPostAnother={sparse && analytics.activeJobs.length > 0 && analytics.activeJobs.length < 4}
       />
-
-      {showApplicants && <ProApplicantList items={applicantQueue} needsReview={metrics.needsReview} />}
-
-      <RecentActivity items={analytics.recentActivity} sparse={sparse} embedded variant="pro" />
     </div>
   );
 }
