@@ -47,11 +47,35 @@
 }
 
 @theme {
-  /* Corner radii — cards 12px, buttons and inputs 8px, chips 6px. Full
-     rounding (rounded-full) is for avatars and status dots only. */
+  /* Corner radii (employer design system). Semantic names rather than
+     Tailwind's sm/md/lg, which the rest of the app already uses with
+     different values:
+       rounded-chip    6px   small tags, bar ends          (brief: radius-sm)
+       rounded-control 8px   buttons, inputs, menus        (brief: radius-md)
+       rounded-card    12px  cards, tables, alerts         (brief: radius-lg)
+       rounded-panel   14px  large panels, dialogs         (brief: radius-xl)
+       rounded-full          status badges, filter pills, avatars, dots
+     Buttons, inputs and cards are never fully rounded. */
   --radius-card: 12px;
   --radius-control: 8px;
   --radius-chip: 6px;
+  --radius-panel: 14px;
+
+  /* Headings: Space Grotesk. A separate name from font-display, which the
+     Pro workspace remaps to Inter for its older components; new employer
+     components use font-heading for page titles and KPI values only. */
+  --font-heading: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
+
+  /* Elevation. Most cards use a border and surface contrast, not shadow:
+     eh-sm is a hairline lift for cards, eh-md for raised items like
+     popovers, eh-lg for dialogs and menus. */
+  --shadow-eh-sm: 0 1px 2px rgb(16 24 40 / 0.04);
+  --shadow-eh-md: 0 4px 12px -2px rgb(16 24 40 / 0.08);
+  --shadow-eh-lg: 0 12px 32px -8px rgb(16 24 40 / 0.18);
+
+  /* Spacing: Tailwind's default 4px scale already is the system scale.
+     Employer components use only 1, 2, 3, 4, 6, 8, 12, 16
+     (4, 8, 12, 16, 24, 32, 48, 64px). */
 
   /* Type scale. Body copy is 14px; card titles 15/600; page title 24/600;
      KPI values 30/600. */
@@ -74,6 +98,20 @@
   --text-kpi--line-height: 1.1;
   --text-kpi--font-weight: 600;
   --text-kpi--letter-spacing: -0.02em;
+  /* Design-system scale (with font-heading): page titles 32/700, section
+     headings 20/600, KPI values 32/700. Card titles stay text-card-title. */
+  --text-display: 32px;
+  --text-display--line-height: 1.15;
+  --text-display--font-weight: 700;
+  --text-display--letter-spacing: -0.02em;
+  --text-section: 20px;
+  --text-section--line-height: 1.3;
+  --text-section--font-weight: 600;
+  --text-section--letter-spacing: -0.01em;
+  --text-metric: 32px;
+  --text-metric--line-height: 1.05;
+  --text-metric--font-weight: 700;
+  --text-metric--letter-spacing: -0.02em;
 }
 
 /* Tabular figures so numbers line up in columns and don't jitter as they
@@ -1693,9 +1731,13 @@ backdrop-filter:blur(6px);
    always wins. It used to be a plain selector forcing 900 and -0.045em,
    which beat every Tailwind weight class and made every Pro heading
    heavier than its component asked for. */
-:where(.employer-pro-workspace) :where(.font-display, h1) {
-  font-weight: 600;
-  letter-spacing: -0.02em;
+/* In the base layer: an unlayered rule beats every Tailwind utility no
+   matter its specificity, which silently overrode text-display's 700. */
+@layer base {
+  :where(.employer-pro-workspace) :where(.font-display, h1) {
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
 }
 
 .employer-pro-workspace .employer-pro-navbar {
