@@ -82,6 +82,18 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Keyboard focus in the employer workspace: a clear 2px Signal Teal ring
+   instead of the browser's thin default. In the base layer with zero
+   specificity, so a component that styles its own focus (focus-visible:
+   ring-*, outline-none) still wins. Only :focus-visible — mouse clicks
+   don't get a ring. */
+@layer base {
+  :where(.employer-workspace) :where(:focus-visible) {
+    outline: 2px solid var(--eh-teal);
+    outline-offset: 2px;
+  }
+}
+
 @theme {
   --color-mist: #F5F6F4;
   --color-ink: #20242B;
