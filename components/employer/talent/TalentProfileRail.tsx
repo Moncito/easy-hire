@@ -20,6 +20,7 @@ import {
 import { profileBucketCompletion } from "@/components/seeker/profile-buckets";
 import type { EmployerPreviewData } from "@/components/seeker/SeekerEmployerPreview";
 import DashboardSurface from "@/components/employer/dashboard/DashboardSurface";
+import ProfileSectionLabel from "@/components/employer/talent/ProfileSectionLabel";
 
 function SnapshotCell({
   icon: Icon,
@@ -61,9 +62,7 @@ export default function TalentProfileRail({ data, seekerId, canDownloadResume }:
     <div className="flex flex-col gap-3 lg:sticky lg:top-24">
       <DashboardSurface className="overflow-hidden !p-0">
         <div className="border-b border-navy/[0.06] bg-gradient-to-r from-navy/[0.04] to-teal/[0.03] px-4 py-3">
-          <p className="text-xs font-bold uppercase tracking-wider text-navy/60">
-            At a glance
-          </p>
+          <ProfileSectionLabel>At a glance</ProfileSectionLabel>
         </div>
         <div className="grid grid-cols-2 gap-3 p-4">
           <SnapshotCell icon={MapPin} label="Location" value={data.location || "—"} />
@@ -118,7 +117,7 @@ export default function TalentProfileRail({ data, seekerId, canDownloadResume }:
 
       {skills.length > 0 && (
         <DashboardSurface>
-          <p className="text-xs font-bold uppercase tracking-wider text-navy/60">Skills</p>
+          <ProfileSectionLabel>Skills</ProfileSectionLabel>
           <div className="mt-2 flex flex-wrap gap-1.5">
             {skills.map((skill) => (
               <span
@@ -134,7 +133,7 @@ export default function TalentProfileRail({ data, seekerId, canDownloadResume }:
 
       {(canDownloadResume || data.linkedinUrl || data.portfolioUrl) && (
         <DashboardSurface>
-          <p className="text-xs font-bold uppercase tracking-wider text-navy/60">Links</p>
+          <ProfileSectionLabel>Links</ProfileSectionLabel>
           <div className="mt-2 flex flex-wrap gap-2">
             {canDownloadResume && data.resumeUrl && (
               <a

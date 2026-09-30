@@ -2,12 +2,12 @@
 
 import { useState, type ReactNode } from "react";
 import Link from "next/link";
-import { Bookmark, ChevronDown, ChevronUp, FolderPlus, Trash2, X } from "lucide-react";
+import { Bookmark, ChevronDown, FolderPlus, Search, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { fetchJsonSafe } from "@/lib/client/fetch-json";
 import { unsaveSeeker } from "@/lib/client/saved-seekers";
-import ProButton from "@/components/employer/pro/ProButton";
-import EmployerAvatar from "@/components/employer/ui/EmployerAvatar";
+import { Avatar, Button, Card, CardHeader, EmptyState, IconButton, cx } from "@/components/employer/system";
+import EmployerConfirmModal from "@/components/employer/EmployerConfirmModal";
 
 export type TalentListSummary = {
   id: string;
@@ -58,24 +58,18 @@ function PersonRow({
   trailing: ReactNode;
 }) {
   return (
-    <li className="flex items-center gap-3 py-2.5">
-      <Link href={href} className="flex min-w-0 flex-1 items-center gap-3">
-        <EmployerAvatar
-          name={name}
-          imageUrl={photoUrl}
-          size="sm"
-          fallbackClassName="bg-ink/8 text-ink"
-        />
+    <li className="flex items-center gap-3 px-5 py-3 transition-colors duration-150 hover:bg-eh-surface-2 sm:px-6">
+      <Link href={href} className="flex min-w-0 flex-1 items-center gap-3 rounded-chip">
+        <Avatar name={name} src={photoUrl} size="sm" />
         <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-ink">{name}</p>
-          <p className="truncate text-xs text-ink/45">{subtitle}</p>
+          <p className="truncate text-ui font-semibold text-eh-ink">{name}</p>
+          <p className="truncate text-small text-eh-muted">{subtitle}</p>
         </div>
       </Link>
       {trailing}
     </li>
   );
 }
-
 export default function TalentListsBoard({ initialLists, initialBookmarks }: Props) {
   const [lists, setLists] = useState<TalentListSummary[]>(initialLists);
   const [bookmarks, setBookmarks] = useState<SavedBookmark[]>(initialBookmarks);
@@ -86,6 +80,7 @@ export default function TalentListsBoard({ initialLists, initialBookmarks }: Pro
   const [loadingItemsFor, setLoadingItemsFor] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [addingTo, setAddingTo] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<TalentListSummary | null>(null);
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -153,9 +148,7 @@ export default function TalentListsBoard({ initialLists, initialBookmarks }: Pro
     );
   }
 
-  async function handleDeleteList(listId: string, name: string) {
-    if (!confirm(`Delete "${name}"? This can't be undone.`)) return;
-
+  async function handleDeleteList(listId: string) {
     setDeletingId(listId);
     const result = await fetchJsonSafe(`/api/employer/talent/lists/${listId}`, { method: "DELETE" });
     setDeletingId(null);
@@ -171,6 +164,7 @@ export default function TalentListsBoard({ initialLists, initialBookmarks }: Pro
       return next;
     });
     if (expandedId === listId) setExpandedId(null);
+    setConfirmDelete(null);
     toast.success("List deleted");
   }
 
@@ -230,43 +224,50 @@ export default function TalentListsBoard({ initialLists, initialBookmarks }: Pro
   }
 
   return (
-    <div className="space-y-10">
-      <form onSubmit={handleCreate} className="flex flex-wrap items-stretch gap-2">
-        <input
-          type="text"
-          value={newName}
-          onChange={(e) => setNewName(e.target.value)}
-          placeholder="New list name — e.g. Q1 support hires"
-          maxLength={80}
-          className="min-w-0 flex-1 rounded-full border border-ink/10 bg-white px-4 py-2.5 text-sm text-ink outline-none placeholder:text-ink/35 focus:border-ink/25"
+    <div className="flex flex-col gap-6">
+      <Card as="div" padded={false} className="p-4">
+        <form onSubmit={handleCreate} className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <label htmlFor="new-list-name" className="sr-only">
+            New list name
+          </label>
+          <input
+            id="new-list-name"
+            type="text"
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            placeholder="New list name — e.g. Q1 support hires"
+            maxLength={80}
+            className="h-9 min-w-0 flex-1 rounded-control border border-eh-line bg-eh-surface px-3 text-ui text-eh-ink outline-none transition-colors duration-150 placeholder:text-eh-muted focus:border-eh-teal"
+          />
+          <Button type="submit" variant="primary" icon={<FolderPlus />} loading={creating} disabled={!newName.trim()}>
+            {creating ? "Creating…" : "New list"}
+          </Button>
+        </form>
+      </Card>
+
+      <Card padded={false} aria-labelledby="bookmarks-heading" className="overflow-hidden">
+        <CardHeader
+          id="bookmarks-heading"
+          className="px-5 py-4 sm:px-6"
+          title="Bookmarks"
+          description={<span className="num">{bookmarks.length}</span>}
+          action={
+            <Button href="/employer/talent" size="sm" variant="ghost" icon={<Search />}>
+              Search talent
+            </Button>
+          }
         />
-        <ProButton
-          type="submit"
-          variant="primary"
-          disabled={creating || !newName.trim()}
-          icon={<FolderPlus className="h-4 w-4" strokeWidth={2.5} />}
-        >
-          {creating ? "Creating…" : "New list"}
-        </ProButton>
-      </form>
-
-      <section>
-        <div className="mb-3 flex items-baseline justify-between gap-3">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-ink/45">
-            Bookmarks
-            <span className="ml-2 font-data font-semibold text-ink/70">{bookmarks.length}</span>
-          </h2>
-          <Link href="/employer/talent" className="text-xs font-semibold text-[#9A5B12] hover:underline">
-            Search talent
-          </Link>
-        </div>
-
         {bookmarks.length === 0 ? (
-          <p className="text-sm leading-relaxed text-ink/45">
-            No bookmarks yet. Hit Save on a Talent card and they show up here.
-          </p>
+          <div className="border-t border-eh-line">
+            <EmptyState
+              compact
+              icon={<Bookmark />}
+              title="No bookmarks yet"
+              description="Hit Save on a Talent card and they show up here."
+            />
+          </div>
         ) : (
-          <ul className="divide-y divide-ink/6">
+          <ul className="divide-y divide-eh-line border-t border-eh-line">
             {bookmarks.map((seeker) => (
               <PersonRow
                 key={seeker.id}
@@ -275,134 +276,125 @@ export default function TalentListsBoard({ initialLists, initialBookmarks }: Pro
                 subtitle={seeker.headline || seeker.location || "Virtual Assistant"}
                 photoUrl={seeker.photoUrl}
                 trailing={
-                  <div className="flex shrink-0 items-center gap-1">
+                  <div className="flex shrink-0 items-center gap-1.5">
                     {lists.length > 0 && (
-                      <label className="sr-only" htmlFor={`add-${seeker.id}`}>
-                        Add {seeker.fullName} to a list
-                      </label>
+                      <>
+                        <label className="sr-only" htmlFor={`add-${seeker.id}`}>
+                          Add {seeker.fullName} to a list
+                        </label>
+                        <select
+                          id={`add-${seeker.id}`}
+                          defaultValue=""
+                          disabled={addingTo?.endsWith(`:${seeker.id}`)}
+                          onChange={(e) => {
+                            const listId = e.target.value;
+                            e.target.value = "";
+                            if (listId) void handleAddBookmarkToList(listId, seeker);
+                          }}
+                          className="h-8 max-w-[10rem] rounded-control border border-eh-line bg-eh-surface px-2 text-small text-eh-ink disabled:opacity-50"
+                        >
+                          <option value="">Add to list…</option>
+                          {lists.map((list) => (
+                            <option key={list.id} value={list.id}>
+                              {list.name}
+                            </option>
+                          ))}
+                        </select>
+                      </>
                     )}
-                    {lists.length > 0 && (
-                      <select
-                        id={`add-${seeker.id}`}
-                        defaultValue=""
-                        disabled={addingTo?.endsWith(`:${seeker.id}`)}
-                        onChange={(e) => {
-                          const listId = e.target.value;
-                          e.target.value = "";
-                          if (listId) void handleAddBookmarkToList(listId, seeker);
-                        }}
-                        className="max-w-[9rem] rounded-full border border-ink/10 bg-white px-2 py-1 text-xs text-ink outline-none"
-                      >
-                        <option value="">Add to list</option>
-                        {lists.map((list) => (
-                          <option key={list.id} value={list.id}>
-                            {list.name}
-                          </option>
-                        ))}
-                      </select>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => handleUnsave(seeker.id)}
-                      className="rounded-lg p-1.5 text-ink/35 transition hover:bg-ink/5 hover:text-ink"
-                      aria-label={`Unsave ${seeker.fullName}`}
-                    >
-                      <X className="h-3.5 w-3.5" strokeWidth={2.25} />
-                    </button>
+                    <IconButton
+                      aria-label={`Remove bookmark for ${seeker.fullName}`}
+                      title="Remove bookmark"
+                      icon={<X />}
+                      onClick={() => void handleUnsave(seeker.id)}
+                    />
                   </div>
                 }
               />
             ))}
           </ul>
         )}
-      </section>
+      </Card>
 
-      <section>
-        <h2 className="mb-3 text-xs font-bold uppercase tracking-wider text-ink/45">
-          Named lists
-          <span className="ml-2 font-data font-semibold text-ink/70">{lists.length}</span>
-        </h2>
-
+      <Card padded={false} aria-labelledby="lists-heading" className="overflow-hidden">
+        <CardHeader
+          id="lists-heading"
+          className="px-5 py-4 sm:px-6"
+          title="Named lists"
+          description={<span className="num">{lists.length}</span>}
+        />
         {lists.length === 0 ? (
-          <div className="flex items-start gap-3 text-sm leading-relaxed text-ink/45">
-            <FolderPlus className="mt-0.5 h-4 w-4 shrink-0 text-marigold" strokeWidth={2} />
-            <p>
-              Create a list above — like “Q1 support hires” — then add people from Bookmarks
-              or from a Talent profile.
-            </p>
+          <div className="border-t border-eh-line">
+            <EmptyState
+              compact
+              icon={<FolderPlus />}
+              title="No lists yet"
+              description="Create one above — like “Q1 support hires” — then add people from Bookmarks or a Talent profile."
+            />
           </div>
         ) : (
-          <ul className="divide-y divide-ink/6">
+          <ul className="divide-y divide-eh-line border-t border-eh-line">
             {lists.map((list) => {
               const isOpen = expandedId === list.id;
               const items = itemsByList[list.id] ?? [];
               return (
                 <li key={list.id}>
-                  <div className="flex items-center gap-2 py-3">
+                  <div className="flex items-center gap-2 px-5 py-3 sm:px-6">
                     <button
                       type="button"
-                      onClick={() => toggleExpand(list.id)}
-                      className="flex min-w-0 flex-1 items-center gap-3 text-left"
+                      onClick={() => void toggleExpand(list.id)}
+                      aria-expanded={isOpen}
+                      aria-controls={`list-${list.id}`}
+                      className="flex min-w-0 flex-1 items-center gap-3 rounded-chip text-left"
                     >
-                      <Bookmark className="h-4 w-4 shrink-0 text-[#9A5B12]" strokeWidth={2.25} />
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold text-ink">{list.name}</p>
-                        <p className="text-xs text-ink/45">
+                      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-control bg-eh-surface-2 text-eh-ink-2">
+                        <Bookmark className="h-4 w-4" aria-hidden="true" />
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block truncate text-ui font-semibold text-eh-ink">{list.name}</span>
+                        <span className="num block text-small text-eh-muted">
                           {list.itemCount} candidate{list.itemCount === 1 ? "" : "s"}
-                        </p>
-                      </div>
+                        </span>
+                      </span>
+                      <ChevronDown
+                        className={cx("ml-auto h-4 w-4 shrink-0 text-eh-muted transition-transform duration-150", isOpen && "rotate-180")}
+                        aria-hidden="true"
+                      />
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteList(list.id, list.name)}
-                      disabled={deletingId === list.id}
-                      className="rounded-lg p-2 text-ink/30 transition hover:bg-ember/5 hover:text-ember disabled:opacity-50"
+                    <IconButton
                       aria-label={`Delete ${list.name}`}
-                    >
-                      <Trash2 className="h-4 w-4" strokeWidth={2.25} />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => toggleExpand(list.id)}
-                      className="rounded-lg p-2 text-ink/35 transition hover:bg-ink/5 hover:text-ink"
-                      aria-label={isOpen ? "Collapse" : "Expand"}
-                    >
-                      {isOpen ? (
-                        <ChevronUp className="h-4 w-4" strokeWidth={2.25} />
-                      ) : (
-                        <ChevronDown className="h-4 w-4" strokeWidth={2.25} />
-                      )}
-                    </button>
+                      title="Delete list"
+                      icon={<Trash2 />}
+                      disabled={deletingId === list.id}
+                      onClick={() => setConfirmDelete(list)}
+                      className="hover:text-eh-danger!"
+                    />
                   </div>
 
                   {isOpen && (
-                    <div className="pb-3 pl-7">
+                    <div id={`list-${list.id}`} className="border-t border-eh-line bg-eh-surface-2/50">
                       {loadingItemsFor === list.id ? (
-                        <p className="py-2 text-xs text-ink/40">Loading…</p>
-                      ) : items.length === 0 ? (
-                        <p className="py-2 text-xs text-ink/40">
-                          Empty — add someone from Bookmarks above.
+                        <p className="px-6 py-3 text-small text-eh-muted" role="status">
+                          Loading…
                         </p>
+                      ) : items.length === 0 ? (
+                        <p className="px-6 py-3 text-small text-eh-muted">Empty — add someone from Bookmarks above.</p>
                       ) : (
-                        <ul className="divide-y divide-ink/5">
+                        <ul className="divide-y divide-eh-line">
                           {items.map((item) => (
                             <PersonRow
                               key={item.seekerId}
                               href={`/employer/talent/${item.seeker.id}`}
                               name={item.seeker.fullName}
-                              subtitle={
-                                item.seeker.headline || item.seeker.location || "Virtual Assistant"
-                              }
+                              subtitle={item.seeker.headline || item.seeker.location || "Virtual Assistant"}
                               photoUrl={item.seeker.photoUrl}
                               trailing={
-                                <button
-                                  type="button"
-                                  onClick={() => handleRemoveItem(list.id, item.seekerId)}
-                                  className="rounded-lg p-1.5 text-ink/30 transition hover:bg-ember/5 hover:text-ember"
+                                <IconButton
                                   aria-label={`Remove ${item.seeker.fullName} from ${list.name}`}
-                                >
-                                  <X className="h-3.5 w-3.5" strokeWidth={2.25} />
-                                </button>
+                                  title="Remove from list"
+                                  icon={<X />}
+                                  onClick={() => void handleRemoveItem(list.id, item.seekerId)}
+                                />
                               }
                             />
                           ))}
@@ -415,7 +407,22 @@ export default function TalentListsBoard({ initialLists, initialBookmarks }: Pro
             })}
           </ul>
         )}
-      </section>
+      </Card>
+
+      <EmployerConfirmModal
+        open={confirmDelete !== null}
+        title="Delete this list?"
+        subject={confirmDelete?.name}
+        description="The list is removed for your whole team. The candidates themselves and your bookmarks stay."
+        confirmLabel="Delete list"
+        danger
+        loading={confirmDelete !== null && deletingId === confirmDelete.id}
+        onCancel={() => {
+          if (deletingId) return;
+          setConfirmDelete(null);
+        }}
+        onConfirm={() => confirmDelete && void handleDeleteList(confirmDelete.id)}
+      />
     </div>
   );
 }

@@ -17,7 +17,8 @@ export default async function EmployerSeekerProfilePage({
 }: {
   params: Promise<{ seekerId: string }>;
 }) {
-  const { session } = await requireEmployerPageContext();
+  const { session, plan } = await requireEmployerPageContext();
+  const isPro = plan === "PRO";
   const { seekerId } = await params;
 
   let data;
@@ -56,7 +57,11 @@ export default async function EmployerSeekerProfilePage({
     <div className="mx-auto max-w-[1480px] space-y-4">
       <Link
         href="/employer/talent"
-        className="inline-flex items-center gap-1.5 text-sm font-medium text-ink/55 transition hover:text-teal"
+        className={
+          isPro
+            ? "inline-flex items-center gap-1.5 rounded-chip text-ui text-eh-muted transition-colors duration-150 hover:text-eh-ink"
+            : "inline-flex items-center gap-1.5 text-sm font-medium text-ink/55 transition hover:text-teal"
+        }
       >
         <ArrowLeft className="h-4 w-4" aria-hidden="true" />
         Back to talent search
@@ -73,6 +78,7 @@ export default async function EmployerSeekerProfilePage({
             saved={saved}
             canDownloadResume={canDownloadResume}
             resumeUrl={profile.resumeUrl}
+            pro={isPro}
           />
 
           <TalentProfileAbout bio={profile.bio} languages={profile.languages ?? []} />
@@ -90,6 +96,7 @@ export default async function EmployerSeekerProfilePage({
             seekerName={profile.fullName}
             seekerPhotoUrl={profile.photoUrl}
             seekerId={profile.id}
+            pro={isPro}
           />
         </div>
 

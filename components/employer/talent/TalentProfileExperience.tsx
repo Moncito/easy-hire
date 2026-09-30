@@ -1,5 +1,6 @@
 import { Briefcase } from "lucide-react";
 import DashboardSurface from "@/components/employer/dashboard/DashboardSurface";
+import ProfileSectionLabel from "@/components/employer/talent/ProfileSectionLabel";
 import { displayWorkExperience, parseWorkExperience } from "@/lib/seeker/profile-format";
 
 type Props = {
@@ -11,10 +12,7 @@ export default function TalentProfileExperience({ workExperience }: Props) {
 
   return (
     <DashboardSurface>
-      <p className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-navy/60">
-        <Briefcase className="h-3 w-3" aria-hidden="true" />
-        Experience
-      </p>
+      <ProfileSectionLabel icon={<Briefcase aria-hidden="true" />}>Experience</ProfileSectionLabel>
       <ul className="mt-4 space-y-4">
         {workExperience.map((entry) => {
           const { title, company, startDate, endDate, description } = parseWorkExperience(entry);

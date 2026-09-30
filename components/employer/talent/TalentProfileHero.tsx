@@ -1,6 +1,6 @@
-import Link from "next/link";
 import { MapPin, Download } from "lucide-react";
 import EmployerAvatar from "@/components/employer/ui/EmployerAvatar";
+import { Avatar, Button, Card } from "@/components/employer/system";
 import SaveSeekerButton from "@/components/employer/SaveSeekerButton";
 import MessageSeekerButton from "@/components/employer/MessageSeekerButton";
 
@@ -13,6 +13,8 @@ type Props = {
   saved: boolean;
   canDownloadResume: boolean;
   resumeUrl: string | null;
+  /** Employer Pro: a light, design-system hero instead of the navy banner. */
+  pro?: boolean;
 };
 
 export default function TalentProfileHero({
@@ -24,7 +26,37 @@ export default function TalentProfileHero({
   saved,
   canDownloadResume,
   resumeUrl,
+  pro = false,
 }: Props) {
+  if (pro) {
+    return (
+      <Card as="section" aria-label={`${fullName}, talent profile`}>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
+          <Avatar name={fullName} src={photoUrl} size="lg" className="h-16! w-16! text-base!" />
+          <div className="min-w-0 flex-1">
+            <h1 className="font-heading text-[28px] font-bold leading-tight tracking-[-0.02em] text-eh-ink">{fullName}</h1>
+            <p className="mt-1 text-body text-eh-ink-2">{headline || "Virtual Assistant"}</p>
+            {location && (
+              <p className="mt-1.5 inline-flex items-center gap-1 text-small text-eh-muted">
+                <MapPin className="h-3.5 w-3.5" aria-hidden="true" />
+                {location}
+              </p>
+            )}
+          </div>
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
+            <MessageSeekerButton seekerId={seekerId} />
+            <SaveSeekerButton seekerId={seekerId} saved={saved} />
+            {canDownloadResume && resumeUrl && (
+              <Button size="sm" href={`/api/employer/talent/${seekerId}/resume`} native icon={<Download />}>
+                Resume
+              </Button>
+            )}
+          </div>
+        </div>
+      </Card>
+    );
+  }
+
   return (
     <div className="relative overflow-hidden rounded-2xl bg-navy shadow-[0_12px_40px_-12px_rgba(30,58,95,0.45)] ring-1 ring-navy/20">
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(31,128,115,0.14)_0%,transparent_42%,rgba(255,255,255,0.04)_100%)]" />
