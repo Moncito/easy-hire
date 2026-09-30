@@ -83,9 +83,13 @@ export default function ProTalentProfileRail({
         </section>
       )}
 
-      <Button href={`/seekers/${seekerId}`} target="_blank" rel="noopener noreferrer" variant="ghost" icon={<ExternalLink />}>
-        View public profile
-      </Button>
+      {/* /seekers/[id] only serves PUBLIC profiles (it 404s for every other
+          visibility, deliberately), so the link only exists when it works. */}
+      {data.visibility === "PUBLIC" && (
+        <Button href={`/seekers/${seekerId}`} target="_blank" rel="noopener noreferrer" variant="ghost" icon={<ExternalLink />}>
+          View public profile
+        </Button>
+      )}
     </div>
   );
 }

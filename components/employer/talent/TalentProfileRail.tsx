@@ -170,6 +170,8 @@ export default function TalentProfileRail({ data, seekerId, canDownloadResume }:
         </DashboardSurface>
       )}
 
+      {/* /seekers/[id] only serves PUBLIC profiles — see ProTalentProfileRail. */}
+      {data.visibility === "PUBLIC" && (
       <Link
         href={`/seekers/${seekerId}`}
         target="_blank"
@@ -179,6 +181,7 @@ export default function TalentProfileRail({ data, seekerId, canDownloadResume }:
         <ExternalLink className="h-3.5 w-3.5" />
         View public profile
       </Link>
+      )}
     </div>
   );
 }
