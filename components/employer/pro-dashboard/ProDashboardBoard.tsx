@@ -1,9 +1,9 @@
-import type { EmployerAnalytics } from "@/lib/employer-analytics";
 import type { DashboardDecisions } from "@/lib/employer/dashboard-decisions";
 import type { GettingStartedStep } from "@/lib/employer/dashboard-sparse";
 import type { DashboardInsight, DashboardRange } from "@/lib/employer/dashboard-insights";
 import type { DashboardKpis } from "@/lib/employer/dashboard-kpis";
 import type { ApplicationsChart, PipelineFunnel } from "@/lib/employer/dashboard-pipeline";
+import type { RoleRow } from "@/lib/employer/dashboard-roles";
 
 import ProCompanyBand from "@/components/employer/pro-dashboard/ProCompanyBand";
 import ProJobsTable from "@/components/employer/pro-dashboard/ProJobsTable";
@@ -24,31 +24,29 @@ type Company = {
 
 type Props = {
   company: Company;
-  analytics: EmployerAnalytics;
   decisions: DashboardDecisions;
   defaultRejectionMessage: string | null;
-  sparse: boolean;
   showGettingStarted: boolean;
   gettingStartedSteps: GettingStartedStep[];
   insights: DashboardInsight[];
   kpis: DashboardKpis;
   chart: ApplicationsChart;
   funnel: PipelineFunnel;
+  roles: RoleRow[];
   range: DashboardRange;
 };
 
 export default function ProDashboardBoard({
   company,
-  analytics,
   decisions,
   defaultRejectionMessage,
-  sparse,
   showGettingStarted,
   gettingStartedSteps,
   insights,
   kpis,
   chart,
   funnel,
+  roles,
   range,
 }: Props) {
   return (
@@ -90,11 +88,7 @@ export default function ProDashboardBoard({
         <ProRecentActivity events={decisions.activity} />
       </div>
 
-      <ProJobsTable
-        jobs={analytics.activeJobs}
-        companyVerified={analytics.companyVerified}
-        showPostAnother={sparse && analytics.activeJobs.length > 0 && analytics.activeJobs.length < 4}
-      />
+      <ProJobsTable rows={roles} />
     </div>
   );
 }

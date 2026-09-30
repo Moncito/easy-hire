@@ -87,30 +87,30 @@ function ProDashboardSkeleton() {
         </section>
       </div>
 
-      <section>
-        <div className="mb-4 flex items-end justify-between">
-          <div>
-            <Bone className="h-6 w-32" />
-            <Bone className="mt-2 h-4 w-56" />
-          </div>
-          <Bone className="h-4 w-20" />
+      {/* Active roles table */}
+      <section className="rounded-card border border-eh-line bg-eh-surface">
+        <div className="flex items-center gap-2.5 px-5 pb-3.5 pt-4">
+          <Bone className="h-5 w-28" />
+          <Bone className="h-4 w-16" />
         </div>
-        <div className="pro-card overflow-hidden !p-0">
-          <div className="grid grid-cols-6 gap-3 border-b border-ink/[0.06] px-5 py-3">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <Bone key={i} className="h-3 w-12" />
-            ))}
-          </div>
-          {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="grid grid-cols-6 items-center gap-3 border-b border-ink/[0.06] px-5 py-4 last:border-0">
-              <Bone className="col-span-2 h-4 w-40" />
-              <Bone className="h-4 w-8 justify-self-end" />
-              <Bone className="h-4 w-8 justify-self-end" />
-              <Bone className="h-4 w-8 justify-self-end" />
-              <Bone className="h-8 w-20 justify-self-end rounded-full" />
-            </div>
+        <div className="grid grid-cols-7 gap-3 border-y border-eh-line bg-eh-surface-2 px-5 py-2.5">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Bone key={i} className="h-3 w-14" />
           ))}
         </div>
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="grid grid-cols-7 items-center gap-3 border-b border-eh-line px-5 py-3 last:border-0">
+            <div className="col-span-2 space-y-1.5">
+              <Bone className="h-4 w-40" />
+              <Bone className="h-3 w-28" />
+            </div>
+            <Bone className="h-4 w-8 justify-self-end" />
+            <Bone className="h-4 w-8 justify-self-end" />
+            <Bone className="h-4 w-12 justify-self-end" />
+            <Bone className="h-4 w-10 justify-self-end" />
+            <Bone className="h-[30px] w-28 justify-self-end rounded-control" />
+          </div>
+        ))}
       </section>
     </div>
   );
