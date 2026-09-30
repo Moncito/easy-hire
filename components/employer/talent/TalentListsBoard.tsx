@@ -6,7 +6,7 @@ import { Bookmark, ChevronDown, FolderPlus, Search, Trash2, X } from "lucide-rea
 import { toast } from "sonner";
 import { fetchJsonSafe } from "@/lib/client/fetch-json";
 import { unsaveSeeker } from "@/lib/client/saved-seekers";
-import { Avatar, Button, Card, CardHeader, EmptyState, IconButton, cx } from "@/components/employer/system";
+import { Avatar, Button, Card, CardHeader, EmptyState, IconButton, Select, cx } from "@/components/employer/system";
 import EmployerConfirmModal from "@/components/employer/EmployerConfirmModal";
 
 export type TalentListSummary = {
@@ -278,29 +278,22 @@ export default function TalentListsBoard({ initialLists, initialBookmarks }: Pro
                 trailing={
                   <div className="flex shrink-0 items-center gap-1.5">
                     {lists.length > 0 && (
-                      <>
-                        <label className="sr-only" htmlFor={`add-${seeker.id}`}>
-                          Add {seeker.fullName} to a list
-                        </label>
-                        <select
-                          id={`add-${seeker.id}`}
-                          defaultValue=""
-                          disabled={addingTo?.endsWith(`:${seeker.id}`)}
-                          onChange={(e) => {
-                            const listId = e.target.value;
-                            e.target.value = "";
-                            if (listId) void handleAddBookmarkToList(listId, seeker);
-                          }}
-                          className="h-8 max-w-[10rem] rounded-control border border-eh-line bg-eh-surface px-2 text-small text-eh-ink disabled:opacity-50"
-                        >
-                          <option value="">Add to list…</option>
-                          {lists.map((list) => (
-                            <option key={list.id} value={list.id}>
-                              {list.name}
-                            </option>
-                          ))}
-                        </select>
-                      </>
+                      <Select
+                        label={`Add ${seeker.fullName} to a list`}
+                        size="sm"
+                        value=""
+                        placeholder="Add to list…"
+                        disabled={addingTo?.endsWith(`:${seeker.id}`)}
+                        onChange={(listId) => void handleAddBookmarkToList(listId, seeker)}
+                        options={lists.map((list) => ({
+                          value: list.id,
+                          label: list.name,
+                          icon: <Bookmark />,
+                          description: `${list.itemCount} candidate${list.itemCount === 1 ? "" : "s"}`,
+                        }))}
+                        className="w-40"
+                        menuWidth={220}
+                      />
                     )}
                     <IconButton
                       aria-label={`Remove bookmark for ${seeker.fullName}`}

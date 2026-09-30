@@ -1,7 +1,7 @@
 "use client";
 
 import { Briefcase, Plus, SearchX } from "lucide-react";
-import { Button, Card, EmptyState, FilterButton, SearchInput } from "@/components/employer/system";
+import { Button, Card, EmptyState, FilterButton, SearchInput, Select } from "@/components/employer/system";
 import type { SortOption } from "@/components/employer/JobsBoardToolbar";
 import EmployerConfirmModal from "@/components/employer/EmployerConfirmModal";
 import { EMPTY_COPY, SEARCH_EMPTY } from "@/components/employer/JobsBoard";
@@ -77,20 +77,16 @@ export default function ProJobsBoard({
             onValueChange={board.setQuery}
             className="w-full sm:w-72"
           />
-          <label className="flex items-center gap-2 text-ui text-eh-muted">
-            Sort
-            <select
+          <div className="flex items-center gap-2 text-ui text-eh-muted">
+            <span aria-hidden="true">Sort</span>
+            <Select
+              label="Sort job listings"
               value={board.sort}
-              onChange={(e) => board.setSort(e.target.value as SortOption)}
-              className="h-9 rounded-control border border-eh-line bg-eh-surface px-2.5 text-ui text-eh-ink transition-colors duration-150 hover:border-eh-muted"
-            >
-              {SORT_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
-          </label>
+              onChange={(v) => board.setSort(v as SortOption)}
+              options={SORT_OPTIONS}
+              className="w-44"
+            />
+          </div>
           <span className="num sr-only" role="status" aria-live="polite">
             {displayedJobs.length} {displayedJobs.length === 1 ? "listing" : "listings"}
           </span>

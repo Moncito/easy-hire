@@ -12,6 +12,7 @@ import {
   JobStatusBadge,
   PipelineMini,
   SearchInput,
+  Select,
 } from "@/components/employer/system";
 import {
   HUB_EMPTY_COPY,
@@ -218,20 +219,16 @@ export default function ProApplicantsHubBoard({
             onValueChange={hub.setQuery}
             className="w-full sm:w-72"
           />
-          <label className="flex items-center gap-2 text-ui text-eh-muted">
-            Sort
-            <select
+          <div className="flex items-center gap-2 text-ui text-eh-muted">
+            <span aria-hidden="true">Sort</span>
+            <Select
+              label="Sort jobs"
               value={hub.sort}
-              onChange={(e) => hub.setSort(e.target.value as ApplicantsSortOption)}
-              className="h-9 rounded-control border border-eh-line bg-eh-surface px-2.5 text-ui text-eh-ink transition-colors duration-150 hover:border-eh-muted"
-            >
-              {SORT_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
-          </label>
+              onChange={(v) => hub.setSort(v as ApplicantsSortOption)}
+              options={SORT_OPTIONS}
+              className="w-44"
+            />
+          </div>
           <span className="sr-only" role="status" aria-live="polite">
             {displayedJobs.length} {displayedJobs.length === 1 ? "job" : "jobs"}
           </span>

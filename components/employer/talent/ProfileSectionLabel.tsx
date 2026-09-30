@@ -2,19 +2,35 @@
 
 import type { ReactNode } from "react";
 import { useEmployerShell } from "@/components/employer/EmployerShellContext";
+import { TONE_CHIP, type SectionTone } from "@/components/employer/talent/tones";
 
 /**
- * Section heading on the talent profile. Pro: a real heading in the
- * design-system style (Space Grotesk, sentence case, muted 16px icon).
- * Free: the original small uppercase navy label, unchanged.
+ * Section heading on the talent profile. Pro: Space Grotesk heading with
+ * the section's icon on a tinted chip. Free: the original small uppercase
+ * navy label, unchanged.
  */
-export default function ProfileSectionLabel({ icon, children }: { icon?: ReactNode; children: ReactNode }) {
+export default function ProfileSectionLabel({
+  icon,
+  tone = "navy",
+  children,
+}: {
+  icon?: ReactNode;
+  tone?: SectionTone;
+  children: ReactNode;
+}) {
   const { isPro } = useEmployerShell();
 
   if (isPro) {
     return (
-      <h2 className="flex items-center gap-2 font-heading text-[17px] font-semibold tracking-[-0.01em] text-eh-ink [&_svg]:h-4 [&_svg]:w-4 [&_svg]:shrink-0 [&_svg]:text-eh-muted">
-        {icon}
+      <h2 className="flex items-center gap-2.5 font-heading text-[17px] font-semibold tracking-[-0.01em] text-eh-ink">
+        {icon && (
+          <span
+            className={`grid h-8 w-8 shrink-0 place-items-center rounded-control [&_svg]:h-4 [&_svg]:w-4 ${TONE_CHIP[tone]}`}
+            aria-hidden="true"
+          >
+            {icon}
+          </span>
+        )}
         {children}
       </h2>
     );

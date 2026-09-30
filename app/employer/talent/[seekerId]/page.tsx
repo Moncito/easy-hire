@@ -10,6 +10,8 @@ import TalentProfileExperience from "@/components/employer/talent/TalentProfileE
 import TalentProfileEducation from "@/components/employer/talent/TalentProfileEducation";
 import TalentApplicationHistory from "@/components/employer/talent/TalentApplicationHistory";
 import TalentProfileRail from "@/components/employer/talent/TalentProfileRail";
+import ProTalentProfileHero from "@/components/employer/talent/ProTalentProfileHero";
+import ProTalentProfileRail from "@/components/employer/talent/ProTalentProfileRail";
 import { requireEmployerPageContext } from "@/lib/employer-session";
 
 export default async function EmployerSeekerProfilePage({
@@ -54,7 +56,7 @@ export default async function EmployerSeekerProfilePage({
   };
 
   return (
-    <div className="mx-auto max-w-[1480px] space-y-4">
+    <div className={`mx-auto max-w-[1480px] ${isPro ? "space-y-5" : "space-y-4"}`}>
       <Link
         href="/employer/talent"
         className={
@@ -67,19 +69,27 @@ export default async function EmployerSeekerProfilePage({
         Back to talent search
       </Link>
 
-      <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,1fr)_340px] 2xl:grid-cols-[minmax(0,1fr)_380px]">
-        <div className="min-w-0 space-y-4">
-          <TalentProfileHero
-            fullName={profile.fullName}
-            headline={profile.headline}
-            location={profile.location}
-            photoUrl={profile.photoUrl}
-            seekerId={profile.id}
-            saved={saved}
-            canDownloadResume={canDownloadResume}
-            resumeUrl={profile.resumeUrl}
-            pro={isPro}
-          />
+      <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-[minmax(0,1fr)_340px] 2xl:grid-cols-[minmax(0,1fr)_380px]">
+        <div className={`min-w-0 ${isPro ? "space-y-5" : "space-y-4"}`}>
+          {isPro ? (
+            <ProTalentProfileHero
+              data={previewData}
+              seekerId={profile.id}
+              saved={saved}
+              canDownloadResume={canDownloadResume}
+            />
+          ) : (
+            <TalentProfileHero
+              fullName={profile.fullName}
+              headline={profile.headline}
+              location={profile.location}
+              photoUrl={profile.photoUrl}
+              seekerId={profile.id}
+              saved={saved}
+              canDownloadResume={canDownloadResume}
+              resumeUrl={profile.resumeUrl}
+            />
+          )}
 
           <TalentProfileAbout bio={profile.bio} languages={profile.languages ?? []} />
           <TalentResumeHighlights seekerId={profile.id} />
@@ -100,11 +110,11 @@ export default async function EmployerSeekerProfilePage({
           />
         </div>
 
-        <TalentProfileRail
-          data={previewData}
-          seekerId={profile.id}
-          canDownloadResume={canDownloadResume}
-        />
+        {isPro ? (
+          <ProTalentProfileRail data={previewData} seekerId={profile.id} canDownloadResume={canDownloadResume} />
+        ) : (
+          <TalentProfileRail data={previewData} seekerId={profile.id} canDownloadResume={canDownloadResume} />
+        )}
       </div>
     </div>
   );

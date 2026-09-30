@@ -19,7 +19,7 @@ export default function TalentProfileEducation({ education, certifications }: Pr
     <DashboardSurface>
       {education.length > 0 && (
         <div>
-          <ProfileSectionLabel icon={<GraduationCap aria-hidden="true" />}>Education</ProfileSectionLabel>
+          <ProfileSectionLabel icon={<GraduationCap aria-hidden="true" />} tone="marigold">Education</ProfileSectionLabel>
           <ul className="mt-4 space-y-3">
             {education.map((entry) => {
               const { school, degree, field, year } = parseEducation(entry);
@@ -46,7 +46,7 @@ export default function TalentProfileEducation({ education, certifications }: Pr
 
       {certifications.length > 0 && (
         <div className={education.length > 0 ? "mt-5 border-t border-ink/[0.06] pt-5" : ""}>
-          <ProfileSectionLabel icon={<Award aria-hidden="true" />}>Certifications</ProfileSectionLabel>
+          <ProfileSectionLabel icon={<Award aria-hidden="true" />} tone="marigold">Certifications</ProfileSectionLabel>
           <ul className="mt-3 space-y-2">
             {certifications.map((cert) => (
               <li key={cert} className="text-sm text-ink/65">

@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { ArrowRight, Briefcase, CheckCircle2, MessageSquare } from "lucide-react";
+import { ArrowRight, Briefcase, CheckCircle2, ClipboardList, MessageSquare } from "lucide-react";
+import ProfileSectionLabel from "@/components/employer/talent/ProfileSectionLabel";
 import DashboardSurface from "@/components/employer/dashboard/DashboardSurface";
 import EmployerAvatar from "@/components/employer/ui/EmployerAvatar";
 import MessageSeekerButton from "@/components/employer/MessageSeekerButton";
@@ -101,16 +102,16 @@ export default function TalentApplicationHistory({
     <DashboardSurface>
       <div className="mb-4 flex items-center justify-between gap-3">
         <div>
-          {!pro && <p className="text-xs font-bold uppercase tracking-wider text-navy/60">Your company</p>}
-          <h2
-            className={
-              pro
-                ? "font-heading text-[17px] font-semibold tracking-[-0.01em] text-eh-ink"
-                : "font-display text-lg font-bold tracking-tight text-ink"
-            }
-          >
-            Application history
-          </h2>
+          {pro ? (
+            <ProfileSectionLabel icon={<ClipboardList aria-hidden="true" />} tone="navy">
+              Application history
+            </ProfileSectionLabel>
+          ) : (
+            <>
+              <p className="text-xs font-bold uppercase tracking-wider text-navy/60">Your company</p>
+              <h2 className="font-display text-lg font-bold tracking-tight text-ink">Application history</h2>
+            </>
+          )}
         </div>
         {applications.length > 0 && (
           <Link

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Bookmark, Download, Search, SearchX, SlidersHorizontal } from "lucide-react";
-import { Button, Card, EmptyState, FilterButton, SearchInput } from "@/components/employer/system";
+import { Button, Card, EmptyState, FilterButton, SearchInput, Select } from "@/components/employer/system";
 import { formatSalaryRange } from "@/lib/format";
 import { listSavedSeekers } from "@/lib/client/saved-seekers";
 import SaveSeekerButton from "@/components/employer/SaveSeekerButton";
@@ -231,20 +231,16 @@ export default function TalentSearchBoard() {
                     className="h-9 rounded-control border border-eh-line bg-eh-surface px-3 text-ui font-normal text-eh-ink outline-none transition-colors duration-150 placeholder:text-eh-muted focus:border-eh-teal"
                   />
                 </label>
-                <label className="flex flex-col gap-1.5 text-small font-medium text-eh-ink-2">
-                  Availability
-                  <select
+                <div className="flex flex-col gap-1.5 text-small font-medium text-eh-ink-2">
+                  <span aria-hidden="true">Availability</span>
+                  <Select
+                    label="Availability"
                     value={availability}
-                    onChange={(e) => setAvailability(e.target.value)}
-                    className="h-9 rounded-control border border-eh-line bg-eh-surface px-2.5 text-ui font-normal text-eh-ink outline-none transition-colors duration-150 focus:border-eh-teal"
-                  >
-                    {availabilityOptions.map((opt) => (
-                      <option key={opt.value || "any-avail"} value={opt.value}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                    onChange={setAvailability}
+                    options={availabilityOptions}
+                    className="w-full font-normal"
+                  />
+                </div>
               </div>
               <div className="mt-3 flex items-center gap-2">
                 <Button size="sm" onClick={search}>

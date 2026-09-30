@@ -32,6 +32,8 @@ export { default as SegmentedControl } from "@/components/employer/system/Segmen
 export type { SegmentOption } from "@/components/employer/system/SegmentedControl";
 export { default as FilterButton } from "@/components/employer/system/FilterButton";
 export { default as SearchInput } from "@/components/employer/system/SearchInput";
+export { default as Select } from "@/components/employer/system/Select";
+export type { SelectOption } from "@/components/employer/system/Select";
 
 export { default as MetricCard, TrendIndicator } from "@/components/employer/system/MetricCard";
 export type { TrendDirection } from "@/components/employer/system/MetricCard";

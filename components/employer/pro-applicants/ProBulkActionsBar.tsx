@@ -1,7 +1,7 @@
 "use client";
 
 import { X } from "lucide-react";
-import { Button } from "@/components/employer/system";
+import { Button, Select } from "@/components/employer/system";
 import { STAGE_OPTIONS } from "@/components/employer/BulkApplicantActionsBar";
 
 /**
@@ -33,27 +33,17 @@ export default function ProBulkActionsBar({
       <span className="num mr-2 text-ui font-semibold text-eh-ink" aria-live="polite">
         {selectedCount} {selectedCount === 1 ? "candidate" : "candidates"} selected
       </span>
-      <select
+      {/* An action picker: value stays empty, each pick moves the selection. */}
+      <Select
+        label="Move selected to stage"
+        size="sm"
+        value=""
+        placeholder="Move to stage…"
         disabled={loading}
-        defaultValue=""
-        onChange={(e) => {
-          if (e.target.value) {
-            onMove(e.target.value);
-            e.target.value = "";
-          }
-        }}
-        aria-label="Move selected to stage"
-        className="h-8 rounded-control border border-eh-line bg-eh-surface px-2.5 text-ui text-eh-ink disabled:opacity-50"
-      >
-        <option value="" disabled>
-          Move to stage…
-        </option>
-        {STAGE_OPTIONS.filter((o) => o.value !== "REJECTED").map((opt) => (
-          <option key={opt.value} value={opt.value}>
-            {opt.label}
-          </option>
-        ))}
-      </select>
+        onChange={onMove}
+        options={STAGE_OPTIONS.filter((o) => o.value !== "REJECTED")}
+        className="w-44"
+      />
       <Button size="sm" variant="destructive" icon={<X />} onClick={onReject} disabled={loading}>
         Reject selected
       </Button>
