@@ -20,6 +20,7 @@ import type {
   ReviewQueuePayload,
 } from "@/lib/admin/queues";
 import type { AdminAuditAction } from "@/lib/admin/audit";
+import type { ComplianceIssue } from "@/lib/jobs/posting-compliance";
 
 export type { QueueKind, QueueStatus, SlaBand, QueueSeveritySignal };
 export type {
@@ -133,6 +134,7 @@ export type SerializedJobQueueItemDetail = {
     trustScore: number | null;
     email: string;
   };
+  complianceIssues: ComplianceIssue[];
   documents: SerializedQueueItemDocument[];
   priorDecisions: SerializedQueueItemPriorDecision[];
 };
