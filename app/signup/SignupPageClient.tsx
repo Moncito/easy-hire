@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { BrandMark } from "@/components/brand/BrandMark";
 import RoleStep from "@/components/signup/RoleStep";
 import CredentialsStep from "@/components/signup/CredentialsStep";
 import SeekerProfileStep from "@/components/signup/SeekerProfileStep";
@@ -46,7 +47,7 @@ export default function SignupPageClient() {
     setError("");
     setLoading(true);
 
-    const result = await registerAccount({ ...data, role });
+    const result = await registerAccount({ ...data, acceptTerms: true, role });
 
     if (!result.ok) {
       setError((result.data as { error?: string })?.error || result.error || "Something went wrong");
@@ -112,10 +113,7 @@ export default function SignupPageClient() {
 
       <div className="relative z-10 flex items-center justify-between px-8 py-6">
         <Link href="/" className="flex items-center gap-2.5">
-          <div className="relative h-8 w-8 overflow-hidden rounded-full">
-            <div className="absolute inset-0 bg-marigold" style={{ clipPath: "polygon(0 0, 100% 0, 0 100%)" }} />
-            <div className="absolute inset-0 bg-teal" style={{ clipPath: "polygon(100% 0, 100% 100%, 0 100%)" }} />
-          </div>
+          <BrandMark className="h-8 w-8" />
           <span className="font-display text-lg font-bold text-ink">EasyHire</span>
         </Link>
         <p className="text-sm text-ink/60">

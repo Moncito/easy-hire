@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import {
   Banknote,
@@ -21,6 +21,8 @@ import EmployerActionBar from "@/components/employer/EmployerActionBar";
 import JobFormTopBar from "@/components/employer/JobFormTopBar";
 import EasyAiJobCopyPanel from "@/components/employer/EasyAiJobCopyPanel";
 import EasyAiScreeningPanel from "@/components/employer/EasyAiScreeningPanel";
+import PostingComplianceNotice from "@/components/employer/PostingComplianceNotice";
+import { checkPostingCompliance } from "@/lib/jobs/posting-compliance";
 import JobSoftCapBanner from "@/components/employer/ui/JobSoftCapBanner";
 import EmployerFormSection from "@/components/employer/ui/EmployerFormSection";
 import EmployerFormSelect from "@/components/employer/ui/EmployerFormSelect";
@@ -252,6 +254,18 @@ export default function JobForm({
     { label: "Location", done: !!location.trim() },
   ];
   const checklistDone = checklist.filter((item) => item.done).length;
+
+  const complianceIssues = useMemo(
+    () =>
+      checkPostingCompliance({
+        title,
+        description,
+        requirements,
+        benefits,
+        extra: screeningQuestions.map((q) => q.prompt),
+      }),
+    [title, description, requirements, benefits, screeningQuestions]
+  );
 
   const roleTypeOptions = ROLE_TYPES.map((rt) => ({ value: rt.label, label: rt.label }));
   const industryOptions = INDUSTRIES.map((ind) => ({ value: ind.label, label: ind.label }));
@@ -619,6 +633,10 @@ export default function JobForm({
               )}
             </div>
           </Section>
+      </div>
+
+      <div className="mt-6">
+        <PostingComplianceNotice issues={complianceIssues} autoPublish={canPublishInstantly} />
       </div>
 
       <EmployerActionBar>

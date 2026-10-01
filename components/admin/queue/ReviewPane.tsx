@@ -5,6 +5,7 @@ import { AlertTriangle, CheckCircle2, CircleDashed, ExternalLink, FileText, Hist
 import DecisionForm, { type DecisionAction, type DecisionFormHandle } from "./DecisionForm";
 import { SeverityChips } from "./SlaBadge";
 import { formatDate } from "../directory/badges";
+import type { ComplianceIssue } from "@/lib/jobs/posting-compliance";
 import type {
   QueueKind,
   ReasonCodeOption,
@@ -272,6 +273,36 @@ function PriorDecisions({ priorDecisions }: { priorDecisions: SerializedQueueIte
   );
 }
 
+function humaniseCode(code: string): string {
+  const spaced = code.toLowerCase().replace(/_/g, " ");
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+}
+
+/** Advisory posting-guideline hits for a job; renders nothing when clean. Marigold, like PriorDecisions (no ember in the file for risk flags). */
+function GuidelineFlags({ issues }: { issues: ComplianceIssue[] }) {
+  if (issues.length === 0) return null;
+  return (
+    <div className="rounded-xl border border-marigold/30 bg-marigold/8 p-4 admin-dark:border-marigold/40 admin-dark:bg-marigold/15">
+      <p className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[#8a5a10] admin-dark:text-marigold">
+        <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />
+        Guideline flags
+        <span className="rounded-full bg-marigold/25 px-1.5 py-0.5 font-data text-[10px] leading-none">{issues.length}</span>
+      </p>
+      <ul className="space-y-2">
+        {issues.map((issue, i) => (
+          <li key={`${issue.code}-${i}`} className="rounded-lg bg-white/70 px-3 py-2 text-xs text-ink/75 admin-dark:bg-white/10 admin-dark:text-mist/75">
+            <span className="font-semibold text-ink admin-dark:text-mist">{humaniseCode(issue.code)}</span>
+            <p className="mt-1 text-ink/60 admin-dark:text-mist/60">{issue.message}</p>
+            {issue.excerpt && (
+              <p className="mt-1 break-words font-data text-ink/55 admin-dark:text-mist/55">&ldquo;{issue.excerpt}&rdquo;</p>
+            )}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 /** Shared field label/value grid used by every kind's "Overview" tab. */
 function FieldGrid({ children }: { children: React.ReactNode }) {
   return <dl className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs text-ink/60 admin-dark:text-mist/60">{children}</dl>;
@@ -430,6 +461,7 @@ function buildTabs(detail: SerializedQueueItemDetail, item: SerializedQueueItem,
           label: "Overview",
           content: (
             <div className="space-y-4">
+              <GuidelineFlags issues={detail.complianceIssues} />
               <p className="text-xs text-ink/45 admin-dark:text-mist/45">
                 {detail.company.companyName} · {detail.category} · {detail.employmentType.replace(/_/g, " ")}
               </p>

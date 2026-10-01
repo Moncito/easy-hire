@@ -12,6 +12,7 @@ import { assertCanCreateOrActivateJob } from "@/lib/billing/entitlements";
 import { invalidatePublicJob, invalidatePublicJobsList } from "@/lib/jobs/public-cache";
 import { invalidatePublicCompany } from "@/lib/public-companies";
 import { recordEvent } from "@/lib/admin/events";
+import { checkPostingCompliance } from "@/lib/jobs/posting-compliance";
 
 const SUBMITTABLE_STATUSES: JobStatus[] = ["DRAFT", "PENDING_REVIEW"];
 
@@ -79,7 +80,17 @@ export async function updateJob(
 
   let entersPendingReview = false;
   if (existingStatus === "ACTIVE") {
-    const autoPublish = companyId ? await canAutoPublishJob(companyId) : false;
+    // Flagged posts from auto-publish companies still get a human look;
+    // Free-plan review is unchanged (those always go to PENDING_REVIEW).
+    const complianceIssues = checkPostingCompliance({
+      title: input.title,
+      description: input.description,
+      requirements: input.requirements,
+      benefits: input.benefits,
+      extra: (input.screeningQuestions ?? []).map((q) => q.prompt),
+    });
+    const autoPublish =
+      companyId && complianceIssues.length === 0 ? await canAutoPublishJob(companyId) : false;
     newStatus = autoPublish ? "ACTIVE" : "PENDING_REVIEW";
     entersPendingReview = !autoPublish;
   }
@@ -172,6 +183,9 @@ export async function submitJobForReview(
     description: string;
     category: string;
     location: string;
+    requirements?: string | null;
+    benefits?: string | null;
+    screeningQuestions?: { prompt: string }[];
   },
   companyId: string,
   userId: string
@@ -193,7 +207,16 @@ export async function submitJobForReview(
   // that's already PENDING_REVIEW doesn't double-count against the cap.
   await assertCanCreateOrActivateJob(companyId, { excludeJobId: job.id });
 
-  const autoPublish = await canAutoPublishJob(companyId);
+  // Flagged posts from auto-publish companies still get a human look;
+  // Free-plan review is unchanged (those always go to PENDING_REVIEW).
+  const complianceIssues = checkPostingCompliance({
+    title: job.title,
+    description: job.description,
+    requirements: job.requirements,
+    benefits: job.benefits,
+    extra: (job.screeningQuestions ?? []).map((q) => q.prompt),
+  });
+  const autoPublish = complianceIssues.length === 0 ? await canAutoPublishJob(companyId) : false;
   const updated = autoPublish
     ? await publishJobLive(job.id)
     : await prisma.job.update({
@@ -221,6 +244,7 @@ export async function submitJobForReview(
     userId,
     entityType: "JOB",
     entityId: job.id,
+    metadata: { complianceFlags: complianceIssues.map((i) => i.code).join(",") },
   });
 
   if (autoPublish) {

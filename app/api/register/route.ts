@@ -18,9 +18,9 @@ export async function POST(req: Request) {
     });
 
     const body = await parseJsonBody(req);
-    const { email, password, role, fullName, companyName } = registerSchema.parse(body);
+    const { email, password, role, fullName, companyName, acceptTerms } = registerSchema.parse(body);
 
-    const user = await registerUser({ email, password, role, fullName, companyName });
+    const user = await registerUser({ email, password, role, fullName, companyName, acceptTerms });
 
     return NextResponse.json(user);
   } catch (error) {

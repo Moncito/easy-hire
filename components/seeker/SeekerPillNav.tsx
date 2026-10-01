@@ -13,6 +13,7 @@ import {
   Sparkles,
   LogOut,
 } from "lucide-react";
+import { BrandMark } from "@/components/brand/BrandMark";
 import { useSignOut } from "@/components/ui/useSignOut";
 
 const navItems = [
@@ -59,18 +60,7 @@ function canHover() {
 }
 
 function LogoMark() {
-  return (
-    <div className="relative h-7 w-7 shrink-0 overflow-hidden rounded-full">
-      <div
-        className="absolute inset-0 bg-marigold"
-        style={{ clipPath: "polygon(0 0,100% 0,0 100%)" }}
-      />
-      <div
-        className="absolute inset-0 bg-teal"
-        style={{ clipPath: "polygon(100% 0,100% 100%,0 100%)" }}
-      />
-    </div>
-  );
+  return <BrandMark className="h-7 w-7" />;
 }
 
 export default function SeekerPillNav({ userName, userEmail }: Props) {

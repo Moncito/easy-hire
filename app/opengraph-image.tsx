@@ -1,4 +1,6 @@
 import { ImageResponse } from "next/og";
+import { brandMarkElement } from "@/components/brand/brandMarkImage";
+import { BASE_URL } from "@/lib/seo/base-url";
 
 /**
  * Default Open Graph image for every route that doesn't define its own
@@ -36,16 +38,7 @@ export default function Image() {
         }}
       >
         <div style={{ display: "flex", alignItems: "center" }}>
-          <div
-            style={{
-              display: "flex",
-              width: 22,
-              height: 22,
-              borderRadius: 6,
-              // Marigold — job-seeker accent, used here as the wordmark's dot.
-              background: "#F2A93B",
-            }}
-          />
+          {brandMarkElement(40)}
           <div
             style={{
               display: "flex",
@@ -81,7 +74,7 @@ export default function Image() {
             color: "#F2A93B",
           }}
         >
-          easyhire.ph
+          {new URL(BASE_URL).host}
         </div>
       </div>
     ),
