@@ -11,6 +11,8 @@ type Props = {
   onSuccess?: () => void;
   showSignupLink?: boolean;
   idPrefix?: string;
+  /** Already validated with safeNextPath by the caller; defaults to /dashboard (role router). */
+  next?: string;
 };
 
 // Two-factor step. "password" is the existing email + password form.
@@ -29,6 +31,7 @@ export default function LoginForm({
   onSuccess,
   showSignupLink = true,
   idPrefix = "login",
+  next = "/dashboard",
 }: Props) {
   const router = useRouter();
   const [step, setStep] = useState<Step>("password");
@@ -45,7 +48,7 @@ export default function LoginForm({
   // `error` so the two can never be shown at once.
   const [codeError, setCodeError] = useState("");
   const [loading, setLoading] = useState(false);
-  const { pending: googlePending, start: startGoogleSignIn } = useGoogleSignIn("/dashboard");
+  const { pending: googlePending, start: startGoogleSignIn } = useGoogleSignIn(next);
 
   const formRef = useRef<HTMLFormElement>(null);
   const otpRef = useRef<OtpInputHandle>(null);
@@ -118,7 +121,7 @@ export default function LoginForm({
     }
 
     onSuccess?.();
-    router.push("/dashboard");
+    router.push(next);
   }
 
   async function handleSubmit(e: React.FormEvent) {

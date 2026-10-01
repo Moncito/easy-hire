@@ -1,72 +1,95 @@
-"use client";
-
 import Link from "next/link";
+import { BadgeCheck, Lock, ShieldCheck } from "lucide-react";
+import AuthHeader from "@/components/auth/AuthHeader";
 import LoginForm from "@/components/auth/LoginForm";
+import { BrandLockup, BrandMark } from "@/components/brand/BrandMark";
+import { safeNextPath } from "@/lib/legal/terms-version";
 
-export default function LoginPage() {
+export const metadata = { title: "Sign in" };
+
+const focusRing =
+  "rounded focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy";
+
+const trustPoints = [
+  { icon: BadgeCheck, text: "Seekers never pay to apply or get hired" },
+  { icon: ShieldCheck, text: "Every company is reviewed before it hires" },
+  { icon: Lock, text: "You control your data — export or delete it anytime" },
+];
+
+function first(value: string | string[] | undefined): string | undefined {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ next?: string | string[] }>;
+}) {
+  const params = await searchParams;
+  const next = safeNextPath(first(params.next), "/dashboard");
+
   return (
-    <div className="relative flex min-h-screen flex-col overflow-hidden bg-mist">
-      <div
-        className="absolute left-16 top-32 hidden h-24 w-24 rounded-2xl border border-marigold/30 md:block"
-        style={{
-          backgroundImage: "radial-gradient(#F2A93B 1.5px, transparent 1.5px)",
-          backgroundSize: "10px 10px",
-          opacity: 0.5,
-        }}
-      />
-      <div
-        className="absolute right-20 bottom-40 hidden h-20 w-20 rounded-2xl border border-teal/30 md:block"
-        style={{
-          backgroundImage: "radial-gradient(#1F8073 1.5px, transparent 1.5px)",
-          backgroundSize: "10px 10px",
-          opacity: 0.5,
-        }}
-      />
+    <div className="relative flex min-h-dvh flex-col bg-mist">
+      <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
+        <div className="absolute -left-24 -top-24 h-96 w-96 rounded-full bg-marigold/20 blur-3xl" />
+        <div className="absolute -right-24 top-1/3 h-96 w-96 rounded-full bg-teal/15 blur-3xl" />
+        <div className="absolute -bottom-32 left-1/4 h-96 w-96 rounded-full bg-navy/10 blur-3xl" />
+      </div>
 
-      <div className="pointer-events-none absolute -bottom-24 -right-24 h-72 w-72 rounded-full bg-gradient-to-br from-marigold/25 to-teal/25 blur-3xl md:h-96 md:w-96" />
-
-      <div className="relative z-10 flex items-center justify-between px-8 py-6">
-        <Link href="/" className="flex items-center gap-2.5">
-          <div className="relative h-8 w-8 overflow-hidden rounded-full">
-            <div className="absolute inset-0 bg-marigold" style={{ clipPath: "polygon(0 0, 100% 0, 0 100%)" }} />
-            <div className="absolute inset-0 bg-teal" style={{ clipPath: "polygon(100% 0, 100% 100%, 0 100%)" }} />
-          </div>
-          <span className="font-display text-lg font-bold text-ink">EasyHire</span>
+      <header className="relative z-10 flex items-center justify-between gap-4 px-4 py-4 sm:px-8">
+        <Link href="/" aria-label="EasyHire home" className={focusRing}>
+          <BrandLockup size="md" />
         </Link>
-        <p className="text-sm text-ink/60">
-          Don&apos;t have an account?{" "}
-          <Link href="/signup" className="font-semibold text-ink hover:underline">
+        <p className="text-sm text-ink/65">
+          New to EasyHire?{" "}
+          <Link href="/signup" className={`font-semibold text-ink underline-offset-2 hover:underline ${focusRing}`}>
             Sign up
           </Link>
         </p>
-      </div>
+      </header>
 
-      <div className="relative z-10 flex flex-1 items-center justify-center px-6 py-16">
-        <div className="w-full max-w-lg rounded-3xl bg-white p-10 shadow-xl shadow-black/5 md:p-12">
-          <h1 className="mb-2 text-center font-display text-2xl font-bold text-ink">Welcome back</h1>
-          <p className="mb-8 text-center text-sm text-ink/60">
-            Enter your details to sign in to your account
-          </p>
-          <LoginForm idPrefix="page-login" showSignupLink={false} />
-          <p className="mt-6 text-center text-sm text-ink/55">
-            New here?{" "}
-            <Link href="/signup" className="font-semibold text-ink hover:underline">
-              Get started
-            </Link>
-          </p>
+      <main className="relative z-10 flex flex-1 items-center justify-center px-4 py-2 sm:px-6">
+        <div className="grid w-full max-w-md overflow-hidden rounded-3xl border border-ink/10 bg-white shadow-xl shadow-black/5 lg:max-w-4xl lg:grid-cols-2">
+          <aside className="relative hidden overflow-hidden bg-navy p-10 text-white lg:flex lg:flex-col lg:justify-center">
+            <div className="pointer-events-none absolute inset-0" aria-hidden="true">
+              <div className="absolute -right-16 -top-16 h-64 w-64 rounded-full bg-marigold/25 blur-3xl" />
+              <div className="absolute -bottom-20 -left-16 h-64 w-64 rounded-full bg-teal/30 blur-3xl" />
+            </div>
+            <div className="relative">
+              <BrandMark className="h-10 w-10" />
+              <p className="mt-5 font-display text-3xl font-bold leading-tight tracking-tight">
+                Verified VA jobs. Vetted employers.
+              </p>
+              <ul className="mt-7 space-y-4">
+                {trustPoints.map(({ icon: Icon, text }) => (
+                  <li key={text} className="flex items-start gap-3 text-sm leading-snug text-white/90">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/10">
+                      <Icon className="h-4 w-4" aria-hidden="true" />
+                    </span>
+                    <span className="pt-1.5">{text}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </aside>
+
+          <div className="p-6 sm:p-8 lg:p-10">
+            <AuthHeader className="mb-5" />
+            <LoginForm idPrefix="page-login" showSignupLink={false} next={next} />
+          </div>
         </div>
-      </div>
+      </main>
 
-      <div className="relative z-10 border-t border-ink/10 bg-mist py-6 text-center text-xs text-ink/50">
-        &copy; {new Date().getFullYear()} EasyHire VA Solutions &nbsp;|&nbsp;{" "}
-        <Link href="/privacy" className="hover:underline">
+      <footer className="relative z-10 px-4 py-3 text-center text-xs text-ink/60">
+        &copy; {new Date().getFullYear()} EasyHire VA Solutions &middot;{" "}
+        <Link href="/privacy" className={`hover:underline ${focusRing}`}>
           Privacy Policy
         </Link>{" "}
-        &nbsp;|&nbsp;{" "}
-        <Link href="/terms" className="hover:underline">
-          Terms &amp; Conditions
+        &middot;{" "}
+        <Link href="/terms" className={`hover:underline ${focusRing}`}>
+          Terms of Service
         </Link>
-      </div>
+      </footer>
     </div>
   );
 }

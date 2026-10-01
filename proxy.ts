@@ -22,7 +22,11 @@ export default auth(async (req) => {
   const isProtectedRoute = isSeekerRoute || isEmployerRoute || isAdminRoute;
 
   if (isProtectedRoute && !isLoggedIn) {
-    return NextResponse.redirect(new URL("/login", nextUrl));
+    // Carry the destination so a deep link (e.g. an applicants email) lands
+    // back on that page after sign-in. /login re-validates it with safeNextPath.
+    const loginUrl = new URL("/login", nextUrl);
+    loginUrl.searchParams.set("next", nextUrl.pathname + nextUrl.search);
+    return NextResponse.redirect(loginUrl);
   }
 
   // Impersonation "view as" overlay (docs/ADMIN-CONSOLE-PLAN.md §8.2). An
