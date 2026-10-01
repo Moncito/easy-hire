@@ -5,7 +5,7 @@ import LegalPageShell, { Section } from "@/components/legal/LegalPageShell";
 import PlanComparisonTable from "@/components/pricing/PlanComparisonTable";
 import { isStripeCheckoutEnabled } from "@/lib/billing/plan-comparison";
 
-const description = "EasyHire is free during MVP. See what's included, and what Employer Pro adds.";
+const description = "Posting and hiring on EasyHire is free. See what's included, and what Employer Pro adds.";
 
 export const metadata: Metadata = {
   // No trailing "— EasyHire": the root layout's title template already
@@ -40,20 +40,20 @@ const employerProFeatures = [
 export default function PricingPage() {
   const checkoutEnabled = isStripeCheckoutEnabled();
   const proPrice = checkoutEnabled ? "Employer Pro" : "Early access";
-  const proPriceDetail = checkoutEnabled ? "Monthly billing via Stripe" : "Checkout opening soon";
+  const proPriceDetail = checkoutEnabled ? "Monthly subscription · cancel anytime" : "Checkout opening soon";
 
   return (
     <LegalPageShell
       title="Pricing"
-      description="Free during MVP validation. We're building supply and trust before introducing paid features."
+      description="Posting jobs and hiring are free. Employer Pro is an optional upgrade for teams hiring at volume."
       navSection="Pricing"
       navIcon={Tag}
       navHint="Employer plans & fees"
     >
       <div className="rounded-2xl border border-teal/20 bg-teal/5 p-8">
-        <p className="text-xs font-bold uppercase tracking-wider text-teal">MVP — Free</p>
+        <p className="text-xs font-bold uppercase tracking-wider text-teal">Free</p>
         <p className="mt-2 font-display text-4xl font-bold text-ink">₱0</p>
-        <p className="mt-1 text-sm text-ink/55">No credit card required. No posting limits during validation.</p>
+        <p className="mt-1 text-sm text-ink/55">No credit card required.</p>
         <ul className="mt-6 space-y-3">
           {included.map((item) => (
             <li key={item} className="flex items-start gap-2.5 text-sm text-ink/75">
@@ -73,14 +73,19 @@ export default function PricingPage() {
       <PlanComparisonTable
         className="!shadow-xs"
         freePrice="₱0"
-        freePriceDetail="Free during MVP validation"
+        freePriceDetail="Free forever"
         proPrice={proPrice}
         proPriceDetail={proPriceDetail}
         showRecommendedBadge
         footer={
           <p className="text-xs leading-relaxed text-ink/50">
             Basic posting, messaging, and the full applicant pipeline stay free — forever. Employer
-            Pro is an optional upgrade for teams hiring at volume.
+            Pro is an optional upgrade for teams hiring at volume. Renewal, cancellation, and refund
+            rules are in our{" "}
+            <Link href="/terms" className="font-medium text-navy hover:underline">
+              Terms of Service
+            </Link>
+            .
           </p>
         }
       />
