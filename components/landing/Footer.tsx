@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { Code, Heart, Mail } from "lucide-react";
+import { Mail } from "lucide-react";
+import { businessInfo } from "@/lib/legal/business-info";
 import FooterLoginLink from "@/components/landing/FooterLoginLink";
 
 export default function Footer() {
@@ -9,6 +10,7 @@ export default function Footer() {
       links: [
         { label: "Browse jobs", href: "/jobs" },
         { label: "Create profile", href: "/signup" },
+        { label: "Safety tips", href: "/safety" },
       ],
     },
     {
@@ -16,6 +18,7 @@ export default function Footer() {
       links: [
         { label: "Post a job", href: "/employers" },
         { label: "Employer login", href: "/login", isLogin: true },
+        { label: "Posting guidelines", href: "/job-posting-guidelines" },
       ],
     },
     {
@@ -23,7 +26,9 @@ export default function Footer() {
       links: [
         { label: "Privacy", href: "/privacy" },
         { label: "Terms", href: "/terms" },
+        { label: "Refunds", href: "/refund-policy" },
         { label: "Pricing", href: "/pricing" },
+        { label: "Contact", href: "/contact" },
       ],
     },
   ];
@@ -42,23 +47,10 @@ export default function Footer() {
               </p>
               <div className="mt-5 flex gap-2">
                 <a
-                  href="https://github.com"
-                  className="rounded-full bg-navy/8 p-2 text-navy/60 transition-all hover:bg-navy/15 hover:text-navy"
-                  title="GitHub"
-                >
-                  <Code className="h-4 w-4" />
-                </a>
-                <a
-                  href="https://linkedin.com"
-                  className="rounded-full bg-navy/8 p-2 text-navy/60 transition-all hover:bg-navy/15 hover:text-navy"
-                  title="LinkedIn"
-                >
-                  <Heart className="h-4 w-4" />
-                </a>
-                <a
-                  href="mailto:hello@easyhire.com"
+                  href={`mailto:${businessInfo.contact.general}`}
                   className="rounded-full bg-navy/8 p-2 text-navy/60 transition-all hover:bg-navy/15 hover:text-navy"
                   title="Email"
+                  aria-label="Email EasyHire"
                 >
                   <Mail className="h-4 w-4" />
                 </a>

@@ -142,6 +142,13 @@ export default function TermsPage() {
           </li>
           <li>Treat candidates professionally and respond in good faith.</li>
         </ul>
+        <p>
+          Our{" "}
+          <Link href="/job-posting-guidelines" className={linkClass}>
+            Job Posting Guidelines
+          </Link>{" "}
+          explain these rules with examples.
+        </p>
       </Section>
 
       <Section id="seeker-responsibilities" title="5. Seeker responsibilities" summary="Be truthful, apply genuinely, and never pay anyone to get hired.">
@@ -152,7 +159,11 @@ export default function TermsPage() {
           <li>
             Do not include government ID numbers, bank details, health information, or other
             sensitive details in your resume or messages unless an employer has a legitimate need
-            for them. Never pay an employer to be hired — report anyone who asks.
+            for them. Never pay an employer to be hired — report anyone who asks. See our{" "}
+            <Link href="/safety" className={linkClass}>
+              safety tips
+            </Link>
+            .
           </li>
         </ul>
       </Section>
@@ -260,6 +271,13 @@ export default function TermsPage() {
           </li>
           <li>Prices exclude taxes unless stated; applicable taxes are added at checkout.</li>
         </ul>
+        <p>
+          Full details are in our{" "}
+          <Link href="/refund-policy" className={linkClass}>
+            Refund &amp; Cancellation Policy
+          </Link>
+          .
+        </p>
       </Section>
 
       <Section id="termination" title="11. Suspension and termination" summary="You can leave anytime. We can suspend accounts that break these Terms.">

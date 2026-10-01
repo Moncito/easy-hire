@@ -83,8 +83,8 @@ export default function PricingPage() {
             Basic posting, messaging, and the full applicant pipeline stay free — forever. Employer
             Pro is an optional upgrade for teams hiring at volume. Renewal, cancellation, and refund
             rules are in our{" "}
-            <Link href="/terms" className="font-medium text-navy hover:underline">
-              Terms of Service
+            <Link href="/refund-policy" className="font-medium text-navy hover:underline">
+              Refund &amp; Cancellation Policy
             </Link>
             .
           </p>

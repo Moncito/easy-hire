@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CalendarDays, FileText, Lock, Tag } from "lucide-react";
+import { CalendarDays, FileText, Lock, ReceiptText, Tag } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { getSession } from "@/lib/employer-session";
 import Footer from "@/components/landing/Footer";
@@ -8,7 +8,7 @@ import { LegalNavBandBleed } from "@/components/legal/LegalNavBand";
 import LegalToc from "@/components/legal/LegalToc";
 import SeekerAreaBackground from "@/components/seeker/SeekerAreaBackground";
 
-type LegalDoc = "terms" | "privacy" | "pricing";
+type LegalDoc = "terms" | "privacy" | "refunds" | "pricing";
 
 type Props = {
   title: string;
@@ -30,6 +30,7 @@ type Props = {
 const DOCS: { key: LegalDoc; label: string; href: string; icon: LucideIcon }[] = [
   { key: "terms", label: "Terms of Service", href: "/terms", icon: FileText },
   { key: "privacy", label: "Privacy Policy", href: "/privacy", icon: Lock },
+  { key: "refunds", label: "Refunds", href: "/refund-policy", icon: ReceiptText },
   { key: "pricing", label: "Pricing", href: "/pricing", icon: Tag },
 ];
 
