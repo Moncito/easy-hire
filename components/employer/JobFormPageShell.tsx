@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import { useEmployerShell } from "@/components/employer/EmployerShellContext";
-import ProPageHeader from "@/components/employer/pro-dashboard/ProPageHeader";
+import { PageHeader } from "@/components/employer/system";
 
 type Props = {
   title: string;
@@ -17,7 +17,7 @@ export default function JobFormPageShell({ title, description, children, footer 
   if (isPro) {
     return (
       <>
-        <ProPageHeader title={title} description={description} />
+        <PageHeader className="mb-6" title={title} description={description} />
         {children}
         {footer}
       </>

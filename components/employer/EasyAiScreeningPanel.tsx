@@ -4,7 +4,7 @@ import { useState } from "react";
 import { ListChecks, Sparkles } from "lucide-react";
 import { useEmployerShell } from "@/components/employer/EmployerShellContext";
 import { useEasyAi } from "@/components/employer/pro/useEasyAi";
-import ProButton from "@/components/employer/pro/ProButton";
+import { Button, StatusBadge } from "@/components/employer/system";
 
 type ScreeningQuestion = { prompt: string; required: boolean };
 
@@ -35,48 +35,45 @@ export default function EasyAiScreeningPanel({ title, description, requirements,
     }
   }
 
+  const loading = isLoading("screening-questions");
+  const ready = Boolean(title.trim() && description.trim());
+
   return (
-    <div className="rounded-xl border border-ink/[0.08] bg-mist/50 p-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[#9A5B12]">
-          <Sparkles className="h-3.5 w-3.5" strokeWidth={2.25} />
+    <div className="rounded-control border border-[color-mix(in_srgb,var(--eh-teal)_22%,transparent)] bg-eh-teal-tint p-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="inline-flex items-center gap-2 text-ui font-semibold text-eh-ink">
+          <Sparkles className="h-4 w-4 text-eh-teal" aria-hidden="true" />
           Easy AI screening
         </p>
-        <ProButton
-          variant="secondary"
-          onClick={handleSuggest}
-          disabled={isLoading("screening-questions") || !title.trim() || !description.trim()}
-          icon={<ListChecks className="h-3.5 w-3.5" strokeWidth={2.25} />}
-        >
-          {isLoading("screening-questions") ? "Suggesting…" : "Suggest questions"}
-        </ProButton>
+        <Button size="sm" icon={<ListChecks />} loading={loading} disabled={!ready} onClick={() => void handleSuggest()}>
+          {loading ? "Suggesting…" : "Suggest questions"}
+        </Button>
       </div>
+      {!ready && <p className="mt-1.5 text-small text-eh-ink-2">Add a title and description first.</p>}
       {preview && preview.length > 0 && (
-        <div className="mt-3 space-y-2">
+        <div className="mt-3 rounded-control border border-eh-line bg-eh-surface p-3">
           <ul className="space-y-1.5">
             {preview.map((q, i) => (
-              <li key={i} className="text-xs leading-relaxed text-ink/55">
-                • {q.prompt}
-                {q.required ? (
-                  <span className="ml-1 text-[10px] font-semibold text-ink/70">Required</span>
-                ) : null}
+              <li key={i} className="flex flex-wrap items-center gap-2 text-ui text-eh-ink-2">
+                <span className="min-w-0 flex-1">{q.prompt}</span>
+                {q.required && <StatusBadge tone="neutral">Required</StatusBadge>}
               </li>
             ))}
           </ul>
-          <ProButton
+          <Button
+            size="sm"
             variant="primary"
+            className="mt-3"
             onClick={() => {
               onApply(preview);
               setPreview(null);
             }}
           >
             Add suggested questions
-          </ProButton>
+          </Button>
         </div>
       )}
-      <p className="mt-2 text-[10px] leading-relaxed text-ink/40">
-        Suggestions only — answers never auto-reject candidates.
-      </p>
+      <p className="mt-2 text-small text-eh-muted">Suggestions only — answers never auto-reject candidates.</p>
     </div>
   );
 }

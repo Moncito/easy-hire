@@ -7,6 +7,10 @@ import JobForm, { JobFormData, JobSubmitIntent } from "@/components/employer/Job
 type Props = {
   jobId: string;
   initialData: JobFormData;
+  /** Verified Employer Pro: submitting publishes live instead of going to review. */
+  canPublishInstantly?: boolean;
+  /** The job is ACTIVE: only "Save changes" applies (see JobForm). */
+  editingLiveJob?: boolean;
 };
 
 async function saveJob(jobId: string, data: JobFormData) {
@@ -30,7 +34,7 @@ async function submitForReview(jobId: string) {
   }
 }
 
-export default function EditJobForm({ jobId, initialData }: Props) {
+export default function EditJobForm({ jobId, initialData, canPublishInstantly = false, editingLiveJob = false }: Props) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -54,7 +58,7 @@ export default function EditJobForm({ jobId, initialData }: Props) {
   return (
     <>
       {error && <p className="mb-4 text-sm text-ember">{error}</p>}
-      <JobForm initialData={initialData} loading={loading} onSubmit={handleSubmit} />
+      <JobForm initialData={initialData} loading={loading} onSubmit={handleSubmit} canPublishInstantly={canPublishInstantly} editingLiveJob={editingLiveJob} />
     </>
   );
 }
