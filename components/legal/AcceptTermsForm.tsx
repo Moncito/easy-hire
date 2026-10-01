@@ -99,7 +99,7 @@ export default function AcceptTermsForm({ next, role }: { next: string; role?: s
       <div className="relative mx-auto grid w-full max-w-5xl rounded-3xl border border-ink/10 bg-white shadow-xl shadow-black/5 lg:max-h-full lg:grid-cols-[3fr_2fr] lg:grid-rows-[minmax(0,1fr)] lg:overflow-hidden">
         {/* LEFT — on lg it scrolls inside the card only when the window is
             too short, so the page itself never scrolls and Accept stays put. */}
-        <div className="p-6 sm:p-10 lg:min-h-0 lg:overflow-y-auto lg:p-8">
+        <div className="p-6 sm:p-10 lg:min-h-0 lg:overflow-y-auto lg:p-8 lg:[scrollbar-width:none] lg:[&::-webkit-scrollbar]:hidden">
           <BrandLockup size="md" />
           <h1 className="mt-5 font-display text-3xl font-bold tracking-tight text-ink">
             We&apos;ve updated our Terms
@@ -167,7 +167,7 @@ export default function AcceptTermsForm({ next, role }: { next: string; role?: s
         </div>
 
         {/* RIGHT */}
-        <div className="flex flex-col rounded-b-3xl border-t border-ink/10 bg-mist/60 p-6 sm:p-10 lg:min-h-0 lg:overflow-y-auto lg:rounded-b-none lg:p-8 lg:pb-0 lg:rounded-r-3xl lg:border-l lg:border-t-0">
+        <div className="flex flex-col rounded-b-3xl border-t border-ink/10 bg-mist/60 p-6 sm:p-10 lg:min-h-0 lg:overflow-y-auto lg:[scrollbar-width:none] lg:[&::-webkit-scrollbar]:hidden lg:rounded-b-none lg:p-8 lg:pb-0 lg:rounded-r-3xl lg:border-l lg:border-t-0">
           <p className="text-[11px] font-semibold uppercase tracking-widest text-ink/45">
             Your account
           </p>
