@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { signIn } from "next-auth/react";
 import { CURRENT_TERMS_VERSION, TERMS_CONSENT_COOKIE } from "@/lib/legal/terms-version";
+import { useGoogleSignIn } from "@/components/auth/useGoogleSignIn";
 import { Role, CredentialsData } from "./types";
 
 type Props = {
@@ -23,6 +23,7 @@ export default function CredentialsStep({ role, loading, serverError, onSubmit }
 
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [termsError, setTermsError] = useState("");
+  const { pending: googlePending, start: startGoogleSignIn } = useGoogleSignIn("/seeker/dashboard");
 
   const TERMS_ERROR = "Please confirm you're 18 or older and agree to the Terms and Privacy Policy.";
   const accentClass = role === "EMPLOYER" ? "accent-teal" : "accent-marigold";
@@ -32,9 +33,10 @@ export default function CredentialsStep({ role, loading, serverError, onSubmit }
       setTermsError(TERMS_ERROR);
       return;
     }
-    const secure = window.location.protocol === "https:" ? "; secure" : "";
-    document.cookie = `${TERMS_CONSENT_COOKIE}=${CURRENT_TERMS_VERSION}; path=/; max-age=600; samesite=lax${secure}`;
-    void signIn("google", { callbackUrl: "/seeker/dashboard" });
+    startGoogleSignIn(() => {
+      const secure = window.location.protocol === "https:" ? "; secure" : "";
+      document.cookie = `${TERMS_CONSENT_COOKIE}=${CURRENT_TERMS_VERSION}; path=/; max-age=600; samesite=lax${secure}`;
+    });
   }
 
   function handleSubmit(e: React.FormEvent) {
@@ -175,7 +177,9 @@ export default function CredentialsStep({ role, loading, serverError, onSubmit }
           <button
             type="button"
             onClick={handleGoogle}
-            className="w-full rounded-xl border border-ink/15 px-4 py-3 text-sm font-semibold text-ink transition-colors hover:bg-ink/5 active:scale-95 cursor-pointer"
+            disabled={googlePending}
+            aria-busy={googlePending}
+            className="w-full rounded-xl border border-ink/15 px-4 py-3 text-sm font-semibold text-ink transition-colors hover:bg-ink/5 active:scale-95 cursor-pointer disabled:cursor-wait disabled:opacity-60"
           >
             <div className="flex items-center justify-center gap-2">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -196,7 +200,7 @@ export default function CredentialsStep({ role, loading, serverError, onSubmit }
                   fill="#EA4335"
                 />
               </svg>
-              Continue with Google
+              {googlePending ? "Redirecting to Google…" : "Continue with Google"}
             </div>
           </button>
         </>
