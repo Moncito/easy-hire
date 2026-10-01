@@ -2,7 +2,8 @@ import Link from "next/link";
 import { BadgeCheck, Lock, ShieldCheck } from "lucide-react";
 import AuthHeader from "@/components/auth/AuthHeader";
 import LoginForm from "@/components/auth/LoginForm";
-import { BrandLockup, BrandMark } from "@/components/brand/BrandMark";
+import AuthPageShell from "@/components/auth/AuthPageShell";
+import { BrandMark } from "@/components/brand/BrandMark";
 import { safeNextPath } from "@/lib/legal/terms-version";
 
 export const metadata = { title: "Sign in" };
@@ -29,27 +30,18 @@ export default async function LoginPage({
   const next = safeNextPath(first(params.next), "/dashboard");
 
   return (
-    <div className="relative flex min-h-dvh flex-col bg-mist">
-      <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
-        <div className="absolute -left-24 -top-24 h-96 w-96 rounded-full bg-marigold/20 blur-3xl" />
-        <div className="absolute -right-24 top-1/3 h-96 w-96 rounded-full bg-teal/15 blur-3xl" />
-        <div className="absolute -bottom-32 left-1/4 h-96 w-96 rounded-full bg-navy/10 blur-3xl" />
-      </div>
-
-      <header className="relative z-10 flex items-center justify-between gap-4 px-4 py-4 sm:px-8">
-        <Link href="/" aria-label="EasyHire home" className={focusRing}>
-          <BrandLockup size="md" />
-        </Link>
-        <p className="text-sm text-ink/65">
+    <AuthPageShell
+      wide
+      topRight={
+        <>
           New to EasyHire?{" "}
           <Link href="/signup" className={`font-semibold text-ink underline-offset-2 hover:underline ${focusRing}`}>
             Sign up
           </Link>
-        </p>
-      </header>
-
-      <main className="relative z-10 flex flex-1 items-center justify-center px-4 py-2 sm:px-6">
-        <div className="grid w-full max-w-md overflow-hidden rounded-3xl border border-ink/10 bg-white shadow-xl shadow-black/5 lg:max-w-4xl lg:grid-cols-2">
+        </>
+      }
+    >
+        <div className="grid w-full overflow-hidden rounded-3xl border border-ink/10 bg-white shadow-xl shadow-black/5 lg:grid-cols-2">
           <aside className="relative hidden overflow-hidden bg-navy p-10 text-white lg:flex lg:flex-col lg:justify-center">
             <div className="pointer-events-none absolute inset-0" aria-hidden="true">
               <div className="absolute -right-16 -top-16 h-64 w-64 rounded-full bg-marigold/25 blur-3xl" />
@@ -78,18 +70,6 @@ export default async function LoginPage({
             <LoginForm idPrefix="page-login" showSignupLink={false} next={next} />
           </div>
         </div>
-      </main>
-
-      <footer className="relative z-10 px-4 py-3 text-center text-xs text-ink/60">
-        &copy; {new Date().getFullYear()} EasyHire VA Solutions &middot;{" "}
-        <Link href="/privacy" className={`hover:underline ${focusRing}`}>
-          Privacy Policy
-        </Link>{" "}
-        &middot;{" "}
-        <Link href="/terms" className={`hover:underline ${focusRing}`}>
-          Terms of Service
-        </Link>
-      </footer>
-    </div>
+    </AuthPageShell>
   );
 }

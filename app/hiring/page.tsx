@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ArrowLeft, Bell, BriefcaseBusiness, ShieldCheck, Sparkles } from "lucide-react";
 import { auth } from "@/Auth";
+import { BrandMark } from "@/components/brand/BrandMark";
 import { getHiringWorkspacesForUser } from "@/lib/collaborative-hiring";
 import HiringWorkspacePicker, { type WorkspaceCard } from "@/components/hiring/HiringWorkspacePicker";
 import OwnershipOfferPrompt from "@/components/hiring/OwnershipOfferPrompt";
@@ -37,10 +38,7 @@ export default async function HiringWorkspacesPage() {
               <Bell className="h-4 w-4" />
             </Link>
             <div className="flex items-center gap-2 text-sm font-bold text-ink">
-              <span className="relative flex h-8 w-8 overflow-hidden rounded-full">
-                <span className="absolute inset-0 bg-marigold" style={{ clipPath: "polygon(0 0, 100% 0, 0 100%)" }} />
-                <span className="absolute inset-0 bg-teal" style={{ clipPath: "polygon(100% 0, 100% 100%, 0 100%)" }} />
-              </span>
+              <BrandMark className="h-8 w-8" />
               <span className="font-display text-lg font-black tracking-tighter">EasyHire</span>
             </div>
           </div>

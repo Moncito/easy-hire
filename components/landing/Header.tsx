@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Search, Briefcase, HelpCircle } from "lucide-react";
+import { BrandMark } from "@/components/brand/BrandMark";
 import { useLoginModalOptional } from "@/components/auth/LoginModalProvider";
 
 const navItems = [
@@ -54,10 +55,7 @@ export default function Header({ variant: _variant }: Props = {}) {
       >
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 md:px-12">
           <Link href="/" className="flex shrink-0 items-center gap-3 transition-opacity hover:opacity-90">
-            <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-full">
-              <div className="absolute inset-0 bg-marigold" style={{ clipPath: "polygon(0 0,100% 0,0 100%)" }} />
-              <div className="absolute inset-0 bg-teal" style={{ clipPath: "polygon(100% 0,100% 100%,0 100%)" }} />
-            </div>
+            <BrandMark className="h-8 w-8" />
             <span className="whitespace-nowrap font-display text-lg font-bold text-ink">EasyHire</span>
           </Link>
 

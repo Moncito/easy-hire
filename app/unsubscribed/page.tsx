@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { MailCheck } from "lucide-react";
+import AuthPageShell from "@/components/auth/AuthPageShell";
 
 export const metadata = {
   title: "Unsubscribed — EasyHire",
@@ -18,18 +19,21 @@ export const metadata = {
  */
 export default function UnsubscribedPage() {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-mist px-6 py-16">
-      <div className="w-full max-w-md rounded-2xl border border-ink/10 bg-white p-8 shadow-[0_10px_30px_rgba(32,36,43,0.04)]">
+    <AuthPageShell>
+      <div className="rounded-3xl border border-ink/10 bg-white p-6 shadow-xl shadow-black/5 sm:p-8">
         <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-teal/10 text-teal">
           <MailCheck className="h-5 w-5" strokeWidth={2} aria-hidden="true" />
         </div>
 
-        <h1 className="mt-5 font-display text-2xl font-bold text-ink">You&rsquo;re unsubscribed</h1>
-        <p className="mt-2 text-sm leading-relaxed text-ink/60">
+        <p className="mt-4 text-xs font-semibold uppercase tracking-wider text-navy">Email preferences</p>
+        <h1 className="mt-1 font-display text-2xl font-bold tracking-tight text-ink sm:text-3xl">
+          You&rsquo;re unsubscribed
+        </h1>
+        <p className="mt-1.5 text-sm leading-relaxed text-ink/65">
           You won&rsquo;t receive job alert digests or weekly summaries from EasyHire any more.
         </p>
 
-        <div className="mt-6 rounded-xl border border-ink/10 bg-mist/60 p-4">
+        <div className="mt-5 rounded-xl border border-ink/10 bg-mist/60 p-4">
           <p className="text-xs font-bold uppercase tracking-wider text-ink/40">Still sent</p>
           <p className="mt-1.5 text-sm leading-relaxed text-ink/60">
             Account security emails &mdash; password resets and email verification &mdash; and
@@ -38,7 +42,7 @@ export default function UnsubscribedPage() {
           </p>
         </div>
 
-        <p className="mt-6 text-sm text-ink/55">
+        <p className="mt-5 text-sm text-ink/60">
           Changed your mind? You can turn digests back on any time in{" "}
           <Link href="/login" className="font-semibold text-teal hover:underline">
             your account settings
@@ -46,6 +50,6 @@ export default function UnsubscribedPage() {
           .
         </p>
       </div>
-    </main>
+    </AuthPageShell>
   );
 }
