@@ -4,6 +4,8 @@ import { Shield } from "lucide-react";
 import LegalPageShell, { Section } from "@/components/legal/LegalPageShell";
 import BusinessDetails from "@/components/legal/BusinessDetails";
 import { businessInfo, contractingPartyName } from "@/lib/legal/business-info";
+import { currentLegalVersion } from "@/lib/legal/changelog";
+import { CURRENT_TERMS_VERSION } from "@/lib/legal/terms-version";
 
 export const metadata: Metadata = {
   // No trailing "— EasyHire": the root layout's title template already
@@ -13,6 +15,23 @@ export const metadata: Metadata = {
 };
 
 const linkClass = "font-medium text-navy underline-offset-2 hover:underline";
+
+const toc = [
+  { id: "who-we-are", title: "Who we are" },
+  { id: "information-we-collect", title: "Information we collect" },
+  { id: "how-we-use", title: "How we use it, and why we are allowed to" },
+  { id: "easy-ai", title: "Easy AI and automated processing" },
+  { id: "who-can-see", title: "Who can see your information" },
+  { id: "international-transfers", title: "International transfers" },
+  { id: "retention", title: "How long we keep data" },
+  { id: "security", title: "How we protect it" },
+  { id: "your-rights", title: "Your rights" },
+  { id: "cookies", title: "Cookies" },
+  { id: "emails", title: "Emails" },
+  { id: "children", title: "Children" },
+  { id: "changes", title: "Changes to this policy" },
+  { id: "contact", title: "Contact" },
+];
 
 const processors = [
   { name: "Vercel", purpose: "Website hosting and delivery" },
@@ -35,12 +54,18 @@ export default function PrivacyPage() {
   return (
     <LegalPageShell
       title="Privacy Policy"
-      description="Last updated: October 1, 2026."
+      description={
+        "How EasyHire collects, uses, and protects your personal information."
+      }
+      doc="privacy"
+      toc={toc}
+      updated={currentLegalVersion().effective}
+      version={CURRENT_TERMS_VERSION}
       navSection="Privacy Policy"
       navIcon={Shield}
       navHint="Data & privacy"
     >
-      <Section title="1. Who we are">
+      <Section id="who-we-are" title="1. Who we are" summary="EasyHire is responsible for your data under the Philippine Data Privacy Act.">
         <p>
           {contractingPartyName()}{" "}
           (&quot;EasyHire&quot;, &quot;we&quot;, &quot;us&quot;) runs a job
@@ -56,7 +81,7 @@ export default function PrivacyPage() {
         </p>
       </Section>
 
-      <Section title="2. Information we collect">
+      <Section id="information-we-collect" title="2. Information we collect" summary="Account and profile details, documents you choose to upload, your activity on EasyHire, and basic technical data.">
         <p>
           <strong>Account data:</strong> name, email address, password (stored only as a one-way
           hash), role, sign-in method, two-factor settings (secrets are encrypted), and the date you
@@ -97,7 +122,7 @@ export default function PrivacyPage() {
         </p>
       </Section>
 
-      <Section title="3. How we use it, and why we are allowed to">
+      <Section id="how-we-use" title="3. How we use it, and why we are allowed to" summary="To run the service, keep it safe, and bill employers. We never sell your data.">
         <ul className="list-disc space-y-2 pl-5">
           <li>
             <strong>To provide the service you signed up for</strong> — accounts, profiles, job
@@ -127,7 +152,7 @@ export default function PrivacyPage() {
         <p>We do not sell personal data and we do not use it for third-party advertising.</p>
       </Section>
 
-      <Section title="4. Easy AI and automated processing">
+      <Section id="easy-ai" title="4. Easy AI and automated processing" summary="Some text is processed by AI providers to help employers. No one is rejected automatically.">
         <p>
           Easy AI features help employers draft job posts, summarise resumes, suggest candidate
           rankings, prepare interviews, and draft messages; we also use automated checks to flag
@@ -143,7 +168,7 @@ export default function PrivacyPage() {
         </p>
       </Section>
 
-      <Section title="5. Who can see your information">
+      <Section id="who-can-see" title="5. Who can see your information" summary="Employers you apply to, whoever your visibility setting allows, our team when needed, and vetted providers.">
         <ul className="list-disc space-y-2 pl-5">
           <li>
             <strong>Employers you apply to</strong> (and their team members on EasyHire) see your
@@ -192,7 +217,7 @@ export default function PrivacyPage() {
         </p>
       </Section>
 
-      <Section title="6. International transfers">
+      <Section id="international-transfers" title="6. International transfers">
         <p>
           Several of our service providers store or process data outside the Philippines, including
           in the United States and other countries. When this happens we rely on contractual
@@ -201,7 +226,7 @@ export default function PrivacyPage() {
         </p>
       </Section>
 
-      <Section title="7. How long we keep data">
+      <Section id="retention" title="7. How long we keep data" summary="We keep data while your account is open and anonymise it when you delete your account.">
         <ul className="list-disc space-y-2 pl-5">
           <li>Account and profile data: while your account is open.</li>
           <li>
@@ -218,7 +243,7 @@ export default function PrivacyPage() {
         </ul>
       </Section>
 
-      <Section title="8. How we protect it">
+      <Section id="security" title="8. How we protect it">
         <p>
           We use encrypted connections, hashed passwords, encrypted two-factor secrets, private
           storage with short-lived signed links for resumes and documents, role-based access
@@ -228,7 +253,7 @@ export default function PrivacyPage() {
         </p>
       </Section>
 
-      <Section title="9. Your rights">
+      <Section id="your-rights" title="9. Your rights" summary="Download or delete your data yourself, or email us for anything else.">
         <p>
           Under the Data Privacy Act you have the right to be informed, to access, to correct, to
           object, to erasure or blocking, to data portability, to claim damages, and to lodge a
@@ -252,7 +277,7 @@ export default function PrivacyPage() {
         </ul>
       </Section>
 
-      <Section title="10. Cookies">
+      <Section id="cookies" title="10. Cookies" summary="Essential cookies only. No ads or tracking.">
         <p>
           We only use cookies that are needed for the site to work: keeping you signed in,
           protecting forms against cross-site attacks, remembering your consent while you sign up
@@ -262,7 +287,7 @@ export default function PrivacyPage() {
         </p>
       </Section>
 
-      <Section title="11. Emails">
+      <Section id="emails" title="11. Emails">
         <p>
           We send emails you need to use your account (verification, password resets, security
           alerts, interview scheduling). Other notifications, job alerts, and digests can be turned
@@ -270,14 +295,14 @@ export default function PrivacyPage() {
         </p>
       </Section>
 
-      <Section title="12. Children">
+      <Section id="children" title="12. Children">
         <p>
           EasyHire is only for people aged 18 and over. We do not knowingly collect data from
           anyone younger; if you believe we have, contact {privacyMail} and we will delete it.
         </p>
       </Section>
 
-      <Section title="13. Changes to this policy">
+      <Section id="changes" title="13. Changes to this policy">
         <p>
           We will post any update here with a new &quot;Last updated&quot; date, and tell you by
           email or in the app about material changes before they apply. See also our{" "}
@@ -288,7 +313,7 @@ export default function PrivacyPage() {
         </p>
       </Section>
 
-      <Section title="14. Contact">
+      <Section id="contact" title="14. Contact">
         <p>Privacy questions and requests: {privacyMail}</p>
       </Section>
     </LegalPageShell>

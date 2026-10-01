@@ -46,6 +46,7 @@ export default function PricingPage() {
     <LegalPageShell
       title="Pricing"
       description="Posting jobs and hiring are free. Employer Pro is an optional upgrade for teams hiring at volume."
+      doc="pricing"
       navSection="Pricing"
       navIcon={Tag}
       navHint="Employer plans & fees"

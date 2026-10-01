@@ -4,6 +4,8 @@ import { FileText } from "lucide-react";
 import LegalPageShell, { Section } from "@/components/legal/LegalPageShell";
 import BusinessDetails from "@/components/legal/BusinessDetails";
 import { businessInfo, contractingPartyName } from "@/lib/legal/business-info";
+import { currentLegalVersion } from "@/lib/legal/changelog";
+import { CURRENT_TERMS_VERSION } from "@/lib/legal/terms-version";
 
 export const metadata: Metadata = {
   // No trailing "— EasyHire": the root layout's title template already
@@ -14,6 +16,27 @@ export const metadata: Metadata = {
 
 const linkClass = "font-medium text-navy underline-offset-2 hover:underline";
 
+const toc = [
+  { id: "about", title: "About these Terms" },
+  { id: "what-easyhire-is", title: "What EasyHire is — and is not" },
+  { id: "eligibility", title: "Eligibility and accounts" },
+  { id: "employer-responsibilities", title: "Employer responsibilities" },
+  { id: "seeker-responsibilities", title: "Seeker responsibilities" },
+  { id: "prohibited-conduct", title: "Prohibited conduct" },
+  { id: "moderation", title: "Job posts, verification, and moderation" },
+  { id: "your-content", title: "Your content" },
+  { id: "easy-ai", title: "Easy AI and automated features" },
+  { id: "billing", title: "Paid plans, billing, and refunds" },
+  { id: "termination", title: "Suspension and termination" },
+  { id: "intellectual-property", title: "Our intellectual property" },
+  { id: "disclaimers", title: "Disclaimers" },
+  { id: "liability", title: "Limitation of liability" },
+  { id: "indemnity", title: "Indemnity" },
+  { id: "governing-law", title: "Governing law and disputes" },
+  { id: "changes", title: "Changes to these Terms" },
+  { id: "contact", title: "Contact" },
+];
+
 export default function TermsPage() {
   const party = contractingPartyName();
   const venue = businessInfo.venueCity
@@ -23,12 +46,18 @@ export default function TermsPage() {
   return (
     <LegalPageShell
       title="Terms of Service"
-      description="Last updated: October 1, 2026."
+      description={
+        "The agreement between you and EasyHire for using the platform."
+      }
+      doc="terms"
+      toc={toc}
+      updated={currentLegalVersion().effective}
+      version={CURRENT_TERMS_VERSION}
       navSection="Terms of Service"
       navIcon={FileText}
       navHint="Platform agreement"
     >
-      <Section title="1. About these Terms">
+      <Section id="about" title="1. About these Terms" summary="This is the agreement between you and EasyHire. Using the site means you accept it.">
         <p>
           These Terms of Service (&quot;Terms&quot;) are an agreement between you and {party}{" "}
           (&quot;EasyHire&quot;, &quot;we&quot;, &quot;us&quot;), the operator of the EasyHire
@@ -42,7 +71,7 @@ export default function TermsPage() {
         <BusinessDetails />
       </Section>
 
-      <Section title="2. What EasyHire is — and is not">
+      <Section id="what-easyhire-is" title="2. What EasyHire is — and is not" summary="We're a job board, not a recruitment agency or employer. Seekers never pay us.">
         <p>
           EasyHire is a self-service online job board that lets employers post roles and lets
           virtual assistants (&quot;seekers&quot;) find and apply to them. We provide the software;
@@ -68,7 +97,7 @@ export default function TermsPage() {
         </ul>
       </Section>
 
-      <Section title="3. Eligibility and accounts">
+      <Section id="eligibility" title="3. Eligibility and accounts" summary="You must be 18 or older, give accurate details, and keep your login safe.">
         <ul className="list-disc space-y-2 pl-5">
           <li>You must be at least 18 years old and able to enter into a binding contract.</li>
           <li>
@@ -87,7 +116,7 @@ export default function TermsPage() {
         </ul>
       </Section>
 
-      <Section title="4. Employer responsibilities">
+      <Section id="employer-responsibilities" title="4. Employer responsibilities" summary="Post real jobs, never charge seekers, don't discriminate, and protect applicant data.">
         <ul className="list-disc space-y-2 pl-5">
           <li>Post only real, currently open roles with accurate pay, hours, and duties.</li>
           <li>
@@ -115,7 +144,7 @@ export default function TermsPage() {
         </ul>
       </Section>
 
-      <Section title="5. Seeker responsibilities">
+      <Section id="seeker-responsibilities" title="5. Seeker responsibilities" summary="Be truthful, apply genuinely, and never pay anyone to get hired.">
         <ul className="list-disc space-y-2 pl-5">
           <li>Provide truthful profile information, work history, and documents.</li>
           <li>Apply only to roles you are genuinely interested in and qualified for.</li>
@@ -128,7 +157,7 @@ export default function TermsPage() {
         </ul>
       </Section>
 
-      <Section title="6. Prohibited conduct">
+      <Section id="prohibited-conduct" title="6. Prohibited conduct" summary="No scams, illegal work, impersonation, harassment, scraping, or fake reviews.">
         <p>You may not use EasyHire to:</p>
         <ul className="list-disc space-y-2 pl-5">
           <li>Post or promote scams, pyramid or multi-level marketing schemes, or &quot;jobs&quot; that require payment from the worker</li>
@@ -142,7 +171,7 @@ export default function TermsPage() {
         </ul>
       </Section>
 
-      <Section title="7. Job posts, verification, and moderation">
+      <Section id="moderation" title="7. Job posts, verification, and moderation" summary="Free-plan posts are reviewed before going live. We can remove anything that breaks the rules.">
         <p>
           Job posts from employers on the Free plan are reviewed by our team before they are
           published. Employers on Employer Pro whose company has passed our verification may
@@ -161,7 +190,7 @@ export default function TermsPage() {
         </p>
       </Section>
 
-      <Section title="8. Your content">
+      <Section id="your-content" title="8. Your content" summary="You own what you upload. You let us host and show it so the service works.">
         <p>
           You keep ownership of what you upload — profiles, resumes, logos, job posts, messages, and
           reviews. You give us a non-exclusive, worldwide, royalty-free licence to host, store,
@@ -183,7 +212,7 @@ export default function TermsPage() {
         </p>
       </Section>
 
-      <Section title="9. Easy AI and automated features">
+      <Section id="easy-ai" title="9. Easy AI and automated features" summary="AI makes suggestions. People make every hiring decision.">
         <p>
           Some features use artificial intelligence — for example drafting job descriptions,
           summarising resumes, suggesting candidate rankings, preparing interview questions, and
@@ -197,7 +226,7 @@ export default function TermsPage() {
         </p>
       </Section>
 
-      <Section title="10. Paid plans, billing, and refunds">
+      <Section id="billing" title="10. Paid plans, billing, and refunds" summary="Employer Pro renews automatically until you cancel. Cancelling stops the next renewal.">
         <p>
           Core features are free. Employer Pro is an optional paid subscription; current features
           and prices are on our{" "}
@@ -233,7 +262,7 @@ export default function TermsPage() {
         </ul>
       </Section>
 
-      <Section title="11. Suspension and termination">
+      <Section id="termination" title="11. Suspension and termination" summary="You can leave anytime. We can suspend accounts that break these Terms.">
         <p>
           You can stop using EasyHire at any time and delete your account from your account
           settings. We may suspend or close an account, or limit features, if we reasonably believe
@@ -244,7 +273,7 @@ export default function TermsPage() {
         </p>
       </Section>
 
-      <Section title="12. Our intellectual property">
+      <Section id="intellectual-property" title="12. Our intellectual property">
         <p>
           The EasyHire name, logo, software, and site design belong to us or our licensors. These
           Terms do not give you any right to use them except to use the service as intended. If you
@@ -252,7 +281,7 @@ export default function TermsPage() {
         </p>
       </Section>
 
-      <Section title="13. Disclaimers">
+      <Section id="disclaimers" title="13. Disclaimers">
         <p>
           EasyHire is provided &quot;as is&quot; and &quot;as available&quot;. To the extent
           permitted by law, we make no warranties about the accuracy of job posts, profiles, or AI
@@ -261,7 +290,7 @@ export default function TermsPage() {
         </p>
       </Section>
 
-      <Section title="14. Limitation of liability">
+      <Section id="liability" title="14. Limitation of liability" summary="Our liability is capped at what you paid us in the last 12 months, or PHP 5,000.">
         <p>
           To the extent permitted by law, EasyHire is not liable for indirect, incidental, or
           consequential losses, lost profits or wages, or for any dispute, payment, or relationship
@@ -272,7 +301,7 @@ export default function TermsPage() {
         </p>
       </Section>
 
-      <Section title="15. Indemnity">
+      <Section id="indemnity" title="15. Indemnity">
         <p>
           You agree to indemnify EasyHire against claims, losses, and reasonable costs arising from
           your content, your breach of these Terms or the law, or your dealings with other users —
@@ -280,7 +309,7 @@ export default function TermsPage() {
         </p>
       </Section>
 
-      <Section title="16. Governing law and disputes">
+      <Section id="governing-law" title="16. Governing law and disputes" summary="Philippine law applies. Contact us first and we'll try to resolve it within 30 days.">
         <p>
           These Terms are governed by the laws of the Republic of the Philippines. Before starting
           any formal proceeding, please contact us at{" "}
@@ -293,7 +322,7 @@ export default function TermsPage() {
         </p>
       </Section>
 
-      <Section title="17. Changes to these Terms">
+      <Section id="changes" title="17. Changes to these Terms" summary="We'll tell you about material changes and ask you to accept them.">
         <p>
           We may update these Terms as the service or the law changes. We will post the new version
           here with a new &quot;Last updated&quot; date. For material changes we will notify you by
@@ -302,7 +331,7 @@ export default function TermsPage() {
         </p>
       </Section>
 
-      <Section title="18. Contact">
+      <Section id="contact" title="18. Contact">
         <p>
           Questions about these Terms:{" "}
           <a href={`mailto:${businessInfo.contact.legal}`} className={linkClass}>

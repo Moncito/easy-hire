@@ -30,5 +30,5 @@ export default async function AcceptTermsPage({ searchParams }: Props) {
 
   if (hasAcceptedCurrentTerms(session.user.termsVersion)) redirect(next);
 
-  return <AcceptTermsForm next={next} />;
+  return <AcceptTermsForm next={next} role={role} />;
 }

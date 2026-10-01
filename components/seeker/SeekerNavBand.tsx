@@ -1,20 +1,9 @@
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 
-export function SeekerLogoMark({ className = "h-6 w-6 sm:h-7 sm:w-7" }: { className?: string }) {
-  return (
-    <div className={`relative shrink-0 overflow-hidden rounded-full ${className}`}>
-      <div
-        className="absolute inset-0 bg-marigold"
-        style={{ clipPath: "polygon(0 0,100% 0,0 100%)" }}
-      />
-      <div
-        className="absolute inset-0 bg-teal"
-        style={{ clipPath: "polygon(100% 0,100% 100%,0 100%)" }}
-      />
-    </div>
-  );
-}
+import { BrandMark } from "@/components/brand/BrandMark";
+
+export const SeekerLogoMark = BrandMark;
 
 export type SeekerNavBandProps = {
   section: string;
