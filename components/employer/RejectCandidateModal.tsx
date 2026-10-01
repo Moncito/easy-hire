@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { X } from "lucide-react";
 
 type Props = {
@@ -10,30 +10,34 @@ type Props = {
   error?: string;
   onCancel: () => void;
   onConfirm: (reason: string) => void;
+  /** Hiring-defaults rejection message. The box opens with it each time; the employer can edit or clear it. */
+  defaultReason?: string;
 };
 
-export default function RejectCandidateModal({
-  open,
+/**
+ * The dialog body only mounts while open, so each opening starts from a
+ * fresh `defaultReason` without an effect resetting state on close.
+ */
+export default function RejectCandidateModal({ open, ...props }: Props) {
+  if (!open) return null;
+  return <RejectCandidateDialog {...props} />;
+}
+
+function RejectCandidateDialog({
   candidateName,
   loading = false,
   error = "",
   onCancel,
   onConfirm,
-}: Props) {
-  const [reason, setReason] = useState("");
-
-  useEffect(() => {
-    if (!open) setReason("");
-  }, [open]);
-
-  if (!open) return null;
+  defaultReason = "",
+}: Omit<Props, "open">) {
+  const [reason, setReason] = useState(defaultReason);
 
   function handleConfirm() {
     onConfirm(reason.trim());
   }
 
   function handleCancel() {
-    setReason("");
     onCancel();
   }
 

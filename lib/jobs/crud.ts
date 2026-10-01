@@ -6,9 +6,9 @@ import {
   assertEmployerStatusTransition,
   type JobStatus,
 } from "@/lib/job-status";
-import { canAutoPublishJob, publishJobLive } from "@/lib/subscriptions";
+import { canAutoPublishJob, publishJobLive } from "@/lib/billing/subscriptions";
 import { invalidateEmployerWorkspace } from "@/lib/employer-cache";
-import { canCreateOrActivateJob } from "@/lib/billing/entitlements";
+import { assertCanCreateOrActivateJob } from "@/lib/billing/entitlements";
 import { invalidatePublicJob, invalidatePublicJobsList } from "@/lib/jobs/public-cache";
 import { invalidatePublicCompany } from "@/lib/public-companies";
 import { recordEvent } from "@/lib/admin/events";
@@ -191,10 +191,7 @@ export async function submitJobForReview(
   // Free plan: block once a company already has FREE_ACTIVE_JOB_SOFT_CAP jobs
   // live or pending review. Exclude this job itself so re-submitting a job
   // that's already PENDING_REVIEW doesn't double-count against the cap.
-  const cap = await canCreateOrActivateJob(companyId, { excludeJobId: job.id });
-  if (!cap.allowed) {
-    throw new ApiError(cap.reason!, 403);
-  }
+  await assertCanCreateOrActivateJob(companyId, { excludeJobId: job.id });
 
   const autoPublish = await canAutoPublishJob(companyId);
   const updated = autoPublish

@@ -4,9 +4,9 @@ import { seekerIdentityDocumentCreateSchema } from "@/lib/validations/verificati
 import { VERIFICATION_DOC_BUCKET, assertOwnedObjectPath, resolveSignedUrl } from "@/lib/storage";
 import { invalidateSeekerProfile } from "@/lib/seeker/seekers";
 import { getSeekerProfileCompletion, type SeekerProfileCompletionInput } from "@/lib/seeker/profile-completion";
-import { computeVerificationScore, MAX_IDENTITY_DOCUMENTS } from "@/lib/seeker/verification-score";
+import { computeVerificationScore, MAX_IDENTITY_DOCUMENTS, type VerificationScoreResult } from "@/lib/seeker/verification-score";
 import { recordEvent } from "@/lib/admin/events";
-import type { SeekerIdentityDocument } from "@prisma/client";
+import type { SeekerIdentityDocument, VerificationStatus } from "@prisma/client";
 
 /** Signs a seeker identity document's `fileUrl` for display (private bucket, short TTL) — mirrors signVerificationDocument in lib/employer/verification.ts. */
 async function signIdentityDocument<T extends SeekerIdentityDocument>(document: T) {
@@ -91,6 +91,37 @@ export async function recomputeVerificationScore(seekerProfileId: string): Promi
   // needing an explicit tag drop on every recompute.
 
   return score;
+}
+
+/**
+ * Same inputs `recomputeVerificationScore` gathers, but read-only — for
+ * rendering the real per-factor breakdown on the seeker's own profile page
+ * instead of the panel deriving a combined "email + history" figure by
+ * subtracting from the persisted total (which drifts silently if a prior
+ * recompute raced or failed).
+ */
+export async function getVerificationScoreBreakdown(
+  userId: string,
+  profile: SeekerProfileCompletionInput & { id: string; idVerificationStatus: VerificationStatus | null }
+): Promise<VerificationScoreResult> {
+  const [user, hires] = await Promise.all([
+    prisma.user.findUnique({ where: { id: userId }, select: { emailVerifiedAt: true } }),
+    prisma.application.findMany({
+      where: { seekerId: profile.id, hiredAt: { not: null } },
+      select: { job: { select: { companyId: true } } },
+    }),
+  ]);
+  const confirmedHireCount = new Set(hires.map((h) => h.job.companyId)).size;
+
+  const { completed, total } = getSeekerProfileCompletion(profile);
+  const profileCompletionPercent = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+  return computeVerificationScore({
+    idVerificationStatus: profile.idVerificationStatus,
+    emailVerifiedAt: user?.emailVerifiedAt ?? null,
+    profileCompletionPercent,
+    confirmedHireCount,
+  });
 }
 
 /** Convenience wrapper for callers that only have a userId (e.g. email verification, which fires for both seeker and employer accounts). No-ops silently for non-seeker users. */

@@ -8,6 +8,7 @@ import { invalidateEmployerNav } from "@/lib/employer-cache";
 import { invalidateConversationsForParticipants } from "@/lib/conversations-cache";
 import { stampFirstEmployerResponseForMessage } from "@/lib/employer/response-metrics";
 import { requireEmployerCompany } from "@/lib/employer-auth";
+import { isEmployerPro } from "@/lib/billing/subscriptions";
 import { requireSeekerProfile } from "@/lib/auth/seeker-guards";
 import { requireVerifiedEmail } from "@/lib/auth/credentials-recovery";
 import { companyMemberRoleLabel } from "@/lib/collaborative-hiring";
@@ -269,6 +270,28 @@ export function seekerCanMessageCompany(appliedJobIds: string[], jobId?: string 
 
 export const SEEKER_MESSAGE_ACCESS_DENIED = "You can only message companies you've applied to.";
 
+export const EMPLOYER_MESSAGE_ACCESS_DENIED =
+  "Messaging candidates you found in talent search is an Employer Pro feature. You can always message candidates who applied to your jobs for free.";
+
+/**
+ * Charging for sourcing (cold outreach) but never for replying protects the
+ * core hiring loop and keeps `Company.responseRate` — published on the
+ * public company page — honest. An already-existing conversation is exempt
+ * even when the employer is Free and the seeker never applied: `upsertConversation`
+ * is create-*or-get*, and a Free employer who sourced someone while on Pro
+ * (or before this gate shipped) must keep access to a thread they already
+ * own, not get locked out of their own inbox.
+ *
+ * Pure — no DB access — so it's unit-testable without mocking Prisma.
+ */
+export function canEmployerStartConversation(args: {
+  isPro: boolean;
+  hasApplied: boolean;
+  conversationExists: boolean;
+}): boolean {
+  return args.conversationExists || args.isPro || args.hasApplied;
+}
+
 type UpsertConversationArgs = {
   companyId: string;
   companyUserId: string;
@@ -373,6 +396,32 @@ async function createOrGetConversationAsEmployer(employerUserId: string, input: 
     if (!job) {
       throw new ApiError("Job not found", 404);
     }
+  }
+
+  // Gate only the creation of a NEW conversation — never an already-existing
+  // one. `input.jobId` is employer-supplied and only validated above as
+  // belonging to this company; it does not prove the seeker applied, so
+  // "has applied" is looked up independently against any job of the company.
+  const [isPro, existingConversation, application] = await Promise.all([
+    isEmployerPro(company.id),
+    prisma.conversation.findUnique({
+      where: { companyId_seekerId: { companyId: company.id, seekerId: seeker.id } },
+      select: { id: true },
+    }),
+    prisma.application.findFirst({
+      where: { seekerId: seeker.id, job: { companyId: company.id } },
+      select: { id: true },
+    }),
+  ]);
+
+  if (
+    !canEmployerStartConversation({
+      isPro,
+      hasApplied: application !== null,
+      conversationExists: existingConversation !== null,
+    })
+  ) {
+    throw new ApiError(EMPLOYER_MESSAGE_ACCESS_DENIED, 403);
   }
 
   return upsertConversation({
@@ -500,10 +549,15 @@ export async function sendMessage(
             id: { not: message.id },
           },
         }),
-        prisma.user.findUnique({ where: { id: recipientUserId }, select: { email: true } }),
+        prisma.user.findUnique({ where: { id: recipientUserId }, select: { email: true, notifyMessages: true } }),
       ]);
       if (!recipient || !shouldSendNewMessageEmail(earlierUnreadCount)) return;
-      await sendNewMessageEmail({ to: recipient.email, recipientRole, senderName });
+      await sendNewMessageEmail({
+        to: recipient.email,
+        recipientRole,
+        senderName,
+        notifyMessages: recipient.notifyMessages,
+      });
     })().catch((err) => console.error("[messages] new-message email failed:", err));
   }
 

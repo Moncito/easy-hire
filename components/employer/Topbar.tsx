@@ -3,13 +3,12 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { getEmployerPageTitle } from "@/lib/employer-nav";
-import { Camera, Search } from "lucide-react";
+import { Camera, Search, Sparkles } from "lucide-react";
 import EmployerSearchTrigger from "@/components/employer/EmployerSearchTrigger";
 import EmployerNotificationBell from "@/components/employer/EmployerNotificationBell";
 import EmployerAvatar from "@/components/employer/ui/EmployerAvatar";
 import EmployerThemeToggle from "@/components/employers/EmployerThemeToggle";
 import ProBadge from "@/components/employer/pro/ProBadge";
-import EasyAiChip from "@/components/employer/pro/EasyAiChip";
 
 type Props = {
   companyName: string;
@@ -37,7 +36,13 @@ export default function Topbar({ companyName, companyLogoUrl, verifiedStatus, pl
   const isPro = plan === "PRO";
 
   return (
-    <header className="employer-topbar sticky top-0 z-30 flex h-14 shrink-0 items-center gap-4 border-b border-navy/[0.08] bg-white/70 px-4 shadow-[0_1px_0_0_rgba(255,255,255,0.6)_inset] backdrop-blur-md sm:px-6">
+    <header
+      className={`employer-topbar sticky top-0 z-30 flex h-14 shrink-0 items-center gap-4 border-b px-4 backdrop-blur-md sm:px-6 ${
+        isPro
+          ? "border-eh-line bg-[color-mix(in_srgb,var(--eh-bg)_88%,transparent)]"
+          : "border-navy/[0.08] bg-white/70 shadow-[0_1px_0_0_rgba(255,255,255,0.6)_inset]"
+      }`}
+    >
       <h1
         className={`shrink-0 font-display text-lg font-bold tracking-tight text-ink ${
           isMessages ? "" : "lg:hidden"
@@ -52,7 +57,13 @@ export default function Topbar({ companyName, companyLogoUrl, verifiedStatus, pl
 
       <div className="ml-auto flex items-center gap-2 sm:gap-3">
         {isPro && (
-          <EasyAiChip variant="chip" className="hidden sm:inline-flex" />
+          <Link
+            href="/employer/easy-ai"
+            className="hidden h-[30px] items-center gap-1.5 rounded-control border border-eh-line bg-eh-surface px-2.5 text-small font-medium text-eh-teal-ink transition hover:bg-eh-surface-2 sm:inline-flex"
+          >
+            <Sparkles className="h-4 w-4" strokeWidth={1.75} aria-hidden="true" />
+            Ask Easy AI
+          </Link>
         )}
 
         <button
@@ -70,27 +81,33 @@ export default function Topbar({ companyName, companyLogoUrl, verifiedStatus, pl
 
         <EmployerThemeToggle variant="topbar" />
 
-        <div
-          className="employer-topbar-verified hidden items-center gap-2 rounded-full bg-white/60 px-2.5 py-1 ring-1 ring-ink/5 sm:flex"
-          title={statusLabel[verifiedStatus] ?? verifiedStatus}
-        >
-          <span
-            className={`h-2 w-2 rounded-full ${statusDot[verifiedStatus] ?? "bg-ink/30"}`}
-            aria-hidden="true"
-          />
-          <span className="text-xs font-medium text-ink/60">
-            {statusLabel[verifiedStatus] ?? verifiedStatus}
-          </span>
-        </div>
+        {/* Pro shows verification in the dashboard header instead, and the
+            profile photo is edited from Settings → Profile. */}
+        {!isPro && (
+          <>
+            <div
+              className="employer-topbar-verified hidden items-center gap-2 rounded-full bg-white/60 px-2.5 py-1 ring-1 ring-ink/5 sm:flex"
+              title={statusLabel[verifiedStatus] ?? verifiedStatus}
+            >
+              <span
+                className={`h-2 w-2 rounded-full ${statusDot[verifiedStatus] ?? "bg-ink/30"}`}
+                aria-hidden="true"
+              />
+              <span className="text-xs font-medium text-ink/60">
+                {statusLabel[verifiedStatus] ?? verifiedStatus}
+              </span>
+            </div>
 
-        <Link
-          href="/account/profile"
-          aria-label="Edit your profile photo"
-          title="Edit your profile photo"
-          className="grid h-8 w-8 shrink-0 cursor-pointer place-items-center rounded-full text-ink/45 transition hover:bg-ink/[0.04] hover:text-ink"
-        >
-          <Camera className="h-4 w-4" strokeWidth={2} />
-        </Link>
+            <Link
+              href="/account/profile"
+              aria-label="Edit your profile photo"
+              title="Edit your profile photo"
+              className="grid h-8 w-8 shrink-0 cursor-pointer place-items-center rounded-full text-ink/45 transition hover:bg-ink/[0.04] hover:text-ink"
+            >
+              <Camera className="h-4 w-4" strokeWidth={2} />
+            </Link>
+          </>
+        )}
 
         <Link href="/employer/company-profile" className="flex items-center gap-2 rounded-lg py-1 pl-1 pr-2 transition hover:bg-ink/[0.04]">
           <EmployerAvatar

@@ -16,6 +16,11 @@ import { appendInternalNote } from "@/lib/candidate-notes";
 import { patchApplication } from "@/lib/client/applications";
 import { startConversation } from "@/lib/client/conversations";
 import { useEmployerShell } from "@/components/employer/EmployerShellContext";
+import ProApplicantsJobHeader from "@/components/employer/pro-applicants/ProApplicantsJobHeader";
+import ProBulkActionsBar from "@/components/employer/pro-applicants/ProBulkActionsBar";
+import ProKanbanBoard from "@/components/employer/pro-applicants/ProKanbanBoard";
+import ProCandidateDetailPanel from "@/components/employer/pro-applicants/ProCandidateDetailPanel";
+import { waitSeverity } from "@/lib/employer/attention";
 
 type Application = CandidateApplication;
 
@@ -27,6 +32,12 @@ type Props = {
   needsAttention?: boolean;
   employerName: string;
   initialApplications: Application[];
+  /** Hiring-defaults rejection message; the reject dialog opens with it, still editable. */
+  defaultRejectionMessage?: string | null;
+  /** `?application=` from a deep link (e.g. the dashboard's Easy AI card): opens that candidate's panel on load. */
+  initialSelectedId?: string | null;
+  /** Render time from the server, for "waiting N days" on unreviewed candidates. */
+  nowMs: number;
 };
 
 type PendingReject = {
@@ -48,12 +59,17 @@ export default function ApplicantsBoard({
   needsAttention = false,
   employerName,
   initialApplications,
+  defaultRejectionMessage,
+  initialSelectedId = null,
+  nowMs,
 }: Props) {
   const { isPro } = useEmployerShell();
   const router = useRouter();
   const [applications, setApplications] = useState<Application[]>(initialApplications);
   const [activeStage, setActiveStage] = useState<string | null>(null);
-  const [selectedApp, setSelectedApp] = useState<Application | null>(null);
+  const [selectedApp, setSelectedApp] = useState<Application | null>(
+    () => initialApplications.find((a) => a.id === initialSelectedId) ?? null
+  );
   const [noteInput, setNoteInput] = useState("");
   const [savingNotes, setSavingNotes] = useState(false);
   const [selectionMode, setSelectionMode] = useState(false);
@@ -283,6 +299,71 @@ export default function ApplicantsBoard({
     rejected: applications.filter((a) => a.status === "REJECTED").length,
   };
 
+  // The oldest unreviewed wait, for the header badge (same rule as the job cards).
+  const oldestAppliedMs = applications
+    .filter((a) => a.status === "APPLIED")
+    .reduce((min, a) => Math.min(min, new Date(a.appliedAt).getTime()), Infinity);
+  const headerSeverity = waitSeverity(
+    Number.isFinite(oldestAppliedMs) ? Math.floor((nowMs - oldestAppliedMs) / (24 * 60 * 60 * 1000)) : null
+  );
+
+  const bulkReject = () => {
+    if (selectedIds.size > 0) {
+      setPendingReject({
+        ids: Array.from(selectedIds),
+        candidateName: `${selectedIds.size} candidates`,
+      });
+    }
+  };
+
+  const openCard = (app: Application) => {
+    if (selectionMode) return;
+    if (selectedApp?.id === app.id) setSelectedApp(null);
+    else setSelectedApp(app);
+  };
+
+  const proBoard = (
+    <div className="flex h-full min-h-0 flex-col overflow-hidden">
+      <div className="shrink-0 px-4 pt-4 sm:px-5">
+        <ProApplicantsJobHeader
+          job={job}
+          totalApplicants={applications.length}
+          pipeline={livePipeline}
+          companyVerified={companyVerified}
+          waitSeverity={headerSeverity}
+          activeStage={activeStage}
+          onStageSelect={handleStageSelect}
+          selectionMode={selectionMode}
+          onToggleSelection={() => {
+            if (selectionMode) clearSelection();
+            else setSelectionMode(true);
+          }}
+        />
+        <ProBulkActionsBar
+          selectedCount={selectedIds.size}
+          loading={bulkLoading || rejectLoading}
+          onClear={clearSelection}
+          onMove={handleBulkMove}
+          onReject={bulkReject}
+        />
+      </div>
+      <div className="min-h-0 flex-1 overflow-hidden px-4 pb-3 sm:px-5">
+        <ProKanbanBoard
+          applications={applications}
+          job={job}
+          companyVerified={companyVerified}
+          nowMs={nowMs}
+          activeStage={activeStage}
+          focusedApplicationId={selectedApp?.id ?? null}
+          onCardClick={openCard}
+          selectionMode={selectionMode}
+          selectedIds={selectedIds}
+          onToggleSelect={toggleSelect}
+        />
+      </div>
+    </div>
+  );
+
   const toolbar = hasApplicants ? (
     <button
       type="button"
@@ -305,6 +386,25 @@ export default function ApplicantsBoard({
 
   const panel =
     selectedApp && navIndex >= 0 ? (
+      isPro ? (
+        <ProCandidateDetailPanel
+          application={selectedApp}
+          navIndex={navIndex}
+          navTotal={applications.length}
+          noteInput={noteInput}
+          savingNotes={savingNotes}
+          messageLoading={messageLoading}
+          messageError={messageError}
+          nowMs={nowMs}
+          onClose={() => setSelectedApp(null)}
+          onNoteChange={setNoteInput}
+          onSaveNotes={handleSaveNotes}
+          onStatusChange={(status) => handleStatusChange(selectedApp.id, status)}
+          onRating={handleRating}
+          onMessage={handleMessageCandidate}
+          onNavigate={navigateCandidate}
+        />
+      ) : (
       <CandidateDetailPanel
         application={selectedApp}
         navIndex={navIndex}
@@ -321,6 +421,7 @@ export default function ApplicantsBoard({
         onMessage={handleMessageCandidate}
         onNavigate={navigateCandidate}
       />
+      )
     ) : null;
 
   return (
@@ -329,6 +430,9 @@ export default function ApplicantsBoard({
         panelOpen={!!selectedApp}
         onClosePanel={() => setSelectedApp(null)}
         board={
+          isPro ? (
+            proBoard
+          ) : (
           <div className="flex h-full min-h-0 flex-col overflow-hidden">
             <div className="shrink-0 px-4 pt-4 sm:px-5">
               <ApplicantsJobHeader
@@ -376,6 +480,7 @@ export default function ApplicantsBoard({
               />
             </div>
           </div>
+          )
         }
         panel={panel}
       />
@@ -390,6 +495,7 @@ export default function ApplicantsBoard({
           setRejectError("");
         }}
         onConfirm={confirmReject}
+        defaultReason={defaultRejectionMessage ?? ""}
       />
     </div>
   );

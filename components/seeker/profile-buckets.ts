@@ -1,3 +1,16 @@
+import type { LucideIcon } from "lucide-react";
+import {
+  Briefcase,
+  Eye,
+  FileText,
+  GraduationCap,
+  Languages,
+  Link2,
+  Paperclip,
+  Phone,
+  Sparkles,
+  Target,
+} from "lucide-react";
 import type { EmployerPreviewData } from "@/components/seeker/SeekerEmployerPreview";
 import {
   parseCertification,
@@ -22,6 +35,8 @@ export type ProfileBucket = {
   id: ProfileBucketId;
   label: string;
   description: string;
+  icon: LucideIcon;
+  group: "profile" | "settings";
 };
 
 export const PROFILE_BUCKETS: ProfileBucket[] = [
@@ -29,51 +44,71 @@ export const PROFILE_BUCKETS: ProfileBucket[] = [
     id: "summary",
     label: "Personal summary",
     description: "Your headline and story — the first thing employers read.",
+    icon: FileText,
+    group: "profile",
   },
   {
     id: "basics",
     label: "Contact & photo",
     description: "Name, location, phone, and a professional photo.",
+    icon: Phone,
+    group: "profile",
   },
   {
     id: "resume",
     label: "Resume",
     description: "Up to 3 CVs — pick which one goes out when you apply.",
+    icon: Paperclip,
+    group: "profile",
   },
   {
     id: "skills",
     label: "Skills & experience",
     description: "VA skills with proficiency and years of experience.",
+    icon: Sparkles,
+    group: "profile",
   },
   {
     id: "career",
     label: "Career history",
     description: "Past roles — title, company, dates, and what you did.",
+    icon: Briefcase,
+    group: "profile",
   },
   {
     id: "education",
     label: "Education",
     description: "School, degree, and graduation year.",
+    icon: GraduationCap,
+    group: "profile",
   },
   {
     id: "next-role",
     label: "About your next role",
     description: "Availability, timezone, and salary expectations in USD.",
+    icon: Target,
+    group: "profile",
   },
   {
     id: "languages",
     label: "Languages",
     description: "Languages you speak and your proficiency level.",
+    icon: Languages,
+    group: "profile",
   },
   {
     id: "credentials",
     label: "Links & certifications",
     description: "LinkedIn, portfolio, and credentials with issuer details.",
+    icon: Link2,
+    group: "profile",
   },
   {
     id: "visibility",
     label: "Profile visibility",
     description: "Control who can discover you in talent search.",
+    icon: Eye,
+    group: "settings",
   },
 ];
 

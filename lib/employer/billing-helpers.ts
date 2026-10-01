@@ -1,4 +1,4 @@
-import type { SubscriptionPlan } from "@/lib/subscriptions";
+import type { SubscriptionPlan } from "@/lib/billing/subscriptions";
 
 export { PLAN_COMPARISON_FEATURES, isStripeCheckoutEnabled } from "@/lib/billing/plan-comparison";
 

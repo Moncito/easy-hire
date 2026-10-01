@@ -3,10 +3,8 @@ import { Prisma } from "@prisma/client";
 import { ApiError } from "@/lib/api-error";
 import {
   notifyApplicationSubmitted,
-  notifyApplicationRejected,
-  notifyApplicationStatusChanged,
+  notifyApplicationStatusTransition,
   createNotification,
-  type NonRejectionApplicationStatus,
 } from "@/lib/email";
 import { applicationCreateSchema, applicationUpdateSchema } from "@/lib/validations/application";
 import { invalidateEmployerWorkspace } from "@/lib/employer-cache";
@@ -15,6 +13,7 @@ import { hydrateResumeFields } from "@/lib/seeker/resume-urls";
 import { recomputeVerificationScore } from "@/lib/seeker/identity-verification";
 import { isFirstEmployerResponseTransition } from "@/lib/employer/response-metrics";
 import { recordEvent } from "@/lib/admin/events";
+import { stageChangeActivityData } from "@/lib/jobs/stage-history";
 
 const candidateSeekerSelect = {
   id: true,
@@ -64,7 +63,7 @@ export async function createApplication(seekerUserId: string, raw: unknown) {
 
   const seeker = await prisma.seekerProfile.findUnique({
     where: { userId: seekerUserId },
-    include: { user: { select: { email: true } } },
+    include: { user: { select: { email: true, notifyApplicationUpdates: true } } },
   });
 
   if (!seeker) {
@@ -84,7 +83,10 @@ export async function createApplication(seekerUserId: string, raw: unknown) {
     },
     include: {
       company: {
-        include: { user: { select: { id: true, email: true } } },
+        include: {
+          user: { select: { id: true, email: true, notifyApplicationUpdates: true } },
+          hiringDefaults: { select: { applicantNote: true } },
+        },
       },
       screeningQuestions: true,
     },
@@ -112,6 +114,10 @@ export async function createApplication(seekerUserId: string, raw: unknown) {
   const answersToCreate = input.answers.filter(
     (a) => validQuestionIds.has(a.questionId) && a.answerText.trim().length > 0
   );
+
+  // The company's hiring-defaults note, read at apply time: editing it later
+  // never changes what earlier applicants were sent.
+  const applicantNote = job.company.hiringDefaults?.applicantNote ?? null;
 
   try {
     const application = await prisma.$transaction(async (tx) => {
@@ -144,10 +150,14 @@ export async function createApplication(seekerUserId: string, raw: unknown) {
       jobTitle: job.title,
       companyName: job.company.companyName,
       seekerName: seeker.fullName,
+      seekerUserId,
       employerUserId: job.company.user.id,
       employerEmail: job.company.user.email,
       seekerEmail: seeker.user.email,
       jobId: job.id,
+      employerNotifyApplicationUpdates: job.company.user.notifyApplicationUpdates,
+      seekerNotifyApplicationUpdates: seeker.user.notifyApplicationUpdates,
+      applicantNote,
     });
 
     invalidateEmployerWorkspace(job.companyId);
@@ -162,7 +172,8 @@ export async function createApplication(seekerUserId: string, raw: unknown) {
       metadata: { jobId: job.id },
     });
 
-    return application;
+    // Returned so the apply screen can show the same note the email carries.
+    return { ...application, applicantNote };
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
       throw new ApiError("You have already applied to this job", 409);
@@ -236,7 +247,7 @@ export async function updateApplication(applicationId: string, raw: unknown) {
     include: {
       seeker: {
         include: {
-          user: { select: { id: true, email: true } },
+          user: { select: { id: true, email: true, notifyApplicationUpdates: true } },
         },
       },
       job: {
@@ -266,49 +277,51 @@ export async function updateApplication(applicationId: string, raw: unknown) {
     Boolean(existing.firstEmployerResponseAt)
   );
 
-  const updated = await prisma.application.update({
-    where: { id: applicationId },
-    data: {
-      ...(data.status !== undefined ? { status: data.status } : {}),
-      ...(data.internalNotes !== undefined ? { internalNotes: data.internalNotes } : {}),
-      ...(data.rating !== undefined ? { rating: data.rating } : {}),
-      ...(data.rejectionReason !== undefined ? { rejectionReason: data.rejectionReason } : {}),
-      ...(becameHired ? { hiredAt: new Date() } : {}),
-      ...(becameResponded ? { firstEmployerResponseAt: new Date() } : {}),
-    },
-    include: {
-      seeker: {
-        select: candidateSeekerSelect,
+  const statusChanged = data.status !== undefined && data.status !== existing.status;
+
+  // Stage history is written in the same transaction as the status, so the
+  // log can never disagree with the application (see lib/jobs/stage-history.ts).
+  const updated = await prisma.$transaction(async (tx) => {
+    const row = await tx.application.update({
+      where: { id: applicationId },
+      data: {
+        ...(data.status !== undefined ? { status: data.status } : {}),
+        ...(data.internalNotes !== undefined ? { internalNotes: data.internalNotes } : {}),
+        ...(data.rating !== undefined ? { rating: data.rating } : {}),
+        ...(data.rejectionReason !== undefined ? { rejectionReason: data.rejectionReason } : {}),
+        ...(becameHired ? { hiredAt: new Date() } : {}),
+        ...(becameResponded ? { firstEmployerResponseAt: new Date() } : {}),
       },
-    },
+      include: {
+        seeker: {
+          select: candidateSeekerSelect,
+        },
+      },
+    });
+    if (statusChanged) {
+      await tx.applicationActivity.create({
+        data: stageChangeActivityData({
+          applicationId,
+          fromStatus: existing.status,
+          toStatus: data.status!,
+          actorMemberId: null,
+        }),
+      });
+    }
+    return row;
   });
 
-  const becameRejected = data.status === "REJECTED" && existing.status !== "REJECTED";
-  const NON_REJECTION_STATUSES = new Set(["SHORTLISTED", "INTERVIEW", "HIRED"]);
-  const becameOtherStatus =
-    data.status !== undefined &&
-    data.status !== existing.status &&
-    NON_REJECTION_STATUSES.has(data.status);
-
-  if (becameRejected) {
-    void notifyApplicationRejected({
-      seekerUserId: existing.seeker.user.id,
-      seekerEmail: existing.seeker.user.email,
-      seekerName: existing.seeker.fullName,
-      jobTitle: existing.job.title,
-      companyName: existing.job.company.companyName,
-      rejectionReason: data.rejectionReason ?? updated.rejectionReason ?? null,
-    }).catch((err) => console.error("[applications] rejection notify failed:", err));
-  } else if (becameOtherStatus) {
-    void notifyApplicationStatusChanged({
-      seekerUserId: existing.seeker.user.id,
-      seekerEmail: existing.seeker.user.email,
-      seekerName: existing.seeker.fullName,
-      jobTitle: existing.job.title,
-      companyName: existing.job.company.companyName,
-      status: data.status as NonRejectionApplicationStatus,
-    }).catch((err) => console.error("[applications] status-change notify failed:", err));
-  }
+  notifyApplicationStatusTransition({
+    previousStatus: existing.status,
+    nextStatus: data.status,
+    rejectionReason: data.rejectionReason ?? updated.rejectionReason ?? null,
+    seekerUserId: existing.seeker.user.id,
+    seekerEmail: existing.seeker.user.email,
+    seekerName: existing.seeker.fullName,
+    jobTitle: existing.job.title,
+    companyName: existing.job.company.companyName,
+    seekerNotifyApplicationUpdates: existing.seeker.user.notifyApplicationUpdates,
+  });
 
   if (becameHired) {
     // A confirmed hire feeds the "history" factor of the verification score

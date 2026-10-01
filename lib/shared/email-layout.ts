@@ -28,6 +28,8 @@ type EmailLayoutInput = {
   cta?: EmailCta;
   badge?: string;
   footerNote?: string;
+  /** Recurring-digest sends only — renders a visible unsubscribe link in the footer, alongside the `List-Unsubscribe` header on the same send. */
+  unsubscribeUrl?: string;
 };
 
 export function emailWordmark() {
@@ -71,7 +73,13 @@ function emailHeader(badge?: string) {
   `;
 }
 
-function emailFooter(footerNote?: string) {
+function emailFooter(footerNote?: string, unsubscribeUrl?: string) {
+  const unsubscribeRow = unsubscribeUrl
+    ? `<p style="margin:0 0 8px;font-family:${FONT};font-size:12px;line-height:1.55;color:${EMAIL.muted};">
+         <a href="${unsubscribeUrl}" style="color:${EMAIL.muted};text-decoration:underline;">Unsubscribe from these emails</a>
+       </p>`
+    : "";
+
   return `
     <tr>
       <td style="padding:28px 8px 0;text-align:center;">
@@ -84,6 +92,7 @@ function emailFooter(footerNote?: string) {
         <p style="margin:0 0 8px;font-family:${FONT};font-size:12px;line-height:1.55;color:${EMAIL.muted};">
           ${footerNote ?? "You're receiving this email because you have an EasyHire account."}
         </p>
+        ${unsubscribeRow}
         <p style="margin:0;font-family:${FONT};font-size:12px;line-height:1.55;color:${EMAIL.muted};">
           © 2026 EasyHire. All rights reserved.
         </p>
@@ -130,6 +139,7 @@ export function renderEmailLayout({
   cta,
   badge,
   footerNote,
+  unsubscribeUrl,
 }: EmailLayoutInput): string {
   return emailShell(
     preview,
@@ -152,7 +162,7 @@ export function renderEmailLayout({
           </table>
         </td>
       </tr>
-      ${emailFooter(footerNote)}
+      ${emailFooter(footerNote, unsubscribeUrl)}
     `,
   );
 }
@@ -213,8 +223,29 @@ export function renderApplicationReceivedEmail(input: {
   companyName: string;
   jobTitle: string;
   dashboardUrl: string;
+  /**
+   * The company's own message to applicants (hiring defaults), already
+   * HTML-escaped by the caller like every other field here. Newlines become
+   * line breaks. Omitted or empty renders nothing.
+   */
+  applicantNote?: string | null;
 }): string {
-  const { preview, applicantFirstName, companyName, jobTitle, dashboardUrl } = input;
+  const { preview, applicantFirstName, companyName, jobTitle, dashboardUrl, applicantNote } = input;
+  const noteBlock = applicantNote
+    ? `
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 28px;border-left:3px solid ${EMAIL.success};">
+                  <tr>
+                    <td style="padding:4px 0 4px 16px;">
+                      <p style="margin:0 0 6px;font-family:${FONT};font-size:12px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:${EMAIL.muted};">
+                        A note from ${companyName}
+                      </p>
+                      <p style="margin:0;font-family:${FONT};font-size:15px;line-height:1.65;color:${EMAIL.text};">
+                        ${applicantNote.replace(/\r?\n/g, "<br>")}
+                      </p>
+                    </td>
+                  </tr>
+                </table>`
+    : "";
 
   return emailShell(
     preview,
@@ -258,7 +289,7 @@ export function renderApplicationReceivedEmail(input: {
                     </td>
                   </tr>
                 </table>
-
+${noteBlock}
                 <p style="margin:0 0 8px;font-family:${FONT};font-size:16px;font-weight:700;color:${EMAIL.text};">
                   What happens next?
                 </p>

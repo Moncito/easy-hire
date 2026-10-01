@@ -1,7 +1,7 @@
 import Link from "next/link";
 import PlanComparisonTable from "@/components/pricing/PlanComparisonTable";
 import { isStripeCheckoutEnabled } from "@/lib/billing/plan-comparison";
-import type { SubscriptionPlan } from "@/lib/subscriptions";
+import type { SubscriptionPlan } from "@/lib/billing/subscriptions";
 
 type Props = {
   plan: SubscriptionPlan;
@@ -13,9 +13,7 @@ export default function BillingPlanComparison({ plan, stripeSubscriptionId }: Pr
   const checkoutEnabled = isStripeCheckoutEnabled();
 
   const proPrice = checkoutEnabled ? "Pro" : "Early access";
-  const proPriceDetail = checkoutEnabled
-    ? "Monthly billing via Stripe"
-    : "Checkout when Stripe is enabled";
+  const proPriceDetail = checkoutEnabled ? "Billed monthly" : "Opening soon";
 
   return (
     <PlanComparisonTable
@@ -54,7 +52,7 @@ export default function BillingPlanComparison({ plan, stripeSubscriptionId }: Pr
                 </form>
               ) : (
                 <p className="rounded-xl border border-ink/8 bg-white/80 px-4 py-3 text-center text-sm text-ink/55">
-                  Contact support to enable Employer Pro checkout.
+                  Paid plans are opening soon. Contact support for early access.
                 </p>
               )}
             </div>
@@ -62,9 +60,6 @@ export default function BillingPlanComparison({ plan, stripeSubscriptionId }: Pr
           <div className="shrink-0 text-center sm:text-right">
             {isPro && stripeSubscriptionId && (
               <>
-                <p className="mb-2 font-data text-[11px] text-ink/35">
-                  Subscription {stripeSubscriptionId}
-                </p>
                 <form action="/api/billing/portal" method="POST" className="mb-2 sm:inline-block">
                   <button
                     type="submit"

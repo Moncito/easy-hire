@@ -3,7 +3,9 @@
 import { Search } from "lucide-react";
 import { useEmployerShell } from "@/components/employer/EmployerShellContext";
 
-export type ApplicantsSortOption = "updated" | "applicants" | "review" | "title";
+import type { ApplicantsSortOption } from "@/components/employer/jobs/useApplicantsHub";
+
+export type { ApplicantsSortOption };
 
 type Props = {
   query: string;

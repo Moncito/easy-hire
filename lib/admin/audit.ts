@@ -55,6 +55,13 @@ export const ADMIN_AUDIT_ACTIONS = [
   "USER_PASSWORD_RESET_TRIGGERED",
   "USER_VERIFICATION_RESEND_TRIGGERED",
   "USER_DELETED_BY_ADMIN",
+  // Phase 2 support action, added ahead of Phase 2 login enforcement
+  // (docs/two-factor-auth-plan.md) — the escape hatch for a user who has
+  // lost their authenticator and spent their recovery codes. Same
+  // awaited-recordAdminAction contract as the two triggers above (a
+  // decision/state change, not a read) — see lib/admin/users.ts's
+  // performUserSupportAction, "disable_two_factor" branch.
+  "USER_TWO_FACTOR_DISABLED_BY_ADMIN",
   // Admin RBAC (docs/ADMIN-CONSOLE-PLAN.md §6.7/§8.1, lib/admin/permissions.ts)
   // — admin-team CRUD. All three are decisions (a state change), so they use
   // the awaited recordAdminAction/buildAdminActionOperation contract, never

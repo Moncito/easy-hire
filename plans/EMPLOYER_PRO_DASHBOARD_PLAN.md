@@ -1,8 +1,29 @@
 # EasyHire Employer Pro — Implementation Guide
 
-**Last reconciled:** 2026-08-17  
-**Direction:** Clean SaaS workspace — Pro top navbar, standard grid, premium through workflows  
-**Status key:** ✅ Shipped · 🔧 In progress / partial · ☐ Not started
+**Last reconciled:** 2026-09-22  
+**Direction:** Clean SaaS workspace — shared shell, standard grid, premium through workflows  
+**Status key:** ✅ Shipped · 🔧 In progress / partial · ☐ Not started · ⛔ Removed
+
+> **2026-09-22 — Pro top navbar cancelled; UI split narrowed.** The Pro shell was
+> dropped: Pro and Free render the same `Sidebar` and `Topbar`, so
+> `EmployerProNavbar`, `lib/employer/pro-nav-items.ts` and every `.pro-nav-link`
+> rule were dead and have been removed.
+>
+> **The Pro visual treatment itself stays.** A proposal to unify Free and Pro onto a
+> single workspace look was **rejected by the product owner on 2026-09-22**: the
+> visual difference is intended as a visible separation between Pro and non-Pro
+> employers, and Pro's treatment is not to be downgraded or given away.
+>
+> What was removed is dead code and upsell chrome only — the cancelled navbar, six
+> `Pro*PerkStrip` components plus their loading skeleton, and six Pro dashboard
+> components with no importer at all. None of that touched the look. The parallel
+> Free/Pro component trees remain by design, and so does their build cost; that is
+> an accepted trade, not an oversight.
+>
+> §1's thesis still holds for **pricing**: Pro is sold on instant publish, unlimited
+> roles, Easy AI, analytics, CSV and saved lists — never on the skin. The billing
+> page says as much ("You're paying for workflows, not a teal reskin"). The look is
+> a perk of the tier, not the reason to buy it.
 
 ---
 
@@ -123,6 +144,11 @@ These are navy-tinted flat shadows — not neomorphic extrusions. No `box-shadow
 
 ### Parallel Free / Pro components (intentional divergence — document only)
 
+**Superseded 2026-09-22 — the keep-list is no longer a limit.** It briefly scoped a
+merge that was then rejected; the parallel trees stay in full. This table remains as
+documentation of the four pairs whose divergence is *structural* rather than visual,
+which is still useful when deciding where a new Pro surface belongs.
+
 | Free | Pro | Notes |
 |------|-----|-------|
 | `EmployerPageHeader` (text-2xl/3xl) | `ProPageHeader` (text-3xl/4xl) | Size divergence intentional; keep both |
@@ -130,9 +156,15 @@ These are navy-tinted flat shadows — not neomorphic extrusions. No `box-shadow
 | `DashboardHero` | `ProCompanyBand` | Fundamentally different layout |
 | `JobsPageHeader` | `ProJobsPageHeader` | Acceptable |
 
+**Removed as decoration:** the six `Pro*PerkStrip` components. Each rendered a row of
+static link cards advertising Pro features to companies that had already bought Pro —
+no data, no gate. Two of the six (`ProCompanyPerkStrip`, `ProReportsPerkStrip`) had
+already lost their call sites and were dead on arrival.
+
 ### Pro-only components (implemented ✅ unless noted)
 
-- `EmployerProNavbar` ✅ · `ProBadge` ✅ · `EasyAiChip` ✅ · `ProDashboardBoard` ✅
+- `EmployerProNavbar` ⛔ removed 2026-09-22 (Pro shell cancelled — Pro uses the shared `Sidebar`/`Topbar`)
+- `ProBadge` ✅ · `EasyAiChip` ✅ · `ProDashboardBoard` ✅
 - `ProCompanyBand` ✅ · `ProKpiRow` ✅ · `ProApplicantList` ✅ · `ProActiveJobsSection` ✅
 - `ProJobsPageHeader` ✅ · `ProApplicantsPageHeader` ✅ · `ProAttentionLinks` ✅
 - `ProPageHeader` ✅ · `ProReportsBoard` ✅ · `EasyAiUsagePanel` ✅
@@ -358,7 +390,7 @@ All 8 confirmed low-risk bugs fixed: ArrowLeft back link · Outreach Drafts href
 | Area | Paths |
 |------|-------|
 | Tokens + CSS | `app/globals.css` |
-| Shell | `components/employer/EmployerShell.tsx` · `pro-shell/EmployerProNavbar.tsx` · `EmployerMobileNav.tsx` · `EmployerPageContainer.tsx` |
+| Shell | `components/employer/EmployerShell.tsx` · `Sidebar.tsx` · `Topbar.tsx` · `EmployerMobileNav.tsx` · `EmployerPageContainer.tsx` |
 | Pro primitives | `components/employer/pro/` · `components/employer/pro-dashboard/` |
 | Billing logic | `lib/billing/subscriptions.ts` · `lib/billing/plan-comparison.ts` |
 | Analytics | `lib/employer/analytics.ts` · `lib/employer/cache.ts` · `lib/employer/dashboard-panels.ts` |

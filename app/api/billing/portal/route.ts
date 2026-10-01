@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/Auth";
 import { errorResponse } from "@/lib/api-error";
 import { requireEmployerCompany } from "@/lib/employer-auth";
-import { getCompanySubscription } from "@/lib/subscriptions";
+import { getCompanySubscription } from "@/lib/billing/subscriptions";
 import { createBillingPortalSession } from "@/lib/billing/stripe-billing";
 
 /** POST /api/billing/portal — opens the Stripe Customer Portal for the caller's subscription. */

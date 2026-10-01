@@ -1,5 +1,6 @@
-import { Languages } from "lucide-react";
+import { Languages, UserRound } from "lucide-react";
 import DashboardSurface from "@/components/employer/dashboard/DashboardSurface";
+import ProfileSectionLabel from "@/components/employer/talent/ProfileSectionLabel";
 import { displayLanguage } from "@/lib/seeker/profile-format";
 
 type Props = {
@@ -12,7 +13,7 @@ export default function TalentProfileAbout({ bio, languages }: Props) {
 
   return (
     <DashboardSurface>
-      <p className="text-xs font-bold uppercase tracking-wider text-navy/60">About</p>
+      <ProfileSectionLabel icon={<UserRound aria-hidden="true" />} tone="navy">About</ProfileSectionLabel>
       {bio ? (
         <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-ink/75">{bio}</p>
       ) : (
@@ -21,10 +22,7 @@ export default function TalentProfileAbout({ bio, languages }: Props) {
 
       {languages.length > 0 && (
         <div className="mt-4 border-t border-ink/[0.06] pt-4">
-          <p className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-navy/60">
-            <Languages className="h-3 w-3" aria-hidden="true" />
-            Languages
-          </p>
+          <ProfileSectionLabel icon={<Languages aria-hidden="true" />} tone="navy">Languages</ProfileSectionLabel>
           <div className="mt-2 flex flex-wrap gap-1.5">
             {languages.map((language) => (
               <span

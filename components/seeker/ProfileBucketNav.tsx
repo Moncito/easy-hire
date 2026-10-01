@@ -1,20 +1,34 @@
 "use client";
 
 import { useRef } from "react";
-import { Check } from "lucide-react";
+import { Check, ShieldCheck } from "lucide-react";
 import {
   PROFILE_BUCKETS,
   type ProfileBucketId,
   isBucketComplete,
 } from "@/components/seeker/profile-buckets";
 import type { EmployerPreviewData } from "@/components/seeker/SeekerEmployerPreview";
+import type { IdVerificationStatus } from "@/components/seeker/ProfileHeaderCard";
 
 type Props = {
   activeId: ProfileBucketId;
   onSelect: (id: ProfileBucketId) => void;
   data: EmployerPreviewData & { resumeUrl: string | null; photoUrl: string | null };
   variant?: "sidebar" | "pills";
+  identityStatus?: IdVerificationStatus | null;
 };
+
+const IDENTITY_DOT_CLASSES: Record<"APPROVED" | "REJECTED" | "OTHER", string> = {
+  APPROVED: "bg-teal",
+  REJECTED: "bg-ember",
+  OTHER: "bg-white ring-1 ring-inset ring-ink/20",
+};
+
+function identityDotClass(status: IdVerificationStatus | null | undefined) {
+  if (status === "APPROVED") return IDENTITY_DOT_CLASSES.APPROVED;
+  if (status === "REJECTED") return IDENTITY_DOT_CLASSES.REJECTED;
+  return IDENTITY_DOT_CLASSES.OTHER;
+}
 
 const NEXT_KEYS = new Set(["ArrowRight", "ArrowDown"]);
 const PREV_KEYS = new Set(["ArrowLeft", "ArrowUp"]);
@@ -65,6 +79,7 @@ export default function ProfileBucketNav({
   onSelect,
   data,
   variant = "sidebar",
+  identityStatus = null,
 }: Props) {
   const navRef = useRef<HTMLElement>(null);
   const handleKeyDown = useTabListKeyDown(onSelect);
@@ -110,13 +125,50 @@ export default function ProfileBucketNav({
     );
   }
 
-  // ── Editorial rail (sidebar variant) ──
-  // A thin vertical connecting line with small circular dot markers per
-  // section: hollow for incomplete, filled teal for complete, filled
-  // marigold with a soft glow ring for the active section. No button
-  // backgrounds/borders — separation comes from the dot + label state only.
-  // Same accessible tab structure as before (role="tab", aria-selected,
-  // roving tabindex via useTabListKeyDown), this is a visual restyle only.
+  // ── Icon rail (sidebar variant) ──
+  // Two labeled sections (PROFILE, SETTINGS) of icon+label rows. Each row's
+  // icon sits in a small rounded tile whose fill communicates state: filled
+  // marigold when active, teal-tinted when complete-but-inactive, neutral
+  // when incomplete-and-inactive — same tone-tile pattern as
+  // ProfileQuickActionsCard. Same accessible tab structure as before
+  // (role="tab", aria-selected, roving tabindex via useTabListKeyDown) for
+  // the real buckets; the Identity verification row appended after SETTINGS
+  // is a plain nav link, not part of the tablist.
+  const profileBuckets = PROFILE_BUCKETS.filter((b) => b.group === "profile");
+  const settingsBuckets = PROFILE_BUCKETS.filter((b) => b.group === "settings");
+
+  function renderBucketRow(bucket: (typeof PROFILE_BUCKETS)[number]) {
+    const complete = isBucketComplete(bucket.id, data);
+    const active = activeId === bucket.id;
+    const Icon = bucket.icon;
+    return (
+      <button
+        key={bucket.id}
+        type="button"
+        role="tab"
+        id={`profile-tab-${variant}-${bucket.id}`}
+        aria-selected={active}
+        aria-controls="seeker-profile-form"
+        data-bucket-id={bucket.id}
+        tabIndex={active ? 0 : -1}
+        onClick={() => onSelect(bucket.id)}
+        className={`group flex w-full cursor-pointer items-center gap-3 rounded-lg px-2 py-2 text-left text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-marigold/40 focus-visible:ring-offset-2 focus-visible:ring-offset-mist ${
+          active ? "bg-marigold/10 font-bold text-ink" : "font-medium text-ink/50 hover:bg-ink/[0.03] hover:text-ink/80"
+        }`}
+      >
+        <span
+          aria-hidden="true"
+          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors ${
+            active ? "bg-marigold text-ink" : complete ? "bg-teal/10 text-teal" : "bg-ink/5 text-ink/40"
+          }`}
+        >
+          <Icon className="h-4 w-4" aria-hidden="true" />
+        </span>
+        <span className="min-w-0 truncate">{bucket.label}</span>
+      </button>
+    );
+  }
+
   return (
     <nav
       ref={navRef}
@@ -126,45 +178,33 @@ export default function ProfileBucketNav({
       onKeyDown={handleKeyDown}
       className="relative"
     >
-      <p className="mb-4 pl-6 font-data text-[10px] font-bold uppercase tracking-[0.12em] text-ink/35">
-        Sections
+      <p className="mb-2 pl-2 font-data text-[10px] font-bold uppercase tracking-[0.12em] text-ink/35">
+        Profile
       </p>
-      <div className="relative pl-6">
-        <div className="absolute left-[9px] top-1.5 bottom-1.5 w-px bg-ink/8" aria-hidden="true" />
-        <div className="flex flex-col gap-1">
-          {PROFILE_BUCKETS.map((bucket) => {
-            const complete = isBucketComplete(bucket.id, data);
-            const active = activeId === bucket.id;
-            return (
-              <button
-                key={bucket.id}
-                type="button"
-                role="tab"
-                id={`profile-tab-${variant}-${bucket.id}`}
-                aria-selected={active}
-                aria-controls="seeker-profile-form"
-                data-bucket-id={bucket.id}
-                tabIndex={active ? 0 : -1}
-                onClick={() => onSelect(bucket.id)}
-                className={`group relative flex w-full cursor-pointer items-center gap-3 rounded-md py-2.5 text-left text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-marigold/40 focus-visible:ring-offset-2 focus-visible:ring-offset-mist ${
-                  active ? "font-bold text-ink" : "font-medium text-ink/40 hover:text-ink/70"
-                }`}
-              >
-                <span
-                  aria-hidden="true"
-                  className={`absolute -left-6 top-1/2 shrink-0 -translate-y-1/2 rounded-full transition-all ${
-                    active
-                      ? "h-[13px] w-[13px] bg-marigold shadow-[0_0_0_4px_rgba(242,169,59,0.18)]"
-                      : complete
-                        ? "h-[11px] w-[11px] bg-teal"
-                        : "h-[11px] w-[11px] border-2 border-ink/15 bg-mist"
-                  }`}
-                />
-                <span className="min-w-0 truncate">{bucket.label}</span>
-              </button>
-            );
-          })}
-        </div>
+      <div className="flex flex-col gap-1">{profileBuckets.map(renderBucketRow)}</div>
+
+      <p className="mb-2 mt-5 pl-2 font-data text-[10px] font-bold uppercase tracking-[0.12em] text-ink/35">
+        Settings
+      </p>
+      <div className="flex flex-col gap-1">
+        {settingsBuckets.map(renderBucketRow)}
+
+        <a
+          href="#identity-verification"
+          className="group flex w-full cursor-pointer items-center gap-3 rounded-lg px-2 py-2 text-left text-sm font-medium text-ink/50 transition-colors hover:bg-ink/[0.03] hover:text-ink/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-marigold/40 focus-visible:ring-offset-2 focus-visible:ring-offset-mist"
+        >
+          <span
+            aria-hidden="true"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-ink/5 text-ink/40"
+          >
+            <ShieldCheck className="h-4 w-4" aria-hidden="true" />
+          </span>
+          <span className="min-w-0 flex-1 truncate">Identity verification</span>
+          <span
+            aria-hidden="true"
+            className={`h-2 w-2 shrink-0 rounded-full ${identityDotClass(identityStatus)}`}
+          />
+        </a>
       </div>
     </nav>
   );

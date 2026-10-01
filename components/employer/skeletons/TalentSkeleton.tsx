@@ -2,7 +2,6 @@
 
 import Bone from "@/components/employer/skeletons/Bone";
 import ProPageHeaderSkeleton from "@/components/employer/skeletons/ProPageHeaderSkeleton";
-import ProPerkStripSkeleton from "@/components/employer/skeletons/ProPerkStripSkeleton";
 import { useEmployerShell } from "@/components/employer/EmployerShellContext";
 
 export default function TalentSkeleton() {
@@ -12,7 +11,6 @@ export default function TalentSkeleton() {
     return (
       <div>
         <ProPageHeaderSkeleton actions={2} stats={1} />
-        <ProPerkStripSkeleton />
         <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center">
           <Bone className="h-11 max-w-xl flex-1 rounded-full" />
           <Bone className="h-11 w-24 rounded-full" />

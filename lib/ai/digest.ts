@@ -1,11 +1,13 @@
 import { prisma } from "@/lib/prisma";
-import { sendEmail } from "@/lib/email";
+import { sendEmail, listUnsubscribeHeaders } from "@/lib/email";
 import { renderEmailLayout } from "@/lib/shared/email-layout";
 import { escapeHtml } from "@/lib/escape-html";
 import { isEmployerPro } from "@/lib/billing/subscriptions";
 import { generateHiringInsights } from "@/lib/ai/features/insights";
 import { getEmployerAnalytics } from "@/lib/employer-analytics";
 import { APP_URL } from "@/lib/shared/app-url";
+import { shouldSendCategoryEmail } from "@/lib/shared/email-preferences";
+import { getOrCreateUnsubscribeToken } from "@/lib/account/notification-preferences";
 
 const appUrl = APP_URL;
 
@@ -21,9 +23,13 @@ export async function sendWeeklyDigestForCompany(companyId: string): Promise<boo
 
   const company = await prisma.company.findUnique({
     where: { id: companyId },
-    include: { user: { select: { email: true } } },
+    include: { user: { select: { id: true, email: true, notifyProductDigest: true, unsubscribeToken: true } } },
   });
   if (!company) return false;
+
+  // EmailCategory "PRODUCT_DIGEST" — checked before doing any analytics or
+  // AI-provider work below, since a company with digests off needs neither.
+  if (!shouldSendCategoryEmail("PRODUCT_DIGEST", company.user.notifyProductDigest)) return false;
 
   const analytics = await getEmployerAnalytics(companyId);
   const insights = await generateHiringInsights(companyId).catch((error) => {
@@ -39,6 +45,11 @@ export async function sendWeeklyDigestForCompany(companyId: string): Promise<boo
         analytics.newApplicantsThisWeek === 1 ? "" : "s"
       } across ${analytics.metrics.activeJobs} active job${analytics.metrics.activeJobs === 1 ? "" : "s"}.</p>`;
 
+  // Lazily issued the first time this company actually gets a digest — see
+  // getOrCreateUnsubscribeToken's doc comment.
+  const unsubscribeToken = company.user.unsubscribeToken ?? (await getOrCreateUnsubscribeToken(company.user.id));
+  const unsubscribeUrl = `${appUrl}/api/unsubscribe/${encodeURIComponent(unsubscribeToken)}`;
+
   await sendEmail(
     company.user.email,
     `Your weekly hiring digest — ${company.companyName}`,
@@ -53,7 +64,10 @@ export async function sendWeeklyDigestForCompany(companyId: string): Promise<boo
         label: "Open your dashboard",
         href: `${appUrl}/employer/dashboard`,
       },
-    })
+      unsubscribeUrl,
+    }),
+    undefined,
+    listUnsubscribeHeaders(unsubscribeUrl)
   );
 
   return true;

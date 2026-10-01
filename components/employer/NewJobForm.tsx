@@ -1,0 +1,76 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import JobForm, { JobFormData, JobSubmitIntent } from "@/components/employer/JobForm";
+import JobFormPageShell from "@/components/employer/JobFormPageShell";
+
+async function saveJob(data: JobFormData, jobId?: string) {
+  const url = jobId ? `/api/jobs/${jobId}` : "/api/jobs";
+  const method = jobId ? "PATCH" : "POST";
+
+  const res = await fetch(url, {
+    method,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+
+  const result = await res.json();
+  if (!res.ok) {
+    throw new Error(result.error || "Something went wrong");
+  }
+
+  return result as { id: string };
+}
+
+async function submitForReview(jobId: string) {
+  const res = await fetch(`/api/jobs/${jobId}/submit`, { method: "PATCH" });
+  const result = await res.json();
+  if (!res.ok) {
+    throw new Error(result.error || "Could not submit for review");
+  }
+}
+
+/** Client half of /employer/jobs/new. `initialData` is the company's hiring-defaults pre-fill, loaded by the server page. */
+export default function NewJobForm({
+  initialData,
+  canPublishInstantly = false,
+}: {
+  initialData?: Partial<JobFormData>;
+  /** Verified Employer Pro: submitting publishes live instead of going to review. */
+  canPublishInstantly?: boolean;
+}) {
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  async function handleSubmit(data: JobFormData, intent: JobSubmitIntent) {
+    setError("");
+    setLoading(true);
+
+    try {
+      const job = await saveJob(data);
+      if (intent === "submit") {
+        await submitForReview(job.id);
+      }
+      router.push("/employer/jobs");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong");
+      setLoading(false);
+    }
+  }
+
+  return (
+    <JobFormPageShell
+      title="Post a new job"
+      description={
+        canPublishInstantly
+          ? "Save a draft anytime, or publish when you're ready — it goes live right away."
+          : "Save a draft anytime, or submit for review when you're ready to go live."
+      }
+      footer={error ? <p className="mt-4 text-sm text-ember">{error}</p> : undefined}
+    >
+      <JobForm initialData={initialData} loading={loading} onSubmit={handleSubmit} canPublishInstantly={canPublishInstantly} />
+    </JobFormPageShell>
+  );
+}

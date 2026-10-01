@@ -126,7 +126,7 @@ export default function RecommendedJobCard({ job, saved, compact = false, scoreD
               </span>
             )}
             <span
-              className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${band.className}`}
+              className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wide ring-1 ring-inset ring-current/15 ${band.className}`}
               aria-label={
                 scoreDisplay === "number"
                   ? `Match score ${job.score} out of 100`
@@ -134,7 +134,7 @@ export default function RecommendedJobCard({ job, saved, compact = false, scoreD
               }
             >
               {scoreDisplay === "band" && band.pillLabel}
-              <span className="font-data font-semibold" aria-hidden="true">
+              <span className="font-data text-xs font-bold" aria-hidden="true">
                 {job.score}
               </span>
             </span>

@@ -372,7 +372,7 @@ export default function EmployerJobCard({
       </div>
 
       {loading && (
-        <div className="absolute inset-0 flex items-center justify-center rounded-[1.75rem] bg-white/70">
+        <div className="absolute inset-0 flex items-center justify-center rounded-[var(--pro-radius,1.75rem)] bg-white/70">
           <div
             className={`h-5 w-5 animate-spin rounded-full border-2 border-t-transparent ${
               isPro ? "border-ink" : "border-teal"

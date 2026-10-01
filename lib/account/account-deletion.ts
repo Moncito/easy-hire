@@ -54,7 +54,7 @@ export function assertCanDeleteOwnedCompany(input: {
 }): void {
   if (input.ownsCompany && input.otherActiveMemberCount > 0) {
     throw new ApiError(
-      "You are the sole owner of a company with other active team members. Transfer ownership before deleting your account.",
+      "You are the sole owner of a company with other active team members. Transfer ownership from Team before deleting your account.",
       409
     );
   }

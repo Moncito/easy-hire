@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/Auth";
 import { errorResponse } from "@/lib/api-error";
 import { requireEmployerCompany } from "@/lib/employer-auth";
-import { createProCheckoutSession } from "@/lib/stripe-billing";
+import { createProCheckoutSession } from "@/lib/billing/stripe-billing";
 
 export async function POST() {
   try {

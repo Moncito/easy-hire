@@ -5,6 +5,7 @@ import { VERIFICATION_DOC_BUCKET, resolveSignedUrl } from "@/lib/storage";
 import { recomputeVerificationScore } from "@/lib/seeker/identity-verification";
 import { buildAdminActionOperation } from "@/lib/admin/audit";
 import { requireAdminPermission } from "@/lib/admin/permissions";
+import { sendSeekerIdentityApprovedEmail, sendSeekerIdentityRejectedEmail } from "@/lib/email";
 
 const PENDING_SEEKER_VERIFICATIONS_LIMIT = 100;
 
@@ -51,7 +52,7 @@ export async function reviewSeekerVerification(adminUserId: string, seekerProfil
 
   const profile = await prisma.seekerProfile.findUnique({
     where: { id: seekerProfileId },
-    include: { user: { select: { id: true } } },
+    include: { user: { select: { id: true, email: true } } },
   });
 
   if (!profile) {
@@ -89,6 +90,11 @@ export async function reviewSeekerVerification(adminUserId: string, seekerProfil
       }),
     ]);
 
+    void sendSeekerIdentityApprovedEmail({
+      to: profile.user.email,
+      seekerName: profile.fullName,
+    }).catch((err) => console.error("[admin/seekers] identity approved email failed:", err));
+
     await recomputeVerificationScore(seekerProfileId);
 
     return updated;
@@ -119,6 +125,12 @@ export async function reviewSeekerVerification(adminUserId: string, seekerProfil
       after: { idVerificationStatus: "REJECTED" },
     }),
   ]);
+
+  void sendSeekerIdentityRejectedEmail({
+    to: profile.user.email,
+    seekerName: profile.fullName,
+    reason,
+  }).catch((err) => console.error("[admin/seekers] identity rejected email failed:", err));
 
   await recomputeVerificationScore(seekerProfileId);
 

@@ -207,7 +207,7 @@ describe("shapeReviewableApplication — the /api/reviews/pending eligibility + 
     jobTitle: "Bookkeeper",
     status: "HIRED",
     hiredAt,
-    counterpart: { type: "SEEKER", id: "seeker-1", name: "Jane Doe", headline: "Bookkeeper", photoUrl: null },
+    counterpart: { type: "SEEKER", id: "seeker-1", name: "Jane Doe", headline: "Bookkeeper", photoUrl: null, hasPublicProfile: false },
     myReview: null,
   };
 

@@ -1,27 +1,18 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
-import { toast } from "sonner";
 import EmployerFilterChips from "@/components/employer/ui/EmployerFilterChips";
 import EmployerEmptyState from "@/components/employer/ui/EmployerEmptyState";
 import { EmployerPrimaryButton } from "@/components/employer/ui/EmployerPageHeader";
 import EmployerJobCard from "@/components/employer/EmployerJobCard";
-import JobsBoardToolbar, { type SortOption } from "@/components/employer/JobsBoardToolbar";
+import JobsBoardToolbar from "@/components/employer/JobsBoardToolbar";
 import type { EmployerJobCardData } from "@/lib/employer-jobs";
-import { createEmployerJob, patchJobStatus, deleteEmployerJob } from "@/lib/client/jobs";
-import { useEmployerShell } from "@/components/employer/EmployerShellContext";
-import ProPostAnotherJobCard from "@/components/employer/pro-dashboard/ProPostAnotherJobCard";
-import ProButton from "@/components/employer/pro/ProButton";
-import ProEmptyState from "@/components/employer/pro/ProEmptyState";
 import EmployerConfirmModal from "@/components/employer/EmployerConfirmModal";
+import { FILTER_ALL, pendingActionCopy, useJobsBoard } from "@/components/employer/jobs/useJobsBoard";
 
 type Props = {
   jobs: EmployerJobCardData[];
   companyVerified: boolean;
 };
-
-const FILTER_ALL = "ALL";
 
 const EMPTY_COPY: Record<string, { title: string; description: string }> = {
   ALL: {
@@ -52,227 +43,45 @@ const SEARCH_EMPTY = {
   description: "Try a different keyword or clear the search to see all listings.",
 };
 
+/** The Free plan's job postings board. Pro renders ProJobsBoard instead. */
 export default function JobsBoard({ jobs: initialJobs, companyVerified }: Props) {
-  const { isPro } = useEmployerShell();
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const initialFilter = searchParams.get("filter") ?? FILTER_ALL;
-  const [jobs, setJobs] = useState<EmployerJobCardData[]>(initialJobs);
-  const [filter, setFilter] = useState(
-    ["ALL", "ACTIVE", "DRAFT", "PENDING_REVIEW", "CLOSED"].includes(initialFilter)
-      ? initialFilter
-      : FILTER_ALL
-  );
-  const [query, setQuery] = useState("");
-  const [sort, setSort] = useState<SortOption>("updated");
-  const [loadingId, setLoadingId] = useState<string | null>(null);
-  const [pending, setPending] = useState<
-    | { kind: "close" | "duplicate" | "delete"; job: EmployerJobCardData }
-    | null
-  >(null);
+  const board = useJobsBoard(initialJobs);
+  const { displayedJobs, filter, query, pending, loadingId } = board;
+  const copy = pendingActionCopy(pending);
 
-  useEffect(() => {
-    setJobs(initialJobs);
-  }, [initialJobs]);
-
-  const counts = useMemo(() => {
-    const c: Record<string, number> = {
-      ALL: jobs.length,
-      ACTIVE: 0,
-      DRAFT: 0,
-      PENDING_REVIEW: 0,
-      CLOSED: 0,
-    };
-    for (const job of jobs) {
-      if (job.status in c) c[job.status]++;
-    }
-    return c;
-  }, [jobs]);
-
-  const filteredJobs = useMemo(() => {
-    if (filter === FILTER_ALL) return jobs;
-    return jobs.filter((j) => j.status === filter);
-  }, [jobs, filter]);
-
-  const displayedJobs = useMemo(() => {
-    let list = filteredJobs;
-    const q = query.trim().toLowerCase();
-    if (q) {
-      list = list.filter(
-        (j) =>
-          j.title.toLowerCase().includes(q) ||
-          j.location.toLowerCase().includes(q) ||
-          j.category.toLowerCase().includes(q) ||
-          (j.industry?.toLowerCase().includes(q) ?? false)
-      );
-    }
-    return [...list].sort((a, b) => {
-      if (sort === "applicants") return b.applicantCount - a.applicantCount;
-      if (sort === "attention") {
-        if (a.needsAttention !== b.needsAttention) return a.needsAttention ? -1 : 1;
-        if (a.unreviewedCount !== b.unreviewedCount) return b.unreviewedCount - a.unreviewedCount;
-        return b.applicantCount - a.applicantCount;
-      }
-      return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
-    });
-  }, [filteredJobs, query, sort]);
-
-  async function handleCloseJob(job: EmployerJobCardData) {
-    setLoadingId(job.id);
-    const result = await patchJobStatus(job.id, "CLOSED");
-
-    if (result.ok) {
-      setJobs((prev) =>
-        prev.map((j) => (j.id === job.id ? { ...j, status: "CLOSED", needsAttention: false } : j))
-      );
-      toast.success("Job closed");
-      setPending(null);
-    } else {
-      toast.error(result.error ?? "Could not close job");
-    }
-    setLoadingId(null);
-  }
-
-  async function handleDuplicateJob(job: EmployerJobCardData) {
-    setLoadingId(job.id);
-    const result = await createEmployerJob({
-      title: `${job.title} (Copy)`,
-      description: job.description,
-      requirements: job.requirements,
-      benefits: job.benefits,
-      category: job.category,
-      industry: job.industry,
-      employmentType: job.employmentType,
-      salaryMin: job.salaryMin,
-      salaryMax: job.salaryMax,
-      salaryPeriod: job.salaryPeriod,
-      location: job.location,
-      remoteType: job.remoteType,
-      targetHireCount: job.targetHireCount,
-      screeningQuestions:
-        job.screeningQuestions?.map((q) => ({
-          prompt: q.prompt,
-          required: q.required,
-        })) ?? [],
-    });
-
-    if (result.ok) {
-      toast.success("Job duplicated");
-      setPending(null);
-      router.refresh();
-    } else {
-      toast.error(result.error ?? "Could not duplicate job");
-    }
-    setLoadingId(null);
-  }
-
-  async function handleDeleteDraft(job: EmployerJobCardData) {
-    setLoadingId(job.id);
-    const result = await deleteEmployerJob(job.id);
-
-    if (result.ok) {
-      setJobs((prev) => prev.filter((j) => j.id !== job.id));
-      toast.success("Draft deleted");
-      setPending(null);
-    } else {
-      toast.error(result.error ?? "Could not delete draft");
-    }
-    setLoadingId(null);
-  }
-
-  function confirmPending() {
-    if (!pending) return;
-    if (pending.kind === "close") return handleCloseJob(pending.job);
-    if (pending.kind === "duplicate") return handleDuplicateJob(pending.job);
-    return handleDeleteDraft(pending.job);
-  }
-
-  const filterOptions = [
-    { value: FILTER_ALL, label: "All", count: counts.ALL },
-    { value: "ACTIVE", label: "Active", count: counts.ACTIVE },
-    { value: "DRAFT", label: "Draft", count: counts.DRAFT },
-    { value: "PENDING_REVIEW", label: "Pending", count: counts.PENDING_REVIEW },
-    { value: "CLOSED", label: "Closed", count: counts.CLOSED },
-  ];
-
-  if (jobs.length === 0) {
-    const copy = EMPTY_COPY.ALL;
-    if (isPro) {
-      return (
-        <ProEmptyState
-          title={
-            companyVerified
-              ? "Post your first role — it goes live instantly"
-              : "Post your first role"
-          }
-          description={
-            companyVerified
-              ? "Verified Pro listings skip the admin queue. Unlimited live jobs, and you can feature any of them."
-              : "Pro has unlimited listings. Finish company verification to publish instantly — verification is still required."
-          }
-          action={
-            <ProButton href="/employer/jobs/new" variant="primary">
-              Post your first job
-            </ProButton>
-          }
-        />
-      );
-    }
+  if (board.jobs.length === 0) {
     return (
       <EmployerEmptyState
-        title={copy.title}
-        description={copy.description}
-        action={
-          <EmployerPrimaryButton href="/employer/jobs/new">Post your first job</EmployerPrimaryButton>
-        }
+        title={EMPTY_COPY.ALL.title}
+        description={EMPTY_COPY.ALL.description}
+        action={<EmployerPrimaryButton href="/employer/jobs/new">Post your first job</EmployerPrimaryButton>}
       />
     );
   }
 
   return (
     <>
-      <EmployerFilterChips options={filterOptions} value={filter} onChange={setFilter} />
+      <EmployerFilterChips options={board.filterOptions} value={filter} onChange={board.setFilter} />
       <JobsBoardToolbar
         query={query}
-        onQueryChange={setQuery}
-        sort={sort}
-        onSortChange={setSort}
+        onQueryChange={board.setQuery}
+        sort={board.sort}
+        onSortChange={board.setSort}
         resultCount={displayedJobs.length}
       />
 
       {displayedJobs.length === 0 ? (
-        isPro ? (
-          <ProEmptyState
-            compact
-            title={query.trim() ? SEARCH_EMPTY.title : (EMPTY_COPY[filter]?.title ?? "No jobs found")}
-            description={
-              query.trim()
-                ? SEARCH_EMPTY.description
-                : (EMPTY_COPY[filter]?.description ?? "Try a different filter.")
-            }
-            action={
-              query.trim() ? undefined : filter !== FILTER_ALL ? (
-                <ProButton href="/employer/jobs/new" variant="primary">
-                  Post a new job
-                </ProButton>
-              ) : undefined
-            }
-          />
-        ) : (
-          <EmployerEmptyState
-            title={query.trim() ? SEARCH_EMPTY.title : (EMPTY_COPY[filter]?.title ?? "No jobs found")}
-            description={
-              query.trim()
-                ? SEARCH_EMPTY.description
-                : (EMPTY_COPY[filter]?.description ?? "Try a different filter.")
-            }
-            action={
-              query.trim() ? undefined : filter !== FILTER_ALL ? (
-                <EmployerPrimaryButton href="/employer/jobs/new">Post a new job</EmployerPrimaryButton>
-              ) : undefined
-            }
-          />
-        )
+        <EmployerEmptyState
+          title={query.trim() ? SEARCH_EMPTY.title : (EMPTY_COPY[filter]?.title ?? "No jobs found")}
+          description={
+            query.trim() ? SEARCH_EMPTY.description : (EMPTY_COPY[filter]?.description ?? "Try a different filter.")
+          }
+          action={
+            query.trim() ? undefined : filter !== FILTER_ALL ? (
+              <EmployerPrimaryButton href="/employer/jobs/new">Post a new job</EmployerPrimaryButton>
+            ) : undefined
+          }
+        />
       ) : (
         <div className="grid grid-cols-1 items-stretch gap-4 md:grid-cols-2 xl:grid-cols-3">
           {displayedJobs.map((job) => (
@@ -281,45 +90,31 @@ export default function JobsBoard({ jobs: initialJobs, companyVerified }: Props)
               job={job}
               companyVerified={companyVerified}
               loading={loadingId === job.id}
-              onDuplicate={() => setPending({ kind: "duplicate", job })}
-              onClose={() => setPending({ kind: "close", job })}
-              onDelete={() => setPending({ kind: "delete", job })}
+              onDuplicate={() => board.setPending({ kind: "duplicate", job })}
+              onClose={() => board.setPending({ kind: "close", job })}
+              onDelete={() => board.setPending({ kind: "delete", job })}
             />
           ))}
-          {isPro && filter === FILTER_ALL && !query.trim() && <ProPostAnotherJobCard />}
         </div>
       )}
 
       <EmployerConfirmModal
         open={pending !== null}
-        title={
-          pending?.kind === "delete"
-            ? "Delete this draft?"
-            : pending?.kind === "close"
-              ? "Close this job?"
-              : pending
-                ? "Duplicate this job?"
-                : ""
-        }
+        title={copy.title}
         subject={pending?.job.title}
-        description={
-          pending?.kind === "delete"
-            ? "This draft will be removed permanently. You can’t undo this."
-            : pending?.kind === "close"
-              ? "It will stop accepting applications and move to Closed. Applicants already in the pipeline stay on file."
-              : "A new draft copy will be created. The original listing is unchanged."
-        }
-        confirmLabel={
-          pending?.kind === "delete" ? "Delete draft" : pending?.kind === "close" ? "Close job" : "Duplicate"
-        }
-        danger={pending?.kind === "delete" || pending?.kind === "close"}
+        description={copy.description}
+        context={copy.context}
+        confirmLabel={copy.confirmLabel}
+        danger={copy.danger}
         loading={pending !== null && loadingId === pending.job.id}
         onCancel={() => {
           if (loadingId) return;
-          setPending(null);
+          board.setPending(null);
         }}
-        onConfirm={() => void confirmPending()}
+        onConfirm={() => void board.confirmPending()}
       />
     </>
   );
 }
+
+export { EMPTY_COPY, SEARCH_EMPTY };

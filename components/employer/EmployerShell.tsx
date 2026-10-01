@@ -17,6 +17,8 @@ type Props = {
   verifiedStatus: string;
   plan?: "FREE" | "PRO";
   collaborativeHiringEnabled?: boolean;
+  /** Free plan's job-slot usage for the sidebar card; null on Pro. */
+  jobSlots?: { used: number; limit: number } | null;
   navCounts: { activeJobs: number; needsReview: number; unreadMessages: number };
   children: React.ReactNode;
 };
@@ -27,6 +29,7 @@ function EmployerShellInner({
   verifiedStatus,
   plan = "FREE",
   collaborativeHiringEnabled = false,
+  jobSlots = null,
   navCounts,
   children,
 }: Props) {
@@ -62,8 +65,12 @@ function EmployerShellInner({
         data-employer-plan="pro"
         suppressHydrationWarning
       >
-        <Sidebar navCounts={navCounts} plan={plan} collaborativeHiringEnabled={collaborativeHiringEnabled} />
-        <EmployerMobileNav plan={plan} collaborativeHiringEnabled={collaborativeHiringEnabled} />
+        <Sidebar navCounts={navCounts} plan={plan} collaborativeHiringEnabled={collaborativeHiringEnabled} jobSlots={jobSlots} />
+        <EmployerMobileNav
+          plan={plan}
+          collaborativeHiringEnabled={collaborativeHiringEnabled}
+          navCounts={navCounts}
+        />
         <div
           className={`relative flex min-w-0 flex-1 flex-col transition-[padding] duration-200 ease-out ${
             expanded ? "lg:pl-52" : "lg:pl-[60px]"
@@ -103,8 +110,12 @@ function EmployerShellInner({
       data-employer-plan="free"
       suppressHydrationWarning
     >
-      <Sidebar navCounts={navCounts} plan={plan} collaborativeHiringEnabled={collaborativeHiringEnabled} />
-      <EmployerMobileNav plan={plan} collaborativeHiringEnabled={collaborativeHiringEnabled} />
+      <Sidebar navCounts={navCounts} plan={plan} collaborativeHiringEnabled={collaborativeHiringEnabled} jobSlots={jobSlots} />
+      <EmployerMobileNav
+        plan={plan}
+        collaborativeHiringEnabled={collaborativeHiringEnabled}
+        navCounts={navCounts}
+      />
       <div
         className={`relative flex min-w-0 flex-1 flex-col transition-[padding] duration-200 ease-out ${
           expanded ? "lg:pl-52" : "lg:pl-[60px]"

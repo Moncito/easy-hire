@@ -11,6 +11,95 @@ import {
 } from "@/lib/seeker/cache-tags";
 import { reviveDates } from "@/lib/cache-utils";
 
+export const APPLICATION_STATUS_PIPELINE = ["APPLIED", "SHORTLISTED", "INTERVIEW", "HIRED", "REJECTED"] as const;
+export type ApplicationStatusFilter = (typeof APPLICATION_STATUS_PIPELINE)[number] | "ALL";
+export const APPLICATION_STATUS_FILTERS: ApplicationStatusFilter[] = ["ALL", ...APPLICATION_STATUS_PIPELINE];
+
+/** Parses the dashboard's `?status=` query param, falling back to "ALL" for anything unrecognized. */
+export function normalizeApplicationStatusFilter(raw: string | undefined): ApplicationStatusFilter {
+  const normalized = raw?.toUpperCase() as ApplicationStatusFilter | undefined;
+  return normalized && APPLICATION_STATUS_FILTERS.includes(normalized) ? normalized : "ALL";
+}
+
+/** Tailwind classes for an application-status pill, shared by the dashboard's featured card and pipeline list. */
+export function applicationStatusBadgeClassName(status: string): string {
+  if (status === "REJECTED") return "bg-ember/10 text-ember border border-ember/20";
+  if (status === "HIRED") return "bg-marigold/15 text-[#7a4a0a] border border-marigold/20";
+  if (status === "INTERVIEW") return "bg-marigold/10 text-[#8a5a10] border border-marigold/15";
+  if (status === "SHORTLISTED") return "bg-navy/8 text-navy border border-navy/15";
+  return "bg-ink/5 text-ink/55 border border-ink/8";
+}
+
+/** The dashboard's "featured" application: most recent non-rejected one, or null if every application was rejected (or there are none). */
+export function pickFeaturedApplication<T extends { status: string }>(apps: T[]): T | null {
+  return apps.find((a) => a.status !== "REJECTED") ?? null;
+}
+
+/** The pipeline list below the featured card: respects the status filter, and excludes the featured application when showing "ALL" so it isn't listed twice. */
+export function filterPipelineApplications<T extends { id: string; status: string }>(
+  apps: T[],
+  statusFilter: ApplicationStatusFilter,
+  featuredId: string | null
+): T[] {
+  if (statusFilter === "ALL") {
+    return apps.filter((a) => (featuredId ? a.id !== featuredId : true));
+  }
+  return apps.filter((a) => a.status === statusFilter);
+}
+
+/** In-flight applications — everything except a final REJECTED or HIRED outcome. */
+export function countActiveApplications<T extends { status: string }>(apps: T[]): number {
+  return apps.filter((a) => a.status !== "REJECTED" && a.status !== "HIRED").length;
+}
+
+/**
+ * The soonest still-scheduled interview at or after `nowMs`, or null. Unlike
+ * SeekerInterviewsSection's own "upcoming" filter (which deliberately still
+ * shows cancelled rows so a seeker can see what happened), a dashboard
+ * spotlight card must not surface an interview that's dead — a cancelled
+ * or already-completed one carries nothing worth spotlighting.
+ */
+export function pickNextInterview<T extends { scheduledAt: Date; status: string }>(
+  interviews: T[],
+  nowMs: number
+): T | null {
+  const upcoming = interviews.filter(
+    (i) => i.scheduledAt.getTime() >= nowMs && i.status !== "CANCELLED" && i.status !== "COMPLETED"
+  );
+  if (upcoming.length === 0) return null;
+  return upcoming.reduce((soonest, i) => (i.scheduledAt < soonest.scheduledAt ? i : soonest));
+}
+
+/** Count for the same "still live" set pickNextInterview draws from — kept as a separate function so a stat card doesn't need to materialize the array just to know its length. */
+export function countUpcomingInterviews<T extends { scheduledAt: Date; status: string }>(
+  interviews: T[],
+  nowMs: number
+): number {
+  return interviews.filter(
+    (i) => i.scheduledAt.getTime() >= nowMs && i.status !== "CANCELLED" && i.status !== "COMPLETED"
+  ).length;
+}
+
+/**
+ * Interview.location is free-text supplied by the employer when scheduling
+ * (see app/api/hiring/.../interviews/route.ts) — untrusted input, not a
+ * vetted meeting-link field. Only ever treat it as a clickable join link
+ * when it parses as an http(s) URL; anything else (a physical address, or
+ * a scheme like javascript:/data: someone typed in) must render as plain
+ * text or nothing, never as an href.
+ */
+export function interviewJoinUrl(location: string | null | undefined): string | null {
+  const trimmed = location?.trim();
+  if (!trimmed) return null;
+  try {
+    const url = new URL(trimmed);
+    if (url.protocol !== "http:" && url.protocol !== "https:") return null;
+    return trimmed;
+  } catch {
+    return null;
+  }
+}
+
 const DASHBOARD_REVALIDATE_SECONDS = 20;
 const INTERVIEWS_REVALIDATE_SECONDS = 20;
 // Upcoming + recent past — a seeker's interview history is not unbounded the

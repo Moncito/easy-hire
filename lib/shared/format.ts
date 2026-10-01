@@ -48,3 +48,8 @@ export function formatSalaryRange(
 export function formatEnumLabel(value: string) {
   return value.replace(/_/g, " ");
 }
+
+/** "SHORTLISTED" -> "Shortlisted", "monthly" -> "Monthly" — first letter capitalized, rest lowercased. For a single enum-style word; run formatEnumLabel first if the value has underscores. */
+export function capitalize(value: string): string {
+  return value.charAt(0).toUpperCase() + value.slice(1).toLowerCase();
+}

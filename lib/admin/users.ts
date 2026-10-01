@@ -4,6 +4,8 @@ import { ApiError } from "@/lib/api-error";
 import { getCompanyPlan, type SubscriptionPlan } from "@/lib/billing/subscriptions";
 import { getSeekerProfileCompletion } from "@/lib/seeker/profile-completion";
 import { requestPasswordReset, requestEmailVerification } from "@/lib/auth/credentials-recovery";
+import { disableTwoFactorForSupport } from "@/lib/auth/two-factor";
+import { sendTwoFactorDisabledByAdminEmail } from "@/lib/shared/email";
 import { deleteUserAccountAsAdmin, type AccountDeletionResult } from "@/lib/account/account-deletion";
 import { recordAdminAction, recordPiiRead } from "@/lib/admin/audit";
 import { requireAdminPermission } from "@/lib/admin/permissions";
@@ -635,6 +637,8 @@ export type UserSupportActionResult =
   | { action: "password_reset"; status: "sent" }
   | { action: "resend_verification"; status: "sent" }
   | { action: "resend_verification"; status: "already_verified" }
+  | { action: "disable_two_factor"; status: "disabled" }
+  | { action: "disable_two_factor"; status: "not_enrolled" }
   | { action: "delete"; status: "deleted"; result: AccountDeletionResult };
 
 /**
@@ -698,6 +702,51 @@ export async function performUserSupportAction(
     return {
       action: "resend_verification",
       status: user.emailVerifiedAt ? "already_verified" : "sent",
+    };
+  }
+
+  if (input.action === "disable_two_factor") {
+    // Gated the same as password_reset/resend_verification above, not on a
+    // narrower permission — see lib/admin/permissions.ts's ADMIN_PERMISSIONS
+    // list: there is no permission between "user.support" (SUPPORT level)
+    // and "user.delete" (SUPER_ADMIN-only, and scoped to the unrelated RA
+    // 10173 anonymisation path). This IS the "low-risk support action"
+    // bucket user.support's own doc comment describes, and the task spec
+    // that introduced it (docs/two-factor-auth-plan.md's Phase-1-before-
+    // Phase-2 escape hatch) never asked for a new, more restrictive
+    // permission — only for the escape hatch to exist before login
+    // enforcement does.
+    await requireAdminPermission(adminUserId, "user.support");
+
+    // Reuses lib/auth/two-factor.ts's own clearing logic — never
+    // reimplemented here. Unlike the self-serve `disableTwoFactor`, this
+    // performs no re-authentication of the target user (an admin acting on a
+    // locked-out user cannot supply their password or a TOTP code); this
+    // function's own permission check above is the authorization. Always
+    // resolves regardless of whether the account has 2FA enabled (no-op for
+    // an unenrolled account), matching the enumeration-safe contract the two
+    // branches above already follow.
+    const result = await disableTwoFactorForSupport(targetUserId);
+    await recordAdminAction({
+      adminUserId,
+      action: "USER_TWO_FACTOR_DISABLED_BY_ADMIN",
+      targetType: USER_TARGET_TYPE,
+      targetId: targetUserId,
+      note: input.note,
+      after: { wasEnrolled: result.wasEnrolled },
+    });
+
+    // Only notify when something actually changed — an email claiming 2FA
+    // was "removed" from an account that was never enrolled would be false,
+    // and would train the recipient to distrust this exact security
+    // notification the one time it matters.
+    if (result.wasEnrolled) {
+      await sendTwoFactorDisabledByAdminEmail({ to: user.email });
+    }
+
+    return {
+      action: "disable_two_factor",
+      status: result.wasEnrolled ? "disabled" : "not_enrolled",
     };
   }
 

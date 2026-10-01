@@ -68,10 +68,13 @@ export default function EmployerNotificationBell() {
         aria-label={`Notifications${unreadCount > 0 ? `, ${unreadCount} unread` : ""}`}
       >
         <Bell className="h-5 w-5" strokeWidth={2} />
+        {/* A dot, not a number: "something new" is the whole message here, and
+            the exact count is in the label for screen readers and in the panel. */}
         {unreadCount > 0 && (
-          <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-teal px-1 text-[9px] font-bold text-white">
-            {unreadCount > 9 ? "9+" : unreadCount}
-          </span>
+          <span
+            aria-hidden="true"
+            className="absolute right-1.5 top-1.5 h-[7px] w-[7px] rounded-full bg-ember ring-2 ring-[var(--eh-bg,#f5f6f4)]"
+          />
         )}
       </button>
 

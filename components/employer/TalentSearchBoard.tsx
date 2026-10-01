@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Search, SlidersHorizontal, Download } from "lucide-react";
+import { Bookmark, Download, Search, SearchX, SlidersHorizontal } from "lucide-react";
+import { Button, Card, EmptyState, FilterButton, SearchInput, Select } from "@/components/employer/system";
 import { formatSalaryRange } from "@/lib/format";
 import { listSavedSeekers } from "@/lib/client/saved-seekers";
 import SaveSeekerButton from "@/components/employer/SaveSeekerButton";
@@ -47,8 +48,8 @@ function TalentListSkeleton({ pro = false }: { pro?: boolean }) {
     return (
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
         {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="pro-card flex gap-4 p-5">
-            <Bone className="h-14 w-14 shrink-0 rounded-full" />
+          <div key={i} className="flex gap-4 rounded-card border border-eh-line bg-eh-surface p-5 shadow-eh-sm">
+            <Bone className="h-12 w-12 shrink-0 rounded-full" />
             <div className="min-w-0 flex-1 space-y-2">
               <Bone className="h-4 w-44" />
               <Bone className="h-3 w-56" />
@@ -171,7 +172,100 @@ export default function TalentSearchBoard() {
         </div>
       )}
 
-      <div className={`mb-4 flex flex-col gap-3 sm:flex-row sm:items-center ${isPro ? "mb-5" : ""}`}>
+      {isPro ? (
+        <>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <SearchInput
+              label="Search by name, skills, headline"
+              value={query}
+              onValueChange={setQuery}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") search();
+              }}
+              className="w-full sm:flex-1"
+            />
+            <div className="flex flex-wrap items-center gap-2">
+              <Button variant="primary" icon={<Search />} onClick={search} loading={loading}>
+                Search
+              </Button>
+              <FilterButton
+                active={filtersOpen || activeFilterCount > 0}
+                count={activeFilterCount > 0 ? activeFilterCount : undefined}
+                onClick={() => setFiltersOpen((o) => !o)}
+                aria-expanded={filtersOpen}
+              >
+                <SlidersHorizontal className="h-3.5 w-3.5" aria-hidden="true" />
+                Filters
+              </FilterButton>
+              <FilterButton
+                active={showSaved}
+                onClick={() => {
+                  setShowSaved(true);
+                  loadSaved();
+                }}
+              >
+                <Bookmark className="h-3.5 w-3.5" aria-hidden="true" />
+                Saved
+              </FilterButton>
+            </div>
+          </div>
+
+          {filtersOpen && (
+            <Card padded={false} className="mt-3 p-4">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <label className="flex flex-col gap-1.5 text-small font-medium text-eh-ink-2">
+                  Skill
+                  <input
+                    value={skill}
+                    onChange={(e) => setSkill(e.target.value)}
+                    placeholder="e.g. Bookkeeping"
+                    className="h-9 rounded-control border border-eh-line bg-eh-surface px-3 text-ui font-normal text-eh-ink outline-none transition-colors duration-150 placeholder:text-eh-muted focus:border-eh-teal"
+                  />
+                </label>
+                <label className="flex flex-col gap-1.5 text-small font-medium text-eh-ink-2">
+                  Location
+                  <input
+                    value={location}
+                    onChange={(e) => setLocation(e.target.value)}
+                    placeholder="e.g. Cebu"
+                    className="h-9 rounded-control border border-eh-line bg-eh-surface px-3 text-ui font-normal text-eh-ink outline-none transition-colors duration-150 placeholder:text-eh-muted focus:border-eh-teal"
+                  />
+                </label>
+                <div className="flex flex-col gap-1.5 text-small font-medium text-eh-ink-2">
+                  <span aria-hidden="true">Availability</span>
+                  <Select
+                    label="Availability"
+                    value={availability}
+                    onChange={setAvailability}
+                    options={availabilityOptions}
+                    className="w-full font-normal"
+                  />
+                </div>
+              </div>
+              <div className="mt-3 flex items-center gap-2">
+                <Button size="sm" onClick={search}>
+                  Apply filters
+                </Button>
+                {activeFilterCount > 0 && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      setSkill("");
+                      setLocation("");
+                      setAvailability("");
+                    }}
+                  >
+                    Clear
+                  </Button>
+                )}
+              </div>
+            </Card>
+          )}
+          <div className="mb-5" />
+        </>
+      ) : (
+        <>      <div className={`mb-4 flex flex-col gap-3 sm:flex-row sm:items-center ${isPro ? "mb-5" : ""}`}>
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/35" />
           <input
@@ -265,10 +359,35 @@ export default function TalentSearchBoard() {
         </div>
       )}
 
-      {error && <p className="mb-4 text-sm text-ember">{error}</p>}
+        </>
+      )}
+      {error && (
+        <p role="alert" className={isPro ? "mb-4 text-ui text-eh-danger" : "mb-4 text-sm text-ember"}>
+          {error}
+        </p>
+      )}
 
       {loading ? (
         <TalentListSkeleton pro={isPro} />
+      ) : searched && seekers.length === 0 && isPro ? (
+        <Card>
+          <EmptyState
+            icon={showSaved ? <Bookmark /> : <SearchX />}
+            title={showSaved ? "No saved candidates" : "No candidates found"}
+            description={
+              showSaved
+                ? "Bookmark a profile from search, or add people to a saved list."
+                : "Try different keywords or filters, or check back as more VAs join."
+            }
+            action={
+              showSaved ? (
+                <Button href="/employer/talent/lists" size="sm">
+                  Open saved lists
+                </Button>
+              ) : undefined
+            }
+          />
+        </Card>
       ) : searched && seekers.length === 0 ? (
         <EmployerEmptyState
           title={showSaved ? "No saved candidates" : "No candidates found"}

@@ -1,98 +1,75 @@
 import Link from "next/link";
-import { ChevronRight } from "lucide-react";
+import { Calendar, FileText, MessageSquare } from "lucide-react";
 
 type Props = {
-  strength: number;
-  strengthTotal: number;
-  applicationCount: number;
+  activeApplicationCount: number;
+  totalApplicationCount: number;
+  upcomingInterviewCount: number;
   conversationCount: number;
 };
 
 export default function SeekerDashboardStats({
-  strength,
-  strengthTotal,
-  applicationCount,
+  activeApplicationCount,
+  totalApplicationCount,
+  upcomingInterviewCount,
   conversationCount,
 }: Props) {
-  const pct = Math.round((strength / strengthTotal) * 100);
-
   return (
-    <div className="flex flex-wrap divide-y divide-ink/8 overflow-hidden rounded-2xl bg-ink/[0.03] ring-1 ring-ink/8 sm:divide-x sm:divide-y-0">
-      {/* Profile strength */}
+    <div className="grid gap-3 sm:grid-cols-3">
       <Link
-        href="/seeker/profile"
-        className="group flex min-w-[140px] flex-1 flex-col gap-2 px-5 py-4 transition hover:bg-ink/[0.04]"
+        href="/seeker/dashboard"
+        className="group relative flex flex-col gap-2 overflow-hidden rounded-2xl bg-marigold/[0.05] px-5 py-4 ring-1 ring-marigold/15 shadow-[0_2px_12px_rgba(32,36,43,0.04)] transition hover:ring-marigold/35 hover:shadow-[0_4px_16px_rgba(242,169,59,0.12)]"
       >
-        <span className="text-[10px] font-semibold uppercase tracking-widest text-ink/40">
-          Profile strength
-        </span>
-        <div className="flex items-baseline gap-1">
-          <span className="font-data text-2xl font-bold text-ink">{strength}</span>
-          <span className="font-data text-sm text-ink/40">/{strengthTotal}</span>
-        </div>
-        <div className="h-1 w-full overflow-hidden rounded-full bg-ink/10">
-          <div
-            className="h-full rounded-full bg-marigold transition-[width] duration-700"
-            style={{ width: `${pct}%` }}
-          />
-        </div>
-      </Link>
-
-      {/* Browse jobs */}
-      <Link
-        href="/jobs"
-        className="group flex min-w-[140px] flex-1 items-center justify-between gap-3 px-5 py-4 transition hover:bg-ink/[0.04]"
-      >
-        <div>
-          <span className="text-[10px] font-semibold uppercase tracking-widest text-ink/40">
-            Browse jobs
-          </span>
-          <p className="mt-1 text-sm font-semibold text-ink">Find your next VA role</p>
-        </div>
-        <ChevronRight
-          className="h-4 w-4 shrink-0 text-ink/25 transition-transform duration-150 group-hover:translate-x-0.5 group-hover:text-marigold"
+        <div
+          className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-marigold/10 blur-2xl transition-opacity group-hover:opacity-80"
           aria-hidden="true"
         />
+        <span className="relative flex h-9 w-9 items-center justify-center rounded-xl bg-marigold text-ink shadow-[0_4px_10px_rgba(242,169,59,0.35)]">
+          <FileText className="h-4 w-4" aria-hidden="true" />
+        </span>
+        <span className="relative text-[10px] font-semibold uppercase tracking-widest text-[#8a5a10]/70">
+          Active applications
+        </span>
+        <span className="relative font-data text-3xl font-bold text-ink">{activeApplicationCount}</span>
+        <span className="relative text-xs text-ink/45">{totalApplicationCount} total</span>
       </Link>
 
-      {/* Applications */}
-      <div className="flex min-w-[120px] flex-1 flex-col gap-2 px-5 py-4">
-        <span className="text-[10px] font-semibold uppercase tracking-widest text-ink/40">
-          Applications
+      <a
+        href="#interviews-heading"
+        className="group relative flex flex-col gap-2 overflow-hidden rounded-2xl bg-navy/[0.04] px-5 py-4 ring-1 ring-navy/12 shadow-[0_2px_12px_rgba(32,36,43,0.04)] transition hover:ring-navy/30 hover:shadow-[0_4px_16px_rgba(30,58,95,0.12)]"
+      >
+        <div
+          className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-navy/10 blur-2xl transition-opacity group-hover:opacity-80"
+          aria-hidden="true"
+        />
+        <span className="relative flex h-9 w-9 items-center justify-center rounded-xl bg-navy text-mist shadow-[0_4px_10px_rgba(30,58,95,0.35)]">
+          <Calendar className="h-4 w-4" aria-hidden="true" />
         </span>
-        <div className="flex items-center gap-2">
-          <span className="h-2 w-2 shrink-0 rounded-full bg-marigold" aria-hidden="true" />
-          <span className="font-data text-sm font-semibold text-ink">
-            {applicationCount}{" "}
-            <span className="font-body font-normal text-ink/60">
-              {applicationCount === 1 ? "Application" : "Applications"}
-            </span>
-          </span>
-        </div>
-      </div>
+        <span className="relative text-[10px] font-semibold uppercase tracking-widest text-navy/60">
+          Upcoming interviews
+        </span>
+        <span className="relative font-data text-3xl font-bold text-ink">{upcomingInterviewCount}</span>
+        <span className="relative text-xs text-ink/45">
+          {upcomingInterviewCount > 0 ? "Next up soon" : "None scheduled"}
+        </span>
+      </a>
 
-      {/* Messages */}
       <Link
         href="/seeker/messages"
-        className="group flex min-w-[120px] flex-1 flex-col gap-2 px-5 py-4 transition hover:bg-ink/[0.04]"
+        className="group relative flex flex-col gap-2 overflow-hidden rounded-2xl bg-teal/[0.05] px-5 py-4 ring-1 ring-teal/15 shadow-[0_2px_12px_rgba(32,36,43,0.04)] transition hover:ring-teal/35 hover:shadow-[0_4px_16px_rgba(31,128,115,0.12)]"
       >
-        <span className="text-[10px] font-semibold uppercase tracking-widest text-ink/40">
-          Messages
+        <div
+          className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-teal/10 blur-2xl transition-opacity group-hover:opacity-80"
+          aria-hidden="true"
+        />
+        <span className="relative flex h-9 w-9 items-center justify-center rounded-xl bg-teal text-white shadow-[0_4px_10px_rgba(31,128,115,0.35)]">
+          <MessageSquare className="h-4 w-4" aria-hidden="true" />
         </span>
-        <div className="flex items-center gap-2">
-          <span
-            className={`h-2 w-2 shrink-0 rounded-full transition-colors ${
-              conversationCount > 0 ? "bg-teal" : "bg-ink/20"
-            }`}
-            aria-hidden="true"
-          />
-          <span className="font-data text-sm font-semibold text-ink">
-            {conversationCount}{" "}
-            <span className="font-body font-normal text-ink/60">
-              {conversationCount === 1 ? "Thread" : "Threads"}
-            </span>
-          </span>
-        </div>
+        <span className="relative text-[10px] font-semibold uppercase tracking-widest text-teal/70">Messages</span>
+        <span className="relative font-data text-3xl font-bold text-ink">{conversationCount}</span>
+        <span className="relative text-xs text-ink/45">
+          {conversationCount === 1 ? "1 thread" : `${conversationCount} threads`}
+        </span>
       </Link>
     </div>
   );

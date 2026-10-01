@@ -1,43 +1,310 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import { Clock3, Mail, ShieldCheck, Sparkles, UserPlus, UsersRound, X } from "lucide-react";
-import EmployerFormSelect from "@/components/employer/ui/EmployerFormSelect";
+import { Clock3, Mail, ShieldCheck, UserPlus, UsersRound, X } from "lucide-react";
+import {
+  Avatar,
+  Button,
+  Card,
+  IconButton,
+  PageHeader,
+  Select,
+  StatusBadge,
+  type SelectOption,
+  type StatusTone,
+} from "@/components/employer/system";
+import EmployerConfirmModal from "@/components/employer/EmployerConfirmModal";
+import ProFormSection from "@/components/employer/pro-dashboard/ProFormSection";
 
 type Role = "OWNER" | "RECRUITER" | "HIRING_MANAGER" | "VIEWER";
-type Team = { members: Array<{ id: string; role: Role; user: { id: string; email: string } }>; invitations: Array<{ id: string; email: string; role: Role; expiresAt: string }> };
-
-const roles: Record<Role, { label: string; description: string; tone: string }> = {
-  OWNER: { label: "Owner", description: "Full workspace and team control", tone: "bg-marigold/20 text-[#81510d] ring-marigold/25" },
-  RECRUITER: { label: "Recruiter", description: "Manages applicants and feedback", tone: "bg-teal/10 text-teal ring-teal/15" },
-  HIRING_MANAGER: { label: "Hiring manager", description: "Reviews assigned roles", tone: "bg-navy/8 text-navy ring-navy/12" },
-  VIEWER: { label: "Viewer", description: "Read-only workspace access", tone: "bg-ink/[0.05] text-ink/55 ring-ink/8" },
+type Member = { id: string; role: Role; user: { id: string; email: string } };
+type Team = {
+  members: Member[];
+  invitations: Array<{ id: string; email: string; role: Role; expiresAt: string }>;
 };
 
-function Badge({ role }: { role: Role }) { const item = roles[role]; return <span className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.11em] ring-1 ${item.tone}`}>{item.label}</span>; }
-function initials(email: string) { return email.slice(0, 2).toUpperCase(); }
+const ROLES: Record<Role, { label: string; description: string; tone: StatusTone }> = {
+  OWNER: { label: "Owner", description: "Full workspace and team control", tone: "warning" },
+  RECRUITER: { label: "Recruiter", description: "Manages applicants and feedback", tone: "success" },
+  HIRING_MANAGER: { label: "Hiring manager", description: "Reviews assigned roles", tone: "info" },
+  VIEWER: { label: "Viewer", description: "Read-only workspace access", tone: "neutral" },
+};
 
-export default function TeamWorkspace({ initialTeam, canManage = true, companyName = "Your company", companyLogoUrl, viewerRole }: { initialTeam: Team; canManage?: boolean; companyName?: string; companyLogoUrl?: string | null; viewerRole?: Role }) {
+const ASSIGNABLE: Exclude<Role, "OWNER">[] = ["RECRUITER", "HIRING_MANAGER", "VIEWER"];
+const ROLE_OPTIONS: SelectOption[] = ASSIGNABLE.map((r) => ({
+  value: r,
+  label: ROLES[r].label,
+  description: ROLES[r].description,
+}));
+
+function RoleBadge({ role }: { role: Role }) {
+  return <StatusBadge tone={ROLES[role].tone}>{ROLES[role].label}</StatusBadge>;
+}
+
+/**
+ * The private hiring room: who has access, what each role can do, and
+ * invitations. Same API calls as before (invite, revoke, change role,
+ * remove); removing someone's access now asks first.
+ */
+export default function TeamWorkspace({
+  initialTeam,
+  canManage = true,
+  companyName = "Your company",
+  companyLogoUrl,
+  viewerRole,
+}: {
+  initialTeam: Team;
+  canManage?: boolean;
+  companyName?: string;
+  companyLogoUrl?: string | null;
+  viewerRole?: Role;
+}) {
   const [team, setTeam] = useState(initialTeam);
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<Exclude<Role, "OWNER">>("RECRUITER");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
+  const [removing, setRemoving] = useState<Member | null>(null);
+  const [removeBusy, setRemoveBusy] = useState(false);
 
-  async function invite(event: FormEvent) { event.preventDefault(); setPending(true); setError(""); const res = await fetch("/api/employer/team/invitations", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, role }) }); const data = await res.json(); setPending(false); if (!res.ok) return setError(data.error || "Could not send invitation."); setTeam((current) => ({ ...current, invitations: [data, ...current.invitations.filter((item) => item.email !== data.email)] })); setEmail(""); }
-  async function revoke(id: string) { setError(""); const res = await fetch(`/api/employer/team/invitations/${id}`, { method: "DELETE" }); if (!res.ok) return setError((await res.json()).error || "Could not revoke invitation."); setTeam((current) => ({ ...current, invitations: current.invitations.filter((item) => item.id !== id) })); }
-  async function remove(id: string) { setError(""); const res = await fetch(`/api/employer/team/${id}`, { method: "DELETE" }); if (!res.ok) return setError((await res.json()).error || "Could not remove member."); setTeam((current) => ({ ...current, members: current.members.filter((item) => item.id !== id) })); }
-  async function changeRole(id: string, nextRole: Role) { setError(""); const res = await fetch(`/api/employer/team/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ role: nextRole }) }); const data = await res.json(); if (!res.ok) return setError(data.error || "Could not update role."); setTeam((current) => ({ ...current, members: current.members.map((item) => item.id === id ? { ...item, role: data.role } : item) })); }
+  async function invite(event: FormEvent) {
+    event.preventDefault();
+    setPending(true);
+    setError("");
+    const res = await fetch("/api/employer/team/invitations", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, role }),
+    });
+    const data = await res.json();
+    setPending(false);
+    if (!res.ok) return setError(data.error || "Could not send invitation.");
+    setTeam((current) => ({
+      ...current,
+      invitations: [data, ...current.invitations.filter((item) => item.email !== data.email)],
+    }));
+    setEmail("");
+  }
 
-  // EmployerPageContainer already supplies the shared 1296px workspace rail.
-  // Do not add a second max-width here: Team should use the same canvas as Dashboard.
-  return <div className="w-full max-w-none space-y-5 py-0">
-    <header className="flex flex-col gap-4 border-b border-ink/[0.06] pb-5 sm:flex-row sm:items-start sm:justify-between sm:gap-6"><div className="flex min-w-0 gap-4"><div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-ink/8 bg-white shadow-sm sm:h-16 sm:w-16">{companyLogoUrl ? <img src={companyLogoUrl} alt={`${companyName} logo`} className="h-full w-full object-cover" /> : <span className="font-display text-lg font-bold text-teal">{companyName.slice(0, 2).toUpperCase()}</span>}</div><div className="min-w-0"><span className="inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.16em] text-[#9A5B12]"><Sparkles className="h-3.5 w-3.5" />Collaborative hiring</span><h1 className="mt-1 truncate font-display text-3xl font-black tracking-tighter text-ink sm:text-4xl sm:leading-[0.95]">Hiring team</h1><p className="mt-1 truncate text-sm text-ink/50">{companyName}’s private decision-making space.</p></div></div><div className="flex shrink-0 items-center gap-5 border-l-0 border-ink/10 pl-0 sm:mt-2 sm:border-l sm:pl-5"><div><p className="font-data text-xl font-bold text-ink">{team.members.length}</p><p className="text-[10px] font-bold uppercase tracking-[0.12em] text-ink/40">Active</p></div><div className="h-8 border-l border-ink/10" /><div><p className="font-data text-xl font-bold text-ink">{team.invitations.length}</p><p className="text-[10px] font-bold uppercase tracking-[0.12em] text-ink/40">Invited</p></div></div></header>
+  async function revoke(id: string) {
+    setError("");
+    const res = await fetch(`/api/employer/team/invitations/${id}`, { method: "DELETE" });
+    if (!res.ok) return setError((await res.json()).error || "Could not revoke invitation.");
+    setTeam((current) => ({ ...current, invitations: current.invitations.filter((item) => item.id !== id) }));
+  }
 
-    {!canManage && viewerRole && <section className="flex items-start gap-3 border-l-2 border-teal bg-teal/[0.05] px-4 py-3"><ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-teal" /><div><p className="text-sm font-semibold text-ink">You’re reviewing as a {roles[viewerRole].label.toLowerCase()}.</p><p className="mt-0.5 text-sm text-ink/60">{roles[viewerRole].description}. Your seeker profile remains separate.</p></div></section>}
+  async function remove(id: string) {
+    setError("");
+    setRemoveBusy(true);
+    const res = await fetch(`/api/employer/team/${id}`, { method: "DELETE" });
+    setRemoveBusy(false);
+    if (!res.ok) {
+      setRemoving(null);
+      return setError((await res.json()).error || "Could not remove member.");
+    }
+    setTeam((current) => ({ ...current, members: current.members.filter((item) => item.id !== id) }));
+    setRemoving(null);
+  }
 
-    {canManage && <section className="border-y border-ink/8 py-5"><div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between"><div className="flex items-center gap-3"><div className="flex h-9 w-9 items-center justify-center rounded-xl bg-marigold/18 text-[#9A5B12]"><UserPlus className="h-4 w-4" /></div><div><h2 className="font-display text-lg font-bold text-ink">Bring in a teammate</h2><p className="text-sm text-ink/50">Invite only the people needed for this role.</p></div></div><form onSubmit={invite} className="grid gap-2 sm:grid-cols-[minmax(220px,1fr)_170px_auto] lg:w-[640px]"><label className="sr-only" htmlFor="member-email">Work email</label><input id="member-email" required type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="teammate@company.com" className="min-w-0 rounded-xl border border-ink/12 bg-white px-3.5 py-2.5 text-sm outline-none transition focus:border-teal focus:ring-4 focus:ring-teal/10" /><EmployerFormSelect ariaLabel="Invitee role" value={role} onChange={(next) => setRole(next as Exclude<Role, "OWNER">)} options={[{ value: "RECRUITER", label: "Recruiter", description: roles.RECRUITER.description }, { value: "HIRING_MANAGER", label: "Hiring manager", description: roles.HIRING_MANAGER.description }, { value: "VIEWER", label: "Viewer", description: roles.VIEWER.description }]} placeholder="Choose a role" hidePlaceholder /><button disabled={pending} className="inline-flex items-center justify-center gap-2 rounded-xl bg-marigold px-4 py-2.5 text-sm font-bold text-ink transition hover:bg-marigold/90 disabled:opacity-60"><Mail className="h-4 w-4" />{pending ? "Sending…" : "Invite"}</button></form></div><div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 border-t border-ink/6 pt-3 text-xs text-ink/55">{(["RECRUITER", "HIRING_MANAGER", "VIEWER"] as const).map((item) => <span key={item} className="inline-flex items-center gap-2"><Badge role={item} />{roles[item].description}</span>)}</div>{error && <p role="alert" className="mt-3 text-sm text-ember">{error}</p>}</section>}
+  async function changeRole(id: string, nextRole: Role) {
+    setError("");
+    const res = await fetch(`/api/employer/team/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ role: nextRole }),
+    });
+    const data = await res.json();
+    if (!res.ok) return setError(data.error || "Could not update role.");
+    setTeam((current) => ({
+      ...current,
+      members: current.members.map((item) => (item.id === id ? { ...item, role: data.role } : item)),
+    }));
+  }
 
-    <section><div className="flex items-end justify-between pb-3"><div><div className="flex items-center gap-2"><UsersRound className="h-5 w-5 text-teal" /><h2 className="font-display text-xl font-bold tracking-tight text-ink">People with access</h2></div><p className="mt-1 text-sm text-ink/50">A single source of truth for your hiring room.</p></div><span className="text-xs font-semibold text-ink/45">{team.members.length} active</span></div><div className="overflow-visible rounded-[20px] border border-ink/8 bg-white shadow-[0_8px_24px_rgba(32,36,43,0.04)]"><ul className="divide-y divide-ink/7">{team.members.map((member) => <li key={member.id} className="flex flex-wrap items-center gap-3 px-5 py-3.5 transition hover:bg-mist/45 sm:flex-nowrap sm:px-6"><div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-teal/15 to-navy/10 font-display text-sm font-bold text-teal">{member.role === "OWNER" && companyLogoUrl ? <img src={companyLogoUrl} alt="Company logo" className="h-full w-full object-cover" /> : initials(member.user.email)}</div><div className="min-w-0 flex-1"><p className="truncate font-semibold text-ink">{member.user.email}</p><p className="mt-0.5 text-xs text-ink/45">{canManage ? roles[member.role].description : "Private hiring workspace member"}</p></div><Badge role={member.role} />{canManage && member.role !== "OWNER" && <div className="flex items-center gap-1"><EmployerFormSelect ariaLabel={`Change access for ${member.user.email}`} value={member.role} onChange={(next) => changeRole(member.id, next as Exclude<Role, "OWNER">)} options={[{ value: "RECRUITER", label: "Recruiter", description: roles.RECRUITER.description }, { value: "HIRING_MANAGER", label: "Hiring manager", description: roles.HIRING_MANAGER.description }, { value: "VIEWER", label: "Viewer", description: roles.VIEWER.description }]} placeholder="Choose access level" hidePlaceholder menuPlacement="top" className="w-44" /><button onClick={() => remove(member.id)} className="rounded-lg p-2 text-ink/35 transition hover:bg-ember/8 hover:text-ember" aria-label={`Remove ${member.user.email}`}><X className="h-4 w-4" /></button></div>}</li>)}</ul>{canManage && team.invitations.length > 0 && <><div className="flex items-center justify-between border-y border-ink/7 bg-mist/45 px-5 py-2.5 sm:px-6"><span className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.12em] text-ink/45"><Clock3 className="h-3.5 w-3.5" />Waiting to join</span><span className="text-xs text-ink/40">Invites expire after 7 days</span></div><ul className="divide-y divide-ink/7">{team.invitations.map((invitation) => <li key={invitation.id} className="flex flex-wrap items-center gap-3 px-5 py-3.5 sm:flex-nowrap sm:px-6"><div className="flex h-10 w-10 items-center justify-center rounded-xl bg-ink/[0.04] text-ink/45"><Mail className="h-4 w-4" /></div><div className="min-w-0 flex-1"><p className="truncate font-semibold text-ink">{invitation.email}</p><p className="mt-1 flex items-center gap-2 text-xs text-ink/45"><Badge role={invitation.role} />Expires {new Date(invitation.expiresAt).toLocaleDateString()}</p></div><button onClick={() => revoke(invitation.id)} className="text-sm font-bold text-ember transition hover:underline">Revoke</button></li>)}</ul></>}</div></section>
-  </div>;
+  return (
+    <div className="flex flex-col gap-6">
+      <PageHeader
+        title="Hiring team"
+        leading={<Avatar name={companyName} src={companyLogoUrl} size="lg" shape="square" />}
+        description={`${companyName}’s private decision-making space.`}
+        meta={
+          <>
+            <span>
+              <b className="num font-semibold text-eh-ink">{team.members.length}</b> active
+            </span>
+            <span aria-hidden="true" className="hidden sm:inline">
+              ·
+            </span>
+            <span>
+              <b className="num font-semibold text-eh-ink">{team.invitations.length}</b> invited
+            </span>
+          </>
+        }
+      />
+
+      {!canManage && viewerRole && (
+        <p className="flex items-start gap-3 rounded-card border border-[color-mix(in_srgb,var(--eh-teal)_22%,transparent)] bg-eh-teal-tint px-4 py-3 text-ui text-eh-ink-2">
+          <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-eh-teal" aria-hidden="true" />
+          <span>
+            <b className="font-semibold text-eh-ink">You’re reviewing as a {ROLES[viewerRole].label.toLowerCase()}.</b>{" "}
+            {ROLES[viewerRole].description}. Your seeker profile remains separate.
+          </span>
+        </p>
+      )}
+
+      {canManage && (
+        <ProFormSection
+          id="invite"
+          title="Bring in a teammate"
+          description="Invite only the people needed for this role."
+          icon={<UserPlus />}
+          tone="marigold"
+        >
+          <form onSubmit={invite} className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_200px_auto]">
+            <label className="sr-only" htmlFor="member-email">
+              Work email
+            </label>
+            <input
+              id="member-email"
+              required
+              type="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              placeholder="teammate@company.com"
+              className="h-10 min-w-0 rounded-control border border-eh-line bg-eh-surface px-3 text-ui text-eh-ink outline-none transition-colors duration-150 placeholder:text-eh-muted hover:border-[color-mix(in_srgb,var(--eh-ink)_22%,var(--eh-line))] focus-visible:border-eh-teal"
+            />
+            <Select
+              label="Invitee role"
+              value={role}
+              onChange={(next) => setRole(next as Exclude<Role, "OWNER">)}
+              options={ROLE_OPTIONS}
+              className="h-10 w-full"
+              menuWidth={260}
+            />
+            <Button type="submit" size="lg" variant="primary" icon={<Mail />} loading={pending}>
+              {pending ? "Sending…" : "Invite"}
+            </Button>
+          </form>
+          <ul className="mt-4 flex flex-wrap gap-x-5 gap-y-2 border-t border-eh-line pt-4 text-small text-eh-muted">
+            {ASSIGNABLE.map((item) => (
+              <li key={item} className="inline-flex items-center gap-2">
+                <RoleBadge role={item} />
+                {ROLES[item].description}
+              </li>
+            ))}
+          </ul>
+          {error && (
+            <p role="alert" className="mt-3 text-ui text-eh-danger">
+              {error}
+            </p>
+          )}
+        </ProFormSection>
+      )}
+
+      <Card padded={false} aria-labelledby="people-heading" className="overflow-hidden">
+        <div className="flex items-start gap-3 px-5 py-5 sm:px-6">
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-control bg-eh-teal-tint text-eh-teal-ink" aria-hidden="true">
+            <UsersRound className="h-[18px] w-[18px]" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <h2 id="people-heading" className="font-heading text-[18px] font-semibold tracking-[-0.01em] text-eh-ink">
+              People with access
+            </h2>
+            <p className="mt-0.5 text-ui text-eh-muted">
+              A single source of truth for your hiring room · <span className="num">{team.members.length} active</span>
+            </p>
+          </div>
+        </div>
+        <ul className="divide-y divide-eh-line border-t border-eh-line">
+          {team.members.map((member) => (
+            <li
+              key={member.id}
+              className="flex flex-wrap items-center gap-3 px-5 py-3.5 transition-colors duration-150 hover:bg-eh-surface-2 sm:flex-nowrap sm:px-6"
+            >
+              <Avatar
+                name={member.user.email}
+                src={member.role === "OWNER" ? companyLogoUrl : null}
+                size="md"
+                shape={member.role === "OWNER" ? "square" : "circle"}
+              />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-ui font-semibold text-eh-ink">{member.user.email}</p>
+                <p className="mt-0.5 text-small text-eh-muted">
+                  {canManage ? ROLES[member.role].description : "Private hiring workspace member"}
+                </p>
+              </div>
+              {canManage && member.role !== "OWNER" ? (
+                <div className="flex items-center gap-1.5">
+                  <Select
+                    label={`Change access for ${member.user.email}`}
+                    size="sm"
+                    value={member.role}
+                    onChange={(next) => void changeRole(member.id, next as Exclude<Role, "OWNER">)}
+                    options={ROLE_OPTIONS}
+                    className="w-40"
+                    menuWidth={260}
+                  />
+                  <IconButton
+                    aria-label={`Remove ${member.user.email}`}
+                    title="Remove access"
+                    icon={<X />}
+                    onClick={() => setRemoving(member)}
+                    className="hover:text-eh-danger!"
+                  />
+                </div>
+              ) : (
+                <RoleBadge role={member.role} />
+              )}
+            </li>
+          ))}
+        </ul>
+
+        {canManage && team.invitations.length > 0 && (
+          <>
+            <div className="flex items-center justify-between border-y border-eh-line bg-eh-surface-2 px-5 py-2.5 sm:px-6">
+              <span className="inline-flex items-center gap-2 text-small font-medium text-eh-ink-2">
+                <Clock3 className="h-4 w-4 text-eh-muted" aria-hidden="true" />
+                Waiting to join
+              </span>
+              <span className="text-small text-eh-muted">Invites expire after 7 days</span>
+            </div>
+            <ul className="divide-y divide-eh-line">
+              {team.invitations.map((invitation) => (
+                <li key={invitation.id} className="flex flex-wrap items-center gap-3 px-5 py-3.5 sm:flex-nowrap sm:px-6">
+                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-eh-surface-2 text-eh-muted" aria-hidden="true">
+                    <Mail className="h-4 w-4" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-ui font-semibold text-eh-ink">{invitation.email}</p>
+                    <p className="mt-1 flex flex-wrap items-center gap-2 text-small text-eh-muted">
+                      <RoleBadge role={invitation.role} />
+                      Expires {new Date(invitation.expiresAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                    </p>
+                  </div>
+                  <Button size="sm" variant="ghost" onClick={() => void revoke(invitation.id)} className="text-eh-danger! hover:bg-eh-danger-tint!">
+                    Revoke
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+      </Card>
+
+      <EmployerConfirmModal
+        open={removing !== null}
+        title="Remove this teammate?"
+        subject={removing?.user.email}
+        description="They lose access to this company's hiring workspace right away. You can invite them again later."
+        confirmLabel="Remove access"
+        danger
+        loading={removeBusy}
+        onCancel={() => {
+          if (removeBusy) return;
+          setRemoving(null);
+        }}
+        onConfirm={() => removing && void remove(removing.id)}
+      />
+    </div>
+  );
 }

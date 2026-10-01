@@ -1,7 +1,5 @@
 import { Bookmark, Sparkles } from "lucide-react";
-import ProPageHeader from "@/components/employer/pro-dashboard/ProPageHeader";
-import ProTalentPerkStrip from "@/components/employer/pro-dashboard/ProTalentPerkStrip";
-import ProButton from "@/components/employer/pro/ProButton";
+import { Button, PageHeader } from "@/components/employer/system";
 
 type Props = {
   resultCount?: number;
@@ -9,48 +7,46 @@ type Props = {
 };
 
 export default function ProTalentPageHeader({ resultCount, savedMode = false }: Props) {
+  const noun = savedMode
+    ? resultCount === 1
+      ? "saved profile"
+      : "saved profiles"
+    : resultCount === 1
+      ? "profile"
+      : "profiles";
+
   return (
-    <>
-      <ProPageHeader
-        title="Talent"
-        description="Search verified VA profiles, save them to lists, and message without leaving EasyHire."
-        stats={
-          resultCount != null ? (
-            <>
-              <span>
-                <span className="font-data font-semibold text-ink">{resultCount}</span>{" "}
-                {savedMode
-                  ? resultCount === 1
-                    ? "saved profile"
-                    : "saved profiles"
-                  : resultCount === 1
-                    ? "profile"
-                    : "profiles"}
-              </span>
-              {savedMode && <span>Showing bookmarks only</span>}
-            </>
-          ) : undefined
-        }
-        actions={
+    <PageHeader
+      className="mb-6"
+      title="Talent"
+      description="Search verified VA profiles, save them to lists, and message without leaving EasyHire."
+      meta={
+        resultCount != null ? (
           <>
-            <ProButton
-              href="/employer/talent/lists"
-              variant="secondary"
-              icon={<Bookmark className="h-4 w-4" strokeWidth={2.25} aria-hidden="true" />}
-            >
-              Saved lists
-            </ProButton>
-            <ProButton
-              href="/employer/easy-ai"
-              variant="secondary"
-              icon={<Sparkles className="h-4 w-4" strokeWidth={2.25} aria-hidden="true" />}
-            >
-              Easy AI
-            </ProButton>
+            <span>
+              <b className="num font-semibold text-eh-ink">{resultCount}</b> {noun}
+            </span>
+            {savedMode && (
+              <>
+                <span aria-hidden="true" className="hidden sm:inline">
+                  ·
+                </span>
+                <span>Showing bookmarks only</span>
+              </>
+            )}
           </>
-        }
-      />
-      <ProTalentPerkStrip />
-    </>
+        ) : undefined
+      }
+      actions={
+        <>
+          <Button href="/employer/talent/lists" icon={<Bookmark />}>
+            Saved lists
+          </Button>
+          <Button href="/employer/easy-ai" icon={<Sparkles />}>
+            Easy AI
+          </Button>
+        </>
+      }
+    />
   );
 }
