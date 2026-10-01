@@ -628,12 +628,22 @@ model ApplicationActivity {
   type          ApplicationActivityType
   body          String?
   actorMemberId String?                 @map("actor_member_id")
+  // Structured stage history (lib/jobs/stage-history.ts). Set on every
+  // STAGE_CHANGE row from both status-change paths — the plain employer flow
+  // and collaborative hiring — so the dashboard can chart "moved to
+  // interview" by day, count how far rejected applications got, and show
+  // stage moves in recent activity. Null on NOTE rows, and on the few
+  // pre-existing STAGE_CHANGE rows whose `body` couldn't be parsed.
+  fromStatus    ApplicationStatus?      @map("from_status")
+  toStatus      ApplicationStatus?      @map("to_status")
   createdAt     DateTime                @default(now()) @map("created_at")
 
   application Application    @relation(fields: [applicationId], references: [id], onDelete: Cascade)
   actorMember CompanyMember? @relation(fields: [actorMemberId], references: [id], onDelete: SetNull)
 
   @@index([applicationId, createdAt])
+  // "Moved to <stage> per day" for the dashboard chart.
+  @@index([toStatus, createdAt])
   @@map("application_activities")
 }
 

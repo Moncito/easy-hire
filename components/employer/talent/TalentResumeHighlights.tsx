@@ -2,16 +2,18 @@
 
 import { useState } from "react";
 import { Sparkles } from "lucide-react";
+import { Button } from "@/components/employer/system";
 import { useEmployerShell } from "@/components/employer/EmployerShellContext";
 import { useEasyAi } from "@/components/employer/pro/useEasyAi";
-import NeoSurface from "@/components/employer/pro/NeoSurface";
-import NeoButton from "@/components/employer/pro/NeoButton";
 
 type Props = { seekerId: string };
 
 type HighlightsResult = { summary: string; highlights: string[] };
 
-/** Pro-only resume highlight strip for talent profiles. */
+/**
+ * Pro-only Easy AI resume highlights on a talent profile. Teal like every
+ * other Easy AI surface, so AI help reads as help, not a warning.
+ */
 export default function TalentResumeHighlights({ seekerId }: Props) {
   const { isPro } = useEmployerShell();
   const { run, isLoading } = useEasyAi();
@@ -19,43 +21,44 @@ export default function TalentResumeHighlights({ seekerId }: Props) {
 
   if (!isPro) return null;
 
+  const loading = isLoading("resume-highlights");
+
   async function handleGenerate() {
     const result = await run<HighlightsResult>("resume-highlights", { seekerId });
     if (result?.configured && result.data) setData(result.data);
   }
 
   return (
-    <NeoSurface variant="raised" className="space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[color:var(--neo-gold)]">
-          <Sparkles className="h-3.5 w-3.5" strokeWidth={2.25} />
-          Easy AI highlights
-        </p>
-        <NeoButton
-          variant="secondary"
-          size="sm"
-          onClick={handleGenerate}
-          disabled={isLoading("resume-highlights")}
+    <section
+      aria-labelledby="talent-ai-highlights"
+      className="rounded-card border border-[color-mix(in_srgb,var(--eh-teal)_22%,transparent)] bg-eh-teal-tint p-5"
+    >
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2
+          id="talent-ai-highlights"
+          className="flex items-center gap-2 font-heading text-[17px] font-semibold tracking-[-0.01em] text-eh-ink"
         >
-          {isLoading("resume-highlights") ? "Reading…" : data ? "Refresh" : "Extract highlights"}
-        </NeoButton>
+          <Sparkles className="h-4 w-4 text-eh-teal" aria-hidden="true" />
+          Easy AI highlights
+        </h2>
+        <Button size="sm" icon={<Sparkles />} loading={loading} onClick={() => void handleGenerate()}>
+          {loading ? "Reading…" : data ? "Refresh" : "Extract highlights"}
+        </Button>
       </div>
       {data ? (
-        <>
-          <p className="text-sm leading-relaxed text-[color:var(--neo-ink)]">{data.summary}</p>
-          <ul className="space-y-1.5">
+        <div className="mt-3">
+          <p className="text-body text-eh-ink-2">{data.summary}</p>
+          <ul className="mt-2 list-disc space-y-1 pl-5 text-ui text-eh-ink-2 marker:text-eh-teal">
             {data.highlights.map((h, i) => (
-              <li key={i} className="text-xs leading-relaxed text-[color:var(--neo-muted)]">
-                • {h}
-              </li>
+              <li key={i}>{h}</li>
             ))}
           </ul>
-        </>
+        </div>
       ) : (
-        <p className="text-xs leading-relaxed text-[color:var(--neo-muted)]">
+        <p className="mt-2 text-ui text-eh-ink-2">
           Generate a skimmable summary of this candidate&apos;s profile for faster shortlisting.
         </p>
       )}
-    </NeoSurface>
+    </section>
   );
 }

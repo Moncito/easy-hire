@@ -12,6 +12,136 @@
    itself via the `:where(...)`. */
 @custom-variant admin-dark (&:where([data-admin-theme="dark"], [data-admin-theme="dark"] *));
 
+/* ==========================================================================
+   EMPLOYER WORKSPACE DESIGN SYSTEM (dashboard revamp, Phase 1)
+   --------------------------------------------------------------------------
+   Utilities below are global names, but their colours resolve to --eh-*
+   variables that are only defined inside `.employer-workspace` (see the
+   block near the other employer styles). Used anywhere else they resolve to
+   nothing, so they can't leak into seeker, public, or admin pages.
+
+   Values are the EasyHire brand (Mist, Deep Ink, Harbor Navy, Marigold,
+   Signal Teal, Ember), not the revamp mock's substitutes. The mock's
+   "success" green has no brand equivalent, so success maps to Signal Teal.
+   ========================================================================== */
+@theme inline {
+  --color-eh-bg: var(--eh-bg);
+  --color-eh-surface: var(--eh-surface);
+  --color-eh-surface-2: var(--eh-surface-2);
+  --color-eh-ink: var(--eh-ink);
+  --color-eh-ink-2: var(--eh-ink-2);
+  --color-eh-muted: var(--eh-muted);
+  --color-eh-line: var(--eh-line);
+  --color-eh-navy: var(--eh-navy);
+  --color-eh-marigold: var(--eh-marigold);
+  --color-eh-marigold-strong: var(--eh-marigold-strong);
+  --color-eh-marigold-tint: var(--eh-marigold-tint);
+  --color-eh-marigold-ink: var(--eh-marigold-ink);
+  --color-eh-teal: var(--eh-teal);
+  --color-eh-teal-tint: var(--eh-teal-tint);
+  --color-eh-teal-ink: var(--eh-teal-ink);
+  --color-eh-danger: var(--eh-danger);
+  --color-eh-danger-tint: var(--eh-danger-tint);
+  --color-eh-success: var(--eh-success);
+  --color-eh-success-tint: var(--eh-success-tint);
+}
+
+@theme {
+  /* Corner radii (employer design system). Semantic names rather than
+     Tailwind's sm/md/lg, which the rest of the app already uses with
+     different values:
+       rounded-chip    6px   small tags, bar ends          (brief: radius-sm)
+       rounded-control 8px   buttons, inputs, menus        (brief: radius-md)
+       rounded-card    12px  cards, tables, alerts         (brief: radius-lg)
+       rounded-panel   14px  large panels, dialogs         (brief: radius-xl)
+       rounded-full          status badges, filter pills, avatars, dots
+     Buttons, inputs and cards are never fully rounded. */
+  --radius-card: 12px;
+  --radius-control: 8px;
+  --radius-chip: 6px;
+  --radius-panel: 14px;
+
+  /* Headings: Space Grotesk. A separate name from font-display, which the
+     Pro workspace remaps to Inter for its older components; new employer
+     components use font-heading for page titles and KPI values only. */
+  --font-heading: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
+
+  /* Elevation. Most cards use a border and surface contrast, not shadow:
+     eh-sm is a hairline lift for cards, eh-md for raised items like
+     popovers, eh-lg for dialogs and menus. */
+  --shadow-eh-sm: 0 1px 2px rgb(16 24 40 / 0.04);
+  --shadow-eh-md: 0 4px 12px -2px rgb(16 24 40 / 0.08);
+  --shadow-eh-lg: 0 12px 32px -8px rgb(16 24 40 / 0.18);
+
+  /* Spacing: Tailwind's default 4px scale already is the system scale.
+     Employer components use only 1, 2, 3, 4, 6, 8, 12, 16
+     (4, 8, 12, 16, 24, 32, 48, 64px). */
+
+  /* Type scale. Body copy is 14px; card titles 15/600; page title 24/600;
+     KPI values 30/600. */
+  --text-micro: 11.5px;
+  --text-micro--line-height: 1.4;
+  --text-small: 12.5px;
+  --text-small--line-height: 1.45;
+  --text-ui: 13px;
+  --text-ui--line-height: 1.45;
+  --text-body: 14px;
+  --text-body--line-height: 1.45;
+  --text-card-title: 15px;
+  --text-card-title--line-height: 1.35;
+  --text-card-title--font-weight: 600;
+  --text-page-title: 24px;
+  --text-page-title--line-height: 1.2;
+  --text-page-title--font-weight: 600;
+  --text-page-title--letter-spacing: -0.01em;
+  --text-kpi: 30px;
+  --text-kpi--line-height: 1.1;
+  --text-kpi--font-weight: 600;
+  --text-kpi--letter-spacing: -0.02em;
+  /* Design-system scale (with font-heading): page titles 32/700, section
+     headings 20/600, KPI values 32/700. Card titles stay text-card-title. */
+  --text-display: 32px;
+  --text-display--line-height: 1.15;
+  --text-display--font-weight: 700;
+  --text-display--letter-spacing: -0.02em;
+  --text-section: 20px;
+  --text-section--line-height: 1.3;
+  --text-section--font-weight: 600;
+  --text-section--letter-spacing: -0.01em;
+  --text-metric: 32px;
+  --text-metric--line-height: 1.05;
+  --text-metric--font-weight: 700;
+  --text-metric--letter-spacing: -0.02em;
+}
+
+/* Tabular figures so numbers line up in columns and don't jitter as they
+   change. Use on every number in the employer dashboard. */
+@utility num {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Keyboard focus in the employer workspace: a clear 2px Signal Teal ring
+   instead of the browser's thin default. In the base layer with zero
+   specificity, so a component that styles its own focus (focus-visible:
+   ring-*, outline-none) still wins. Only :focus-visible — mouse clicks
+   don't get a ring. */
+@layer base {
+  :where(.employer-workspace) :where(:focus-visible) {
+    outline: 2px solid var(--eh-teal);
+    outline-offset: 2px;
+  }
+  /* Tailwind v4 leaves buttons on the default arrow cursor. Everything
+     clickable in the employer workspace — buttons, menu items (portalled
+     into the workspace root), selects — shows a pointer; disabled ones
+     don't. Zero specificity, so a component's own cursor-* still wins. */
+  :where(.employer-workspace) :where(button, [role="button"], [role="menuitem"], [role="radio"], select, summary) {
+    cursor: pointer;
+  }
+  :where(.employer-workspace) :where(button:disabled, [aria-disabled="true"]) {
+    cursor: not-allowed;
+  }
+}
+
 @theme {
   --color-mist: #F5F6F4;
   --color-ink: #20242B;
@@ -1076,6 +1206,29 @@ backdrop-filter:blur(6px);
   --pro-surface: var(--ew-surface-solid);
   --pro-accent: #f2a93b;
   --pro-border: var(--ew-border-subtle);
+
+  /* Design-system tokens (see the @theme inline block at the top). Brand
+     values; the dark theme below overrides them. */
+  --eh-bg: #f5f6f4;
+  --eh-surface: #ffffff;
+  --eh-surface-2: #f9faf8;
+  --eh-ink: #20242b;
+  --eh-ink-2: #3b404a;
+  --eh-muted: #6b7078;
+  --eh-line: #e4e6e2;
+  --eh-navy: #1e3a5f;
+  --eh-marigold: #f2a93b;
+  --eh-marigold-strong: #dd9424;
+  --eh-marigold-tint: #fef4e3;
+  --eh-marigold-ink: #8a5300;
+  --eh-teal: #1f8073;
+  --eh-teal-tint: #e6f2f0;
+  --eh-teal-ink: #155f55;
+  --eh-danger: #d9553a;
+  --eh-danger-tint: #fbece8;
+  --eh-success: #1f8073;
+  --eh-success-tint: #e6f2f0;
+
   background-color: var(--ew-bg);
   color: var(--ew-text);
   transition: background-color 0.3s ease, color 0.3s ease;
@@ -1102,6 +1255,26 @@ backdrop-filter:blur(6px);
   --pro-chart-tick: rgb(244 244 245 / 0.45);
   --pro-chart-grid: rgb(244 244 245 / 0.08);
   --pro-chart-cursor: rgb(244 244 245 / 0.06);
+
+  --eh-bg: #12151c;
+  --eh-surface: #1a1f2a;
+  --eh-surface-2: #20252f;
+  --eh-ink: #f5f6f4;
+  --eh-ink-2: #c7cbd3;
+  --eh-muted: #9aa1ac;
+  --eh-line: #2a303b;
+  --eh-navy: #8fb0d6;
+  --eh-marigold: #f2a93b;
+  --eh-marigold-strong: #f5b95e;
+  --eh-marigold-tint: #3a2a12;
+  --eh-marigold-ink: #f6c27a;
+  --eh-teal: #3db5a5;
+  --eh-teal-tint: #10302d;
+  --eh-teal-ink: #7ed9cf;
+  --eh-danger: #f07a5f;
+  --eh-danger-tint: #3a1e18;
+  --eh-success: #3db5a5;
+  --eh-success-tint: #10302d;
 }
 
 .employer-ws-surface {
@@ -1437,6 +1610,10 @@ backdrop-filter:blur(6px);
   --pro-accent-ink: #20242b;
   --pro-border: rgb(32 36 43 / 0.08);
   --pro-shadow: 0 1px 2px rgb(32 36 43 / 0.04), 0 8px 24px -8px rgb(32 36 43 / 0.08);
+  /* One corner radius for every Pro surface (cards, tiles, empty states).
+     12px, matching --radius-card in the employer design system. Was
+     1.75rem, then 1.25rem; both read as soft/consumer on a working tool. */
+  --pro-radius: 12px;
 
   --font-display: var(--font-inter), Inter, sans-serif;
   --font-body: var(--font-inter), Inter, sans-serif;
@@ -1486,7 +1663,7 @@ backdrop-filter:blur(6px);
 }
 
 .employer-pro-workspace .pro-card {
-  border-radius: 1.75rem;
+  border-radius: var(--pro-radius);
   border: 1px solid var(--pro-border);
   background-color: var(--pro-surface);
   box-shadow: var(--pro-shadow);
@@ -1559,10 +1736,18 @@ backdrop-filter:blur(6px);
   color: #20242b !important;
 }
 
-.employer-pro-workspace .font-display,
-.employer-pro-workspace h1 {
-  font-weight: 900;
-  letter-spacing: -0.045em;
+/* Default weight and tracking for Pro headings. Wrapped in :where() so it
+   has zero specificity: a component's own font-weight / tracking utility
+   always wins. It used to be a plain selector forcing 900 and -0.045em,
+   which beat every Tailwind weight class and made every Pro heading
+   heavier than its component asked for. */
+/* In the base layer: an unlayered rule beats every Tailwind utility no
+   matter its specificity, which silently overrode text-display's 700. */
+@layer base {
+  :where(.employer-pro-workspace) :where(.font-display, h1) {
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
 }
 
 .employer-pro-workspace .employer-pro-navbar {
@@ -1628,6 +1813,13 @@ backdrop-filter:blur(6px);
   background-color: var(--pro-surface);
   border-color: var(--pro-border);
   box-shadow: var(--pro-shadow);
+}
+
+/* Pro shared surfaces — and the legacy white cards restyled above — follow
+   the design system's 12px card radius. */
+.employer-workspace[data-employer-plan="pro"] .employer-ws-surface,
+.employer-workspace[data-employer-plan="pro"] main .rounded-2xl.bg-white {
+  border-radius: var(--radius-card);
 }
 
 .employer-workspace[data-employer-plan="pro"] main .rounded-2xl.bg-white:hover,

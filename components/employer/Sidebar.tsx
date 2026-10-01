@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LogOut, PanelLeft, Sparkles, Lock } from "lucide-react";
+import { LogOut, PanelLeft } from "lucide-react";
 import { useEmployerShell } from "@/components/employer/EmployerShellContext";
 import { useRailTooltip } from "@/components/workspaces/useRailTooltip";
 import { useSignOut } from "@/components/ui/useSignOut";
@@ -13,6 +13,18 @@ import {
   type NavCounts,
   type EmployerNavItem,
 } from "@/lib/employer/nav";
+
+/**
+ * How a nav count reads. "alert" items (applicants waiting for review,
+ * unread messages) are something to act on: a red pill, and only when
+ * there's something there. "count" items (active jobs) are just a number:
+ * plain muted text, never a coloured badge.
+ */
+function badgeKind(item: EmployerNavItem): "alert" | "count" | null {
+  if (item.badgeKey === "needsReview" || item.badgeKey === "unreadMessages") return "alert";
+  if (item.badgeKey === "activeJobs") return "count";
+  return null;
+}
 
 function NavLink({
   item,
@@ -28,65 +40,114 @@ function NavLink({
   isPro?: boolean;
 }) {
   const Icon = item.icon;
+  const kind = badgeKind(item);
+  const showBadge = badge !== undefined && badge > 0 && kind !== null;
   const { anchorProps, tooltip } = useRailTooltip(
     badge ? `${item.label} (${badge})` : item.label,
     !expanded
   );
+
+  // Pro: marigold tint with a 3px marigold rule on the sidebar's left edge,
+  // not a solid orange fill. The rule sits in the nav's side padding (12px
+  // expanded, 10px when the 40px item is centred in the 60px rail).
+  const proActive = `bg-eh-marigold-tint font-semibold text-eh-ink before:absolute before:top-2 before:bottom-2 before:w-[3px] before:rounded-r-[3px] before:bg-eh-marigold before:content-[''] ${
+    expanded ? "before:-left-3" : "before:-left-[10px]"
+  }`;
 
   return (
     <>
       <Link
         href={item.href}
         title={expanded ? undefined : item.label}
+        aria-current={isActive ? "page" : undefined}
         {...anchorProps}
-        className={`group relative flex items-center rounded-xl transition-all duration-200 ${
-          expanded ? "gap-3 px-3 py-2.5" : "h-10 w-10 justify-center"
+        className={`group relative flex items-center transition-colors duration-150 ${
+          isPro ? "rounded-control" : "rounded-xl"
+        } ${
+          expanded
+            ? isPro
+              ? "min-h-10 gap-3 px-3 py-2.5"
+              : "gap-3 px-3 py-2"
+            : isPro
+              ? "h-11 w-11 justify-center"
+              : "h-10 w-10 justify-center"
         } ${
           isActive
             ? isPro
-              ? "bg-marigold text-ink shadow-sm shadow-marigold/25"
+              ? proActive
               : "bg-teal text-white shadow-lg shadow-teal/30"
             : isPro
-              ? "text-ink/50 hover:bg-ink/[0.04] hover:text-ink"
+              ? "font-medium text-eh-ink-2 hover:bg-eh-surface-2 hover:text-eh-ink"
               : "text-mist/55 hover:bg-white/8 hover:text-mist"
         }`}
       >
-        <Icon
-          className={`h-[18px] w-[18px] shrink-0 transition-transform duration-200 ${
-            isActive ? "scale-105" : "group-hover:scale-105"
-          }`}
-          strokeWidth={2}
-        />
-        {expanded && <span className="min-w-0 flex-1 truncate text-sm font-medium">{item.label}</span>}
-        {badge !== undefined && badge > 0 && (
-          <span
-            className={`flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[10px] font-bold ${
-              isActive
-                ? isPro
-                  ? "bg-ink/10 text-ink"
-                  : "bg-white/20 text-white"
-                : isPro
-                  ? "bg-marigold text-ink"
-                  : "bg-teal/20 text-teal"
-            } ${expanded ? "" : "absolute -right-0.5 -top-0.5 h-4 min-w-4 text-[9px]"}`}
-          >
-            {badge > 99 ? "99+" : badge}
-          </span>
-        )}
+        <Icon className="h-[18px] w-[18px] shrink-0" strokeWidth={isActive ? 2.25 : 2} aria-hidden="true" />
+        {expanded && <span className="min-w-0 flex-1 truncate text-sm">{item.label}</span>}
+        {showBadge &&
+          (kind === "alert" ? (
+            <span
+              className={`num flex items-center justify-center rounded-full bg-ember font-semibold text-white ${
+                expanded ? "h-[18px] min-w-[18px] px-1 text-[11px]" : "absolute -right-0.5 -top-0.5 h-4 min-w-4 px-1 text-[9px]"
+              }`}
+            >
+              {badge > 99 ? "99+" : badge}
+            </span>
+          ) : (
+            expanded && (
+              <span className={`num text-xs ${isPro ? "text-eh-muted" : "text-mist/45"}`}>{badge}</span>
+            )
+          ))}
       </Link>
       {tooltip}
     </>
   );
 }
 
+/**
+ * Free only: how many of the plan's active job slots are in use. Counts jobs
+ * live or awaiting review — the same number the Free cap enforces
+ * (getActiveJobCount) — so it can't say "2 of 3" while posting is blocked.
+ * Pro has no job limit, so it has no card.
+ */
+function PlanUsageCard({ used, limit }: { used: number; limit: number }) {
+  const ratio = Math.min(1, used / limit);
+  const full = used >= limit;
+  return (
+    <Link
+      href="/employer/billing"
+      className="block rounded-card border border-white/10 px-3 py-3 transition hover:border-white/20 hover:bg-white/[0.04]"
+    >
+      <span className="block text-sm font-semibold text-mist">Free plan</span>
+      <span className="num mt-0.5 block text-xs text-mist/55">
+        {used} of {limit} active job slots used
+      </span>
+      <span
+        className="mt-2 block h-1 overflow-hidden rounded-full bg-white/10"
+        role="meter"
+        aria-label="Active job slots used"
+        aria-valuemin={0}
+        aria-valuemax={limit}
+        aria-valuenow={used}
+      >
+        <span
+          className={`block h-full rounded-full ${full ? "bg-marigold" : "bg-teal"}`}
+          style={{ width: `${Math.round(ratio * 100)}%` }}
+        />
+      </span>
+    </Link>
+  );
+}
 export default function Sidebar({
   navCounts,
   plan = "FREE",
   collaborativeHiringEnabled = false,
+  jobSlots = null,
 }: {
   navCounts: NavCounts;
   plan?: "FREE" | "PRO";
   collaborativeHiringEnabled?: boolean;
+  /** Free plan's job-slot usage; null on Pro, which has no job limit. */
+  jobSlots?: { used: number; limit: number } | null;
 }) {
   const pathname = usePathname();
   const { expanded, toggleExpanded } = useEmployerShell();
@@ -175,13 +236,19 @@ export default function Sidebar({
       )}
 
       <nav
-        className={`flex flex-1 flex-col overflow-y-auto overflow-x-hidden py-3 ${
-          expanded ? "gap-4 px-3" : "gap-2 items-center px-2"
+        className={`flex flex-1 flex-col overflow-y-auto overflow-x-hidden ${
+          isPro
+            ? expanded
+              ? "gap-6 px-3 py-5"
+              : "items-center gap-4 px-2 py-5"
+            : expanded
+              ? "gap-4 px-3 py-3"
+              : "items-center gap-2 px-2 py-3"
         }`}
       >
         {visibleEmployerNav(collaborativeHiringEnabled).map((group, groupIndex) => {
           const items = (
-            <div className={`flex flex-col gap-1 ${expanded ? "" : "items-center"}`}>
+            <div className={`flex flex-col ${isPro ? "gap-1.5" : "gap-1"} ${expanded ? "" : "items-center"}`}>
               {group.items.map((item) => (
                 <NavLink
                   key={item.href}
@@ -204,8 +271,8 @@ export default function Sidebar({
               {expanded ? (
                 <p
                   aria-hidden="true"
-                  className={`mb-1.5 px-3 text-[10px] font-bold uppercase tracking-wider ${
-                    isPro ? "text-ink/35" : "text-mist/35"
+                  className={`px-3 ${
+                    isPro ? "mb-2 text-small font-medium text-eh-muted" : "mb-1 text-[10px] font-bold uppercase tracking-wider text-mist/35"
                   }`}
                 >
                   {group.label}
@@ -214,7 +281,7 @@ export default function Sidebar({
                 groupIndex > 0 && (
                   <div
                     aria-hidden="true"
-                    className={`mb-2 h-px w-8 ${isPro ? "bg-ink/10" : "bg-white/10"}`}
+                    className={`h-px w-8 ${isPro ? "mb-4 bg-ink/10" : "mb-2 bg-white/10"}`}
                   />
                 )
               )}
@@ -224,62 +291,32 @@ export default function Sidebar({
         })}
       </nav>
 
-      <div className={`shrink-0 py-2 ${expanded ? "px-3" : "flex justify-center px-2"}`}>
-        <Link
-          href="/employer/easy-ai"
-          title={expanded ? undefined : isPro ? "Easy AI" : "Easy AI — Employer Pro"}
-          className={`group relative flex items-center rounded-xl transition-colors ${
-            expanded ? "gap-3 border px-3 py-2.5" : "h-10 w-10 justify-center"
-          } ${
-            isPro
-              ? `text-[var(--pro-accent-ink,#9a5b12)] ${
-                  expanded ? "border-marigold/20" : ""
-                } ${pathname.startsWith("/employer/easy-ai") ? "bg-marigold/20" : "bg-marigold/5 hover:bg-marigold/10"}`
-              : `text-mist/35 ${expanded ? "border-white/8" : ""} ${
-                  pathname.startsWith("/employer/easy-ai")
-                    ? "bg-white/8 text-mist/60"
-                    : "hover:bg-white/8 hover:text-mist/60"
-                }`
-          }`}
-        >
-          {isPro ? (
-            <Sparkles className="h-[18px] w-[18px] shrink-0" strokeWidth={2} />
-          ) : (
-            <Lock className="h-[18px] w-[18px] shrink-0" strokeWidth={2} />
-          )}
-          {expanded && (
-            <span className="flex min-w-0 flex-1 flex-col">
-              <span className="flex items-center gap-1.5 truncate text-sm font-semibold">
-                Easy AI
-                {!isPro && (
-                  <span className="shrink-0 rounded-full bg-white/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-mist/60">
-                    Pro
-                  </span>
-                )}
-              </span>
-              <span className={`truncate text-[11px] font-medium ${isPro ? "text-ink/40" : "text-mist/30"}`}>
-                Your hiring copilot
-              </span>
-            </span>
-          )}
-          {!expanded && (
-            <span className="pointer-events-none absolute left-full z-50 ml-3 whitespace-nowrap rounded-lg bg-ink px-2.5 py-1.5 text-xs font-medium text-mist opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100">
-              {isPro ? "Easy AI" : "Easy AI — Employer Pro"}
-            </span>
-          )}
-        </Link>
-      </div>
+      {!isPro && expanded && jobSlots && (
+        <div className="shrink-0 px-3 pb-2">
+          <PlanUsageCard used={jobSlots.used} limit={jobSlots.limit} />
+        </div>
+      )}
 
       <div
-        className={`shrink-0 py-3 ${isPro ? "border-t border-ink/[0.06]" : "border-t border-white/5"} ${expanded ? "px-3" : "flex justify-center px-2"}`}
+        className={`shrink-0 ${isPro ? "border-t border-ink/[0.06] py-4" : "border-t border-white/5 py-3"} ${expanded ? "px-3" : "flex justify-center px-2"}`}
       >
         <button
           type="button"
           onClick={signOut}
           title={expanded ? undefined : "Log out"}
-          className={`group relative flex w-full items-center rounded-xl transition hover:bg-ink/[0.04] hover:text-ink ${
-            isPro ? "text-ink/45" : "text-mist/50"
-          } ${expanded ? "gap-3 px-3 py-2.5" : "h-10 w-10 justify-center"}`}
+          className={`group relative flex w-full items-center transition ${
+            isPro
+              ? "rounded-control text-eh-muted hover:bg-eh-surface-2 hover:text-eh-ink"
+              : "rounded-xl text-mist/50 hover:bg-ink/[0.04] hover:text-ink"
+          } ${
+            expanded
+              ? isPro
+                ? "min-h-10 gap-3 px-3 py-2.5"
+                : "gap-3 px-3 py-2"
+              : isPro
+                ? "h-11 w-11 justify-center"
+                : "h-10 w-10 justify-center"
+          }`}
         >
           <LogOut className="h-[18px] w-[18px] shrink-0" strokeWidth={2} />
           {expanded && <span className="text-sm font-medium">Log out</span>}

@@ -32,7 +32,14 @@ async function submitForReview(jobId: string) {
 }
 
 /** Client half of /employer/jobs/new. `initialData` is the company's hiring-defaults pre-fill, loaded by the server page. */
-export default function NewJobForm({ initialData }: { initialData?: Partial<JobFormData> }) {
+export default function NewJobForm({
+  initialData,
+  canPublishInstantly = false,
+}: {
+  initialData?: Partial<JobFormData>;
+  /** Verified Employer Pro: submitting publishes live instead of going to review. */
+  canPublishInstantly?: boolean;
+}) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -56,10 +63,14 @@ export default function NewJobForm({ initialData }: { initialData?: Partial<JobF
   return (
     <JobFormPageShell
       title="Post a new job"
-      description="Save a draft anytime, or submit for review when you're ready to go live."
+      description={
+        canPublishInstantly
+          ? "Save a draft anytime, or publish when you're ready — it goes live right away."
+          : "Save a draft anytime, or submit for review when you're ready to go live."
+      }
       footer={error ? <p className="mt-4 text-sm text-ember">{error}</p> : undefined}
     >
-      <JobForm initialData={initialData} loading={loading} onSubmit={handleSubmit} />
+      <JobForm initialData={initialData} loading={loading} onSubmit={handleSubmit} canPublishInstantly={canPublishInstantly} />
     </JobFormPageShell>
   );
 }

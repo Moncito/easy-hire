@@ -31,7 +31,8 @@ type IdVerificationStatus = "PENDING" | "APPROVED" | "REJECTED" | null;
 type Props = {
   initialData: FormData;
   profileUpdatedAt?: string;
-  profileId?: string;
+  /** Null unless the *saved* visibility is PUBLIC — /seekers/[id] 404s otherwise. */
+  publicProfileHref: string | null;
   initialBucket?: ProfileBucketId;
   idVerificationStatus?: IdVerificationStatus;
   heroCard: React.ReactNode;
@@ -72,7 +73,7 @@ function normalizeFormData(data: Partial<FormData>): FormData {
 export default function SeekerProfileEditor({
   initialData,
   profileUpdatedAt,
-  profileId,
+  publicProfileHref,
   initialBucket,
   idVerificationStatus = null,
   heroCard,
@@ -298,7 +299,7 @@ export default function SeekerProfileEditor({
         return (
           <VisibilityBucket
             visibility={form.visibility}
-            profileId={profileId}
+            publicProfileHref={publicProfileHref}
             onChange={updateField}
           />
         );
@@ -439,7 +440,11 @@ export default function SeekerProfileEditor({
               </button>
               {previewOpen && (
                 <div className="mt-3">
-                  <SeekerEmployerPreview data={previewData} profileId={profileId} />
+                  <SeekerEmployerPreview
+                    data={previewData}
+                    publicProfileHref={publicProfileHref}
+                    onManageVisibility={() => setActiveBucket("visibility")}
+                  />
                 </div>
               )}
             </div>
@@ -448,7 +453,11 @@ export default function SeekerProfileEditor({
       </div>
 
       <aside className="hidden animate-slide-in-right space-y-4 xl:block">
-        <SeekerEmployerPreview data={previewData} profileId={profileId} />
+        <SeekerEmployerPreview
+          data={previewData}
+          publicProfileHref={publicProfileHref}
+          onManageVisibility={() => setActiveBucket("visibility")}
+        />
         <ProfileVisibilityCard visibility={form.visibility} onManage={() => setActiveBucket("visibility")} />
         <ProfileQuickActionsCard onSelectBucket={setActiveBucket} />
         {nextIncompleteBucket ? (

@@ -4,9 +4,7 @@ import { requireEmployerPageContext } from "@/lib/employer-session";
 import { listTalentLists } from "@/lib/employer/talent-lists";
 import { listSavedSeekers } from "@/lib/employer/talent";
 import EmployerPageHeader from "@/components/employer/ui/EmployerPageHeader";
-import ProPageHeader from "@/components/employer/pro-dashboard/ProPageHeader";
-import ProBadge from "@/components/employer/pro/ProBadge";
-import ProButton from "@/components/employer/pro/ProButton";
+import { Button, PageHeader } from "@/components/employer/system";
 import TalentListsBoard, {
   type TalentListSummary,
   type SavedBookmark,
@@ -70,32 +68,24 @@ export default async function TalentListsPage() {
 
   return (
     <>
-      <ProPageHeader
+      <PageHeader
+        className="mb-6"
         title="Saved lists"
         description="Bookmarks from Talent, plus named shortlists for a role or hiring round."
-        stats={
-          <span className="inline-flex items-center gap-2">
-            <ProBadge />
-            <span>
-              <span className="font-data font-semibold text-ink">{initialBookmarks.length}</span>{" "}
-              {initialBookmarks.length === 1 ? "bookmark" : "bookmarks"}
-              {" · "}
-              <span className="font-data font-semibold text-ink">{initialLists.length}</span>{" "}
-              {initialLists.length === 1 ? "list" : "lists"}
-            </span>
+        meta={
+          <span>
+            <b className="num font-semibold text-eh-ink">{initialBookmarks.length}</b>{" "}
+            {initialBookmarks.length === 1 ? "bookmark" : "bookmarks"} ·{" "}
+            <b className="num font-semibold text-eh-ink">{initialLists.length}</b>{" "}
+            {initialLists.length === 1 ? "list" : "lists"}
           </span>
         }
         actions={
-          <ProButton
-            href="/employer/talent"
-            variant="secondary"
-            icon={<ArrowLeft className="h-4 w-4" strokeWidth={2.25} />}
-          >
+          <Button href="/employer/talent" icon={<ArrowLeft />}>
             Talent search
-          </ProButton>
+          </Button>
         }
       />
-
       <TalentListsBoard initialLists={initialLists} initialBookmarks={initialBookmarks} />
     </>
   );

@@ -1,184 +1,291 @@
+"use client";
+
+import { useState, useTransition } from "react";
 import Link from "next/link";
-import { ArrowRight, Plus } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ChevronRight, Plus } from "lucide-react";
+import { toast } from "sonner";
+import {
+  Button,
+  Card,
+  CardHeader,
+  DropdownMenu,
+  EmptyState,
+  PipelineMini,
+  StackedRow,
+  StatusBadge,
+  Table,
+  Td,
+  Th,
+  Tr,
+} from "@/components/employer/system";
+import EmployerConfirmModal from "@/components/employer/EmployerConfirmModal";
+import { patchJobStatus } from "@/lib/client/jobs";
+import type { RoleRow } from "@/lib/employer/dashboard-roles";
 
-import type { EmployerAnalytics } from "@/lib/employer-analytics";
-import { canViewPublicListing, getJobPrimaryAction, jobStatusDisplay } from "@/lib/employer-jobs";
-import ProButton from "@/components/employer/pro/ProButton";
-import ProEmptyState from "@/components/employer/pro/ProEmptyState";
+const CONVERSION_HINT = "Fewer than 10 views — not enough to be meaningful";
 
-type Job = EmployerAnalytics["activeJobs"][number];
-
-type Props = {
-  jobs: Job[];
-  companyVerified: boolean;
-  showPostAnother?: boolean;
-};
-
-function splitTitle(title: string) {
-  const pipe = title.indexOf(" | ");
-  return pipe === -1 ? title : title.slice(0, pipe);
+async function shareListing(row: RoleRow) {
+  const url = `${window.location.origin}/jobs/${row.id}`;
+  try {
+    if (navigator.share) {
+      await navigator.share({ title: row.title, url });
+      return;
+    }
+    await navigator.clipboard.writeText(url);
+    toast.success("Listing link copied");
+  } catch (error) {
+    // Dismissing the native share sheet rejects with AbortError — not a failure.
+    if (error instanceof DOMException && error.name === "AbortError") return;
+    toast.error("Couldn't share. Copy the link from the listing page instead.");
+  }
 }
 
-function conversion(views: number, applicants: number) {
-  return views > 0 ? Math.round((applicants / views) * 100) : null;
-}
-
-export default function ProJobsTable({ jobs, companyVerified, showPostAnother = false }: Props) {
-  const sorted = [...jobs].sort(
-    (a, b) => b.applicantCount - a.applicantCount || b.viewCount - a.viewCount
+function StatusChip({ status }: { status: RoleRow["status"] }) {
+  if (!status) return null;
+  if (status.kind === "no-applicants") return <StatusBadge tone="warning">No applicants</StatusBadge>;
+  // The shared two-level rule: marigold from 3 days, Ember past 14. A
+  // fresh application is still worth a look, so it keeps a neutral navy pill.
+  const tone = status.severity === "critical" ? "danger" : status.severity === "attention" ? "warning" : "info";
+  const waited = status.oldestDays !== null && status.severity !== "none" ? ` · ${status.oldestDays}d` : "";
+  return (
+    <StatusBadge tone={tone} className="num">
+      {status.count} needs review{waited}
+    </StatusBadge>
   );
+}
+
+function RolePipeline({ row }: { row: RoleRow }) {
+  const { applied, shortlisted, interview, hired } = row.pipeline;
+  return (
+    <PipelineMini
+      stages={[
+        { label: "Applied", value: applied, tone: "muted" },
+        { label: "Shortlisted", value: shortlisted, tone: "teal-soft" },
+        { label: "Interview", value: interview, tone: "teal" },
+        { label: "Hired", value: hired, tone: "teal-strong" },
+      ]}
+    />
+  );
+}
+
+function Hired({ row }: { row: RoleRow }) {
+  if (row.filled) return <StatusBadge tone="success">Filled</StatusBadge>;
+  return (
+    <span className="num text-eh-muted">
+      {row.hired} of {row.target}
+    </span>
+  );
+}
+
+function Conversion({ row }: { row: RoleRow }) {
+  if (row.conversion === null) {
+    return (
+      <span
+        className="cursor-help border-b border-dotted border-eh-muted text-eh-muted"
+        title={CONVERSION_HINT}
+        aria-label={`No rate: ${CONVERSION_HINT}`}
+      >
+        —
+      </span>
+    );
+  }
+  return <>{row.conversion}%</>;
+}
+
+function RowActions({ row, onClose }: { row: RoleRow; onClose: (row: RoleRow) => void }) {
+  const variant = row.primary.kind === "review" ? "primary" : "secondary";
+  return (
+    <div className="flex items-center justify-end gap-1">
+      {row.primary.kind === "share" ? (
+        <Button size="sm" variant={variant} onClick={() => void shareListing(row)}>
+          {row.primary.label}
+        </Button>
+      ) : (
+        <Button size="sm" variant={variant} href={row.primary.href}>
+          {row.primary.label}
+        </Button>
+      )}
+      <DropdownMenu
+        label={`More actions for ${row.title}`}
+        items={[
+          { label: "Share listing", onSelect: () => void shareListing(row), hidden: !row.shareable },
+          { label: "Edit listing", href: `/employer/jobs/${row.id}/edit` },
+          { label: "Close listing", onSelect: () => onClose(row), tone: "danger" },
+        ]}
+      />
+    </div>
+  );
+}
+
+/**
+ * Active roles. A status pill appears only when a role needs something
+ * from you; each row shows where its applicants currently sit, and one
+ * primary action (Review, Share listing, or View applicants), with Share,
+ * Edit and Close in the "⋯" menu. Below 1280px the table becomes a stacked
+ * list instead of a sideways-scrolling grid.
+ */
+export default function ProJobsTable({ rows }: { rows: RoleRow[] }) {
+  const router = useRouter();
+  const [, startTransition] = useTransition();
+  const [closing, setClosing] = useState<RoleRow | null>(null);
+  const [closingBusy, setClosingBusy] = useState(false);
+  const [closed, setClosed] = useState<Set<string>>(new Set());
+
+  const visible = rows.filter((r) => !closed.has(r.id));
+
+  async function confirmClose() {
+    if (!closing) return;
+    setClosingBusy(true);
+    const result = await patchJobStatus(closing.id, "CLOSED");
+    setClosingBusy(false);
+    if (result.ok) {
+      setClosed((prev) => new Set(prev).add(closing.id));
+      toast.success("Listing closed");
+      setClosing(null);
+      startTransition(() => router.refresh());
+    } else {
+      toast.error(result.error ?? "Couldn't close this listing");
+    }
+  }
 
   return (
-    <section aria-labelledby="pro-jobs-heading">
-      <div className="mb-4 flex items-end justify-between gap-3">
-        <div>
-          <h2 id="pro-jobs-heading" className="font-display text-xl font-black tracking-tighter text-ink">
-            Active roles
-          </h2>
-          <p className="mt-0.5 text-sm text-ink/45">Review, share, or refresh each listing from here.</p>
-        </div>
-        <Link
-          href="/employer/jobs"
-          className="inline-flex items-center gap-1 text-sm font-semibold text-ink/55 transition hover:text-ink"
-        >
-          All jobs
-          <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
-        </Link>
-      </div>
+    <Card aria-labelledby="pro-roles-heading" padded={false}>
+      <CardHeader
+        id="pro-roles-heading"
+        className="px-5 pb-4 pt-5 sm:px-6"
+        title="Active roles"
+        description={
+          <span className="num">
+            {visible.length} {visible.length === 1 ? "listing" : "listings"}
+          </span>
+        }
+        action={
+          <Link href="/employer/jobs" className="inline-flex items-center gap-1 text-ui text-eh-muted transition hover:text-eh-ink">
+            All jobs
+            <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
+          </Link>
+        }
+      />
 
-      {sorted.length === 0 ? (
-        <ProEmptyState
-          compact
-          title="No active roles"
-          description="Post a listing and this table fills with views, applicants, and conversion."
-          action={
-            <ProButton href="/employer/jobs/new" variant="primary">
-              Post a job
-            </ProButton>
-          }
-        />
+      {visible.length === 0 ? (
+        <div className="border-t border-eh-line">
+          <EmptyState
+            compact
+            icon={<Plus />}
+            title="No active roles"
+            description="Post a listing and it shows up here with its views, applicants and pipeline."
+            action={
+              <Button href="/employer/jobs/new" variant="primary" size="sm" icon={<Plus />}>
+                Post a job
+              </Button>
+            }
+          />
+        </div>
       ) : (
-        <div className="pro-card overflow-hidden !p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[720px] text-left text-sm">
+        <>
+          <div className="hidden xl:block">
+            <Table minWidth={880} caption="Active roles">
               <thead>
-                <tr className="border-b border-ink/[0.06] text-xs font-bold uppercase tracking-wider text-ink/40">
-                  <th className="px-5 py-3 font-bold">Role</th>
-                  <th className="px-3 py-3 text-right font-bold">Views</th>
-                  <th className="px-3 py-3 text-right font-bold">Applicants</th>
-                  <th className="px-3 py-3 text-right font-bold">Hired</th>
-                  <th className="px-3 py-3 text-right font-bold">Conv.</th>
-                  <th className="px-5 py-3 text-right font-bold">Actions</th>
+                <tr>
+                  <Th>Role</Th>
+                  <Th>Status</Th>
+                  <Th>Pipeline</Th>
+                  <Th align="right">Views</Th>
+                  <Th align="right">Applicants</Th>
+                  <Th align="right">Hired</Th>
+                  <Th>
+                    <span className="sr-only">Actions</span>
+                  </Th>
                 </tr>
               </thead>
               <tbody>
-                {sorted.map((job) => {
-                  const status = jobStatusDisplay(job, companyVerified);
-                  const action = getJobPrimaryAction(
-                    { id: job.id, status: job.status, unreviewedCount: job.needsAttention ? 1 : 0 },
-                    companyVerified
-                  );
-                  const shareable = canViewPublicListing(job, companyVerified);
-                  const conv = conversion(job.viewCount, job.applicantCount);
-                  const quiet = job.applicantCount === 0;
-
-                  return (
-                    <tr key={job.id} className="border-b border-ink/[0.04] last:border-0">
-                      <td className="px-5 py-3.5">
-                        <Link
-                          href={action.href}
-                          className="group block max-w-[280px]"
-                          title={job.title}
-                        >
-                          <span className="line-clamp-1 font-semibold text-ink transition group-hover:text-[#9A5B12]">
-                            {splitTitle(job.title)}
-                          </span>
-                        </Link>
-                        <p className="mt-0.5 line-clamp-1 text-xs text-ink/40">
-                          {job.location} · {job.remoteType.replaceAll("_", " ").toLowerCase()}
-                        </p>
-                        <span className="mt-1 inline-block rounded-full bg-ink/[0.06] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-ink/55">
-                          {status.label}
-                        </span>
-                        {quiet && (
-                          <p className="mt-1.5 text-xs text-ink/45">
-                            {job.viewCount === 0 ? (
-                              <>
-                                Not getting seen —{" "}
-                                {shareable ? (
-                                  <Link href={`/jobs/${job.id}`} className="font-semibold text-[#9A5B12] hover:underline">
-                                    share listing
-                                  </Link>
-                                ) : (
-                                  <Link
-                                    href={`/employer/jobs/${job.id}/edit`}
-                                    className="font-semibold text-[#9A5B12] hover:underline"
-                                  >
-                                    refresh listing
-                                  </Link>
-                                )}
-                              </>
-                            ) : (
-                              <>
-                                No applicants yet —{" "}
-                                {shareable ? (
-                                  <Link href={`/jobs/${job.id}`} className="font-semibold text-[#9A5B12] hover:underline">
-                                    share listing
-                                  </Link>
-                                ) : (
-                                  <Link
-                                    href={`/employer/jobs/${job.id}/edit`}
-                                    className="font-semibold text-[#9A5B12] hover:underline"
-                                  >
-                                    polish listing
-                                  </Link>
-                                )}
-                              </>
-                            )}
-                          </p>
-                        )}
-                      </td>
-                      <td className="px-3 py-3.5 text-right font-data font-bold text-ink">{job.viewCount}</td>
-                      <td className="px-3 py-3.5 text-right font-data font-bold text-ink">{job.applicantCount}</td>
-                      <td className="px-3 py-3.5 text-right font-data text-sm text-ink/70">
-                        {job.hiredCount}/{job.targetHireCount}
-                      </td>
-                      <td className="px-3 py-3.5 text-right">
-                        {conv === null ? (
-                          <span className="text-xs text-ink/30">—</span>
-                        ) : (
-                          <span className="font-data text-sm font-bold text-ink">{conv}%</span>
-                        )}
-                      </td>
-                      <td className="px-5 py-3.5 text-right">
-                        <div className="flex flex-col items-end gap-1">
-                          <Link href={action.href} className="text-xs font-semibold text-[#9A5B12] hover:underline">
-                            {action.label}
-                          </Link>
-                          {shareable && (
-                            <Link href={`/jobs/${job.id}`} className="text-xs font-medium text-ink/45 hover:text-ink">
-                              Share listing
-                            </Link>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
+                {visible.map((row) => (
+                  <Tr key={row.id}>
+                    <Td className="min-w-[220px]">
+                      <p className="font-semibold text-eh-ink">{row.title}</p>
+                      <p className="text-small text-eh-muted">{row.meta}</p>
+                    </Td>
+                    <Td>
+                      <StatusChip status={row.status} />
+                    </Td>
+                    <Td className="w-[140px]">
+                      <RolePipeline row={row} />
+                    </Td>
+                    <Td numeric>
+                      {row.views}
+                      {row.conversion !== null && (
+                        <span className="block text-micro text-eh-muted">{row.conversion}% apply</span>
+                      )}
+                    </Td>
+                    <Td numeric className={row.applicants === 0 ? "text-eh-muted" : undefined}>
+                      {row.applicants}
+                    </Td>
+                    <Td numeric>
+                      <Hired row={row} />
+                    </Td>
+                    <Td>
+                      <RowActions row={row} onClose={setClosing} />
+                    </Td>
+                  </Tr>
+                ))}
               </tbody>
-            </table>
+            </Table>
           </div>
-          {showPostAnother && (
-            <Link
-              href="/employer/jobs/new"
-              className="flex items-center justify-center gap-2 border-t border-ink/[0.06] px-5 py-3.5 text-sm font-semibold text-ink/60 transition hover:bg-ink/[0.02] hover:text-ink"
-            >
-              <Plus className="h-4 w-4" strokeWidth={2.25} aria-hidden="true" />
-              Post another role
-            </Link>
-          )}
-        </div>
+
+          <ul className="border-t border-eh-line xl:hidden" aria-label="Active roles">
+            {visible.map((row) => (
+              <StackedRow
+                key={row.id}
+                title={row.title}
+                meta={row.meta}
+                aside={<StatusChip status={row.status} />}
+                actions={<RowActions row={row} onClose={setClosing} />}
+              >
+                <RolePipeline row={row} />
+                <dl className="mt-3 grid grid-cols-4 gap-2 text-small">
+                  <div>
+                    <dt className="text-eh-muted">Views</dt>
+                    <dd className="num font-semibold text-eh-ink">{row.views}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-eh-muted">Applicants</dt>
+                    <dd className="num font-semibold text-eh-ink">{row.applicants}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-eh-muted">Hired</dt>
+                    <dd className="font-semibold text-eh-ink">
+                      <Hired row={row} />
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-eh-muted">Conversion</dt>
+                    <dd className="num font-semibold text-eh-ink">
+                      <Conversion row={row} />
+                    </dd>
+                  </div>
+                </dl>
+              </StackedRow>
+            ))}
+          </ul>
+
+          <p className="border-t border-eh-line px-5 py-3 text-xs text-eh-muted sm:px-6">
+            Conversion shows once a listing has 10 or more views. Status only appears when a role needs something from
+            you.
+          </p>
+        </>
       )}
-    </section>
+
+      <EmployerConfirmModal
+        open={closing !== null}
+        title="Close this listing?"
+        subject={closing?.title}
+        description="It stops taking applications and comes off the job board. Candidates already in your pipeline stay where they are."
+        confirmLabel="Close listing"
+        loading={closingBusy}
+        onCancel={() => setClosing(null)}
+        onConfirm={confirmClose}
+      />
+    </Card>
   );
 }

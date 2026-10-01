@@ -57,7 +57,8 @@ type Props = {
   idVerificationStatus: IdVerificationStatus;
   skills?: string[];
   bucketStatus: HeroBucketStatus[];
-  publicProfileHref: string;
+  /** Null unless the saved visibility is PUBLIC — /seekers/[id] 404s otherwise. */
+  publicProfileHref: string | null;
 };
 
 const MAX_HERO_SKILLS = 4;
@@ -244,15 +245,21 @@ export default function ProfileHeaderCard({
               </div>
             )}
 
-            <a
-              href={publicProfileHref}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-4 inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-white/30 bg-white/10 px-4 py-2 text-xs font-semibold text-white backdrop-blur transition hover:bg-white/20"
-            >
-              <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
-              Preview public profile
-            </a>
+            {publicProfileHref ? (
+              <a
+                href={publicProfileHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-4 inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-white/30 bg-white/10 px-4 py-2 text-xs font-semibold text-white backdrop-blur transition hover:bg-white/20"
+              >
+                <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+                Preview public profile
+              </a>
+            ) : (
+              <p className="mt-4 text-xs text-white/60">
+                No public page — set visibility to Public to get a shareable link.
+              </p>
+            )}
           </div>
         </div>
 

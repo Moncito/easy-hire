@@ -1,5 +1,6 @@
 import { GraduationCap, Award } from "lucide-react";
 import DashboardSurface from "@/components/employer/dashboard/DashboardSurface";
+import ProfileSectionLabel from "@/components/employer/talent/ProfileSectionLabel";
 import {
   displayCertification,
   displayEducation,
@@ -18,10 +19,7 @@ export default function TalentProfileEducation({ education, certifications }: Pr
     <DashboardSurface>
       {education.length > 0 && (
         <div>
-          <p className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-navy/60">
-            <GraduationCap className="h-3 w-3" aria-hidden="true" />
-            Education
-          </p>
+          <ProfileSectionLabel icon={<GraduationCap aria-hidden="true" />} tone="marigold">Education</ProfileSectionLabel>
           <ul className="mt-4 space-y-3">
             {education.map((entry) => {
               const { school, degree, field, year } = parseEducation(entry);
@@ -48,10 +46,7 @@ export default function TalentProfileEducation({ education, certifications }: Pr
 
       {certifications.length > 0 && (
         <div className={education.length > 0 ? "mt-5 border-t border-ink/[0.06] pt-5" : ""}>
-          <p className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-navy/60">
-            <Award className="h-3 w-3" aria-hidden="true" />
-            Certifications
-          </p>
+          <ProfileSectionLabel icon={<Award aria-hidden="true" />} tone="marigold">Certifications</ProfileSectionLabel>
           <ul className="mt-3 space-y-2">
             {certifications.map((cert) => (
               <li key={cert} className="text-sm text-ink/65">

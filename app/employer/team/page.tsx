@@ -18,7 +18,7 @@ export default async function EmployerTeamPage() {
   return (
     <>
       <TeamWorkspace initialTeam={JSON.parse(JSON.stringify(team))} companyName={company.companyName} companyLogoUrl={company.logoUrl} />
-      <div className="mt-8">
+      <div className="mt-6">
         <OwnershipTransferPanel
           initialState={JSON.parse(JSON.stringify(transferState))}
           hasPassword={account?.hasPassword ?? false}

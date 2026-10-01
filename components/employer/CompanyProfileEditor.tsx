@@ -3,12 +3,17 @@
 import { updateCompany } from "@/lib/client/company";
 import { uploadBanner, uploadLogo } from "@/lib/client/uploads";
 
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import {
+  Award,
+  Building2,
   Camera,
+  FileText,
+  Gauge,
   Globe,
   Share2,
+  ShieldCheck,
   Sparkles,
 } from "lucide-react";
 import CompanyProfileTopBar from "@/components/employer/CompanyProfileTopBar";
@@ -17,13 +22,15 @@ import ProCompanyWorkspace from "@/components/employer/pro-dashboard/ProCompanyW
 import CompanyVerificationBanner from "@/components/employer/CompanyVerificationBanner";
 import StickySaveBar from "@/components/employer/StickySaveBar";
 import EmployerFormSection from "@/components/employer/ui/EmployerFormSection";
+import ProFormSection from "@/components/employer/pro-dashboard/ProFormSection";
+import type { SectionTone } from "@/components/employer/talent/tones";
+import { Button, Select } from "@/components/employer/system";
 import EmployerFormSelect from "@/components/employer/ui/EmployerFormSelect";
 import VerificationDocumentsPanel, {
   type VerificationDoc,
 } from "@/components/employer/VerificationDocumentsPanel";
 import { useEmployerShell } from "@/components/employer/EmployerShellContext";
 import { useEasyAi } from "@/components/employer/pro/useEasyAi";
-import ProBadge from "@/components/employer/pro/ProBadge";
 import ResponseMetricsBadge from "@/components/companies/ResponseMetricsBadge";
 
 const industryOptions = [
@@ -168,16 +175,17 @@ function XIcon({ className }: { className?: string }) {
 
 function inputClassName(isPro: boolean) {
   return isPro
-    ? "w-full rounded-xl border border-ink/10 bg-white px-4 py-2.5 text-sm text-ink outline-none transition-colors focus-visible:border-ink/25 focus-visible:ring-2 focus-visible:ring-ink/10"
+    ? "h-10 w-full rounded-control border border-eh-line bg-eh-surface px-3 text-ui text-eh-ink outline-none transition-colors duration-150 placeholder:text-eh-muted hover:border-[color-mix(in_srgb,var(--eh-ink)_22%,var(--eh-line))] focus-visible:border-eh-teal"
     : "w-full rounded-xl border border-ink/10 bg-white px-4 py-2.5 text-sm text-ink outline-none transition-colors focus-visible:border-teal focus-visible:ring-2 focus-visible:ring-teal/20";
 }
 
 function chipClassName(selected: boolean, isPro: boolean) {
   if (isPro) {
-    return `rounded-full border px-3.5 py-2 text-xs font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/15 ${
+    // Same look as the workspace FilterButton pills.
+    return `inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-ui transition-colors duration-150 ${
       selected
-        ? "border-ink bg-ink text-white"
-        : "border-ink/10 text-ink/75 hover:border-ink/20 hover:bg-ink/[0.03]"
+        ? "border-eh-ink bg-eh-ink font-medium text-eh-surface"
+        : "border-eh-line bg-eh-surface text-eh-ink-2 hover:border-eh-muted hover:text-eh-ink"
     }`;
   }
   return `rounded-xl border px-3.5 py-2 text-xs font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal/30 ${
@@ -185,6 +193,48 @@ function chipClassName(selected: boolean, isPro: boolean) {
       ? "scale-[1.02] border-teal bg-teal text-white shadow-xs"
       : "border-ink/10 text-ink/75 hover:border-teal/30 hover:bg-teal/5 hover:scale-[1.01]"
   }`;
+}
+
+/** Field label: Inter for Pro, the original small uppercase label for Free. */
+function labelClassName(isPro: boolean, uppercase = true) {
+  if (isPro) return "mb-1.5 block text-small font-medium text-eh-ink-2";
+  return uppercase
+    ? "mb-2 block text-xs font-semibold uppercase tracking-wider text-ink/45"
+    : "mb-2 block text-xs font-medium text-ink/55";
+}
+
+/** Pro: a card per section with a tinted icon chip. Free: the original divided section. */
+function Section({
+  pro,
+  id,
+  title,
+  description,
+  icon,
+  tone,
+  last,
+  children,
+}: {
+  pro: boolean;
+  id?: string;
+  title: string;
+  description?: string;
+  icon?: ReactNode;
+  tone?: SectionTone;
+  last?: boolean;
+  children: ReactNode;
+}) {
+  if (pro) {
+    return (
+      <ProFormSection id={id} title={title} description={description} icon={icon} tone={tone}>
+        {children}
+      </ProFormSection>
+    );
+  }
+  return (
+    <EmployerFormSection title={title} description={description} last={last}>
+      {children}
+    </EmployerFormSection>
+  );
 }
 
 export default function CompanyProfileEditor({
@@ -598,59 +648,62 @@ export default function CompanyProfileEditor({
         </div>
       )}
 
-      <div className={isPro ? "space-y-8" : "space-y-5"}>
+      <div className={isPro ? "space-y-6" : "space-y-5"}>
           {isPro ? (
-            <div className="pro-card p-5 sm:p-6">
-              <EmployerFormSection
-                title="About company"
-                description="Tell candidates about your culture, mission, values, and what makes your company unique."
-                last
-              >
-                <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-full border border-marigold/25 bg-marigold/10 px-3.5 py-2">
-                  <div className="flex items-center gap-2 text-xs text-ink/65">
-                    <Sparkles className="h-3.5 w-3.5 shrink-0 text-[#9A5B12]" aria-hidden="true" />
-                    <span>Let Easy AI draft or rewrite your About copy from what&apos;s here.</span>
-                    <ProBadge size="sm" />
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleRewriteAbout}
-                    disabled={isLoading("company-brand")}
-                    className="shrink-0 rounded-full bg-marigold px-3 py-1.5 text-xs font-semibold text-ink transition hover:bg-marigold/90 disabled:opacity-60"
-                  >
-                    {isLoading("company-brand")
-                      ? "Writing…"
-                      : form.description
-                        ? "Rewrite About"
-                        : "Draft with Easy AI"}
-                  </button>
-                </div>
-                <textarea
-                  id="description"
-                  value={form.description}
-                  onChange={(e) => updateField("description", e.target.value.slice(0, MAX_DESCRIPTION_LENGTH))}
-                  rows={6}
-                  maxLength={MAX_DESCRIPTION_LENGTH}
-                  placeholder="Share your story, team culture, and what makes working with you special..."
-                  aria-describedby="description-counter"
-                  className="w-full rounded-2xl border border-ink/10 bg-white p-5 text-sm leading-relaxed text-ink outline-none transition-colors focus-visible:border-ink/25 focus-visible:ring-2 focus-visible:ring-ink/10"
-                />
-                <div id="description-counter" className="mt-2 flex items-center justify-between font-data text-[11px] text-ink/40">
-                  <span>Recommended: 150–300 characters</span>
-                  <span aria-live="polite">
-                    {form.description.length} / {MAX_DESCRIPTION_LENGTH}
-                  </span>
-                </div>
-              </EmployerFormSection>
-            </div>
+            <Section
+              pro
+              id="about"
+              title="About company"
+              description="Tell candidates about your culture, mission, values, and what makes your company unique."
+              icon={<FileText />}
+              tone="navy"
+            >
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-control border border-[color-mix(in_srgb,var(--eh-teal)_22%,transparent)] bg-eh-teal-tint px-3.5 py-2.5">
+                <p className="flex items-center gap-2 text-ui text-eh-ink-2">
+                  <Sparkles className="h-4 w-4 shrink-0 text-eh-teal" aria-hidden="true" />
+                  Let Easy AI draft or rewrite your About copy from what&apos;s here.
+                </p>
+                <Button
+                  size="sm"
+                  icon={<Sparkles />}
+                  loading={isLoading("company-brand")}
+                  onClick={handleRewriteAbout}
+                >
+                  {isLoading("company-brand")
+                    ? "Writing…"
+                    : form.description
+                      ? "Rewrite About"
+                      : "Draft with Easy AI"}
+                </Button>
+              </div>
+              <label htmlFor="description" className="sr-only">
+                About company
+              </label>
+              <textarea
+                id="description"
+                value={form.description}
+                onChange={(e) => updateField("description", e.target.value.slice(0, MAX_DESCRIPTION_LENGTH))}
+                rows={6}
+                maxLength={MAX_DESCRIPTION_LENGTH}
+                placeholder="Share your story, team culture, and what makes working with you special..."
+                aria-describedby="description-counter"
+                className="w-full rounded-control border border-eh-line bg-eh-surface p-4 text-body leading-relaxed text-eh-ink outline-none transition-colors duration-150 placeholder:text-eh-muted hover:border-[color-mix(in_srgb,var(--eh-ink)_22%,var(--eh-line))] focus-visible:border-eh-teal"
+              />
+              <div id="description-counter" className="mt-2 flex items-center justify-between text-small text-eh-muted">
+                <span>Recommended: 150–300 characters</span>
+                <span className="num" aria-live="polite">
+                  {form.description.length} / {MAX_DESCRIPTION_LENGTH}
+                </span>
+              </div>
+            </Section>
           ) : null}
 
-          <div>
-          <EmployerFormSection title="Company information" last={false}>
+          <div className={isPro ? "space-y-6" : undefined}>
+          <Section pro={isPro} id="company-info" title="Company information" icon={<Building2 />} tone="navy" last={false}>
             <div className="space-y-4">
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
-                  <label htmlFor="companyName" className="mb-2 block text-xs font-semibold uppercase tracking-wider text-ink/45">
+                  <label htmlFor="companyName" className={labelClassName(isPro)}>
                     Company Name <span className="text-ember">*</span>
                   </label>
                   <input
@@ -663,7 +716,7 @@ export default function CompanyProfileEditor({
                   />
                 </div>
                 <div>
-                  <label htmlFor="website" className="mb-2 block text-xs font-semibold uppercase tracking-wider text-ink/45">
+                  <label htmlFor="website" className={labelClassName(isPro)}>
                     Website
                   </label>
                   <input
@@ -678,7 +731,7 @@ export default function CompanyProfileEditor({
               </div>
 
               <div>
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-ink/45">Industry</p>
+                <p className={labelClassName(isPro)}>Industry</p>
                 <div className="flex flex-wrap gap-2">
                   {industryOptions.map((opt) => (
                     <button
@@ -696,19 +749,30 @@ export default function CompanyProfileEditor({
 
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                   <div>
-                    <label htmlFor="teamSize" className="mb-1.5 block text-xs font-medium text-ink/55">
+                    <label htmlFor="teamSize" className={labelClassName(isPro, false)}>
                       Company Size
                     </label>
-                    <EmployerFormSelect
-                      value={form.teamSize}
-                      onChange={(value) => updateField("teamSize", value)}
-                      options={teamSizeOptions}
-                      placeholder="Select size"
-                      ariaLabel="Company size"
-                    />
+                    {isPro ? (
+                      <Select
+                        label="Company size"
+                        value={form.teamSize}
+                        onChange={(value) => updateField("teamSize", value)}
+                        options={teamSizeOptions}
+                        placeholder="Select size"
+                        className="h-10 w-full"
+                      />
+                    ) : (
+                      <EmployerFormSelect
+                        value={form.teamSize}
+                        onChange={(value) => updateField("teamSize", value)}
+                        options={teamSizeOptions}
+                        placeholder="Select size"
+                        ariaLabel="Company size"
+                      />
+                    )}
                   </div>
                   <div>
-                    <label htmlFor="foundedYear" className="mb-2 block text-xs font-medium text-ink/55">
+                    <label htmlFor="foundedYear" className={labelClassName(isPro, false)}>
                       Founded Year
                     </label>
                     <input
@@ -721,7 +785,7 @@ export default function CompanyProfileEditor({
                     />
                   </div>
                   <div>
-                    <label htmlFor="headquarters" className="mb-2 block text-xs font-medium text-ink/55">
+                    <label htmlFor="headquarters" className={labelClassName(isPro, false)}>
                       Headquarters
                     </label>
                     <input
@@ -735,10 +799,11 @@ export default function CompanyProfileEditor({
                   </div>
                 </div>
             </div>
-          </EmployerFormSection>
+          </Section>
 
           {!isPro && (
-          <EmployerFormSection
+          <Section
+            pro={false}
             title="About company"
             description="Tell candidates about your culture, mission, values, and what makes your company unique."
           >
@@ -758,10 +823,14 @@ export default function CompanyProfileEditor({
                 {form.description.length} / {MAX_DESCRIPTION_LENGTH}
               </span>
             </div>
-          </EmployerFormSection>
+          </Section>
           )}
 
-          <EmployerFormSection
+          <Section
+            pro={isPro}
+            id="highlights"
+            icon={<Award />}
+            tone="marigold"
             title="Company highlights"
             description="Select benefits and perks that will appear on your public job postings."
           >
@@ -794,10 +863,17 @@ export default function CompanyProfileEditor({
                   </button>
                 ))}
             </div>
-          </EmployerFormSection>
+          </Section>
 
-          <EmployerFormSection title="Social presence">
-            <div className="mb-3 flex items-center gap-2 text-ink/40">
+          <Section
+            pro={isPro}
+            id="social"
+            title="Social presence"
+            description={isPro ? "Links shown on your public company page." : undefined}
+            icon={<Share2 />}
+            tone="teal"
+          >
+            <div className={isPro ? "hidden" : "mb-3 flex items-center gap-2 text-ink/40"}>
               <Share2 className="h-4 w-4" aria-hidden="true" />
               <span className="text-xs">Links shown on your public company page.</span>
             </div>
@@ -806,7 +882,7 @@ export default function CompanyProfileEditor({
                 const Icon = field.icon;
                 return (
                   <div key={field.id}>
-                    <label htmlFor={field.id} className="mb-1.5 block text-xs font-semibold text-ink/55">
+                    <label htmlFor={field.id} className={isPro ? labelClassName(true) : "mb-1.5 block text-xs font-semibold text-ink/55"}>
                       {field.label}
                     </label>
                     <div className="relative">
@@ -827,40 +903,50 @@ export default function CompanyProfileEditor({
                 );
               })}
             </div>
-            <p className="mt-3 text-[11px] text-ink/40">
+            <p className={isPro ? "mt-3 text-small text-eh-muted" : "mt-3 text-[11px] text-ink/40"}>
               YouTube, GitHub, Behance, and Dribbble — more platforms coming soon.
             </p>
-          </EmployerFormSection>
+          </Section>
 
-          <EmployerFormSection
+          <Section
+            pro={isPro}
+            id="response"
+            icon={<Gauge />}
+            tone="teal"
             title="Response metrics"
             description="How quickly candidates hear back from you — computed automatically from your hiring activity, not editable here."
             last
           >
-            <div className="rounded-2xl border border-teal/15 bg-teal/5 px-5 py-4">
+            <div
+              className={
+                isPro
+                  ? "rounded-control border border-[color-mix(in_srgb,var(--eh-teal)_22%,transparent)] bg-eh-teal-tint px-5 py-4"
+                  : "rounded-2xl border border-teal/15 bg-teal/5 px-5 py-4"
+              }
+            >
               <ResponseMetricsBadge
                 responseRate={stats.responseRate}
                 medianResponseMinutes={stats.medianResponseMinutes}
                 responseSampleSize={stats.responseSampleSize}
               />
               {stats.responseMetricsUpdatedAt && (
-                <p className="mt-3 font-data text-[11px] text-ink/35">
+                <p className={isPro ? "mt-3 text-small text-eh-muted" : "mt-3 font-data text-[11px] text-ink/35"}>
                   Last updated {formatLastUpdated(stats.responseMetricsUpdatedAt)}
                 </p>
               )}
             </div>
-          </EmployerFormSection>
+          </Section>
           </div>
 
-          <div id="verification" className={isPro ? "pro-card p-5 sm:p-6" : undefined}>
-          <EmployerFormSection title="Verification" last>
+          <div id={isPro ? undefined : "verification"}>
+          <Section pro={isPro} id="verification" title="Verification" icon={<ShieldCheck />} tone="teal" last>
             <VerificationDocumentsPanel
               embedded
               status={verificationStatus}
               rejectionReason={initialData.verificationRejectionReason ?? null}
               initialDocuments={verificationDocuments}
             />
-          </EmployerFormSection>
+          </Section>
           </div>
       </div>
 

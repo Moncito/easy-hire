@@ -93,7 +93,14 @@ export default function ReviewablePromptList({ entries, nowMs }: Props) {
           const name = counterpart.name;
           const sub = counterpart.type === "COMPANY" ? `Hired for ${entry.jobTitle}` : counterpart.headline;
           const photoUrl = counterpart.type === "COMPANY" ? counterpart.logoUrl : counterpart.photoUrl;
-          const publicHref = counterpart.type === "COMPANY" ? `/companies/${counterpart.id}` : `/seekers/${counterpart.id}`;
+          // /seekers/[id] only serves PUBLIC profiles, so a Standard/Private
+          // seeker has no public page to send the reviewer to.
+          const publicHref =
+            counterpart.type === "COMPANY"
+              ? `/companies/${counterpart.id}`
+              : counterpart.hasPublicProfile
+                ? `/seekers/${counterpart.id}`
+                : null;
           const isOpen = openId === entry.applicationId;
           const remaining = daysLeft(nowMs, entry.windowExpiresAt);
 
@@ -159,13 +166,17 @@ export default function ReviewablePromptList({ entries, nowMs }: Props) {
                 ) : (
                   <div className="flex shrink-0 flex-col items-end gap-1">
                     <StarRating value={myReview.rating} size="sm" accent={accent} />
-                    <Link
-                      href={`${publicHref}#reviews`}
-                      className="inline-flex items-center gap-0.5 text-[11px] font-semibold text-navy hover:underline"
-                    >
-                      View published
-                      <ChevronRight className="h-3 w-3" aria-hidden="true" />
-                    </Link>
+                    {publicHref ? (
+                      <Link
+                        href={`${publicHref}#reviews`}
+                        className="inline-flex items-center gap-0.5 text-[11px] font-semibold text-navy hover:underline"
+                      >
+                        View published
+                        <ChevronRight className="h-3 w-3" aria-hidden="true" />
+                      </Link>
+                    ) : (
+                      <span className="text-[11px] font-medium text-ink/40">Published</span>
+                    )}
                     {myReview.status === "DISPUTED" && (
                       <span className="inline-flex items-center gap-1 rounded-full bg-ink/5 px-2 py-0.5 text-[10px] font-semibold text-ink/45">
                         Under review

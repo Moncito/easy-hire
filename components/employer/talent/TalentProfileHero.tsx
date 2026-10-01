@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { MapPin, Download } from "lucide-react";
 import EmployerAvatar from "@/components/employer/ui/EmployerAvatar";
 import SaveSeekerButton from "@/components/employer/SaveSeekerButton";

@@ -521,7 +521,15 @@ export type MyReviewSummary = {
 
 export type ReviewableCounterpart =
   | { type: "COMPANY"; id: string; name: string; logoUrl: string | null }
-  | { type: "SEEKER"; id: string; name: string; headline: string | null; photoUrl: string | null };
+  | {
+      type: "SEEKER";
+      id: string;
+      name: string;
+      headline: string | null;
+      photoUrl: string | null;
+      /** /seekers/[id] 404s unless visibility is PUBLIC — callers must not link there otherwise. */
+      hasPublicProfile: boolean;
+    };
 
 /** Shape as fetched from Prisma, before the eligibility decision is applied. */
 export type ReviewableApplicationCandidate = {
@@ -669,7 +677,7 @@ async function fetchReviewableApplicationsAsCompanyMember(
       status: true,
       hiredAt: true,
       job: { select: { id: true, title: true } },
-      seeker: { select: { id: true, fullName: true, headline: true, photoUrl: true } },
+      seeker: { select: { id: true, fullName: true, headline: true, photoUrl: true, visibility: true } },
       // See the matching comment in fetchReviewableApplicationsAsSeeker —
       // same reasoning, opposite direction.
       reviews: {
@@ -694,6 +702,7 @@ async function fetchReviewableApplicationsAsCompanyMember(
       name: app.seeker.fullName,
       headline: app.seeker.headline,
       photoUrl: app.seeker.photoUrl,
+      hasPublicProfile: app.seeker.visibility === "PUBLIC",
     },
     myReview: app.reviews[0] ?? null,
   }));

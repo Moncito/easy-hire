@@ -1,8 +1,10 @@
 import Link from "next/link";
-import { ArrowRight, Briefcase, CheckCircle2, MessageSquare } from "lucide-react";
+import { ArrowRight, Briefcase, CheckCircle2, ClipboardList, MessageSquare } from "lucide-react";
+import ProfileSectionLabel from "@/components/employer/talent/ProfileSectionLabel";
 import DashboardSurface from "@/components/employer/dashboard/DashboardSurface";
 import EmployerAvatar from "@/components/employer/ui/EmployerAvatar";
 import MessageSeekerButton from "@/components/employer/MessageSeekerButton";
+import { ApplicationStatusBadge } from "@/components/employer/system";
 
 const STATUS_STYLES: Record<string, string> = {
   APPLIED: "bg-ink/8 text-ink/70",
@@ -32,6 +34,8 @@ type Props = {
   seekerName: string;
   seekerPhotoUrl: string | null;
   seekerId: string;
+  /** Employer Pro: shared status pills and heading style. */
+  pro?: boolean;
 };
 
 function NextStepHint({ application, seekerId }: { application: Application; seekerId: string }) {
@@ -90,6 +94,7 @@ export default function TalentApplicationHistory({
   seekerName,
   seekerPhotoUrl,
   seekerId,
+  pro = false,
 }: Props) {
   const latestApplication = applications[0];
 
@@ -97,10 +102,16 @@ export default function TalentApplicationHistory({
     <DashboardSurface>
       <div className="mb-4 flex items-center justify-between gap-3">
         <div>
-          <p className="text-xs font-bold uppercase tracking-wider text-navy/60">Your company</p>
-          <h2 className="font-display text-lg font-bold tracking-tight text-ink">
-            Application history
-          </h2>
+          {pro ? (
+            <ProfileSectionLabel icon={<ClipboardList aria-hidden="true" />} tone="navy">
+              Application history
+            </ProfileSectionLabel>
+          ) : (
+            <>
+              <p className="text-xs font-bold uppercase tracking-wider text-navy/60">Your company</p>
+              <h2 className="font-display text-lg font-bold tracking-tight text-ink">Application history</h2>
+            </>
+          )}
         </div>
         {applications.length > 0 && (
           <Link
@@ -156,13 +167,17 @@ export default function TalentApplicationHistory({
                       })}
                     </p>
                   </div>
-                  <span
-                    className={`shrink-0 rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
-                      STATUS_STYLES[application.status] ?? STATUS_STYLES.APPLIED
-                    }`}
-                  >
-                    {STATUS_LABEL[application.status] ?? application.status}
-                  </span>
+                  {pro ? (
+                    <ApplicationStatusBadge status={application.status} />
+                  ) : (
+                    <span
+                      className={`shrink-0 rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
+                        STATUS_STYLES[application.status] ?? STATUS_STYLES.APPLIED
+                      }`}
+                    >
+                      {STATUS_LABEL[application.status] ?? application.status}
+                    </span>
+                  )}
                 </Link>
               </li>
             ))}

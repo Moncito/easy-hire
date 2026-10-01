@@ -45,7 +45,7 @@ type Props = {
   profileBucketsCompleted: number;
   profileBucketsTotal: number;
   firstIncompleteBucket: ProfileBucketId | null;
-  publicProfileHref: string;
+  publicProfileHref: string | null;
   initialDocuments: IdentityDocument[];
 };
 
@@ -395,7 +395,7 @@ function StateHero({
   uiState: UiState;
   documentsCount: number;
   idVerifiedAt: string | null;
-  publicProfileHref: string;
+  publicProfileHref: string | null;
 }) {
   if (uiState === "verified") {
     const verifiedDate = idVerifiedAt
@@ -414,14 +414,17 @@ function StateHero({
             "Documents are locked once verified."
           )}
         </p>
-        <a
-          href={publicProfileHref}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-[#8a5a10] hover:underline"
-        >
-          View your public profile <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
-        </a>
+        {/* /seekers/[id] only serves PUBLIC profiles — null otherwise. */}
+        {publicProfileHref && (
+          <a
+            href={publicProfileHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-[#8a5a10] hover:underline"
+          >
+            View your public profile <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+          </a>
+        )}
       </div>
     );
   }

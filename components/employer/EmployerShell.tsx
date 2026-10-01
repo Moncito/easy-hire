@@ -17,6 +17,8 @@ type Props = {
   verifiedStatus: string;
   plan?: "FREE" | "PRO";
   collaborativeHiringEnabled?: boolean;
+  /** Free plan's job-slot usage for the sidebar card; null on Pro. */
+  jobSlots?: { used: number; limit: number } | null;
   navCounts: { activeJobs: number; needsReview: number; unreadMessages: number };
   children: React.ReactNode;
 };
@@ -27,6 +29,7 @@ function EmployerShellInner({
   verifiedStatus,
   plan = "FREE",
   collaborativeHiringEnabled = false,
+  jobSlots = null,
   navCounts,
   children,
 }: Props) {
@@ -62,7 +65,7 @@ function EmployerShellInner({
         data-employer-plan="pro"
         suppressHydrationWarning
       >
-        <Sidebar navCounts={navCounts} plan={plan} collaborativeHiringEnabled={collaborativeHiringEnabled} />
+        <Sidebar navCounts={navCounts} plan={plan} collaborativeHiringEnabled={collaborativeHiringEnabled} jobSlots={jobSlots} />
         <EmployerMobileNav
           plan={plan}
           collaborativeHiringEnabled={collaborativeHiringEnabled}
@@ -107,7 +110,7 @@ function EmployerShellInner({
       data-employer-plan="free"
       suppressHydrationWarning
     >
-      <Sidebar navCounts={navCounts} plan={plan} collaborativeHiringEnabled={collaborativeHiringEnabled} />
+      <Sidebar navCounts={navCounts} plan={plan} collaborativeHiringEnabled={collaborativeHiringEnabled} jobSlots={jobSlots} />
       <EmployerMobileNav
         plan={plan}
         collaborativeHiringEnabled={collaborativeHiringEnabled}

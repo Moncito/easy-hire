@@ -28,6 +28,12 @@ export type EmployerJobCardData = {
   hiredCount: number;
   targetHireCount: number;
   needsAttention: boolean;
+  /**
+   * When the oldest still-unreviewed (APPLIED) application came in, or null.
+   * A date rather than a day count: this data is cached, so the wait is
+   * worked out at render time (see waitSeverity in lib/employer/attention).
+   */
+  oldestUnreviewedAt: string | null;
   pipeline: { applied: number; shortlisted: number; interview: number; hired: number };
   screeningQuestions: Array<{ prompt: string; required: boolean }>;
 };
@@ -77,8 +83,9 @@ function enrichJob(
   viewCount: number,
   staleThreshold: Date,
   pipelineByStatus: Record<string, number>,
-  hasStaleUnreviewed: boolean
+  oldestUnreviewedAt: Date | null
 ): EmployerJobCardData {
+  const hasStaleUnreviewed = oldestUnreviewedAt !== null && oldestUnreviewedAt < staleThreshold;
   const unreviewedCount = pipelineByStatus.APPLIED ?? 0;
   const hiredCount = pipelineByStatus.HIRED ?? 0;
   const shortlistedCount = pipelineByStatus.SHORTLISTED ?? 0;
@@ -110,6 +117,7 @@ function enrichJob(
     hiredCount,
     targetHireCount: job.targetHireCount,
     needsAttention: job.status === "ACTIVE" && unreviewedCount > 0 && hasStaleUnreviewed,
+    oldestUnreviewedAt: unreviewedCount > 0 ? (oldestUnreviewedAt?.toISOString() ?? null) : null,
     pipeline: {
       applied: unreviewedCount,
       shortlisted: shortlistedCount,
@@ -207,7 +215,7 @@ export async function getEmployerJobsWithMetrics(companyId: string) {
   const staleThreshold = new Date(now.getTime() - STALE_DAYS * 24 * 60 * 60 * 1000);
   const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-  const [jobs, jobViewCounts, needsReviewApplicants, statusGroups, staleJobIds] =
+  const [jobs, jobViewCounts, needsReviewApplicants, statusGroups, oldestUnreviewed] =
     await Promise.all([
     prisma.job.findMany({
       where: { companyId },
@@ -233,14 +241,10 @@ export async function getEmployerJobsWithMetrics(companyId: string) {
       where: { job: { companyId } },
       _count: { _all: true },
     }),
-    prisma.application.findMany({
-      where: {
-        job: { companyId },
-        status: "APPLIED",
-        appliedAt: { lt: staleThreshold },
-      },
-      select: { jobId: true },
-      distinct: ["jobId"],
+    prisma.application.groupBy({
+      by: ["jobId"],
+      where: { job: { companyId }, status: "APPLIED" },
+      _min: { appliedAt: true },
     }),
   ]);
 
@@ -250,7 +254,7 @@ export async function getEmployerJobsWithMetrics(companyId: string) {
     pipelineByJob[row.jobId][row.status] = row._count._all;
   }
 
-  const staleJobIdSet = new Set(staleJobIds.map((r) => r.jobId));
+  const oldestUnreviewedByJob = new Map(oldestUnreviewed.map((r) => [r.jobId, r._min.appliedAt]));
 
   const viewCountByJob = Object.fromEntries(
     jobViewCounts.map((v) => [v.jobId, v._count._all])
@@ -262,7 +266,7 @@ export async function getEmployerJobsWithMetrics(companyId: string) {
       viewCountByJob[job.id] ?? 0,
       staleThreshold,
       pipelineByJob[job.id] ?? {},
-      staleJobIdSet.has(job.id)
+      oldestUnreviewedByJob.get(job.id) ?? null
     )
   );
 

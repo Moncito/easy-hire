@@ -10,6 +10,8 @@ import TalentProfileExperience from "@/components/employer/talent/TalentProfileE
 import TalentProfileEducation from "@/components/employer/talent/TalentProfileEducation";
 import TalentApplicationHistory from "@/components/employer/talent/TalentApplicationHistory";
 import TalentProfileRail from "@/components/employer/talent/TalentProfileRail";
+import ProTalentProfileHero from "@/components/employer/talent/ProTalentProfileHero";
+import ProTalentProfileRail from "@/components/employer/talent/ProTalentProfileRail";
 import { requireEmployerPageContext } from "@/lib/employer-session";
 
 export default async function EmployerSeekerProfilePage({
@@ -17,7 +19,8 @@ export default async function EmployerSeekerProfilePage({
 }: {
   params: Promise<{ seekerId: string }>;
 }) {
-  const { session } = await requireEmployerPageContext();
+  const { session, plan } = await requireEmployerPageContext();
+  const isPro = plan === "PRO";
   const { seekerId } = await params;
 
   let data;
@@ -53,27 +56,40 @@ export default async function EmployerSeekerProfilePage({
   };
 
   return (
-    <div className="mx-auto max-w-[1480px] space-y-4">
+    <div className={`mx-auto max-w-[1480px] ${isPro ? "space-y-5" : "space-y-4"}`}>
       <Link
         href="/employer/talent"
-        className="inline-flex items-center gap-1.5 text-sm font-medium text-ink/55 transition hover:text-teal"
+        className={
+          isPro
+            ? "inline-flex items-center gap-1.5 rounded-chip text-ui text-eh-muted transition-colors duration-150 hover:text-eh-ink"
+            : "inline-flex items-center gap-1.5 text-sm font-medium text-ink/55 transition hover:text-teal"
+        }
       >
         <ArrowLeft className="h-4 w-4" aria-hidden="true" />
         Back to talent search
       </Link>
 
-      <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,1fr)_340px] 2xl:grid-cols-[minmax(0,1fr)_380px]">
-        <div className="min-w-0 space-y-4">
-          <TalentProfileHero
-            fullName={profile.fullName}
-            headline={profile.headline}
-            location={profile.location}
-            photoUrl={profile.photoUrl}
-            seekerId={profile.id}
-            saved={saved}
-            canDownloadResume={canDownloadResume}
-            resumeUrl={profile.resumeUrl}
-          />
+      <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-[minmax(0,1fr)_340px] 2xl:grid-cols-[minmax(0,1fr)_380px]">
+        <div className={`min-w-0 ${isPro ? "space-y-5" : "space-y-4"}`}>
+          {isPro ? (
+            <ProTalentProfileHero
+              data={previewData}
+              seekerId={profile.id}
+              saved={saved}
+              canDownloadResume={canDownloadResume}
+            />
+          ) : (
+            <TalentProfileHero
+              fullName={profile.fullName}
+              headline={profile.headline}
+              location={profile.location}
+              photoUrl={profile.photoUrl}
+              seekerId={profile.id}
+              saved={saved}
+              canDownloadResume={canDownloadResume}
+              resumeUrl={profile.resumeUrl}
+            />
+          )}
 
           <TalentProfileAbout bio={profile.bio} languages={profile.languages ?? []} />
           <TalentResumeHighlights seekerId={profile.id} />
@@ -90,14 +106,15 @@ export default async function EmployerSeekerProfilePage({
             seekerName={profile.fullName}
             seekerPhotoUrl={profile.photoUrl}
             seekerId={profile.id}
+            pro={isPro}
           />
         </div>
 
-        <TalentProfileRail
-          data={previewData}
-          seekerId={profile.id}
-          canDownloadResume={canDownloadResume}
-        />
+        {isPro ? (
+          <ProTalentProfileRail data={previewData} seekerId={profile.id} canDownloadResume={canDownloadResume} />
+        ) : (
+          <TalentProfileRail data={previewData} seekerId={profile.id} canDownloadResume={canDownloadResume} />
+        )}
       </div>
     </div>
   );

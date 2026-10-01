@@ -11,120 +11,107 @@ function Surface({ children, className = "" }: { children: ReactNode; className?
 
 function ProDashboardSkeleton() {
   return (
-    <div className="flex flex-col gap-8 pb-8">
-      <header className="flex flex-col gap-4 border-b border-ink/[0.06] pb-5 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
-        <div className="flex min-w-0 gap-4">
-          <Bone className="h-14 w-14 shrink-0 rounded-xl sm:h-16 sm:w-16" />
-          <div className="min-w-0 flex-1">
-            <Bone className="h-9 w-64 max-w-full sm:h-10" />
-            <Bone className="mt-2 h-4 w-48 max-w-full" />
-            <div className="mt-2 flex gap-3">
-              <Bone className="h-4 w-20" />
-              <Bone className="h-4 w-36" />
-            </div>
-            <Bone className="mt-3 h-4 w-72 max-w-full" />
-          </div>
+    <div className="flex flex-col gap-5 pb-8">
+      {/* Header: logo, name + meta, range control and two buttons */}
+      <header className="flex flex-wrap items-center gap-3.5">
+        <Bone className="h-12 w-12 shrink-0 rounded-control" />
+        <div className="space-y-2">
+          <Bone className="h-6 w-60 max-w-full" />
+          <Bone className="h-3.5 w-44" />
         </div>
-        <div className="flex shrink-0 flex-wrap gap-2">
-          <Bone className="h-11 w-32 rounded-full" />
-          <Bone className="h-11 w-40 rounded-full" />
+        <div className="flex flex-wrap gap-2 min-[521px]:ml-auto">
+          <Bone className="h-9 w-32 rounded-control" />
+          <Bone className="h-9 w-36 rounded-control" />
+          <Bone className="h-9 w-28 rounded-control" />
         </div>
       </header>
 
-      <div className="flex gap-2 overflow-hidden">
-        <Bone className="h-9 w-40 shrink-0 rounded-full" />
-        <Bone className="h-9 w-36 shrink-0 rounded-full" />
+      {/* KPI strip */}
+      <div className="grid grid-cols-1 gap-3 min-[521px]:grid-cols-2 min-[861px]:grid-cols-3 min-[1181px]:grid-cols-5">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div key={i} className="min-h-[118px] rounded-card border border-eh-line bg-eh-surface px-[18px] py-4">
+            <Bone className="h-3.5 w-24" />
+            <Bone className="mt-3 h-8 w-12" />
+            <Bone className="mt-4 h-3 w-32" />
+          </div>
+        ))}
       </div>
 
-      <section>
-        <Bone className="h-6 w-40" />
-        <Bone className="mt-1.5 h-4 w-56" />
-        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      {/* Applications chart (2/3) + pipeline funnel (1/3) */}
+      <div className="grid grid-cols-1 gap-3 min-[1181px]:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+        <section className="rounded-card border border-eh-line bg-eh-surface p-5">
+          <Bone className="h-5 w-40" />
+          <Bone className="mt-4 h-[220px] w-full rounded-control" />
+        </section>
+        <section className="rounded-card border border-eh-line bg-eh-surface p-5">
+          <Bone className="h-5 w-32" />
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="pro-card p-4">
-              <Bone className="h-9 w-9 rounded-xl" />
-              <Bone className="mt-3 h-4 w-24" />
-              <Bone className="mt-2 h-3 w-full" />
-              <Bone className="mt-1 h-3 w-4/5" />
-            </div>
+            <Bone key={i} className="mt-5 h-[26px] w-full rounded-[6px]" />
           ))}
-        </div>
-      </section>
+        </section>
+      </div>
 
-      <section className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_220px]">
-        <div className="pro-card p-5 sm:p-6">
-          <div className="mb-4 flex items-end justify-between gap-3">
-            <div>
-              <Bone className="h-6 w-28" />
-              <Bone className="mt-2 h-4 w-52" />
+      {/* Decision queue (2/3) + recent activity (1/3) */}
+      <div className="grid grid-cols-1 items-start gap-3 min-[1181px]:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+        <section className="rounded-card border border-eh-line bg-eh-surface p-5">
+          <Bone className="h-5 w-44" />
+          <div className="mt-4 flex items-center gap-3.5 rounded-card border border-eh-line p-3.5">
+            <Bone className="h-9 w-9 shrink-0 rounded-full" />
+            <div className="flex-1 space-y-1.5">
+              <Bone className="h-4 w-40" />
+              <Bone className="h-3 w-56 max-w-full" />
             </div>
-            <Bone className="h-4 w-24" />
+            <Bone className="h-[30px] w-48 rounded-control" />
           </div>
-          <div className="flex gap-4">
-            <Bone className="h-3 w-24" />
-            <Bone className="h-3 w-20" />
-          </div>
-          <Bone className="mt-4 h-[220px] w-full rounded-xl" />
-          <div className="mt-4 flex gap-6 border-t border-ink/[0.06] pt-4">
-            <Bone className="h-4 w-32" />
-            <Bone className="h-4 w-28" />
-          </div>
-        </div>
-        <aside className="pro-card flex flex-col justify-center p-5 sm:p-6">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="border-b border-ink/[0.06] py-3.5 last:border-0 last:pb-0 first:pt-0">
-              <Bone className="h-3 w-20" />
-              <Bone className="mt-2 h-8 w-14" />
-            </div>
-          ))}
-        </aside>
-      </section>
-
-      <section>
-        <div className="mb-4 flex items-end justify-between">
-          <div>
-            <Bone className="h-6 w-32" />
-            <Bone className="mt-2 h-4 w-56" />
-          </div>
-          <Bone className="h-4 w-20" />
-        </div>
-        <div className="pro-card overflow-hidden !p-0">
-          <div className="grid grid-cols-6 gap-3 border-b border-ink/[0.06] px-5 py-3">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <Bone key={i} className="h-3 w-12" />
-            ))}
-          </div>
-          {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="grid grid-cols-6 items-center gap-3 border-b border-ink/[0.06] px-5 py-4 last:border-0">
-              <Bone className="col-span-2 h-4 w-40" />
-              <Bone className="h-4 w-8 justify-self-end" />
-              <Bone className="h-4 w-8 justify-self-end" />
-              <Bone className="h-4 w-8 justify-self-end" />
-              <Bone className="h-8 w-20 justify-self-end rounded-full" />
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-2">
-        <div className="pro-card p-5 sm:p-6">
-          <Bone className="h-5 w-24" />
-          <Bone className="mt-2 h-4 w-40" />
-          <Bone className="mt-6 h-10 w-full rounded-full" />
-        </div>
-        <div className="pro-card p-5 sm:p-6">
-          <Bone className="mb-4 h-5 w-32" />
-          {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="mb-3 flex gap-3 last:mb-0">
-              <Bone className="h-8 w-8 shrink-0 rounded-full" />
+          {Array.from({ length: 2 }).map((_, i) => (
+            <div key={i} className="mt-4 flex items-center gap-3">
+              <Bone className="h-9 w-9 shrink-0 rounded-full" />
               <div className="flex-1 space-y-1.5">
-                <Bone className="h-3 w-full" />
-                <Bone className="h-3 w-20" />
+                <Bone className="h-4 w-36" />
+                <Bone className="h-5 w-64 max-w-full rounded-chip" />
               </div>
             </div>
           ))}
-        </div>
+        </section>
+        <section className="rounded-card border border-eh-line bg-eh-surface p-5">
+          <Bone className="mb-4 h-5 w-32" />
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="mb-3 flex gap-2.5 last:mb-0">
+              <Bone className="h-8 w-8 shrink-0 rounded-full" />
+              <div className="flex-1 space-y-1.5">
+                <Bone className="h-3 w-full" />
+                <Bone className="h-3 w-16" />
+              </div>
+            </div>
+          ))}
+        </section>
       </div>
+
+      {/* Active roles table */}
+      <section className="rounded-card border border-eh-line bg-eh-surface">
+        <div className="flex items-center gap-2.5 px-5 pb-3.5 pt-4">
+          <Bone className="h-5 w-28" />
+          <Bone className="h-4 w-16" />
+        </div>
+        <div className="grid grid-cols-7 gap-3 border-y border-eh-line bg-eh-surface-2 px-5 py-2.5">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Bone key={i} className="h-3 w-14" />
+          ))}
+        </div>
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="grid grid-cols-7 items-center gap-3 border-b border-eh-line px-5 py-3 last:border-0">
+            <div className="col-span-2 space-y-1.5">
+              <Bone className="h-4 w-40" />
+              <Bone className="h-3 w-28" />
+            </div>
+            <Bone className="h-4 w-8 justify-self-end" />
+            <Bone className="h-4 w-8 justify-self-end" />
+            <Bone className="h-4 w-12 justify-self-end" />
+            <Bone className="h-4 w-10 justify-self-end" />
+            <Bone className="h-[30px] w-28 justify-self-end rounded-control" />
+          </div>
+        ))}
+      </section>
     </div>
   );
 }

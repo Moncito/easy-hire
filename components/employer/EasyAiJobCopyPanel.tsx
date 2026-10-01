@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Sparkles } from "lucide-react";
 import { useEmployerShell } from "@/components/employer/EmployerShellContext";
 import { useEasyAi } from "@/components/employer/pro/useEasyAi";
-import ProButton from "@/components/employer/pro/ProButton";
+import { Button } from "@/components/employer/system";
 
 type JobCopyResult = {
   title: string;
@@ -70,31 +70,34 @@ export default function EasyAiJobCopyPanel({
     }
   }
 
+  const loading = isLoading("job-copy");
+
   return (
-    <div className="pro-card mb-5 p-5">
+    <section
+      aria-labelledby="easy-ai-job-copy"
+      className="mb-6 rounded-card border border-[color-mix(in_srgb,var(--eh-teal)_22%,transparent)] bg-eh-teal-tint p-5"
+    >
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex items-start gap-2.5">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-marigold/15 text-[#9A5B12]">
-            <Sparkles className="h-4 w-4" strokeWidth={2.25} />
+        <div className="flex items-start gap-3">
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-control bg-eh-teal text-white" aria-hidden="true">
+            <Sparkles className="h-[18px] w-[18px]" />
           </span>
           <div>
-            <p className="text-sm font-bold text-ink">Improve with Easy AI</p>
-            <p className="mt-0.5 text-xs leading-relaxed text-ink/50">
+            <h2 id="easy-ai-job-copy" className="font-heading text-[18px] font-semibold tracking-[-0.01em] text-eh-ink">
+              {hasDraft ? "Improve with Easy AI" : "Draft with Easy AI"}
+            </h2>
+            <p className="mt-0.5 text-ui text-eh-ink-2">
               {hasDraft
                 ? "Rewrite the title, description, requirements and benefits from what's filled in below."
                 : "Draft the title, description, requirements and benefits from the role details below."}
             </p>
           </div>
         </div>
-        <ProButton
-          variant="secondary"
-          onClick={handleGenerate}
-          disabled={!canGenerate || isLoading("job-copy")}
-        >
-          {isLoading("job-copy") ? "Writing…" : hasDraft ? "Rewrite with Easy AI" : "Draft with Easy AI"}
-        </ProButton>
+        <Button icon={<Sparkles />} loading={loading} disabled={!canGenerate} onClick={() => void handleGenerate()}>
+          {loading ? "Writing…" : hasDraft ? "Rewrite with Easy AI" : "Draft with Easy AI"}
+        </Button>
       </div>
-      <div className="mt-3">
+      <div className="mt-4">
         <label htmlFor="easy-ai-job-notes" className="sr-only">
           Notes for Easy AI
         </label>
@@ -104,12 +107,10 @@ export default function EasyAiJobCopyPanel({
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           placeholder="Optional notes for Easy AI — tools used, tone, must-haves…"
-          className="w-full rounded-xl border border-ink/10 bg-white px-3.5 py-2.5 text-sm text-ink outline-none placeholder:text-ink/40 focus:border-ink/25"
+          className="h-10 w-full rounded-control border border-eh-line bg-eh-surface px-3 text-ui text-eh-ink outline-none transition-colors duration-150 placeholder:text-eh-muted focus-visible:border-eh-teal"
         />
       </div>
-      {!canGenerate && (
-        <p className="mt-2 text-[11px] text-ink/45">Add a job title first.</p>
-      )}
-    </div>
+      {!canGenerate && <p className="mt-2 text-small text-eh-ink-2">Add a job title first.</p>}
+    </section>
   );
 }

@@ -25,6 +25,7 @@ import {
 } from "@/lib/client/conversations";
 import { fetchJsonSafe, noStore } from "@/lib/client/fetch-json";
 import { useEmployerShell } from "@/components/employer/EmployerShellContext";
+import { ApplicationStatusBadge } from "@/components/employer/system";
 import { callEasyAi } from "@/components/employer/pro/useEasyAi";
 import EmployerAvatar from "@/components/employer/ui/EmployerAvatar";
 import ReportButton from "@/components/ReportButton";
@@ -92,10 +93,10 @@ function formatTime(iso: string) {
   return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
-function formatDateSeparator(iso: string) {
-  return new Date(iso)
-    .toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" })
-    .toUpperCase();
+/** "September 20, 2026"; upper-cased everywhere except Employer Pro, which uses sentence-case labels. */
+function formatDateSeparator(iso: string, upper = true) {
+  const label = new Date(iso).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" });
+  return upper ? label.toUpperCase() : label;
 }
 
 function sameDay(a: string, b: string) {
@@ -708,11 +709,19 @@ export default function MessagesInbox({
             </div>
           ) : (
             <div className="flex items-center justify-between gap-2">
-              <h2 className="font-display text-lg font-black tracking-tighter text-ink">Inbox</h2>
+              <h2
+                className={
+                  isEmployerPro
+                    ? "font-heading text-[20px] font-bold tracking-[-0.01em] text-eh-ink"
+                    : "font-display text-lg font-black tracking-tighter text-ink"
+                }
+              >
+                Inbox
+              </h2>
               {unreadTotal > 0 && (
                 <span
-                  className={`rounded-full px-2 py-0.5 font-data text-xs font-bold tabular-nums ${
-                    isEmployerPro ? "bg-ink text-white" : "bg-teal/15 text-teal"
+                  className={`rounded-full px-2 py-0.5 text-xs tabular-nums ${
+                    isEmployerPro ? "num bg-ink font-semibold text-white" : "font-data font-bold bg-teal/15 text-teal"
                   }`}
                 >
                   {unreadTotal} unread
@@ -846,7 +855,9 @@ export default function MessagesInbox({
                   >
                     {peerLabel(conv)}
                   </span>
-                  <span className="shrink-0 font-data text-[10px] text-ink/40">
+                  <span
+                    className={`shrink-0 ${isEmployerPro ? "num text-micro text-eh-muted" : "font-data text-[10px] text-ink/40"}`}
+                  >
                     {formatTime(conv.lastMessageAt)}
                   </span>
                 </div>
@@ -854,15 +865,24 @@ export default function MessagesInbox({
                   <p className="mt-0.5 truncate text-xs text-ink/50">{conv.lastMessage.body}</p>
                 )}
                 <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-                  {conv.applicationStatus && (
-                    <span
-                      className={`shrink-0 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide ${statusBadgeClass(conv.applicationStatus, isSeeker)}`}
-                    >
-                      {conv.applicationStatus.replace(/_/g, " ")}
-                    </span>
-                  )}
+                  {conv.applicationStatus &&
+                    (isEmployerPro ? (
+                      <ApplicationStatusBadge status={conv.applicationStatus} dot={false} />
+                    ) : (
+                      <span
+                        className={`shrink-0 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide ${statusBadgeClass(conv.applicationStatus, isSeeker)}`}
+                      >
+                        {conv.applicationStatus.replace(/_/g, " ")}
+                      </span>
+                    ))}
                   {conv.job && (
-                    <span className="min-w-0 max-w-full truncate rounded-full bg-ink/6 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-ink/45">
+                    <span
+                      className={`min-w-0 max-w-full truncate rounded-full px-2 py-0.5 ${
+                        isEmployerPro
+                          ? "border border-eh-line bg-eh-surface-2 text-[11px] font-medium text-eh-ink-2"
+                          : "bg-ink/6 text-[9px] font-semibold uppercase tracking-wide text-ink/45"
+                      }`}
+                    >
                       {conv.job.title}
                     </span>
                   )}
@@ -871,7 +891,9 @@ export default function MessagesInbox({
 
               {conv.unreadCount > 0 && (
                 <span
-                  className={`flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full px-1.5 text-[10px] font-bold ${unreadBadge}`}
+                  className={`flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full px-1.5 font-bold ${
+                    isEmployerPro ? "num text-[11px]" : "text-[10px]"
+                  } ${unreadBadge}`}
                 >
                   {conv.unreadCount}
                 </span>
@@ -959,7 +981,11 @@ export default function MessagesInbox({
                         {threadPeerLabel()}
                       </Link>
                     ) : (
-                      <h2 className="truncate font-display text-base font-bold text-ink">
+                      <h2
+                        className={`truncate text-ink ${
+                          isEmployerPro ? "text-[17px] font-semibold" : "font-display text-base font-bold"
+                        }`}
+                      >
                         {threadPeerLabel()}
                       </h2>
                     )}
@@ -1030,13 +1056,16 @@ export default function MessagesInbox({
 
             {!isSeeker && (activeConversation?.applicationStatus || thread.job) && (
               <div className={`flex shrink-0 flex-wrap items-center gap-2 border-b border-ink/5 px-4 sm:px-6 ${isSeeker ? "bg-mist/30 py-2" : "bg-mist/20 py-1.5"}`}>
-                {activeConversation?.applicationStatus && (
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide ${statusBadgeClass(activeConversation.applicationStatus, false)}`}
-                  >
-                    {activeConversation.applicationStatus.replace(/_/g, " ")}
-                  </span>
-                )}
+                {activeConversation?.applicationStatus &&
+                  (isEmployerPro ? (
+                    <ApplicationStatusBadge status={activeConversation.applicationStatus} dot={false} />
+                  ) : (
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide ${statusBadgeClass(activeConversation.applicationStatus, false)}`}
+                    >
+                      {activeConversation.applicationStatus.replace(/_/g, " ")}
+                    </span>
+                  ))}
                 {thread.job && (
                   <span className="truncate text-xs text-ink/45">
                     Re:{" "}
@@ -1084,8 +1113,12 @@ export default function MessagesInbox({
                   <div key={msg.id} className={showDate ? "mt-3 first:mt-0" : isGroupStart ? "mt-2.5" : "mt-0.5"}>
                     {showDate && (
                       <div className="mb-2 flex justify-center">
-                        <span className="rounded-full bg-ink/[0.05] px-2.5 py-0.5 text-[10px] font-semibold tracking-wide text-ink/50">
-                          {formatDateSeparator(msg.createdAt)}
+                        <span
+                          className={`rounded-full bg-ink/[0.05] px-2.5 py-0.5 ${
+                            isEmployerPro ? "text-micro font-medium text-eh-muted" : "text-[10px] font-semibold tracking-wide text-ink/50"
+                          }`}
+                        >
+                          {formatDateSeparator(msg.createdAt, !isEmployerPro)}
                         </span>
                       </div>
                     )}
@@ -1119,7 +1152,11 @@ export default function MessagesInbox({
 
                       <div className={`${isSeeker ? "max-w-[min(78%,40rem)]" : "max-w-[min(86%,56rem)]"} ${msg.isMine ? "order-first" : ""}`}>
                         {msgIsTeammate && isGroupStart && (
-                          <p className="mb-0.5 truncate px-1 text-[10px] font-semibold tracking-wide text-navy/50">
+                          <p
+                            className={`mb-0.5 truncate px-1 ${
+                              isEmployerPro ? "text-micro font-medium text-eh-muted" : "text-[10px] font-semibold tracking-wide text-navy/50"
+                            }`}
+                          >
                             {senderCaption(msg)}
                           </p>
                         )}
@@ -1144,7 +1181,9 @@ export default function MessagesInbox({
                               msg.isMine ? "justify-end" : "justify-start"
                             }`}
                           >
-                            <span className="font-data text-[10px] text-ink/35">
+                            <span
+                              className={isEmployerPro ? "num text-micro text-eh-muted" : "font-data text-[10px] text-ink/35"}
+                            >
                               {msg.pending ? "Sending…" : formatTime(msg.createdAt)}
                             </span>
                             {msg.isMine && !msg.pending && msg.readAt && (

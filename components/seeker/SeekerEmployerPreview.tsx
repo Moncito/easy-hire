@@ -8,8 +8,8 @@ import type { ProfileVisibilityLevel } from "@/lib/validations/seeker";
 
 /**
  * Phase B2 — trimmed to a compact "what employers see" summary card.
- * /seekers/[id] (the real public profile) is one click away via the "Open
- * full public preview" link below, so this no longer needs to duplicate the
+ * /seekers/[id] (the real public profile, PUBLIC visibility only) is one
+ * click away via the "Open full public preview" link below, so this no longer needs to duplicate the
  * entire profile (bio, full skills/languages/work/education/certs lists,
  * resume/LinkedIn/portfolio buttons) — that content lived here at ~10-11px
  * type with visible text-wrapping problems in a ~280-340px sidebar. Full
@@ -44,7 +44,14 @@ type PreviewMode = "talent" | "applicant";
 
 const MAX_PREVIEW_SKILLS = 5;
 
-export default function SeekerEmployerPreview({ data, profileId }: { data: EmployerPreviewData; profileId?: string }) {
+type Props = {
+  data: EmployerPreviewData;
+  /** Null unless the saved visibility is PUBLIC — /seekers/[id] 404s for everything else. */
+  publicProfileHref: string | null;
+  onManageVisibility?: () => void;
+};
+
+export default function SeekerEmployerPreview({ data, publicProfileHref, onManageVisibility }: Props) {
   const [mode, setMode] = useState<PreviewMode>("talent");
 
   const initials =
@@ -179,10 +186,11 @@ export default function SeekerEmployerPreview({ data, profileId }: { data: Emplo
 
       {/* ── Primary CTA: full rendered public profile is one click away.
           Marigold is the seeker accent, so it's the one bold pop of color
-          against this dark card. ── */}
-      {profileId && (
+          against this dark card. Only offered once the saved visibility is
+          PUBLIC — otherwise /seekers/[id] is a 404, so explain why instead. ── */}
+      {publicProfileHref ? (
         <a
-          href={`/seekers/${profileId}`}
+          href={publicProfileHref}
           target="_blank"
           rel="noopener noreferrer"
           className="mt-6 flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-2xl bg-marigold px-4 py-3 text-xs font-bold text-ink transition-colors hover:bg-marigold/90"
@@ -190,6 +198,23 @@ export default function SeekerEmployerPreview({ data, profileId }: { data: Emplo
           Open full public preview
           <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
         </a>
+      ) : (
+        <div className="mt-6 rounded-2xl border border-white/12 bg-white/5 px-4 py-3 text-center">
+          <p className="text-[11px] leading-snug text-white/55">
+            {data.visibility === "PUBLIC"
+              ? "Save your profile to publish your public page."
+              : "No public page — only Public visibility gets a shareable profile link."}
+          </p>
+          {data.visibility !== "PUBLIC" && onManageVisibility && (
+            <button
+              type="button"
+              onClick={onManageVisibility}
+              className="mt-1.5 cursor-pointer text-[11px] font-semibold text-marigold hover:underline"
+            >
+              Change visibility
+            </button>
+          )}
+        </div>
       )}
     </div>
   );

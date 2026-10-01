@@ -24,6 +24,12 @@ import DashboardSurface from "@/components/employer/dashboard/DashboardSurface";
 import DashboardApplicantQueue from "@/components/employer/dashboard/DashboardApplicantQueue";
 import DashboardJobPerformance from "@/components/employer/dashboard/DashboardJobPerformance";
 import WeeklyTrendChart from "@/components/employer/charts/WeeklyTrendChart";
+import { getDashboardInsights, parseDashboardRange } from "@/lib/employer/dashboard-insights";
+import { getDashboardKpis } from "@/lib/employer/dashboard-kpis";
+import { getDashboardPipeline } from "@/lib/employer/dashboard-pipeline";
+import { getDashboardDecisions } from "@/lib/employer/dashboard-decisions";
+import { getHiringDefaults } from "@/lib/employer/hiring-defaults";
+import { getDashboardRoles } from "@/lib/employer/dashboard-roles";
 import {
   getJobPerformanceRows,
   shouldShowApplicantQueue,
@@ -75,12 +81,25 @@ function VerificationBanners({
   return null;
 }
 
-export default async function EmployerDashboardPage() {
+export default async function EmployerDashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ range?: string | string[] }>;
+}) {
   const { company, plan } = await requireEmployerPageContext();
   const isPro = plan === "PRO";
-  const [analytics, applicantQueue] = await Promise.all([
+  // The Pro dashboard's date range (7/30/60 days, default 30). Read here so
+  // every section fetches on the server for the same window.
+  const range = parseDashboardRange((await searchParams).range);
+  const [analytics, applicantQueue, proInsights, proKpis, proPipeline, proDecisions, hiringDefaults, proRoles] = await Promise.all([
     getEmployerAnalyticsCached(company.id),
     getDashboardApplicantQueueCached(company.id),
+    isPro ? getDashboardInsights(company.id) : Promise.resolve([]),
+    isPro ? getDashboardKpis(company.id, range) : Promise.resolve(null),
+    isPro ? getDashboardPipeline(company.id, range) : Promise.resolve(null),
+    isPro ? getDashboardDecisions(company.id) : Promise.resolve(null),
+    isPro ? getHiringDefaults(company.id) : Promise.resolve(null),
+    isPro ? getDashboardRoles(company.id, company.verifiedStatus === "APPROVED") : Promise.resolve([]),
   ]);
   const { metrics, weeklyTrend, insights } = analytics;
 
@@ -119,20 +138,19 @@ export default async function EmployerDashboardPage() {
           company={{
             companyName: company.companyName,
             logoUrl: company.logoUrl,
-            description: company.description,
             headquarters: company.headquarters,
-            industry: company.industry,
             verifiedStatus: company.verifiedStatus,
           }}
-          analytics={analytics}
-          applicantQueue={applicantQueue}
-          chartData={chartData}
-          sparse={sparse}
-          scoreHint={scoreHint}
-          chartIsEmpty={chartIsEmpty}
+          decisions={proDecisions!}
+          defaultRejectionMessage={hiringDefaults?.rejectionMessage ?? null}
           showGettingStarted={showGettingStarted}
           gettingStartedSteps={gettingStartedSteps}
-          onboardingItems={onboardingItems}
+          insights={proInsights}
+          kpis={proKpis!}
+          chart={proPipeline!.chart}
+          funnel={proPipeline!.funnel}
+          roles={proRoles}
+          range={range}
         />
       ) : sparse && chartIsEmpty ? (
         <DashboardSparseBoard

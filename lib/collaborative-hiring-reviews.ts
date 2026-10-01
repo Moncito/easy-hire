@@ -6,6 +6,7 @@ import { signResumeUrl } from "@/lib/seeker/resume-urls";
 import { isFirstEmployerResponseTransition } from "@/lib/employer/response-metrics";
 import { recordEvent } from "@/lib/admin/events";
 import { notifyApplicationStatusTransition } from "@/lib/email";
+import { stageChangeActivityData } from "@/lib/jobs/stage-history";
 import type { z } from "zod";
 import type { collaborativePipelineSchema, collaborativeScorecardSchema } from "@/lib/validations/collaborative-review";
 
@@ -177,7 +178,14 @@ export async function updateCollaborativePipeline(companyId: string, actorUserId
       },
       select: { id: true, status: true, rejectionReason: true, updatedAt: true },
     }),
-    prisma.applicationActivity.create({ data: { applicationId, type: "STAGE_CHANGE", body: `${application.status} → ${input.status}`, actorMemberId: membership.id } }),
+    prisma.applicationActivity.create({
+      data: stageChangeActivityData({
+        applicationId,
+        fromStatus: application.status,
+        toStatus: input.status,
+        actorMemberId: membership.id,
+      }),
+    }),
   ]);
 
   notifyApplicationStatusTransition({

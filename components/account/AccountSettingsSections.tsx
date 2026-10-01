@@ -44,6 +44,8 @@ type Props = {
    * shouldn't know how to load. Seekers never have a workspace section.
    */
   workspaceContent?: ReactNode;
+  /** Employer Pro: design-system headings and nav labels. */
+  pro?: boolean;
 };
 
 /**
@@ -68,23 +70,28 @@ export default function AccountSettingsSections({
   passwordChangedAt,
   joinedLabel,
   workspaceContent,
+  pro = false,
 }: Props) {
   const isEmployer = role === "EMPLOYER";
+  // Employer Pro headings follow the employer design system; everyone else keeps theirs.
+  const headingClass = pro
+    ? "font-heading text-section text-eh-ink"
+    : "font-display text-xl font-bold text-ink";
   const passwordChangedLabel = passwordChangedAt ? relativeTime(passwordChangedAt.toISOString()) : null;
 
   return (
     <>
-      <AccountSettingsNav role={role} active={activeSection} variant="mobile" />
+      <AccountSettingsNav role={role} active={activeSection} variant="mobile" pro={pro} />
 
       <div className="lg:grid lg:grid-cols-[220px_minmax(0,1fr)] lg:items-start lg:gap-10">
         <aside className="hidden lg:block">
-          <AccountSettingsNav role={role} active={activeSection} variant="desktop" />
+          <AccountSettingsNav role={role} active={activeSection} variant="desktop" pro={pro} />
         </aside>
 
         <div className="min-w-0">
           {activeSection === "profile" && (
             <section aria-labelledby="profile-heading">
-              <h2 id="profile-heading" className="font-display text-xl font-bold text-ink">
+              <h2 id="profile-heading" className={headingClass}>
                 Profile
               </h2>
               <p className="mt-1 text-sm text-ink/55">The photo people across EasyHire see you by.</p>
@@ -125,7 +132,7 @@ export default function AccountSettingsSections({
 
           {activeSection === "security" && (
             <section aria-labelledby="security-heading">
-              <h2 id="security-heading" className="font-display text-xl font-bold text-ink">
+              <h2 id="security-heading" className={headingClass}>
                 Security
               </h2>
               <p className="mt-1 text-sm text-ink/55">Manage your password, two-factor authentication, and signed-in devices.</p>
@@ -137,7 +144,7 @@ export default function AccountSettingsSections({
 
           {activeSection === "notifications" && (
             <section aria-labelledby="notifications-heading">
-              <h2 id="notifications-heading" className="font-display text-xl font-bold text-ink">
+              <h2 id="notifications-heading" className={headingClass}>
                 Notifications
               </h2>
               <p className="mt-1 text-sm text-ink/55">Choose what EasyHire emails you about.</p>
@@ -149,7 +156,7 @@ export default function AccountSettingsSections({
 
           {activeSection === "privacy" && (
             <section aria-labelledby="privacy-heading">
-              <h2 id="privacy-heading" className="font-display text-xl font-bold text-ink">
+              <h2 id="privacy-heading" className={headingClass}>
                 Privacy &amp; data
               </h2>
               <p className="mt-1 text-sm text-ink/55">
