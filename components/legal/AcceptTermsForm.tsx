@@ -73,7 +73,9 @@ export default function AcceptTermsForm({ next, role }: { next: string; role?: s
         setLoading(false);
         return;
       }
-      await update();
+      // update() with no argument is a plain GET that skips the jwt "update"
+      // trigger; pass {} so the client session refreshes too.
+      await update({});
       router.replace(next);
       router.refresh();
     } catch {
