@@ -43,6 +43,7 @@ export const registerSchema = z.object({
   role: roleSchema,
   fullName: z.string().max(200, "Name is too long").optional(),
   companyName: z.string().max(200, "Company name is too long").optional(),
+  acceptTerms: z.literal(true, { error: "You must accept the Terms of Service and Privacy Policy" }),
 });
 
 export const seekerOnboardingSchema = z.object({

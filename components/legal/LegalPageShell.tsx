@@ -29,18 +29,22 @@ export default async function LegalPageShell({
 
   return (
     <div className="relative min-h-screen overflow-x-hidden bg-mist">
-      <SeekerAreaBackground />
+      {isSeeker && <SeekerAreaBackground />}
       <PublicJobsHeader />
       <main className="header-offset relative z-10 pb-16">
         <div className="mx-auto w-full max-w-3xl px-4 sm:px-6 lg:px-8">
-          <LegalNavBandBleed
-            section={navSection}
-            icon={navIcon}
-            hint={navHint}
-            isSeeker={isSeeker}
-            metaLabel={metaLabel}
-          />
-          <header className="mb-10 border-b border-ink/10 pb-8 pt-2">
+          {isSeeker && (
+            <LegalNavBandBleed
+              section={navSection}
+              icon={navIcon}
+              hint={navHint}
+              isSeeker
+              metaLabel={metaLabel}
+            />
+          )}
+          <header
+            className={`mb-10 border-b border-ink/10 pb-8 ${isSeeker ? "pt-2" : "pt-6 sm:pt-8"}`}
+          >
             <h1 className="font-display text-4xl font-bold tracking-tight text-ink">{title}</h1>
             <p className="mt-3 text-sm text-ink/55">{description}</p>
           </header>

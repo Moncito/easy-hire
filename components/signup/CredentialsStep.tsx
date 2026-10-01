@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { signIn } from "next-auth/react";
+import { CURRENT_TERMS_VERSION, TERMS_CONSENT_COOKIE } from "@/lib/legal/terms-version";
 import { Role, CredentialsData } from "./types";
 
 type Props = {
@@ -19,9 +21,30 @@ export default function CredentialsStep({ role, loading, serverError, onSubmit }
   const [confirmPassword, setConfirmPassword] = useState("");
   const [localError, setLocalError] = useState("");
 
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [termsError, setTermsError] = useState("");
+
+  const TERMS_ERROR = "Please confirm you're 18 or older and agree to the Terms and Privacy Policy.";
+  const accentClass = role === "EMPLOYER" ? "accent-teal" : "accent-marigold";
+
+  function handleGoogle() {
+    if (!acceptedTerms) {
+      setTermsError(TERMS_ERROR);
+      return;
+    }
+    const secure = window.location.protocol === "https:" ? "; secure" : "";
+    document.cookie = `${TERMS_CONSENT_COOKIE}=${CURRENT_TERMS_VERSION}; path=/; max-age=600; samesite=lax${secure}`;
+    void signIn("google", { callbackUrl: "/seeker/dashboard" });
+  }
+
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLocalError("");
+
+    if (!acceptedTerms) {
+      setTermsError(TERMS_ERROR);
+      return;
+    }
 
     if (password !== confirmPassword) {
       setLocalError("Passwords don't match");
@@ -37,6 +60,7 @@ export default function CredentialsStep({ role, loading, serverError, onSubmit }
       companyName: role === "EMPLOYER" ? companyName : undefined,
       email,
       password,
+      acceptTerms: true,
     });
   }
 
@@ -93,6 +117,40 @@ export default function CredentialsStep({ role, loading, serverError, onSubmit }
           className="w-full rounded-xl border border-ink/15 px-4 py-3 text-sm text-ink outline-none focus:border-ink/40"
         />
 
+        <div>
+          <div className="flex min-h-11 items-start gap-3 py-2">
+            <input
+              id="accept-terms"
+              type="checkbox"
+              checked={acceptedTerms}
+              onChange={(e) => {
+                setAcceptedTerms(e.target.checked);
+                if (e.target.checked) setTermsError("");
+              }}
+              aria-required="true"
+              aria-invalid={termsError ? true : undefined}
+              aria-describedby={termsError ? "accept-terms-error" : undefined}
+              className={`mt-0.5 h-5 w-5 shrink-0 cursor-pointer rounded border-ink/30 ${accentClass} focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy`}
+            />
+            <label htmlFor="accept-terms" className="cursor-pointer text-sm leading-snug text-ink/75">
+              I&apos;m 18 or older and I agree to the{" "}
+              <Link href="/terms" target="_blank" rel="noopener noreferrer" className="font-semibold text-ink underline underline-offset-2">
+                Terms of Service
+              </Link>{" "}
+              and{" "}
+              <Link href="/privacy" target="_blank" rel="noopener noreferrer" className="font-semibold text-ink underline underline-offset-2">
+                Privacy Policy
+              </Link>
+              .
+            </label>
+          </div>
+          {termsError && (
+            <p id="accept-terms-error" role="alert" className="mt-1 text-sm text-ember">
+              {termsError}
+            </p>
+          )}
+        </div>
+
         {displayError && <p className="text-sm text-ember">{displayError}</p>}
 
         <button
@@ -115,7 +173,8 @@ export default function CredentialsStep({ role, loading, serverError, onSubmit }
             <div className="flex-1 border-t border-ink/15" />
           </div>
           <button
-            onClick={() => signIn("google", { callbackUrl: "/seeker/dashboard" })}
+            type="button"
+            onClick={handleGoogle}
             className="w-full rounded-xl border border-ink/15 px-4 py-3 text-sm font-semibold text-ink transition-colors hover:bg-ink/5 active:scale-95 cursor-pointer"
           >
             <div className="flex items-center justify-center gap-2">

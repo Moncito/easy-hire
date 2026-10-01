@@ -13,7 +13,7 @@ export default function TermsPage() {
   return (
     <LegalPageShell
       title="Terms of Service"
-      description="Last updated: July 2026. This is an MVP draft — have legal counsel review before public launch."
+      description="Last updated: July 2026."
       navSection="Terms of Service"
       navIcon={FileText}
       navHint="Platform agreement"

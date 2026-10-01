@@ -13,7 +13,7 @@ export default function PrivacyPage() {
   return (
     <LegalPageShell
       title="Privacy Policy"
-      description="Last updated: July 2026. This is an MVP draft — have legal counsel review before public launch."
+      description="Last updated: July 2026."
       navSection="Privacy Policy"
       navIcon={Shield}
       navHint="Data & privacy"

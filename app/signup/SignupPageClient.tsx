@@ -46,7 +46,7 @@ export default function SignupPageClient() {
     setError("");
     setLoading(true);
 
-    const result = await registerAccount({ ...data, role });
+    const result = await registerAccount({ ...data, acceptTerms: true, role });
 
     if (!result.ok) {
       setError((result.data as { error?: string })?.error || result.error || "Something went wrong");
