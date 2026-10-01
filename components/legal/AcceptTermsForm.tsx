@@ -11,7 +11,6 @@ import {
   FileText,
   Lock,
   ShieldCheck,
-  Sparkles,
 } from "lucide-react";
 import { BrandLockup } from "@/components/brand/BrandMark";
 import { useSignOut } from "@/components/ui/useSignOut";
@@ -90,18 +89,19 @@ export default function AcceptTermsForm({ next, role }: { next: string; role?: s
   ];
 
   return (
-    <main className="relative min-h-screen overflow-x-clip bg-mist px-4 py-6 sm:px-6 sm:py-10">
+    <main className="relative min-h-dvh overflow-x-clip bg-mist px-4 py-6 sm:px-6 sm:py-10 lg:flex lg:h-dvh lg:items-center lg:overflow-hidden lg:py-6">
       <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden="true">
         <div className="absolute -left-24 -top-24 h-96 w-96 rounded-full bg-marigold/20 blur-3xl" />
         <div className="absolute -right-24 top-1/3 h-96 w-96 rounded-full bg-teal/15 blur-3xl" />
         <div className="absolute -bottom-32 left-1/4 h-96 w-96 rounded-full bg-navy/10 blur-3xl" />
       </div>
 
-      <div className="relative mx-auto grid w-full max-w-5xl rounded-3xl border border-ink/10 bg-white shadow-xl shadow-black/5 lg:grid-cols-[3fr_2fr]">
-        {/* LEFT */}
-        <div className="p-6 sm:p-10">
+      <div className="relative mx-auto grid w-full max-w-5xl rounded-3xl border border-ink/10 bg-white shadow-xl shadow-black/5 lg:max-h-full lg:grid-cols-[3fr_2fr] lg:grid-rows-[minmax(0,1fr)] lg:overflow-hidden">
+        {/* LEFT — on lg it scrolls inside the card only when the window is
+            too short, so the page itself never scrolls and Accept stays put. */}
+        <div className="p-6 sm:p-10 lg:min-h-0 lg:overflow-y-auto lg:p-8">
           <BrandLockup size="md" />
-          <h1 className="mt-6 font-display text-3xl font-bold tracking-tight text-ink sm:text-4xl">
+          <h1 className="mt-5 font-display text-3xl font-bold tracking-tight text-ink">
             We&apos;ve updated our Terms
           </h1>
           <p className="mt-3 text-sm leading-relaxed text-ink/70">
@@ -113,7 +113,7 @@ export default function AcceptTermsForm({ next, role }: { next: string; role?: s
             Effective {legal.effective}
           </p>
 
-          <ul className="mt-6 grid gap-3 sm:grid-cols-2">
+          <ul className="mt-5 grid gap-3 sm:grid-cols-2">
             {docs.map(({ title, href, icon: Icon }) => (
               <li key={href}>
                 <Link
@@ -139,8 +139,8 @@ export default function AcceptTermsForm({ next, role }: { next: string; role?: s
             ))}
           </ul>
 
-          <h2 className="mt-8 font-display text-lg font-bold text-ink">What&apos;s changed</h2>
-          <ol className="mt-4 space-y-4">
+          <h2 className="mt-6 font-display text-lg font-bold text-ink">What&apos;s changed</h2>
+          <ol className="mt-3 grid gap-x-6 gap-y-3 sm:grid-cols-2">
             {legal.changes.map((change, i) => (
               <li key={change.href} className="flex gap-3">
                 <span
@@ -150,42 +150,24 @@ export default function AcceptTermsForm({ next, role }: { next: string; role?: s
                   {i + 1}
                 </span>
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold text-ink">{change.title}</p>
-                  <p className="mt-0.5 text-sm leading-relaxed text-ink/65">{change.description}</p>
                   <Link
                     href={change.href}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="mt-1 inline-block text-xs font-semibold text-navy underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy"
+                    className="text-sm font-semibold text-ink underline-offset-2 hover:text-navy hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy"
                   >
-                    Read more<span className="sr-only">: {change.title} (opens in a new tab)</span>
+                    {change.title}
+                    <span className="sr-only"> (opens in a new tab)</span>
                   </Link>
+                  <p className="mt-0.5 text-xs leading-relaxed text-ink/60">{change.description}</p>
                 </div>
               </li>
             ))}
           </ol>
-
-          <div className="mt-8 flex gap-3 rounded-2xl border border-teal/20 bg-teal/5 p-4">
-            <Sparkles className="mt-0.5 h-5 w-5 shrink-0 text-teal" aria-hidden="true" />
-            <div className="text-sm">
-              <p className="font-semibold text-ink">
-                Easy AI never rejects a candidate on its own.
-              </p>
-              <Link
-                href="/privacy#easy-ai"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-1 inline-block font-semibold text-teal underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal"
-              >
-                How Easy AI uses your data
-                <span className="sr-only"> (opens in a new tab)</span>
-              </Link>
-            </div>
-          </div>
         </div>
 
         {/* RIGHT */}
-        <div className="flex flex-col rounded-b-3xl border-t border-ink/10 bg-mist/60 p-6 sm:p-10 lg:rounded-b-none lg:rounded-r-3xl lg:border-l lg:border-t-0">
+        <div className="flex flex-col rounded-b-3xl border-t border-ink/10 bg-mist/60 p-6 sm:p-10 lg:min-h-0 lg:overflow-y-auto lg:rounded-b-none lg:p-8 lg:pb-0 lg:rounded-r-3xl lg:border-l lg:border-t-0">
           <p className="text-[11px] font-semibold uppercase tracking-widest text-ink/45">
             Your account
           </p>
@@ -228,7 +210,7 @@ export default function AcceptTermsForm({ next, role }: { next: string; role?: s
             </div>
           </div>
 
-          <hr className="my-6 border-ink/10" />
+          <hr className="my-5 border-ink/10" />
 
           <div className="flex gap-3">
             <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-navy" aria-hidden="true" />
@@ -241,7 +223,7 @@ export default function AcceptTermsForm({ next, role }: { next: string; role?: s
             </div>
           </div>
 
-          <div className="mt-6 rounded-2xl border border-ink/10 bg-white p-4">
+          <div className="mt-5 rounded-2xl border border-ink/10 bg-white p-4">
             <p className="text-sm font-semibold text-ink">Need help?</p>
             <p className="mt-1 text-sm text-ink/65">
               Questions about these updates?{" "}
@@ -258,7 +240,7 @@ export default function AcceptTermsForm({ next, role }: { next: string; role?: s
           {/* Spacer so the sticky mobile action bar never covers content */}
           <div className="h-4 lg:hidden" aria-hidden="true" />
 
-          <div className="sticky bottom-0 z-10 -mx-6 mt-auto border-t border-ink/10 bg-white px-6 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 sm:-mx-10 sm:px-10 lg:static lg:mx-0 lg:mt-auto lg:border-0 lg:bg-transparent lg:px-0 lg:pb-0 lg:pt-8">
+          <div className="sticky bottom-0 z-10 -mx-6 mt-auto border-t border-ink/10 bg-white px-6 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 sm:-mx-10 sm:px-10 lg:-mx-8 lg:mt-auto lg:border-0 lg:bg-[color-mix(in_srgb,var(--color-mist)_60%,white)] lg:px-8 lg:pb-6 lg:pt-6">
             {error && (
               <p id="accept-terms-error" role="alert" className="mb-2 text-sm text-ember">
                 {error}
