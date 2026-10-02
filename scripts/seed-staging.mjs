@@ -113,7 +113,12 @@ async function upsertApplication(jobId, seekerId, status) {
 async function main() {
   const passwordHash = await bcrypt.hash(password, 10);
 
-  await upsertUser("admin@easyhire.test", "ADMIN", passwordHash);
+  const admin = await upsertUser("admin@easyhire.test", "ADMIN", passwordHash);
+  await prisma.adminProfile.upsert({
+    where: { userId: admin.id },
+    update: { level: "SUPER_ADMIN" },
+    create: { userId: admin.id, level: "SUPER_ADMIN" },
+  });
 
   const free = await upsertEmployer("employer.free@easyhire.test", passwordHash, {
     companyName: "Staging Free Co",
@@ -143,7 +148,7 @@ async function main() {
     headline: "Executive Virtual Assistant",
     bio: "Test VA profile for staging.",
     location: "Cebu, Philippines",
-    skills: ["Email management", "Calendar management", "Customer support"],
+    skills: ["Email management|Proficient", "Calendar management|Proficient", "Customer support|Proficient"],
     yearsExperience: "3-5",
   });
 
@@ -152,7 +157,7 @@ async function main() {
     headline: "Social Media VA",
     bio: "Second test VA profile for staging.",
     location: "Davao, Philippines",
-    skills: ["Canva", "Content scheduling", "Community management"],
+    skills: ["Canva|Proficient", "Content scheduling|Proficient", "Community management|Proficient"],
     yearsExperience: "1-2",
   });
 
