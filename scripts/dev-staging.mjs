@@ -24,6 +24,8 @@ if (!existsSync(".env.staging")) {
 }
 
 config({ path: ".env.staging", override: true, quiet: true });
+// Read by getEnvironmentBadge (lib/shared/deploy-env.ts) for the corner label.
+process.env.LOCAL_DATABASE = "staging";
 
 function clearDevDataCache() {
   rmSync(DEV_DATA_CACHE, { recursive: true, force: true });

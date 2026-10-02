@@ -5,7 +5,7 @@ import AuthProvider from "@/components/providers/AuthProvider";
 import CommandPalette from "@/components/CommandPalette";
 import { getSession } from "@/lib/employer-session";
 import { BASE_URL } from "@/lib/seo/base-url";
-import { IS_PRODUCTION_DEPLOYMENT } from "@/lib/shared/deploy-env";
+import { ENVIRONMENT_BADGE, IS_PRODUCTION_DEPLOYMENT } from "@/lib/shared/deploy-env";
 import "./globals.css";
 
 const spaceGrotesk = Space_Grotesk({
@@ -52,14 +52,17 @@ export default async function RootLayout({
   return (
     <html lang="en" className={`scroll-smooth overflow-x-hidden ${spaceGrotesk.variable} ${inter.variable} ${ibmPlexMono.variable}`}>
       <body className="overflow-x-hidden font-body antialiased">
-        {!IS_PRODUCTION_DEPLOYMENT && (
+        {ENVIRONMENT_BADGE && (
           // Fixed and click-through so it never shifts a layout or covers a
-          // control; the public header is itself fixed to the top.
+          // control; the public header is fixed to the top and the search
+          // button (CommandPalette) sits bottom-right, so it goes bottom-center.
           <div
             aria-hidden="true"
-            className="pointer-events-none fixed bottom-3 right-3 z-[100] rounded-full bg-navy px-3 py-1 font-mono text-[11px] font-medium tracking-wide text-mist opacity-90 shadow-lg"
+            className={`pointer-events-none fixed bottom-3 left-1/2 z-[100] -translate-x-1/2 whitespace-nowrap rounded-full px-3 py-1 font-mono text-[11px] font-medium tracking-wide text-mist opacity-90 shadow-lg ${
+              ENVIRONMENT_BADGE.tone === "live-data" ? "bg-ember" : "bg-navy"
+            }`}
           >
-            STAGING · test data
+            {ENVIRONMENT_BADGE.label}
           </div>
         )}
         <AuthProvider session={session}>
