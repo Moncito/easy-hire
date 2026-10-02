@@ -5,6 +5,7 @@ import AuthProvider from "@/components/providers/AuthProvider";
 import CommandPalette from "@/components/CommandPalette";
 import { getSession } from "@/lib/employer-session";
 import { BASE_URL } from "@/lib/seo/base-url";
+import { IS_PRODUCTION_DEPLOYMENT } from "@/lib/shared/deploy-env";
 import "./globals.css";
 
 const spaceGrotesk = Space_Grotesk({
@@ -38,6 +39,9 @@ export const metadata: Metadata = {
     default: "EasyHire VA Solutions",
   },
   description: "Find verified VA jobs, or hire your next virtual assistant.",
+  // robots.txt already disallows crawling off production; this also covers
+  // pages a crawler reaches through an external link.
+  ...(IS_PRODUCTION_DEPLOYMENT ? {} : { robots: { index: false, follow: false } }),
 };
 
 export default async function RootLayout({
@@ -48,6 +52,16 @@ export default async function RootLayout({
   return (
     <html lang="en" className={`scroll-smooth overflow-x-hidden ${spaceGrotesk.variable} ${inter.variable} ${ibmPlexMono.variable}`}>
       <body className="overflow-x-hidden font-body antialiased">
+        {!IS_PRODUCTION_DEPLOYMENT && (
+          // Fixed and click-through so it never shifts a layout or covers a
+          // control; the public header is itself fixed to the top.
+          <div
+            aria-hidden="true"
+            className="pointer-events-none fixed bottom-3 right-3 z-[100] rounded-full bg-navy px-3 py-1 font-mono text-[11px] font-medium tracking-wide text-mist opacity-90 shadow-lg"
+          >
+            STAGING · test data
+          </div>
+        )}
         <AuthProvider session={session}>
           {children}
           <CommandPalette />
