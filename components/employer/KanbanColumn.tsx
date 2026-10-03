@@ -4,12 +4,14 @@ import CandidateCard from "./CandidateCard";
 import { Inbox } from "lucide-react";
 import { useEmployerShell } from "@/components/employer/EmployerShellContext";
 import { PRO_STAGE_COLUMN } from "@/components/employer/pipeline-stage-styles";
+import type { PendingOfferSummary } from "@/components/employer/candidate-detail/types";
 
 type Application = {
   id: string;
   status: string;
   coverNote: string | null;
   appliedAt: string;
+  offers?: PendingOfferSummary[];
   seeker: {
     id: string;
     fullName: string;
@@ -32,6 +34,7 @@ type Props = {
   highlighted?: boolean;
   dotClass?: string;
   focusedApplicationId?: string | null;
+  nowMs?: number;
 };
 
 export default function KanbanColumn({
@@ -47,6 +50,7 @@ export default function KanbanColumn({
   highlighted = false,
   dotClass = "bg-ink/30",
   focusedApplicationId = null,
+  nowMs,
 }: Props) {
   const { isPro } = useEmployerShell();
   const bodyTone = isPro ? (PRO_STAGE_COLUMN[status] ?? "border-ink/5 bg-white/60") : "border-ink/5 bg-white/60";
@@ -86,6 +90,7 @@ export default function KanbanColumn({
               key={app.id}
               application={app}
               selectionMode={selectionMode}
+              nowMs={nowMs}
               selected={selectedIds?.has(app.id)}
               focused={focusedApplicationId === app.id}
               dimmed={!!focusedApplicationId && focusedApplicationId !== app.id}

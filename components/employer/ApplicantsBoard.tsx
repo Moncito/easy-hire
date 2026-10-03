@@ -7,6 +7,7 @@ import KanbanBoard from "./KanbanBoard";
 import RejectCandidateModal from "./RejectCandidateModal";
 import MakeOfferModal from "./MakeOfferModal";
 import EmployerConfirmModal from "./EmployerConfirmModal";
+import HireChoiceModal from "./HireChoiceModal";
 import {
   createOffer,
   listApplicationOffers,
@@ -20,8 +21,10 @@ import ApplicantsJobHeader, { type PipelineCounts } from "./ApplicantsJobHeader"
 import type { ApplicantsJobSummary } from "./ApplicantsJobHeader";
 import ApplicantsWorkspace from "./ApplicantsWorkspace";
 import CandidateDetailPanel from "./candidate-detail/CandidateDetailPanel";
-import type { CandidateApplication } from "./candidate-detail/types";
+import type { CandidateApplication, PendingOfferSummary } from "./candidate-detail/types";
 import { mergeApplicationUpdate } from "./candidate-detail/utils";
+import { offerPrefill, openOffer } from "./candidate-detail/offer-view";
+import { patchJobStatus } from "@/lib/client/jobs";
 import { CheckSquare } from "lucide-react";
 import { appendInternalNote } from "@/lib/candidate-notes";
 import { patchApplication } from "@/lib/client/applications";
@@ -55,6 +58,26 @@ type PendingReject = {
   ids: string[];
   candidateName: string;
 };
+
+type PendingHire = {
+  ids: string[];
+  names: string[];
+  hasOpenOffer: boolean;
+};
+
+/** The PENDING offers from a candidate's full offer list, in the shape the board carries on each application. */
+function pendingSummaries(list: JobOffer[]): PendingOfferSummary[] {
+  return list
+    .filter((o) => o.status === "PENDING")
+    .map((o) => ({
+      id: o.id,
+      status: o.status,
+      expiresAt: o.expiresAt,
+      monthlyRateCents: o.monthlyRateCents,
+      hourlyRateCents: o.hourlyRateCents,
+      currency: o.currency,
+    }));
+}
 
 function applyUpdate(
   apps: Application[],
@@ -91,6 +114,9 @@ export default function ApplicantsBoard({
   const [messageLoading, setMessageLoading] = useState(false);
   const [messageError, setMessageError] = useState("");
   const [rejectError, setRejectError] = useState("");
+  const [pendingHire, setPendingHire] = useState<PendingHire | null>(null);
+  const [closeJobOpen, setCloseJobOpen] = useState(false);
+  const [closeJobLoading, setCloseJobLoading] = useState(false);
 
   useEffect(() => {
     if (selectedApp) setNoteInput("");
@@ -114,25 +140,34 @@ export default function ApplicantsBoard({
   const [pendingWithdrawId, setPendingWithdrawId] = useState<string | null>(null);
   const [withdrawLoading, setWithdrawLoading] = useState(false);
 
+  // Keep the per-application pending-offer summary (card chip, next-step box)
+  // in step with the full list whenever it is fetched.
+  const storeOffers = useCallback((applicationId: string, list: JobOffer[]) => {
+    setOffersFor({ applicationId, offers: list });
+    const summary = pendingSummaries(list);
+    setApplications((prev) => prev.map((app) => (app.id === applicationId ? { ...app, offers: summary } : app)));
+    setSelectedApp((prev) => (prev?.id === applicationId ? { ...prev, offers: summary } : prev));
+  }, []);
+
   useEffect(() => {
     if (!selectedId) return;
     let stale = false;
     listApplicationOffers(selectedId)
       .then((list) => {
-        if (!stale) setOffersFor({ applicationId: selectedId, offers: list });
+        if (!stale) storeOffers(selectedId, list);
       })
       .catch(() => {
-        if (!stale) setOffersFor({ applicationId: selectedId, offers: [] });
+        // Keep the board's pending-offer summary; the panel falls back to it.
       });
     return () => {
       stale = true;
     };
-  }, [selectedId]);
+  }, [selectedId, storeOffers]);
 
   async function refreshOffers(applicationId: string) {
     try {
       const list = await listApplicationOffers(applicationId);
-      setOffersFor({ applicationId, offers: list });
+      storeOffers(applicationId, list);
     } catch {
       // Keep what is on screen; the next selection change refetches.
     }
@@ -245,6 +280,22 @@ export default function ApplicantsBoard({
       return;
     }
 
+    if (newStatus === "HIRED") {
+      const app = applications.find((a) => a.id === id);
+      if (app && app.status !== "HIRED") {
+        setPendingHire({
+          ids: [id],
+          names: [app.seeker.fullName || "this candidate"],
+          hasOpenOffer: openOffer(app, nowMs) !== null,
+        });
+        return;
+      }
+    }
+
+    await runStatusChange(id, newStatus);
+  }
+
+  async function runStatusChange(id: string, newStatus: string) {
     const previous = applications;
     const previousSelected = selectedApp;
     setApplications((prev) => prev.map((app) => (app.id === id ? { ...app, status: newStatus } : app)));
@@ -322,8 +373,23 @@ export default function ApplicantsBoard({
       return;
     }
 
+    if (status === "HIRED") {
+      const targets = applications.filter((a) => selectedIds.has(a.id) && a.status !== "HIRED");
+      if (targets.length > 0) {
+        setPendingHire({
+          ids: targets.map((a) => a.id),
+          names: targets.map((a) => a.seeker.fullName || "this candidate"),
+          hasOpenOffer: targets.length === 1 && openOffer(targets[0], nowMs) !== null,
+        });
+        return;
+      }
+    }
+
+    await runBulkMove(Array.from(selectedIds), status);
+  }
+
+  async function runBulkMove(ids: string[], status: string) {
     setBulkLoading(true);
-    const ids = Array.from(selectedIds);
     const previous = applications;
 
     setApplications((prev) =>
@@ -343,6 +409,42 @@ export default function ApplicantsBoard({
       setApplications(previous);
     } finally {
       setBulkLoading(false);
+    }
+  }
+
+  async function confirmMarkHired() {
+    if (!pendingHire) return;
+    const { ids } = pendingHire;
+    setPendingHire(null);
+    if (ids.length === 1) await runStatusChange(ids[0], "HIRED");
+    else await runBulkMove(ids, "HIRED");
+  }
+
+  function sendOfferFromHireChoice() {
+    if (!pendingHire || pendingHire.ids.length !== 1) return;
+    const target = applications.find((a) => a.id === pendingHire.ids[0]);
+    setPendingHire(null);
+    if (!target) return;
+    setSelectedApp(target);
+    setOfferError("");
+    setMakeOfferFor(target.id);
+  }
+
+  async function handleCloseJob() {
+    setCloseJobLoading(true);
+    try {
+      const result = await patchJobStatus(job.id, "CLOSED");
+      if (result.ok) {
+        toast.success("Job closed");
+        setCloseJobOpen(false);
+        router.refresh();
+      } else {
+        toast.error(result.error);
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not close the job");
+    } finally {
+      setCloseJobLoading(false);
     }
   }
 
@@ -408,6 +510,14 @@ export default function ApplicantsBoard({
     interview: applications.filter((a) => a.status === "INTERVIEW").length,
     hired: applications.filter((a) => a.status === "HIRED").length,
     rejected: applications.filter((a) => a.status === "REJECTED").length,
+  };
+
+  // Facts the after-hire checklist needs ("2 of 2 hired — close this job?").
+  const hireProps = {
+    hiredCount: livePipeline.hired,
+    targetHireCount: job.targetHireCount,
+    jobStatus: job.status,
+    onCloseJob: () => setCloseJobOpen(true),
   };
 
   // The oldest unreviewed wait, for the header badge (same rule as the job cards).
@@ -515,6 +625,7 @@ export default function ApplicantsBoard({
           onMessage={handleMessageCandidate}
           onNavigate={navigateCandidate}
           {...offerProps}
+          {...hireProps}
         />
       ) : (
       <CandidateDetailPanel
@@ -525,6 +636,7 @@ export default function ApplicantsBoard({
         savingNotes={savingNotes}
         messageLoading={messageLoading}
         messageError={messageError}
+        nowMs={nowMs}
         onClose={() => setSelectedApp(null)}
         onNoteChange={setNoteInput}
         onSaveNotes={handleSaveNotes}
@@ -533,6 +645,7 @@ export default function ApplicantsBoard({
         onMessage={handleMessageCandidate}
         onNavigate={navigateCandidate}
         {...offerProps}
+        {...hireProps}
       />
       )
     ) : null;
@@ -580,6 +693,7 @@ export default function ApplicantsBoard({
                 applications={applications}
                 job={job}
                 companyVerified={companyVerified}
+                nowMs={nowMs}
                 activeStage={activeStage}
                 focusedApplicationId={selectedApp?.id ?? null}
                 onCardClick={(app) => {
@@ -615,6 +729,7 @@ export default function ApplicantsBoard({
         open={makeOfferOpen && !!selectedApp}
         candidateName={selectedApp?.seeker.fullName || "this candidate"}
         jobTitle={job.title}
+        prefill={offerPrefill(job)}
         loading={offerSubmitting}
         error={offerError}
         onCancel={() => {
@@ -622,6 +737,26 @@ export default function ApplicantsBoard({
           setOfferError("");
         }}
         onSubmit={handleSubmitOffer}
+      />
+
+      <HireChoiceModal
+        open={!!pendingHire}
+        candidateNames={pendingHire?.names ?? []}
+        hasOpenOffer={pendingHire?.hasOpenOffer ?? false}
+        onSendOffer={pendingHire && pendingHire.ids.length === 1 ? sendOfferFromHireChoice : undefined}
+        onMarkHired={confirmMarkHired}
+        onCancel={() => setPendingHire(null)}
+      />
+
+      <EmployerConfirmModal
+        open={closeJobOpen}
+        title="Close this job?"
+        subject={job.title}
+        description="The listing comes down and no new applications come in. You can still message candidates."
+        confirmLabel="Close job"
+        loading={closeJobLoading}
+        onCancel={() => setCloseJobOpen(false)}
+        onConfirm={handleCloseJob}
       />
 
       <EmployerConfirmModal

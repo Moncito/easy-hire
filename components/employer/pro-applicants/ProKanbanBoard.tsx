@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { ChevronDown, ChevronUp, Clock, Inbox, Paperclip } from "lucide-react";
-import { Avatar, cx } from "@/components/employer/system";
+import { Avatar, StatusBadge, cx } from "@/components/employer/system";
+import { daysLeft, openOffer } from "@/components/employer/candidate-detail/offer-view";
 import KanbanBoardEmptyState from "@/components/employer/KanbanBoardEmptyState";
 import type { CandidateApplication } from "@/components/employer/candidate-detail/types";
 import { PRO_REJECTED_STAGE, PRO_STAGES } from "@/components/employer/pro-applicants/stages";
@@ -50,6 +51,7 @@ function ProCandidateCard({
   const waitingDays =
     application.status === "APPLIED" ? Math.floor((nowMs - new Date(application.appliedAt).getTime()) / DAY_MS) : null;
   const severity = waitSeverity(waitingDays);
+  const pendingOffer = openOffer(application, nowMs);
 
   return (
     <div
@@ -101,7 +103,7 @@ function ProCandidateCard({
             </div>
           )}
 
-          <div className="mt-3 flex items-center justify-between gap-2 border-t border-eh-line pt-2">
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-x-2 gap-y-1 border-t border-eh-line pt-2">
             {severity !== "none" ? (
               <span
                 className={cx(
@@ -114,6 +116,11 @@ function ProCandidateCard({
               </span>
             ) : (
               <span className="text-[11px] text-eh-muted">{appliedLabel(application.appliedAt, nowMs)}</span>
+            )}
+            {pendingOffer && (
+              <StatusBadge tone="info" className="text-[11px]">
+                Offer sent · <span className="num">{daysLeft(pendingOffer.expiresAt, nowMs)}d</span> left
+              </StatusBadge>
             )}
             {seeker.resumeUrl && (
               <span className="inline-flex items-center gap-1 text-[11px] font-medium text-eh-ink-2" title="Resume attached">

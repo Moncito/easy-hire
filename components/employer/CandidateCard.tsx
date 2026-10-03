@@ -5,12 +5,15 @@ import { displaySkill } from "@/lib/seeker/profile-format";
 import EmployerAvatar from "@/components/employer/ui/EmployerAvatar";
 import { useEmployerShell } from "@/components/employer/EmployerShellContext";
 import { PRO_STAGE_CARD_ACCENT } from "@/components/employer/pipeline-stage-styles";
+import type { PendingOfferSummary } from "@/components/employer/candidate-detail/types";
+import { daysLeft, openOffer } from "@/components/employer/candidate-detail/offer-view";
 
 type Application = {
   id: string;
   status: string;
   coverNote: string | null;
   appliedAt: string;
+  offers?: PendingOfferSummary[];
   seeker: {
     id: string;
     fullName: string;
@@ -27,6 +30,8 @@ type Props = {
   focused?: boolean;
   dimmed?: boolean;
   selectionMode?: boolean;
+  /** Server render time; needed for the "Offer sent · Nd left" chip. */
+  nowMs?: number;
   onToggleSelect?: (id: string) => void;
   onClick: () => void;
 };
@@ -50,10 +55,12 @@ export default function CandidateCard({
   focused = false,
   dimmed = false,
   selectionMode = false,
+  nowMs,
   onToggleSelect,
   onClick,
 }: Props) {
   const { isPro } = useEmployerShell();
+  const pendingOffer = nowMs != null ? openOffer(application, nowMs) : null;
   const skills = application.seeker.skills ?? [];
   const stageAccent = isPro ? (PRO_STAGE_CARD_ACCENT[application.status] ?? "") : "";
 
@@ -138,10 +145,15 @@ export default function CandidateCard({
             </div>
           )}
 
-          <div className="mt-3 flex items-center justify-between border-t border-ink/5 pt-2.5">
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-x-2 gap-y-1 border-t border-ink/5 pt-2.5">
             <span className="text-[10px] font-medium text-ink/40">
               {formatAppliedAt(application.appliedAt)}
             </span>
+            {pendingOffer && nowMs != null && (
+              <span className="inline-flex items-center rounded-md bg-navy/10 px-1.5 py-0.5 text-[9px] font-semibold text-navy">
+                Offer sent · <span className="font-data">{daysLeft(pendingOffer.expiresAt, nowMs)}d</span>{" "}left
+              </span>
+            )}
             {application.seeker.resumeUrl && (
               <span
                 className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[9px] font-semibold ${

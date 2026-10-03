@@ -7,7 +7,6 @@ import {
   Calendar,
   GraduationCap,
   Languages,
-  Clock,
   Star,
 } from "lucide-react";
 import { formatSalaryRange } from "@/lib/format";
@@ -50,27 +49,38 @@ export default function CandidateOverviewTab({ application, onRating }: Props) {
   const educationEntries = seeker.education ?? [];
   const languages = seeker.languages ?? [];
   const salary = formatSalaryRange(seeker.desiredSalaryMin, seeker.desiredSalaryMax);
-  const primarySkill = skills[0] ? skillName(skills[0]) : "—";
-  const education = educationEntries[0]?.trim() || "—";
-  const languagesLabel = languages.length > 0 ? languages.join(", ") : "—";
+  const primarySkill = skills[0] ? skillName(skills[0]) : "";
+  const education = educationEntries[0]?.trim() || "";
+  const languagesLabel = languages.length > 0 ? languages.join(", ") : "";
+
+  // Only fields with a value are drawn; the rest are counted, not shown as dashes.
+  const fields: { icon: typeof MapPin; label: string; value: string }[] = [
+    { icon: MapPin, label: "Location", value: seeker.location?.trim() || "" },
+    { icon: Banknote, label: "Expected salary", value: salary === "Not specified" ? "" : salary },
+    { icon: Briefcase, label: "Availability", value: seeker.availability?.trim() || "" },
+    { icon: Calendar, label: "Experience", value: seeker.yearsExperience?.trim() || "" },
+    { icon: Star, label: "Primary skill", value: primarySkill },
+    { icon: Languages, label: "Languages", value: languagesLabel },
+    { icon: GraduationCap, label: "Education", value: education },
+  ];
+  const shown = fields.filter((f) => f.value !== "");
+  const missingCount = fields.length - shown.length;
 
   const snapshot = (
     <>
       <h3 className="font-display text-sm font-semibold text-ink">Snapshot</h3>
-      <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3">
-        <SnapshotCell icon={MapPin} label="Location" value={seeker.location || "—"} />
-        <SnapshotCell
-          icon={Banknote}
-          label="Expected salary"
-          value={salary === "Not specified" ? "—" : salary}
-        />
-        <SnapshotCell icon={Briefcase} label="Availability" value={seeker.availability || "—"} />
-        <SnapshotCell icon={Calendar} label="Experience" value={seeker.yearsExperience || "—"} />
-        <SnapshotCell icon={Star} label="Primary skill" value={primarySkill} />
-        <SnapshotCell icon={Languages} label="Languages" value={languagesLabel} />
-        <SnapshotCell icon={GraduationCap} label="Education" value={education} />
-        <SnapshotCell icon={Clock} label="Notice period" value="—" />
-      </dl>
+      {shown.length > 0 && (
+        <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3">
+          {shown.map((f) => (
+            <SnapshotCell key={f.label} icon={f.icon} label={f.label} value={f.value} />
+          ))}
+        </dl>
+      )}
+      {missingCount > 0 && (
+        <p className="mt-3 text-xs text-ink/40">
+          {missingCount} {missingCount === 1 ? "field" : "fields"} not provided
+        </p>
+      )}
       {skills.length > 0 && (
         <div className={isPro ? "mt-4" : "mt-3 border-t border-ink/5 pt-3"}>
           <p className="text-xs font-medium text-ink/45">Skills</p>

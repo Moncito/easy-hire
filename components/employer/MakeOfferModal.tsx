@@ -4,11 +4,14 @@ import { useEffect, useId, useRef, useState } from "react";
 import { X } from "lucide-react";
 import { validateOfferInput } from "@/lib/client/offers";
 import type { CreateOfferInput } from "@/lib/validations/offer";
+import type { OfferPrefill } from "@/components/employer/candidate-detail/offer-view";
 
 type Props = {
   open: boolean;
   candidateName: string;
   jobTitle: string;
+  /** Starting pay type and amount from the job's posted salary. */
+  prefill?: OfferPrefill;
   loading?: boolean;
   error?: string;
   onCancel: () => void;
@@ -36,6 +39,7 @@ export default function MakeOfferModal({ open, ...props }: Props) {
 function MakeOfferDialog({
   candidateName,
   jobTitle,
+  prefill,
   loading = false,
   error = "",
   onCancel,
@@ -51,8 +55,8 @@ function MakeOfferDialog({
   });
 
   const [title, setTitle] = useState(jobTitle);
-  const [rateType, setRateType] = useState<"MONTHLY" | "HOURLY">("MONTHLY");
-  const [amount, setAmount] = useState("");
+  const [rateType, setRateType] = useState<"MONTHLY" | "HOURLY">(prefill?.rateType ?? "MONTHLY");
+  const [amount, setAmount] = useState(prefill?.amount ? String(prefill.amount) : "");
   const [currency, setCurrency] = useState<"USD" | "PHP">("USD");
   const [hours, setHours] = useState("");
   const [startDate, setStartDate] = useState("");
@@ -101,6 +105,16 @@ function MakeOfferDialog({
     setFieldErrors({});
     onSubmit(result.data);
   }
+
+  // Neutral hint only: the posted range is in USD, so compare nothing else.
+  const typedAmount = Number.parseFloat(amount.replace(/,/g, ""));
+  const outsideRange =
+    !!prefill &&
+    prefill.rateType === rateType &&
+    currency === "USD" &&
+    Number.isFinite(typedAmount) &&
+    typedAmount > 0 &&
+    ((prefill.min != null && typedAmount < prefill.min) || (prefill.max != null && typedAmount > prefill.max));
 
   const titleId = `${uid}-title`;
   const errorFor = (key: string) =>
@@ -204,6 +218,16 @@ function MakeOfferDialog({
                 aria-describedby={describedBy("rateCents")}
                 className={`${INPUT_CLASS} font-data`}
               />
+              {prefill?.rangeLabel ? (
+                <p className="mt-1 text-xs text-ink/50">
+                  Your posted range: <span className="font-data">{prefill.rangeLabel}</span>
+                </p>
+              ) : null}
+              {outsideRange ? (
+                <p role="status" className="mt-0.5 text-xs text-ink/50">
+                  Outside your posted range
+                </p>
+              ) : null}
               {errorFor("rateCents")}
             </div>
             <div>

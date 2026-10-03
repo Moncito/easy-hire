@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Star, X } from "lucide-react";
 import StarRating from "@/components/reviews/StarRating";
 import SubmitReviewForm, { type SubmittedReview } from "@/components/reviews/SubmitReviewForm";
 import type { ReviewableApplicationEntry, MyReviewSummary } from "@/lib/reviews";
@@ -24,6 +24,11 @@ type Props = {
    * `Date.now()`/`new Date()` itself during render, so re-renders stay pure.
    */
   nowMs: number;
+  /**
+   * One-line summary with a "Review" button that expands the full list in place,
+   * and an X that hides it until the page reloads. Default false: the full card.
+   */
+  compact?: boolean;
 };
 
 function toDate(value: Date | string): Date {
@@ -58,22 +63,75 @@ function initialsFrom(name: string): string {
  *  - anything else   → revealed; shows the rating and a link to where it's
  *    publicly visible.
  */
-export default function ReviewablePromptList({ entries, nowMs }: Props) {
+export default function ReviewablePromptList({ entries, nowMs, compact = false }: Props) {
   const router = useRouter();
   const [openId, setOpenId] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
   // Local overrides so a just-submitted review shows as sealed immediately,
   // without needing an effect to resync `entries` from refreshed props.
   const [overrides, setOverrides] = useState<Record<string, MyReviewOverride>>({});
 
   if (entries.length === 0) return null;
 
-  const pendingCount = entries.filter((entry) => (overrides[entry.applicationId] ?? entry.myReview) === null).length;
+  const pendingEntries = entries.filter((entry) => (overrides[entry.applicationId] ?? entry.myReview) === null);
+  const pendingCount = pendingEntries.length;
+
+  if (compact && dismissed) return null;
+
+  if (compact && !expanded) {
+    const listed = pendingCount > 0 ? pendingEntries : entries;
+    const names = listed.map((entry) => entry.counterpart.name.trim().split(/\s+/)[0] || entry.counterpart.name);
+    const nameLabel =
+      names.length > 2 ? `${names.slice(0, 2).join(", ")} +${names.length - 2}` : names.join(", ");
+    const summary =
+      pendingCount > 0 ? `${pendingCount} review${pendingCount === 1 ? "" : "s"} to write` : "Post-hire reviews";
+
+    return (
+      <section
+        aria-label="Post-hire reviews"
+        className="flex items-center gap-2.5 rounded-xl bg-white px-3.5 py-2 ring-1 ring-ink/8"
+      >
+        <Star className="h-4 w-4 shrink-0 text-teal" aria-hidden="true" />
+        <p className="min-w-0 flex-1 truncate text-sm text-ink/70">
+          <span className="font-semibold text-ink">{summary}</span>
+          {nameLabel ? <span> · {nameLabel}</span> : null}
+        </p>
+        <button
+          type="button"
+          onClick={() => setExpanded(true)}
+          className="shrink-0 rounded-lg px-2.5 py-1 text-xs font-semibold text-teal transition hover:bg-teal/5"
+        >
+          {pendingCount > 0 ? "Review" : "View"}
+        </button>
+        <button
+          type="button"
+          onClick={() => setDismissed(true)}
+          aria-label="Hide review reminder"
+          className="shrink-0 rounded-lg p-1 text-ink/35 transition hover:bg-ink/5 hover:text-ink"
+        >
+          <X className="h-4 w-4" aria-hidden="true" />
+        </button>
+      </section>
+    );
+  }
 
   return (
     <section
       aria-labelledby="reviewable-heading"
       className="rounded-2xl bg-white p-5 ring-1 ring-ink/8 sm:p-6"
     >
+      {compact ? (
+        <div className="mb-2 flex justify-end">
+          <button
+            type="button"
+            onClick={() => setExpanded(false)}
+            className="rounded-lg px-2.5 py-1 text-xs font-semibold text-ink/55 transition hover:bg-ink/5 hover:text-ink"
+          >
+            Collapse
+          </button>
+        </div>
+      ) : null}
       <h2 id="reviewable-heading" className="font-display text-base font-bold text-ink">
         {pendingCount > 0
           ? `${pendingCount} review${pendingCount === 1 ? "" : "s"} to write`

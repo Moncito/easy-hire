@@ -50,7 +50,7 @@ export default async function ApplicantsPage({
     <>
       {jobReviewablePrompts.length > 0 && (
         <div className="mb-6">
-          <ReviewablePromptList entries={jobReviewablePrompts} nowMs={nowMs} />
+          <ReviewablePromptList entries={jobReviewablePrompts} nowMs={nowMs} compact />
         </div>
       )}
       {total > PAGE_SIZE && (

@@ -375,6 +375,14 @@ export async function listJobApplications(jobId: string, page = 1, pageSize = 50
           },
           orderBy: { question: { sortOrder: "asc" } },
         },
+        // The open offer (at most one — partial unique index) for the
+        // board's "Offer sent" chip. A PENDING row past expiresAt is still
+        // returned; the client compares expiresAt with the page's nowMs.
+        offers: {
+          where: { status: "PENDING" },
+          take: 1,
+          select: { id: true, status: true, expiresAt: true, monthlyRateCents: true, hourlyRateCents: true, currency: true },
+        },
       },
     }),
     prisma.application.count({ where: { jobId } }),

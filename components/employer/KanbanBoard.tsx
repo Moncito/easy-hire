@@ -6,12 +6,14 @@ import KanbanBoardEmptyState from "./KanbanBoardEmptyState";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { useEmployerShell } from "@/components/employer/EmployerShellContext";
 import { PRO_STAGE_DOT } from "@/components/employer/pipeline-stage-styles";
+import type { PendingOfferSummary } from "@/components/employer/candidate-detail/types";
 
 type Application = {
   id: string;
   status: string;
   coverNote: string | null;
   appliedAt: string;
+  offers?: PendingOfferSummary[];
   seeker: {
     id: string;
     fullName: string;
@@ -36,6 +38,8 @@ type Props = {
   onToggleSelect?: (id: string) => void;
   activeStage?: string | null;
   focusedApplicationId?: string | null;
+  /** Server render time, for the "Offer sent · Nd left" chip on cards. */
+  nowMs?: number;
 };
 
 const primaryColumns = [
@@ -82,6 +86,7 @@ export default function KanbanBoard({
   onToggleSelect,
   activeStage,
   focusedApplicationId = null,
+  nowMs,
 }: Props) {
   const { isPro } = useEmployerShell();
   const [showRejected, setShowRejected] = useState(false);
@@ -121,6 +126,7 @@ export default function KanbanBoard({
             selectedIds={selectedIds}
             onToggleSelect={onToggleSelect}
             focusedApplicationId={focusedApplicationId}
+            nowMs={nowMs}
           />
         ))}
 
@@ -166,6 +172,7 @@ export default function KanbanBoard({
               selectedIds={selectedIds}
               onToggleSelect={onToggleSelect}
               focusedApplicationId={focusedApplicationId}
+              nowMs={nowMs}
             />
           )}
         </div>
