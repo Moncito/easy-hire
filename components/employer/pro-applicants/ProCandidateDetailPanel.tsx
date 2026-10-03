@@ -29,6 +29,8 @@ import { PIPELINE } from "@/components/employer/candidate-detail/types";
 import { formatAppliedAt, stageIndex } from "@/components/employer/candidate-detail/utils";
 import { PRO_STAGES } from "@/components/employer/pro-applicants/stages";
 import { waitSeverity } from "@/lib/employer/attention";
+import { ProGuaranteeCard, ProOfferSection } from "@/components/employer/pro-applicants/ProOfferSection";
+import type { OfferPanelProps } from "@/components/employer/candidate-detail/offer-view";
 
 const TABS: { id: CandidateDetailTab; label: string }[] = [
   { id: "overview", label: "Overview" },
@@ -55,7 +57,7 @@ type Props = {
   onRating: (rating: number) => void;
   onMessage: () => void;
   onNavigate: (direction: "prev" | "next") => void;
-};
+} & OfferPanelProps;
 
 /**
  * Pro candidate panel. Same props and behaviour as CandidateDetailPanel —
@@ -86,6 +88,11 @@ export default function ProCandidateDetailPanel({
   onRating,
   onMessage,
   onNavigate,
+  offers,
+  offersLoading,
+  onMakeOffer,
+  onWithdrawOffer,
+  onGuaranteeInterest,
 }: Props) {
   const { seeker } = application;
   const [tab, setTab] = useState<CandidateDetailTab>("overview");
@@ -260,6 +267,14 @@ export default function ProCandidateDetailPanel({
             {messageError}
           </p>
         )}
+
+        <ProOfferSection
+          applicationStatus={application.status}
+          offers={offers}
+          offersLoading={offersLoading}
+          onMakeOffer={onMakeOffer}
+          onWithdrawOffer={onWithdrawOffer}
+        />
       </div>
 
       <div role="tablist" aria-label="Candidate details" className="flex shrink-0 gap-1 border-b border-eh-line bg-eh-surface px-3">
@@ -292,6 +307,9 @@ export default function ProCandidateDetailPanel({
         aria-labelledby={`candidate-tab-${tab}`}
         className="employer-tab-fade min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-3"
       >
+        {application.status === "HIRED" && (
+          <ProGuaranteeCard key={application.id} onGuaranteeInterest={onGuaranteeInterest} />
+        )}
         {tab === "overview" && <CandidateOverviewTab application={application} onRating={onRating} />}
         {tab === "application" && <CandidateApplicationTab application={application} />}
         {tab === "notes" && (

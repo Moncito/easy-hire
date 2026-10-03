@@ -26,6 +26,11 @@ if (!existsSync(".env.staging")) {
 config({ path: ".env.staging", override: true, quiet: true });
 // Read by getEnvironmentBadge (lib/shared/deploy-env.ts) for the corner label.
 process.env.LOCAL_DATABASE = "staging";
+// A local run must never build redirects or email links for the live domain,
+// whatever `.env` says (it may carry the production NEXTAUTH_URL).
+process.env.NEXTAUTH_URL = "http://localhost:3000";
+process.env.APP_URL = "http://localhost:3000";
+process.env.AUTH_URL = "http://localhost:3000";
 
 function clearDevDataCache() {
   rmSync(DEV_DATA_CACHE, { recursive: true, force: true });

@@ -21,6 +21,8 @@ import { useEmployerShell } from "@/components/employer/EmployerShellContext";
 import type { CandidateApplication, CandidateDetailTab } from "./types";
 import { PIPELINE } from "./types";
 import { formatAppliedAt, stageIndex } from "./utils";
+import { CandidateGuaranteeCard, CandidateOfferSection } from "./CandidateOfferSection";
+import type { OfferPanelProps } from "./offer-view";
 
 const STATUS_STYLES_FREE: Record<string, string> = {
   APPLIED: "bg-ink/8 text-ink/70",
@@ -53,7 +55,7 @@ type Props = {
   onRating: (rating: number) => void;
   onMessage: () => void;
   onNavigate: (direction: "prev" | "next") => void;
-};
+} & OfferPanelProps;
 
 export default function CandidateDetailPanel({
   application,
@@ -70,6 +72,11 @@ export default function CandidateDetailPanel({
   onRating,
   onMessage,
   onNavigate,
+  offers,
+  offersLoading,
+  onMakeOffer,
+  onWithdrawOffer,
+  onGuaranteeInterest,
 }: Props) {
   const { isPro } = useEmployerShell();
   const { seeker } = application;
@@ -386,11 +393,22 @@ export default function CandidateDetailPanel({
         {isPro && messageError && (
           <p className="mt-1.5 text-xs text-ember">{messageError}</p>
         )}
+
+        <CandidateOfferSection
+          applicationStatus={application.status}
+          offers={offers}
+          offersLoading={offersLoading}
+          onMakeOffer={onMakeOffer}
+          onWithdrawOffer={onWithdrawOffer}
+        />
       </div>
 
       <CandidateDetailTabs active={tab} onChange={setTab} />
 
       <div className="employer-tab-fade min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-3">
+        {application.status === "HIRED" && (
+          <CandidateGuaranteeCard key={application.id} onGuaranteeInterest={onGuaranteeInterest} />
+        )}
         {tab === "overview" && (
           <CandidateOverviewTab application={application} onRating={onRating} />
         )}

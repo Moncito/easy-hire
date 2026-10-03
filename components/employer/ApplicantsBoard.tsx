@@ -2,8 +2,19 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import KanbanBoard from "./KanbanBoard";
 import RejectCandidateModal from "./RejectCandidateModal";
+import MakeOfferModal from "./MakeOfferModal";
+import EmployerConfirmModal from "./EmployerConfirmModal";
+import {
+  createOffer,
+  listApplicationOffers,
+  sendGuaranteeInterest,
+  withdrawOffer,
+  type JobOffer,
+} from "@/lib/client/offers";
+import type { CreateOfferInput } from "@/lib/validations/offer";
 import BulkApplicantActionsBar from "./BulkApplicantActionsBar";
 import ApplicantsJobHeader, { type PipelineCounts } from "./ApplicantsJobHeader";
 import type { ApplicantsJobSummary } from "./ApplicantsJobHeader";
@@ -84,6 +95,106 @@ export default function ApplicantsBoard({
   useEffect(() => {
     if (selectedApp) setNoteInput("");
   }, [selectedApp?.id]);
+
+  // Offers for the open candidate. Refetched when the selection changes; a
+  // response for a candidate that is no longer selected is dropped.
+  const selectedId = selectedApp?.id ?? null;
+  // Offers are stored WITH the application id they were fetched for, so a
+  // selection change hides the previous candidate's offers by derivation
+  // rather than by resetting state inside an effect.
+  const [offersFor, setOffersFor] = useState<{ applicationId: string; offers: JobOffer[] } | null>(null);
+  const offers = offersFor && offersFor.applicationId === selectedId ? offersFor.offers : undefined;
+  const offersLoading = selectedId != null && offers === undefined;
+  // The make-offer dialog belongs to one candidate; navigating away closes it.
+  const [makeOfferFor, setMakeOfferFor] = useState<string | null>(null);
+  const makeOfferOpen = makeOfferFor != null && makeOfferFor === selectedId;
+  const setMakeOfferOpen = (open: boolean) => setMakeOfferFor(open ? selectedId : null);
+  const [offerSubmitting, setOfferSubmitting] = useState(false);
+  const [offerError, setOfferError] = useState("");
+  const [pendingWithdrawId, setPendingWithdrawId] = useState<string | null>(null);
+  const [withdrawLoading, setWithdrawLoading] = useState(false);
+
+  useEffect(() => {
+    if (!selectedId) return;
+    let stale = false;
+    listApplicationOffers(selectedId)
+      .then((list) => {
+        if (!stale) setOffersFor({ applicationId: selectedId, offers: list });
+      })
+      .catch(() => {
+        if (!stale) setOffersFor({ applicationId: selectedId, offers: [] });
+      });
+    return () => {
+      stale = true;
+    };
+  }, [selectedId]);
+
+  async function refreshOffers(applicationId: string) {
+    try {
+      const list = await listApplicationOffers(applicationId);
+      setOffersFor({ applicationId, offers: list });
+    } catch {
+      // Keep what is on screen; the next selection change refetches.
+    }
+  }
+
+  async function handleSubmitOffer(input: CreateOfferInput) {
+    if (!selectedApp) return;
+    const applicationId = selectedApp.id;
+    setOfferSubmitting(true);
+    setOfferError("");
+    try {
+      await createOffer(applicationId, input);
+      setMakeOfferOpen(false);
+      toast.success("Offer sent");
+      await refreshOffers(applicationId);
+    } catch (err) {
+      setOfferError(err instanceof Error ? err.message : "Could not send the offer");
+      // A 409 means an offer is already open — show it.
+      void refreshOffers(applicationId);
+    } finally {
+      setOfferSubmitting(false);
+    }
+  }
+
+  async function handleConfirmWithdraw() {
+    if (!pendingWithdrawId || !selectedApp) return;
+    const applicationId = selectedApp.id;
+    setWithdrawLoading(true);
+    try {
+      await withdrawOffer(pendingWithdrawId);
+      toast.success("Offer withdrawn");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not withdraw the offer");
+    } finally {
+      setWithdrawLoading(false);
+      setPendingWithdrawId(null);
+    }
+    await refreshOffers(applicationId);
+  }
+
+  async function handleGuaranteeInterest(): Promise<boolean> {
+    if (!selectedApp) return false;
+    try {
+      await sendGuaranteeInterest(selectedApp.id);
+      return true;
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not record your interest");
+      return false;
+    }
+  }
+
+  const cancelWithdraw = useCallback(() => setPendingWithdrawId(null), []);
+  const offerProps = {
+    offers,
+    offersLoading,
+    onMakeOffer: () => {
+      setOfferError("");
+      setMakeOfferOpen(true);
+    },
+    onWithdrawOffer: (offerId: string) => setPendingWithdrawId(offerId),
+    onGuaranteeInterest: handleGuaranteeInterest,
+  };
 
   const navIndex = selectedApp ? applications.findIndex((a) => a.id === selectedApp.id) : -1;
 
@@ -403,6 +514,7 @@ export default function ApplicantsBoard({
           onRating={handleRating}
           onMessage={handleMessageCandidate}
           onNavigate={navigateCandidate}
+          {...offerProps}
         />
       ) : (
       <CandidateDetailPanel
@@ -420,6 +532,7 @@ export default function ApplicantsBoard({
         onRating={handleRating}
         onMessage={handleMessageCandidate}
         onNavigate={navigateCandidate}
+        {...offerProps}
       />
       )
     ) : null;
@@ -496,6 +609,31 @@ export default function ApplicantsBoard({
         }}
         onConfirm={confirmReject}
         defaultReason={defaultRejectionMessage ?? ""}
+      />
+
+      <MakeOfferModal
+        open={makeOfferOpen && !!selectedApp}
+        candidateName={selectedApp?.seeker.fullName || "this candidate"}
+        jobTitle={job.title}
+        loading={offerSubmitting}
+        error={offerError}
+        onCancel={() => {
+          setMakeOfferOpen(false);
+          setOfferError("");
+        }}
+        onSubmit={handleSubmitOffer}
+      />
+
+      <EmployerConfirmModal
+        open={pendingWithdrawId !== null}
+        title="Withdraw this offer?"
+        subject={selectedApp?.seeker.fullName}
+        description="The candidate will no longer be able to accept it. You can send a new offer afterwards."
+        confirmLabel="Withdraw offer"
+        danger
+        loading={withdrawLoading}
+        onCancel={cancelWithdraw}
+        onConfirm={handleConfirmWithdraw}
       />
     </div>
   );

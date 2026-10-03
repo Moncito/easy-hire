@@ -10,6 +10,7 @@ import {
   Layers,
   LogOut,
   Users,
+  UserCheck,
   Briefcase,
   ShieldCheck,
   ShieldAlert,
@@ -464,6 +465,18 @@ export default function AdminSidebar({ access }: AdminSidebarProps) {
           >
             <Briefcase className={`h-4.5 w-4.5 shrink-0 ${ICON_COLOR.teal}`} strokeWidth={2} />
             {!collapsed && "Jobs"}
+          </Link>
+        )}
+        {canReadUsers && (
+          <Link
+            href="/admin/hires"
+            title="Hires"
+            className={`flex items-center gap-3 rounded-xl py-2.5 text-sm font-medium transition-all ${
+              collapsed ? "w-11 justify-center px-0" : "w-full px-3"
+            } ${navLinkClass(pathname === "/admin/hires")}`}
+          >
+            <UserCheck className={`h-4.5 w-4.5 shrink-0 ${ICON_COLOR.teal}`} strokeWidth={2} />
+            {!collapsed && "Hires"}
           </Link>
         )}
 
