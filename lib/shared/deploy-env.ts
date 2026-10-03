@@ -8,7 +8,7 @@
  * and is the only reliable signal there. Off Vercel (local `next dev` /
  * `next start`), fall back to `NODE_ENV`.
  *
- * See docs/STAGING-AND-RELEASE.md.
+ * See plans/STAGING-AND-RELEASE.md.
  */
 export type DeployEnv = "production" | "staging" | "development";
 

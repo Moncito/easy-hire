@@ -1,6 +1,6 @@
 // Fills the STAGING database with a fixed set of test accounts, companies,
 // jobs and applications, so nobody has to sign up by hand after a reset.
-// See docs/STAGING-AND-RELEASE.md.
+// See plans/STAGING-AND-RELEASE.md.
 //
 // Reads `.env.staging` (never `.env`) and refuses to run unless DATABASE_URL
 // points at the staging Supabase project. Safe to run repeatedly: every row
