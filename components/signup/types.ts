@@ -5,6 +5,7 @@ export type CredentialsData = {
   companyName?: string;
   email: string;
   password: string;
+  acceptTerms: true;
 };
 
 export type SeekerProfileData = {

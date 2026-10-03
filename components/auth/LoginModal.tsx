@@ -2,7 +2,9 @@
 
 import { useEffect, useRef } from "react";
 import { X } from "lucide-react";
+import AuthHeader from "@/components/auth/AuthHeader";
 import LoginForm from "@/components/auth/LoginForm";
+import { BrandMark } from "@/components/brand/BrandMark";
 
 type Props = {
   open: boolean;
@@ -48,20 +50,17 @@ export default function LoginModal({ open, onClose }: Props) {
         aria-labelledby="login-modal-title"
         className="relative flex max-h-[92vh] w-full max-w-md flex-col overflow-hidden rounded-t-2xl border border-ink/5 bg-white shadow-2xl outline-none animate-scale-in sm:rounded-2xl"
       >
-        <div className="h-1.5 w-full shrink-0 bg-marigold" />
+        <div className="h-1 w-full shrink-0 bg-gradient-to-r from-navy via-teal to-marigold" aria-hidden="true" />
         <div className="overflow-y-auto p-6 sm:p-8">
           <div className="mb-6 flex items-start justify-between gap-4">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-marigold">Welcome back</p>
-              <h2 id="login-modal-title" className="mt-1 font-display text-xl font-bold text-ink sm:text-2xl">
-                Sign in to EasyHire
-              </h2>
-              <p className="mt-1 text-sm text-ink/55">Pick up where you left off — jobs, profile, applications.</p>
+              <BrandMark className="mb-3 h-8 w-8" />
+              <AuthHeader as="h2" id="login-modal-title" />
             </div>
             <button
               type="button"
               onClick={onClose}
-              className="cursor-pointer rounded-lg p-1 text-ink/40 hover:bg-ink/5 hover:text-ink"
+              className="cursor-pointer rounded-lg p-1 text-ink/50 hover:bg-ink/5 hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy"
               aria-label="Close"
             >
               <X className="h-5 w-5" />

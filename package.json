@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev --webpack",
+    "dev:staging": "node scripts/dev-staging.mjs",
     "dev:turbo": "next dev",
     "build": "prisma generate && next build",
     "start": "next start",

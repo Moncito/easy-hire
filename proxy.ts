@@ -1,6 +1,7 @@
 import NextAuth from "next-auth";
 import { NextResponse } from "next/server";
 import { authConfig } from "./auth.config";
+import { hasAcceptedCurrentTerms } from "@/lib/legal/terms-version";
 import { IMPERSONATION_COOKIE_NAME, verifyImpersonationToken } from "@/lib/admin/impersonation-token";
 
 // Uses the edge-safe config only — does NOT import from ./auth.ts,
@@ -21,7 +22,11 @@ export default auth(async (req) => {
   const isProtectedRoute = isSeekerRoute || isEmployerRoute || isAdminRoute;
 
   if (isProtectedRoute && !isLoggedIn) {
-    return NextResponse.redirect(new URL("/login", nextUrl));
+    // Carry the destination so a deep link (e.g. an applicants email) lands
+    // back on that page after sign-in. /login re-validates it with safeNextPath.
+    const loginUrl = new URL("/login", nextUrl);
+    loginUrl.searchParams.set("next", nextUrl.pathname + nextUrl.search);
+    return NextResponse.redirect(loginUrl);
   }
 
   // Impersonation "view as" overlay (docs/ADMIN-CONSOLE-PLAN.md §8.2). An
@@ -66,6 +71,22 @@ export default auth(async (req) => {
 
   if (isAdminRoute && role !== "ADMIN") {
     return NextResponse.redirect(new URL("/", nextUrl));
+  }
+
+  // Terms re-acceptance gate. GET/HEAD only: a redirect on a Server Action or
+  // other POST would break the client's fetch instead of showing a page, and
+  // the user always hits a GET navigation first anyway. Admins and
+  // impersonating admins are exempt.
+  const method = req.method.toUpperCase();
+  if (
+    (method === "GET" || method === "HEAD") &&
+    isLoggedIn &&
+    role !== "ADMIN" &&
+    !hasOptimisticImpersonationCookie &&
+    !hasAcceptedCurrentTerms(req.auth?.user?.termsVersion)
+  ) {
+    const next = encodeURIComponent(nextUrl.pathname + nextUrl.search);
+    return NextResponse.redirect(new URL(`/accept-terms?next=${next}`, nextUrl));
   }
 
   return NextResponse.next();

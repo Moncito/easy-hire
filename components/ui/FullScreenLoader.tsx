@@ -6,6 +6,8 @@
  * dead click. Render it conditionally from a `useTransition` `isPending` or a
  * local pending flag. Uses a dark scrim so it reads the same in light and dark.
  */
+import { BrandMark } from "@/components/brand/BrandMark";
+
 export default function FullScreenLoader({
   label,
   sublabel,
@@ -23,10 +25,7 @@ export default function FullScreenLoader({
         {/* sweeping ring */}
         <span className="absolute inset-0 animate-spin rounded-full border-2 border-white/15 border-t-marigold [animation-duration:1.1s]" />
         {/* rotating EasyHire mark */}
-        <span className="relative h-11 w-11 animate-spin overflow-hidden rounded-full shadow-lg ring-1 ring-white/10 [animation-duration:2.4s]">
-          <span className="absolute inset-0 bg-marigold" style={{ clipPath: "polygon(0 0, 100% 0, 0 100%)" }} />
-          <span className="absolute inset-0 bg-teal" style={{ clipPath: "polygon(100% 0, 100% 100%, 0 100%)" }} />
-        </span>
+        <BrandMark className="h-11 w-11 animate-spin shadow-lg ring-1 ring-white/10 [animation-duration:2.4s]" />
       </div>
 
       <div className="text-center">

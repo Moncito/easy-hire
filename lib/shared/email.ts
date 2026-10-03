@@ -8,6 +8,7 @@ import { generateInterviewIcs } from "@/lib/shared/calendar-invite";
 import { formatInterviewWhenUtc, interviewFormatLabel } from "@/lib/shared/interview-format";
 import { notificationHref, type NotificationRecipientRole } from "@/lib/shared/notifications";
 import { APP_URL } from "@/lib/shared/app-url";
+import { DEPLOY_ENV, type DeployEnv } from "@/lib/shared/deploy-env";
 import { sendCategorizedEmail } from "@/lib/shared/email-preferences";
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
@@ -28,7 +29,8 @@ export type EmailAttachment = {
 };
 
 export type ResolvedRecipient = {
-  recipient: string;
+  /** Null means "do not send" — a staging deployment with no EMAIL_TEST_RECIPIENT. */
+  recipient: string | null;
   /** True when `recipient` differs from `to` because of EMAIL_TEST_RECIPIENT — drives the "[to: ...]" subject prefix. */
   overridden: boolean;
 };
@@ -36,27 +38,37 @@ export type ResolvedRecipient = {
 /**
  * Decides the actual send-to address. EMAIL_TEST_RECIPIENT exists so a
  * verified sender address (e.g. onboarding@resend.dev) can redirect all mail
- * to one inbox in development. In production it is ignored outright — if it
- * were ever honored there, every seeker/employer email would silently go to
- * one inbox with no error or visible symptom. A console.warn fires whenever
+ * to one inbox outside production. On the live site it is ignored outright —
+ * if it were ever honored there, every seeker/employer email would silently go
+ * to one inbox with no error or visible symptom. A console.warn fires whenever
  * it's set-but-ignored so a leaked env var in production is discoverable
  * instead of silent.
+ *
+ * Staging gets a stricter rule than local dev: with no test recipient it sends
+ * nothing at all, because staging data can include real people's addresses and
+ * a forgotten env var must not email them from a test site.
  */
 export function resolveRecipient(
   to: string,
   testRecipient: string | undefined,
-  nodeEnv: string | undefined
+  deployEnv: DeployEnv
 ): ResolvedRecipient {
   const trimmed = testRecipient?.trim();
 
-  if (!trimmed) {
+  if (deployEnv === "production") {
+    if (trimmed) {
+      console.warn(
+        "[email] EMAIL_TEST_RECIPIENT is set in production — ignoring it and sending to the real recipient. Unset this variable in production."
+      );
+    }
     return { recipient: to, overridden: false };
   }
 
-  if (nodeEnv === "production") {
-    console.warn(
-      "[email] EMAIL_TEST_RECIPIENT is set in production — ignoring it and sending to the real recipient. Unset this variable in production."
-    );
+  if (!trimmed) {
+    if (deployEnv === "staging") {
+      console.warn("[email] Staging deployment with no EMAIL_TEST_RECIPIENT — not sending to", to);
+      return { recipient: null, overridden: false };
+    }
     return { recipient: to, overridden: false };
   }
 
@@ -81,8 +93,9 @@ export async function sendEmail(
   const { recipient, overridden } = resolveRecipient(
     to,
     process.env.EMAIL_TEST_RECIPIENT,
-    process.env.NODE_ENV
+    DEPLOY_ENV
   );
+  if (!recipient) return false;
   const testSubject = overridden ? `[to: ${to}] ${subject}` : subject;
 
   const { error } = await resend.emails.send({

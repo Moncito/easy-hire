@@ -1,11 +1,12 @@
 import { APP_URL } from "@/lib/shared/app-url";
-/** EasyHire transactional email tokens — inline-only, Gmail/Outlook safe. */
+/** EasyHire transactional email tokens — inline-only, Gmail/Outlook safe.
+ *  Brand palette from CLAUDE.md: Harbor Navy, Marigold, Mist White, Deep Ink. */
 export const EMAIL = {
-  navy: "#17365D",
-  orange: "#F5A623",
-  background: "#F4F6F8",
+  navy: "#1E3A5F",
+  orange: "#F2A93B",
+  background: "#F5F6F4",
   white: "#FFFFFF",
-  text: "#172033",
+  text: "#20242B",
   muted: "#667085",
   success: "#16834D",
   border: "#E6E9EE",
@@ -36,6 +37,18 @@ export function emailWordmark() {
   return `<span style="font-family:${FONT};font-size:20px;font-weight:700;letter-spacing:-0.03em;line-height:1;"><span style="color:${EMAIL.navy};">Easy</span><span style="color:${EMAIL.orange};">Hire</span></span>`;
 }
 
+/**
+ * Split-circle mark + wordmark for the email header. The mark is a PNG from
+ * app/brand-mark.png (absolute URL — email clients can't resolve relative
+ * paths); empty alt so clients that block images just show the wordmark.
+ */
+export function emailBrandLockup() {
+  return `<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
+    <td valign="middle" style="padding:0 10px 0 0;"><img src="${appUrl}/brand-mark.png" width="28" height="28" alt="" style="display:block;border:0;width:28px;height:28px;" /></td>
+    <td valign="middle" style="padding:0;">${emailWordmark()}</td>
+  </tr></table>`;
+}
+
 export function emailCtaButton(cta: EmailCta) {
   return `
     <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:0 auto;">
@@ -64,7 +77,7 @@ function emailHeader(badge?: string) {
       <td style="padding:0 0 20px;">
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
           <tr>
-            <td valign="middle" style="padding:0;">${emailWordmark()}</td>
+            <td valign="middle" style="padding:0;">${emailBrandLockup()}</td>
             ${badgeCell}
           </tr>
         </table>

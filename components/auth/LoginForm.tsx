@@ -4,12 +4,15 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { useGoogleSignIn } from "@/components/auth/useGoogleSignIn";
 import OtpInput, { type OtpInputHandle } from "@/components/ui/OtpInput";
 
 type Props = {
   onSuccess?: () => void;
   showSignupLink?: boolean;
   idPrefix?: string;
+  /** Already validated with safeNextPath by the caller; defaults to /dashboard (role router). */
+  next?: string;
 };
 
 // Two-factor step. "password" is the existing email + password form.
@@ -28,6 +31,7 @@ export default function LoginForm({
   onSuccess,
   showSignupLink = true,
   idPrefix = "login",
+  next = "/dashboard",
 }: Props) {
   const router = useRouter();
   const [step, setStep] = useState<Step>("password");
@@ -44,6 +48,7 @@ export default function LoginForm({
   // `error` so the two can never be shown at once.
   const [codeError, setCodeError] = useState("");
   const [loading, setLoading] = useState(false);
+  const { pending: googlePending, start: startGoogleSignIn } = useGoogleSignIn(next);
 
   const formRef = useRef<HTMLFormElement>(null);
   const otpRef = useRef<OtpInputHandle>(null);
@@ -116,7 +121,7 @@ export default function LoginForm({
     }
 
     onSuccess?.();
-    router.push("/dashboard");
+    router.push(next);
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -322,8 +327,10 @@ export default function LoginForm({
 
           <button
             type="button"
-            onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
-            className="w-full cursor-pointer rounded-xl border border-ink/15 px-4 py-3 text-sm font-semibold text-ink transition-colors hover:bg-ink/5 active:scale-[0.99]"
+            onClick={() => startGoogleSignIn()}
+            disabled={googlePending}
+            aria-busy={googlePending}
+            className="w-full cursor-pointer rounded-xl border border-ink/15 px-4 py-3 text-sm font-semibold text-ink transition-colors hover:bg-ink/5 active:scale-[0.99] disabled:cursor-wait disabled:opacity-60"
           >
             <div className="flex items-center justify-center gap-2">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -344,7 +351,7 @@ export default function LoginForm({
                   fill="#EA4335"
                 />
               </svg>
-              Sign in with Google
+              {googlePending ? "Redirecting to Google…" : "Sign in with Google"}
             </div>
           </button>
         </>

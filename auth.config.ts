@@ -24,6 +24,7 @@ export const authConfig = {
       if (session.user) {
         session.user.id = token.id as string;
         session.user.role = token.role as "SEEKER" | "EMPLOYER" | "ADMIN";
+        session.user.termsVersion = (token.termsVersion as string | null | undefined) ?? null;
       }
       return session;
     },

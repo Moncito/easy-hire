@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/lib/api-error";
 import { sendWelcomeVerification } from "@/lib/auth/credentials-recovery";
 import { recordEvent } from "@/lib/admin/events";
+import { CURRENT_TERMS_VERSION } from "@/lib/legal/terms-version";
 
 /**
  * Business logic for POST /api/register — the route handler stays thin
@@ -18,6 +19,8 @@ export type RegisterUserInput = {
   role: "SEEKER" | "EMPLOYER";
   fullName?: string;
   companyName?: string;
+  /** Consent given on the sign-up form; stamps the acceptance on the new user. */
+  acceptTerms: true;
 };
 
 export type RegisteredUser = {
@@ -32,6 +35,7 @@ export async function registerUser({
   role,
   fullName,
   companyName,
+  acceptTerms,
 }: RegisterUserInput): Promise<RegisteredUser> {
   const passwordHash = await bcrypt.hash(password, 10);
 
@@ -42,6 +46,10 @@ export async function registerUser({
         email,
         passwordHash,
         role,
+        ...(acceptTerms && {
+          termsAcceptedAt: new Date(),
+          termsVersion: CURRENT_TERMS_VERSION,
+        }),
         ...(role === "SEEKER" && {
           seekerProfile: { create: { fullName: fullName ?? "" } },
         }),

@@ -10,6 +10,8 @@ import { resolveGoogleAccountLinkingAction } from "@/lib/auth/google-account-lin
 import { recordUserLoggedIn, recordUserLoggedOut, recordUserLoginFailed } from "@/lib/auth/auth-events";
 import { classifyTwoFactorCodeInput, consumeRecoveryCode, verifyTotpCode } from "@/lib/auth/two-factor";
 import { isSessionRevoked, verifySessionReissueProof } from "@/lib/auth/session-revocation";
+import { CURRENT_TERMS_VERSION, TERMS_CONSENT_COOKIE } from "@/lib/legal/terms-version";
+import { cookies } from "next/headers";
 import { authConfig } from "./auth.config";
 
 // Brute-force / credential-stuffing guard for the Credentials provider.
@@ -70,7 +72,7 @@ class TwoFactorInvalid extends CredentialsSignin {
   code = "totp_invalid";
 }
 
-const DB_USER_SELECT = { id: true, role: true, sessionsValidAfter: true } as const;
+const DB_USER_SELECT = { id: true, role: true, sessionsValidAfter: true, termsVersion: true } as const;
 
 async function resolveDbUser(email?: string | null, userId?: string | null) {
   if (email) {
@@ -141,6 +143,7 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
           if (dbUser) {
             token.id = dbUser.id;
             token.role = dbUser.role;
+            token.termsVersion = dbUser.termsVersion ?? null;
             token.idVerified = true;
           } else {
             token.id = user.id;
@@ -198,6 +201,7 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
 
           token.id = dbUser.id;
           token.role = dbUser.role;
+          token.termsVersion = dbUser.termsVersion ?? null;
           token.idVerified = true;
         }
       } catch (err) {
@@ -211,6 +215,7 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
       if (session.user) {
         session.user.id = token.id as string;
         session.user.role = token.role as "SEEKER" | "EMPLOYER" | "ADMIN";
+        session.user.termsVersion = (token.termsVersion as string | null | undefined) ?? null;
       }
       return session;
     },
@@ -240,12 +245,26 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
           // SeekerProfile created in the same step — matching what
           // /api/register already does for Credentials sign-up. Google has
           // already verified this address, so stamp it verified too.
+          // The signup page sets TERMS_CONSENT_COOKIE before redirecting to
+          // Google. A missing/stale cookie (or any failure reading it) leaves
+          // the stamp null, and the proxy gate then asks for acceptance.
+          let acceptedTerms = false;
+          try {
+            const jar = await cookies();
+            acceptedTerms = jar.get(TERMS_CONSENT_COOKIE)?.value === CURRENT_TERMS_VERSION;
+          } catch {
+            // never let consent bookkeeping break sign-in
+          }
           user = await prisma.user.create({
             data: {
               email,
               role: "SEEKER",
               passwordHash: null,
               emailVerifiedAt: new Date(),
+              ...(acceptedTerms && {
+                termsAcceptedAt: new Date(),
+                termsVersion: CURRENT_TERMS_VERSION,
+              }),
               seekerProfile: {
                 create: { fullName: profile.name || "" },
               },

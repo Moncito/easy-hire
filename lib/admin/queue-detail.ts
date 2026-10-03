@@ -10,6 +10,7 @@ import type {
 import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/lib/api-error";
 import type { QueueKind } from "@/lib/admin/queues";
+import { checkPostingCompliance, type ComplianceIssue } from "@/lib/jobs/posting-compliance";
 import { recordPiiRead, listAuditLog, type AdminAuditAction } from "@/lib/admin/audit";
 import { requireAdminPermission } from "@/lib/admin/permissions";
 import { VERIFICATION_DOC_BUCKET, resolveSignedUrl } from "@/lib/storage";
@@ -171,6 +172,8 @@ export type JobQueueItemDetail = {
     trustScore: number | null;
     email: string;
   };
+  /** Computed on read from the job's text (incl. screening prompts) — nothing stored. Empty when the post is clean. */
+  complianceIssues: ComplianceIssue[];
   /** Always empty — no document model exists for jobs. Present (not omitted) so the review pane can render one shape across all four kinds, per the task spec. */
   documents: QueueItemDocument[];
   priorDecisions: QueueItemPriorDecision[];
@@ -444,6 +447,7 @@ async function getJobQueueItemDetail(jobId: string): Promise<JobQueueItemDetail>
       remoteType: true,
       status: true,
       reviewRejectionReason: true,
+      screeningQuestions: { select: { prompt: true }, orderBy: { sortOrder: "asc" } },
       company: {
         select: {
           id: true,
@@ -486,6 +490,13 @@ async function getJobQueueItemDetail(jobId: string): Promise<JobQueueItemDetail>
       trustScore: job.company.trustScore,
       email: job.company.user.email,
     },
+    complianceIssues: checkPostingCompliance({
+      title: job.title,
+      description: job.description,
+      requirements: job.requirements,
+      benefits: job.benefits,
+      extra: job.screeningQuestions.map((q) => q.prompt),
+    }),
     documents: [],
     priorDecisions,
   };

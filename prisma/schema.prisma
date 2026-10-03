@@ -54,6 +54,10 @@ model User {
   // recorded" — existing accounts have no known date and inventing one would
   // make the UI lie.
   passwordChangedAt        DateTime? @map("password_changed_at")
+  // Latest Terms/Privacy version the user accepted (lib/legal/terms-version.ts).
+  // Null means never recorded; the proxy sends such users to /accept-terms.
+  termsAcceptedAt          DateTime? @map("terms_accepted_at")
+  termsVersion             String?   @map("terms_version")
 
   // Two-factor (TOTP), Phase 1 — see docs/two-factor-auth-plan.md.
   // totpSecret is AES-256-GCM encrypted with TOTP_ENCRYPTION_KEY and is

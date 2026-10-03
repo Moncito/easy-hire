@@ -42,6 +42,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${BASE_URL}/employers`, changeFrequency: "weekly", priority: 0.8 },
     { url: `${BASE_URL}/pricing`, changeFrequency: "monthly", priority: 0.6 },
     { url: `${BASE_URL}/signup`, changeFrequency: "monthly", priority: 0.5 },
+    { url: `${BASE_URL}/terms`, changeFrequency: "yearly", priority: 0.3 },
+    { url: `${BASE_URL}/privacy`, changeFrequency: "yearly", priority: 0.3 },
+    { url: `${BASE_URL}/refund-policy`, changeFrequency: "yearly", priority: 0.3 },
+    { url: `${BASE_URL}/job-posting-guidelines`, changeFrequency: "yearly", priority: 0.3 },
+    { url: `${BASE_URL}/safety`, changeFrequency: "yearly", priority: 0.3 },
+    { url: `${BASE_URL}/contact`, changeFrequency: "yearly", priority: 0.3 },
   ];
 
   let jobRoutes: MetadataRoute.Sitemap = [];

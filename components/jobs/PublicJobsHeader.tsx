@@ -27,8 +27,11 @@ function GuestJobsPillNav() {
       });
 
       tl.to(headerRef.current, { paddingTop: 10, ease: "power2.out" }, 0);
-      tl.to(fullNavRef.current, { opacity: 0, y: -10, scale: 0.97, ease: "power2.out" }, 0);
-      tl.to(compactNavRef.current, { opacity: 1, y: 0, scale: 1, ease: "power2.out" }, 0);
+      // Sequential, not simultaneous: the full nav finishes fading before the
+      // compact pill starts, so the two never show on top of each other
+      // mid-scroll (most visible on phones, where they overlap in width).
+      tl.to(fullNavRef.current, { opacity: 0, y: -10, scale: 0.97, ease: "power2.out", duration: 0.5 }, 0);
+      tl.to(compactNavRef.current, { opacity: 1, y: 0, scale: 1, ease: "power2.out", duration: 0.5 }, 0.5);
     });
 
     const st = ScrollTrigger.create({
@@ -78,7 +81,21 @@ function GuestJobsPillNav() {
             </Link>
           </nav>
 
-          <div className="flex shrink-0 items-center gap-3">
+          <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
+            <Link
+              href="/jobs"
+              aria-label="Browse jobs"
+              className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-marigold/25 text-marigold md:hidden"
+            >
+              <Briefcase className="h-4 w-4" aria-hidden="true" />
+            </Link>
+            <Link
+              href="/login"
+              aria-label="Log in"
+              className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full text-mist/75 transition-colors hover:bg-white/10 hover:text-white sm:hidden"
+            >
+              <LogIn className="h-4 w-4" aria-hidden="true" />
+            </Link>
             <Link
               href="/login"
               className="hidden cursor-pointer whitespace-nowrap text-[15px] font-medium text-mist/75 transition hover:text-white sm:block"
@@ -87,7 +104,7 @@ function GuestJobsPillNav() {
             </Link>
             <Link
               href="/signup"
-              className="cursor-pointer whitespace-nowrap rounded-full bg-white px-6 py-1.5 text-[15px] font-semibold text-ink shadow-lg transition-all duration-300 hover:scale-105 active:scale-95"
+              className="cursor-pointer whitespace-nowrap rounded-full bg-white px-4 py-1.5 text-[15px] font-semibold text-ink shadow-lg sm:px-6 transition-all duration-300 hover:scale-105 active:scale-95"
             >
               Get started
             </Link>
@@ -117,7 +134,8 @@ function GuestJobsPillNav() {
           <Link
             href="/login"
             title="Log in"
-            className="hidden h-9 w-9 cursor-pointer items-center justify-center rounded-full text-mist/75 transition-colors hover:bg-white/10 hover:text-white sm:flex"
+            aria-label="Log in"
+            className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full text-mist/75 transition-colors hover:bg-white/10 hover:text-white"
           >
             <LogIn className="h-4 w-4" />
           </Link>

@@ -7,6 +7,11 @@ describe("resolveRecipient", () => {
     expect(result).toEqual({ recipient: "test@resend.dev", overridden: true });
   });
 
+  it("applies the override on staging", () => {
+    const result = resolveRecipient("seeker@example.com", "test@resend.dev", "staging");
+    expect(result).toEqual({ recipient: "test@resend.dev", overridden: true });
+  });
+
   it("ignores the override in production and warns", () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     const result = resolveRecipient("seeker@example.com", "test@resend.dev", "production");
@@ -16,7 +21,7 @@ describe("resolveRecipient", () => {
     warnSpy.mockRestore();
   });
 
-  it("does not warn when no override is set, in either environment", () => {
+  it("does not warn when no override is set, in development or production", () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     expect(resolveRecipient("seeker@example.com", undefined, "development")).toEqual({
       recipient: "seeker@example.com",
@@ -27,6 +32,20 @@ describe("resolveRecipient", () => {
       overridden: false,
     });
     expect(warnSpy).not.toHaveBeenCalled();
+    warnSpy.mockRestore();
+  });
+
+  it("sends nothing on staging when no override is set", () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    expect(resolveRecipient("seeker@example.com", undefined, "staging")).toEqual({
+      recipient: null,
+      overridden: false,
+    });
+    expect(resolveRecipient("seeker@example.com", "   ", "staging")).toEqual({
+      recipient: null,
+      overridden: false,
+    });
+    expect(warnSpy).toHaveBeenCalledTimes(2);
     warnSpy.mockRestore();
   });
 
