@@ -1,6 +1,6 @@
 # Hire Revenue Plan — "Hire through EasyHire"
 
-Status: **Phase 1 direction agreed (2026-10-03); schema in §3 awaits owner approval.** Phase 2 is blocked on PH business registration and a legal check.
+Status: **Phase 1 approved for build, including the §3 schema (owner, 2026-10-03).** Phase 2 is blocked on PH business registration and a legal check.
 Owner: Moncito. Backend: Manuel. Release flow: `plans/STAGING-AND-RELEASE.md`.
 
 ## 1. Why this shape
@@ -38,7 +38,7 @@ Out of scope: payments, contracts/e-signature, guarantee claims, payroll, changi
 
 The plain employer path (`updateApplication` in `lib/jobs/applications.ts`) does it correctly. Phase 1 moves that logic into one function both paths call.
 
-## 3. Schema (needs owner approval before the migration is written)
+## 3. Schema (approved by owner 2026-10-03)
 
 Additive only, per `plans/STAGING-AND-RELEASE.md` → Migrations.
 
@@ -225,7 +225,7 @@ Add the four types to `notificationHref` (`lib/shared/notifications.ts`). Accept
 
 ## 8. Order of work
 
-1. Owner approves §3 schema.
+1. ~~Owner approves §3 schema.~~ Done 2026-10-03.
 2. Manuel: migration + `markApplicationHired` refactor (fixes the bug on its own; can ship first) → PR into `dev`.
 3. Manuel: offers lib, routes, notifications, tests → PR into `dev`.
 4. UI on top of the endpoints → PR into `dev`.
