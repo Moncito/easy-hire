@@ -303,6 +303,7 @@ model Company {
   invitations                CompanyInvitation[]
   hiringDefaults             CompanyHiringDefaults?
   reviewsReceived            Review[]
+  jobOffers                  JobOffer[]
 
   // Denormalized public "response metrics" rollup (Phase 4.3), recomputed nightly by
   // runResponseMetricsForAllCompanies (lib/employer/response-metrics.ts) over a rolling
@@ -584,6 +585,12 @@ model Application {
   // (lib/reviews.ts) and `updatedAt` changes on every edit so it can't serve
   // that purpose.
   hiredAt         DateTime?         @map("hired_at")
+  // How the hire happened. Null = never hired, or hired before this column
+  // existed (deliberately not backfilled — the source is genuinely unknown).
+  // Set once, on the first move into HIRED; see lib/hiring/mark-hired.ts.
+  hireSource              HireSource? @map("hire_source")
+  // When the VA confirmed the hire (accepting an offer counts). Stamp-once.
+  hireConfirmedBySeekerAt DateTime?   @map("hire_confirmed_by_seeker_at")
   // Same stamp-once precedent as hiredAt above, but for the *first* employer
   // engagement with this candidate — powers the public "response rate /
   // median response time" metrics (Phase 4.3, lib/employer/response-metrics.ts).
@@ -603,6 +610,7 @@ model Application {
   interviews  Interview[]
   activities  ApplicationActivity[]
   reviews     Review[]
+  offers      JobOffer[]
 
   @@unique([jobId, seekerId])
   @@index([jobId])
@@ -649,6 +657,42 @@ model ApplicationActivity {
   // "Moved to <stage> per day" for the dashboard chart.
   @@index([toStatus, createdAt])
   @@map("application_activities")
+}
+
+// Offers an employer sends to an applicant (plans/HIRE-REVENUE-PLAN.md).
+// The VA accepting one is the platform-owned hire event that Phase 2's paid
+// guarantee attaches to. At most one PENDING offer per application, and
+// exactly one of monthly/hourly rate set — both enforced by raw SQL in the
+// migration (Prisma can't express a partial unique index or CHECK).
+// created_by_* have no foreign keys on purpose: an offer is a record of who
+// sent it and must outlive that member/user, same precedent as
+// admin_audit_logs.admin_user_id.
+model JobOffer {
+  id                String         @id @default(cuid())
+  applicationId     String         @map("application_id")
+  companyId         String         @map("company_id")
+  createdByMemberId String?        @map("created_by_member_id")
+  createdByUserId   String         @map("created_by_user_id")
+  title             String
+  monthlyRateCents  Int?           @map("monthly_rate_cents")
+  hourlyRateCents   Int?           @map("hourly_rate_cents")
+  currency          String         @default("USD")
+  hoursPerWeek      Int?           @map("hours_per_week")
+  startDate         DateTime?      @map("start_date") @db.Date
+  message           String?
+  status            JobOfferStatus @default(PENDING)
+  expiresAt         DateTime       @map("expires_at")
+  respondedAt       DateTime?      @map("responded_at")
+  declineReason     String?        @map("decline_reason")
+  createdAt         DateTime       @default(now()) @map("created_at")
+  updatedAt         DateTime       @updatedAt @map("updated_at")
+
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  company     Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([applicationId, status])
+  @@index([companyId, status])
+  @@map("job_offers")
 }
 
 enum ApplicationActivityType {
@@ -815,6 +859,19 @@ model InterviewParticipant {
   @@unique([interviewId, memberId])
   @@index([memberId, interviewId])
   @@map("interview_participants")
+}
+
+enum JobOfferStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  WITHDRAWN
+  EXPIRED
+}
+
+enum HireSource {
+  OFFER_ACCEPTED
+  EMPLOYER_MARKED
 }
 
 enum ApplicationStatus {

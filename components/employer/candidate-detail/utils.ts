@@ -9,6 +9,7 @@ export function mergeApplicationUpdate(
     ...updated,
     seeker: updated.seeker ? { ...existing.seeker, ...updated.seeker } : existing.seeker,
     answers: updated.answers ?? existing.answers,
+    offers: updated.offers ?? existing.offers,
   };
 }
 

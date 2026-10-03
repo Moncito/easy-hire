@@ -106,6 +106,10 @@ export function notificationHref(
         return "/seeker/dashboard";
       case "APPLICATION_SUBMITTED":
         return "/seeker/dashboard";
+      case "OFFER_RECEIVED":
+      case "OFFER_WITHDRAWN":
+      case "OFFER_ACCEPTED_CONFIRMATION":
+        return "/seeker/dashboard";
       default:
         return "/seeker/dashboard";
     }
@@ -124,6 +128,8 @@ export function notificationHref(
       return "/employer/company-profile";
     case "INTERVIEW_ACCEPTED":
     case "INTERVIEW_DECLINED":
+    case "OFFER_ACCEPTED":
+    case "OFFER_DECLINED":
       return "/employer/applicants";
     default:
       return "/employer/dashboard";

@@ -1,5 +1,5 @@
 // `npm run dev:staging` — runs `next dev` against the STAGING Supabase project
-// instead of whatever `.env` points at. See docs/STAGING-AND-RELEASE.md.
+// instead of whatever `.env` points at. See plans/STAGING-AND-RELEASE.md.
 //
 // Values from `.env.staging` are put into the process environment before
 // Next starts, and Next never overrides a variable that is already set, so
@@ -19,13 +19,18 @@ import { config } from "dotenv";
 const DEV_DATA_CACHE = ".next/dev/cache/fetch-cache";
 
 if (!existsSync(".env.staging")) {
-  console.error("Missing .env.staging — see docs/STAGING-AND-RELEASE.md.");
+  console.error("Missing .env.staging — see plans/STAGING-AND-RELEASE.md.");
   process.exit(1);
 }
 
 config({ path: ".env.staging", override: true, quiet: true });
 // Read by getEnvironmentBadge (lib/shared/deploy-env.ts) for the corner label.
 process.env.LOCAL_DATABASE = "staging";
+// A local run must never build redirects or email links for the live domain,
+// whatever `.env` says (it may carry the production NEXTAUTH_URL).
+process.env.NEXTAUTH_URL = "http://localhost:3000";
+process.env.APP_URL = "http://localhost:3000";
+process.env.AUTH_URL = "http://localhost:3000";
 
 function clearDevDataCache() {
   rmSync(DEV_DATA_CACHE, { recursive: true, force: true });

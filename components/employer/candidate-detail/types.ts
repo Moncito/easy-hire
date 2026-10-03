@@ -1,3 +1,13 @@
+/** The open (PENDING) offer on an application, as listJobApplications returns it. Dates are ISO strings. */
+export type PendingOfferSummary = {
+  id: string;
+  status: string;
+  expiresAt: string;
+  monthlyRateCents: number | null;
+  hourlyRateCents: number | null;
+  currency: string;
+};
+
 export type CandidateApplication = {
   id: string;
   status: string;
@@ -24,6 +34,8 @@ export type CandidateApplication = {
     languages: string[];
     education: string[];
   };
+  /** 0 or 1 pending offer. Absent on PATCH responses, so merges must keep the existing value. */
+  offers?: PendingOfferSummary[];
   answers?: {
     id: string;
     answerText: string;

@@ -20,7 +20,9 @@ import EmployerAvatar from "@/components/employer/ui/EmployerAvatar";
 import { useEmployerShell } from "@/components/employer/EmployerShellContext";
 import type { CandidateApplication, CandidateDetailTab } from "./types";
 import { PIPELINE } from "./types";
-import { formatAppliedAt, stageIndex } from "./utils";
+import { formatAppliedAt } from "./utils";
+import { CandidateNextStep } from "./CandidateOfferSection";
+import { canStartOffer, currentOpenOffer, stepperStages, type OfferPanelProps } from "./offer-view";
 
 const STATUS_STYLES_FREE: Record<string, string> = {
   APPLIED: "bg-ink/8 text-ink/70",
@@ -46,6 +48,8 @@ type Props = {
   savingNotes: boolean;
   messageLoading: boolean;
   messageError: string;
+  /** Server render time, for "N days left" on an open offer. */
+  nowMs: number;
   onClose: () => void;
   onNoteChange: (value: string) => void;
   onSaveNotes: () => void;
@@ -53,7 +57,7 @@ type Props = {
   onRating: (rating: number) => void;
   onMessage: () => void;
   onNavigate: (direction: "prev" | "next") => void;
-};
+} & OfferPanelProps;
 
 export default function CandidateDetailPanel({
   application,
@@ -63,6 +67,7 @@ export default function CandidateDetailPanel({
   savingNotes,
   messageLoading,
   messageError,
+  nowMs,
   onClose,
   onNoteChange,
   onSaveNotes,
@@ -70,6 +75,14 @@ export default function CandidateDetailPanel({
   onRating,
   onMessage,
   onNavigate,
+  offers,
+  onMakeOffer,
+  onWithdrawOffer,
+  onGuaranteeInterest,
+  hiredCount,
+  targetHireCount,
+  jobStatus,
+  onCloseJob,
 }: Props) {
   const { isPro } = useEmployerShell();
   const { seeker } = application;
@@ -79,8 +92,19 @@ export default function CandidateDetailPanel({
   const stageRef = useRef<HTMLDivElement>(null);
   const moveButtonRef = useRef<HTMLButtonElement>(null);
   const moveMenuRef = useRef<HTMLDivElement>(null);
-  const progress = stageIndex(application.status);
   const isRejected = application.status === "REJECTED";
+  const openPendingOffer = currentOpenOffer(application, offers, nowMs);
+  const offerAccepted = offers?.[0]?.status === "ACCEPTED";
+  const stepperItems = stepperStages(application.status, openPendingOffer !== null, offerAccepted);
+  const canOpenOffer = !!onMakeOffer && canStartOffer(application.status, openPendingOffer !== null);
+
+  function handleStepperClick(key: string) {
+    if (key === "OFFER") {
+      if (canOpenOffer) onMakeOffer?.();
+      return;
+    }
+    onStatusChange(key);
+  }
 
   const stageOptions = [
     ...PIPELINE,
@@ -222,54 +246,81 @@ export default function CandidateDetailPanel({
         {!isRejected ? (
           <div className="mt-4 border-t border-ink/6 pt-3">
             <div className="flex h-1.5 overflow-hidden rounded-full bg-ink/8">
-              {PIPELINE.map((stage, i) => (
-                <button
-                  key={stage.value}
-                  type="button"
-                  onClick={() => onStatusChange(stage.value)}
-                  title={stage.label}
-                  className={`h-full flex-1 transition ${
-                    i <= progress
-                      ? isPro
-                        ? stage.value === "HIRED"
-                          ? "bg-teal"
-                          : "bg-ink"
-                        : "bg-teal"
-                      : "bg-transparent hover:bg-ink/10"
-                  }`}
-                />
-              ))}
+              {stepperItems.map((stage) => {
+                const inert = stage.key === "OFFER" && !canOpenOffer;
+                return (
+                  <button
+                    key={stage.key}
+                    type="button"
+                    onClick={() => handleStepperClick(stage.key)}
+                    aria-disabled={inert || undefined}
+                    tabIndex={inert ? -1 : undefined}
+                    aria-label={stage.label}
+                    title={stage.label}
+                    className={`h-full flex-1 transition ${inert ? "cursor-default" : ""} ${
+                      stage.state !== "upcoming"
+                        ? isPro
+                          ? stage.key === "HIRED"
+                            ? "bg-teal"
+                            : "bg-ink"
+                          : "bg-teal"
+                        : inert
+                          ? "bg-transparent"
+                          : "bg-transparent hover:bg-ink/10"
+                    }`}
+                  />
+                );
+              })}
             </div>
-          <div className="mt-1.5 flex justify-between">
-            {PIPELINE.map((stage, i) => (
-              <button
-                key={stage.value}
-                type="button"
-                onClick={() => onStatusChange(stage.value)}
-                className={`max-w-[4.5rem] truncate text-[11px] font-semibold transition ${
-                  isPro ? "hover:text-ink" : "hover:text-teal"
-                } ${
-                  i === progress
-                    ? isPro
-                      ? stage.value === "HIRED"
-                        ? "text-teal"
-                        : "text-ink"
-                      : "text-teal"
-                    : i < progress
-                      ? "text-ink/45"
-                      : "text-ink/30"
-                }`}
-              >
-                {stage.label}
-              </button>
-            ))}
-          </div>
+            <div className="mt-1.5 flex justify-between">
+              {stepperItems.map((stage) => {
+                const inert = stage.key === "OFFER" && !canOpenOffer;
+                return (
+                  <button
+                    key={stage.key}
+                    type="button"
+                    onClick={() => handleStepperClick(stage.key)}
+                    aria-disabled={inert || undefined}
+                    aria-current={stage.state === "current" ? "step" : undefined}
+                    className={`max-w-[4.5rem] truncate text-[11px] font-semibold transition ${
+                      inert ? "cursor-default" : isPro ? "hover:text-ink" : "hover:text-teal"
+                    } ${
+                      stage.state === "current"
+                        ? isPro
+                          ? stage.key === "HIRED"
+                            ? "text-teal"
+                            : "text-ink"
+                          : "text-teal"
+                        : stage.state === "complete"
+                          ? "text-ink/45"
+                          : "text-ink/30"
+                    }`}
+                  >
+                    {stage.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         ) : (
           <p className="mt-2 rounded-lg bg-ink/5 px-2 py-1.5 text-center text-[10px] font-medium text-ink/55">
             Rejected — use Move stage to restore
           </p>
         )}
+
+        <CandidateNextStep
+          application={application}
+          nowMs={nowMs}
+          offers={offers}
+          onStatusChange={onStatusChange}
+          onMakeOffer={onMakeOffer}
+          onWithdrawOffer={onWithdrawOffer}
+          onGuaranteeInterest={onGuaranteeInterest}
+          hiredCount={hiredCount}
+          targetHireCount={targetHireCount}
+          jobStatus={jobStatus}
+          onCloseJob={onCloseJob}
+        />
 
         {/* Actions — Pro: Message lives here so it stays on screen with the person */}
         <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-ink/6 pt-3">
@@ -284,8 +335,8 @@ export default function CandidateDetailPanel({
               >
                 <ChevronLeft className="h-4 w-4" />
               </button>
-              <span className="font-data text-[10px] text-ink/40">
-                {navIndex + 1} of {navTotal}
+              <span className="font-data whitespace-nowrap text-[10px] text-ink/40">
+                <span className="sr-only">Candidate </span>{navIndex + 1} of {navTotal}
               </span>
               <button
                 type="button"
@@ -413,7 +464,7 @@ export default function CandidateDetailPanel({
             type="button"
             onClick={onMessage}
             disabled={messageLoading}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-teal py-2.5 text-sm font-semibold text-white shadow-sm shadow-teal/15 transition hover:bg-teal/95 disabled:opacity-50"
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-ink/10 bg-white py-2.5 text-sm font-semibold text-ink/70 transition hover:border-teal/30 hover:bg-teal/5 hover:text-teal disabled:opacity-50"
           >
             <MessageSquare className="h-4 w-4" />
             {messageLoading ? "Opening…" : "Message candidate"}

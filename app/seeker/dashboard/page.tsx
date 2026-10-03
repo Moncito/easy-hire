@@ -42,6 +42,10 @@ import { SeekerNavBandBleed } from "@/components/seeker/SeekerNavBand";
 import ReviewablePromptList from "@/components/reviews/ReviewablePromptList";
 import { listReviewableApplications } from "@/lib/reviews";
 import { getSeekerProfileCompletion } from "@/lib/seeker/profile-completion";
+import { getPendingOffersForSeeker } from "@/lib/hiring/offers";
+import SeekerOffersSection from "@/components/seeker/SeekerOffersSection";
+import ConfirmHirePrompt, { type ConfirmHireItem } from "@/components/seeker/ConfirmHirePrompt";
+import type { SeekerOffer } from "@/lib/client/offers";
 
 export default async function SeekerDashboardPage({
   searchParams,
@@ -52,15 +56,42 @@ export default async function SeekerDashboardPage({
   const { status: statusParam } = await searchParams;
   const statusFilter: ApplicationStatusFilter = normalizeApplicationStatusFilter(statusParam);
 
-  const [{ profile, jobAlerts }, interviews, reviewablePrompts, recommendations, savedJobIds, { notifications: activityItems }] =
-    await Promise.all([
-      getSeekerDashboardProfile(userId, session.user.name ?? ""),
-      getSeekerInterviews(userId),
-      listReviewableApplications(userId),
-      getTopSeekerJobRecommendations(userId, 3),
-      listSavedJobIds(userId),
-      getSeekerNotifications(userId, { limit: 5 }),
-    ]);
+  const [
+    { profile, jobAlerts },
+    interviews,
+    reviewablePrompts,
+    recommendations,
+    savedJobIds,
+    { notifications: activityItems },
+    pendingOffers,
+  ] = await Promise.all([
+    getSeekerDashboardProfile(userId, session.user.name ?? ""),
+    getSeekerInterviews(userId),
+    listReviewableApplications(userId),
+    getTopSeekerJobRecommendations(userId, 3),
+    listSavedJobIds(userId),
+    getSeekerNotifications(userId, { limit: 5 }),
+    getPendingOffersForSeeker(userId),
+  ]);
+
+  // Dates become ISO strings before crossing into client components.
+  const offerCards: SeekerOffer[] = pendingOffers.map((o) => ({
+    id: o.id,
+    applicationId: o.applicationId,
+    title: o.title,
+    monthlyRateCents: o.monthlyRateCents,
+    hourlyRateCents: o.hourlyRateCents,
+    currency: o.currency,
+    hoursPerWeek: o.hoursPerWeek,
+    startDate: o.startDate ? o.startDate.toISOString() : null,
+    message: o.message,
+    status: o.status,
+    expiresAt: o.expiresAt.toISOString(),
+    respondedAt: o.respondedAt ? o.respondedAt.toISOString() : null,
+    declineReason: o.declineReason,
+    createdAt: o.createdAt.toISOString(),
+    application: o.application,
+  }));
 
   // Wall-clock read for splitting interviews into upcoming/past. Computed
   // here, outside the unstable_cache boundaries inside getSeekerDashboardProfile
@@ -91,6 +122,15 @@ export default async function SeekerDashboardPage({
   const allApps: AppEntry[] = profile?.applications ?? [];
   const savedJobs: SavedJobEntry[] = profile?.savedJobs ?? [];
   const conversations: ConvoEntry[] = profile?.conversations ?? [];
+
+  // Hires an employer recorded that this VA hasn't confirmed yet.
+  const hiresToConfirm: ConfirmHireItem[] = allApps
+    .filter((a) => a.status === "HIRED" && !a.hireConfirmedBySeekerAt)
+    .map((a) => ({
+      applicationId: a.id,
+      companyName: a.job.company.companyName,
+      jobTitle: a.job.title,
+    }));
 
   // Featured app for timeline: most recent non-rejected
   const featuredApp = pickFeaturedApplication(allApps);
@@ -135,6 +175,12 @@ export default async function SeekerDashboardPage({
           </h1>
           <p className="mt-1.5 text-sm text-ink/50">Your job search command center</p>
         </div>
+
+        {/* ── Pending offers: the most important thing on the page ── */}
+        <SeekerOffersSection offers={offerCards} />
+
+        {/* ── Employer-recorded hires awaiting the VA's confirmation ── */}
+        <ConfirmHirePrompt items={hiresToConfirm} />
 
         {/* ── Post-hire reviews to write ── */}
         {reviewablePrompts.length > 0 && (

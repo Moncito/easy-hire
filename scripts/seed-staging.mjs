@@ -1,6 +1,6 @@
 // Fills the STAGING database with a fixed set of test accounts, companies,
 // jobs and applications, so nobody has to sign up by hand after a reset.
-// See docs/STAGING-AND-RELEASE.md.
+// See plans/STAGING-AND-RELEASE.md.
 //
 // Reads `.env.staging` (never `.env`) and refuses to run unless DATABASE_URL
 // points at the staging Supabase project. Safe to run repeatedly: every row
@@ -99,15 +99,23 @@ async function upsertJob(companyId, job) {
 }
 
 async function upsertApplication(jobId, seekerId, status) {
+  const hired = status === "HIRED";
   const data = {
     status,
-    hiredAt: status === "HIRED" ? new Date() : null,
+    hiredAt: hired ? new Date() : null,
+    hireSource: hired ? "EMPLOYER_MARKED" : null,
+    hireConfirmedBySeekerAt: null,
+    firstEmployerResponseAt: status === "APPLIED" ? null : new Date(),
   };
-  return prisma.application.upsert({
+  const application = await prisma.application.upsert({
     where: { jobId_seekerId: { jobId, seekerId } },
     update: data,
     create: { jobId, seekerId, ...data },
   });
+  // A reset returns each seeded application to a clean state: no offers left
+  // over from earlier test runs (plans/HIRE-REVENUE-PLAN.md).
+  await prisma.jobOffer.deleteMany({ where: { applicationId: application.id } });
+  return application;
 }
 
 async function main() {

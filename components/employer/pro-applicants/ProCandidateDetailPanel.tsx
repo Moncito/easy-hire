@@ -26,9 +26,15 @@ import CandidateApplicationTab from "@/components/employer/candidate-detail/Cand
 import CandidateNotesTab from "@/components/employer/candidate-detail/CandidateNotesTab";
 import type { CandidateApplication, CandidateDetailTab } from "@/components/employer/candidate-detail/types";
 import { PIPELINE } from "@/components/employer/candidate-detail/types";
-import { formatAppliedAt, stageIndex } from "@/components/employer/candidate-detail/utils";
-import { PRO_STAGES } from "@/components/employer/pro-applicants/stages";
+import { formatAppliedAt } from "@/components/employer/candidate-detail/utils";
 import { waitSeverity } from "@/lib/employer/attention";
+import { ProNextStep } from "@/components/employer/pro-applicants/ProOfferSection";
+import {
+  canStartOffer,
+  currentOpenOffer,
+  stepperStages,
+  type OfferPanelProps,
+} from "@/components/employer/candidate-detail/offer-view";
 
 const TABS: { id: CandidateDetailTab; label: string }[] = [
   { id: "overview", label: "Overview" },
@@ -55,7 +61,7 @@ type Props = {
   onRating: (rating: number) => void;
   onMessage: () => void;
   onNavigate: (direction: "prev" | "next") => void;
-};
+} & OfferPanelProps;
 
 /**
  * Pro candidate panel. Same props and behaviour as CandidateDetailPanel —
@@ -86,12 +92,23 @@ export default function ProCandidateDetailPanel({
   onRating,
   onMessage,
   onNavigate,
+  offers,
+  onMakeOffer,
+  onWithdrawOffer,
+  onGuaranteeInterest,
+  hiredCount,
+  targetHireCount,
+  jobStatus,
+  onCloseJob,
 }: Props) {
   const { seeker } = application;
   const [tab, setTab] = useState<CandidateDetailTab>("overview");
   const [shownFor, setShownFor] = useState(application.id);
-  const progress = stageIndex(application.status);
   const isRejected = application.status === "REJECTED";
+  const openPendingOffer = currentOpenOffer(application, offers, nowMs);
+  const stepperItems = stepperStages(application.status, openPendingOffer !== null, offers?.[0]?.status === "ACCEPTED");
+  const currentKey = stepperItems.find((s) => s.state === "current")?.key;
+  const canOpenOffer = !!onMakeOffer && canStartOffer(application.status, openPendingOffer !== null);
 
   // Each candidate opens on Overview. Reset during render, not in an effect.
   if (shownFor !== application.id) {
@@ -176,21 +193,36 @@ export default function ProCandidateDetailPanel({
             Rejected. Use <span className="font-semibold">⋯ → Restore to Applied</span> to bring them back.
           </p>
         ) : (
-          <div role="group" aria-label="Move to stage" className="mt-4 grid grid-cols-4 gap-1">
-            {PRO_STAGES.map((stage, i) => {
-              const reached = i <= progress;
+          <div role="group" aria-label="Move to stage" className="mt-4 grid grid-cols-5 gap-1">
+            {stepperItems.map((stage) => {
+              const reached = stage.state !== "upcoming";
               // Progress is one colour: ink while still unreviewed, teal once
               // they've moved on, darkest teal when hired.
-              const fill = progress === 0 ? "bg-eh-ink" : progress === 3 ? "bg-eh-teal-ink" : "bg-eh-teal";
-              const current = i === progress;
+              const fill = currentKey === "APPLIED" ? "bg-eh-ink" : currentKey === "HIRED" ? "bg-eh-teal-ink" : "bg-eh-teal";
+              const current = stage.state === "current";
+              const isOffer = stage.key === "OFFER";
+              const inert = isOffer ? !canOpenOffer : current;
               return (
                 <button
-                  key={stage.status}
+                  key={stage.key}
                   type="button"
-                  onClick={() => !current && onStatusChange(stage.status)}
+                  onClick={() => {
+                    if (inert) return;
+                    if (isOffer) onMakeOffer?.();
+                    else onStatusChange(stage.key);
+                  }}
                   aria-current={current ? "step" : undefined}
-                  title={current ? `${stage.label} (current)` : `Move to ${stage.label}`}
-                  className="group flex flex-col gap-1.5 rounded-chip pt-1 text-left"
+                  aria-disabled={inert || undefined}
+                  title={
+                    current
+                      ? `${stage.label} (current)`
+                      : isOffer
+                        ? canOpenOffer
+                          ? "Make offer"
+                          : stage.label
+                        : `Move to ${stage.label}`
+                  }
+                  className={cx("group flex flex-col gap-1.5 rounded-chip pt-1 text-left", inert && "cursor-default")}
                 >
                   <span
                     className={cx(
@@ -213,10 +245,24 @@ export default function ProCandidateDetailPanel({
           </div>
         )}
 
+        <ProNextStep
+          application={application}
+          nowMs={nowMs}
+          offers={offers}
+          onStatusChange={onStatusChange}
+          onMakeOffer={onMakeOffer}
+          onWithdrawOffer={onWithdrawOffer}
+          onGuaranteeInterest={onGuaranteeInterest}
+          hiredCount={hiredCount}
+          targetHireCount={targetHireCount}
+          jobStatus={jobStatus}
+          onCloseJob={onCloseJob}
+        />
+
         <div className="mt-4 flex items-center gap-2">
           <Button
             size="lg"
-            variant="primary"
+            variant="secondary"
             icon={<MessageSquare />}
             loading={messageLoading}
             onClick={onMessage}
@@ -234,8 +280,8 @@ export default function ProCandidateDetailPanel({
                 disabled={navIndex <= 0}
                 onClick={() => onNavigate("prev")}
               />
-              <span className="num w-12 text-center text-small text-eh-muted" aria-live="polite">
-                {navIndex + 1} / {navTotal}
+              <span className="whitespace-nowrap px-1 text-center text-small text-eh-muted" aria-live="polite">
+                <span className="sr-only">Candidate </span><span className="num">{navIndex + 1}</span> of <span className="num">{navTotal}</span>
               </span>
               <IconButton
                 size="lg"
