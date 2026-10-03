@@ -6,7 +6,7 @@ const BASE = APP_URL;
 
 export default function robots(): MetadataRoute.Robots {
   // Staging and local builds must never be indexed — they would compete with
-  // the live site for the same job pages. See docs/STAGING-AND-RELEASE.md.
+  // the live site for the same job pages. See plans/STAGING-AND-RELEASE.md.
   if (!IS_PRODUCTION_DEPLOYMENT) {
     return { rules: { userAgent: "*", disallow: "/" } };
   }

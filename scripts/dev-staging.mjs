@@ -1,5 +1,5 @@
 // `npm run dev:staging` — runs `next dev` against the STAGING Supabase project
-// instead of whatever `.env` points at. See docs/STAGING-AND-RELEASE.md.
+// instead of whatever `.env` points at. See plans/STAGING-AND-RELEASE.md.
 //
 // Values from `.env.staging` are put into the process environment before
 // Next starts, and Next never overrides a variable that is already set, so
@@ -19,7 +19,7 @@ import { config } from "dotenv";
 const DEV_DATA_CACHE = ".next/dev/cache/fetch-cache";
 
 if (!existsSync(".env.staging")) {
-  console.error("Missing .env.staging — see docs/STAGING-AND-RELEASE.md.");
+  console.error("Missing .env.staging — see plans/STAGING-AND-RELEASE.md.");
   process.exit(1);
 }
 
