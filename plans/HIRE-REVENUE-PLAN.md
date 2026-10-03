@@ -161,17 +161,16 @@ export function afterFirstHire(args: {
 
 ### Routes
 
-| Method & path | Calls |
-|---|---|
-| `POST /api/applications/[id]/offers` | `createOffer` |
-| `GET /api/applications/[id]/offers` | `listOffersForApplication` |
-| `POST /api/offers/[offerId]/withdraw` | `withdrawOffer` |
-| `POST /api/seeker/offers/[offerId]/respond` | `respondToOffer` (mirror `app/api/seeker/interviews/[interviewId]/respond`) |
-| `POST /api/seeker/applications/[id]/confirm-hire` | `confirmHire` |
-| `GET /api/seeker/offers` | `getPendingOffersForSeeker` |
-| `POST /api/applications/[id]/guarantee-interest` | records the waitlist event |
+| File | Method | Auth | Calls |
+|---|---|---|---|
+| app/api/applications/[id]/offers/route.ts | POST, GET | any signed-in user (authz in lib) | createOffer / listOffersForApplication |
+| app/api/offers/[offerId]/withdraw/route.ts | POST | any signed-in user | withdrawOffer |
+| app/api/applications/[id]/guarantee-interest/route.ts | POST | any signed-in user | recordGuaranteeInterest |
+| app/api/seeker/offers/route.ts | GET | role SEEKER | getPendingOffersForSeeker |
+| app/api/seeker/offers/[offerId]/respond/route.ts | POST | role SEEKER | respondToOffer |
+| app/api/seeker/applications/[id]/confirm-hire/route.ts | POST | role SEEKER | confirmHire |
 
-Team-workspace equivalents live under `app/api/hiring/[companyId]/jobs/[jobId]/applications/[applicationId]/` beside the existing `pipeline` route.
+One set of employer routes serves both the company owner and team members: `resolveOfferActor` (lib/hiring/offers.ts) authorizes the owner directly and team members through the same job-access and permission rules as the pipeline route.
 
 ### Notifications
 
@@ -183,6 +182,7 @@ Through the existing helpers in `lib/shared/email.ts`, respecting `notifyApplica
 | Offer accepted | employer owner + job team | `OFFER_ACCEPTED` | yes |
 | Offer declined | employer owner + job team | `OFFER_DECLINED` | in-app only |
 | Offer withdrawn | VA | `OFFER_WITHDRAWN` | in-app only |
+| Offer accepted (confirmation) | VA | `OFFER_ACCEPTED_CONFIRMATION` | in-app only |
 
 Add the four types to `notificationHref` (`lib/shared/notifications.ts`). Accepting an offer must **not** also send the generic "you got the job" email from `notifyApplicationStatusTransition`: the VA just accepted, so send one acceptance confirmation instead.
 

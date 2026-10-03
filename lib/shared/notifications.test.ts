@@ -45,6 +45,15 @@ describe("notificationHref", () => {
     }
   });
 
+  it("routes offer notifications to the right dashboard for each recipient", () => {
+    for (const type of ["OFFER_RECEIVED", "OFFER_WITHDRAWN", "OFFER_ACCEPTED_CONFIRMATION"]) {
+      expect(notificationHref(type, "SEEKER")).toBe("/seeker/dashboard");
+    }
+    expect(notificationHref("OFFER_ACCEPTED", "EMPLOYER")).toBe("/employer/applicants");
+    expect(notificationHref("OFFER_DECLINED", "EMPLOYER")).toBe("/employer/applicants");
+    expect(notificationHref("OFFER_ACCEPTED")).toBe("/employer/applicants");
+  });
+
   it("falls back to the seeker dashboard for unknown types", () => {
     expect(notificationHref("SOME_FUTURE_TYPE", "SEEKER")).toBe("/seeker/dashboard");
   });

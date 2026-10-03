@@ -14,7 +14,7 @@ import type { collaborativePipelineSchema, collaborativeScorecardSchema } from "
 type ScorecardInput = z.infer<typeof collaborativeScorecardSchema>;
 type PipelineInput = z.infer<typeof collaborativePipelineSchema>;
 
-async function requireCollaborativeJobAccess(companyId: string, actorUserId: string, jobId: string) {
+export async function requireCollaborativeJobAccess(companyId: string, actorUserId: string, jobId: string) {
   const membership = await requireCompanyMembership(companyId, actorUserId, "team:read");
   const job = await prisma.job.findFirst({
     where: { id: jobId, companyId },
