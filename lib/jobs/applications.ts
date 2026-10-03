@@ -10,7 +10,7 @@ import { applicationCreateSchema, applicationUpdateSchema } from "@/lib/validati
 import { invalidateEmployerWorkspace } from "@/lib/employer-cache";
 import { invalidateSeekerApplications } from "@/lib/seeker/cache";
 import { hydrateResumeFields } from "@/lib/seeker/resume-urls";
-import { recomputeVerificationScore } from "@/lib/seeker/identity-verification";
+import { hiredTransitionData, afterFirstHire } from "@/lib/hiring/mark-hired";
 import { isFirstEmployerResponseTransition } from "@/lib/employer/response-metrics";
 import { recordEvent } from "@/lib/admin/events";
 import { stageChangeActivityData } from "@/lib/jobs/stage-history";
@@ -264,8 +264,9 @@ export async function updateApplication(applicationId: string, raw: unknown) {
 
   // Stamp once, the first time this application transitions into HIRED —
   // never overwritten on a later re-hire (see the Application.hiredAt schema
-  // comment). This anchors the two-way review window (lib/reviews.ts).
-  const becameHired = data.status === "HIRED" && existing.status !== "HIRED" && !existing.hiredAt;
+  // comment and lib/hiring/mark-hired.ts). This anchors the two-way review
+  // window (lib/reviews.ts).
+  const hire = hiredTransitionData(existing, data.status, { hireSource: "EMPLOYER_MARKED" });
 
   // Site 1 of 3 for Application.firstEmployerResponseAt (see its schema
   // comment): the plain (non-collaborative) employer flow moving an
@@ -289,7 +290,7 @@ export async function updateApplication(applicationId: string, raw: unknown) {
         ...(data.internalNotes !== undefined ? { internalNotes: data.internalNotes } : {}),
         ...(data.rating !== undefined ? { rating: data.rating } : {}),
         ...(data.rejectionReason !== undefined ? { rejectionReason: data.rejectionReason } : {}),
-        ...(becameHired ? { hiredAt: new Date() } : {}),
+        ...hire.data,
         ...(becameResponded ? { firstEmployerResponseAt: new Date() } : {}),
       },
       include: {
@@ -323,13 +324,13 @@ export async function updateApplication(applicationId: string, raw: unknown) {
     seekerNotifyApplicationUpdates: existing.seeker.user.notifyApplicationUpdates,
   });
 
-  if (becameHired) {
-    // A confirmed hire feeds the "history" factor of the verification score
-    // (see lib/seeker/verification-score.ts). Fire-and-forget: must never
-    // block the hiring transition.
-    void recomputeVerificationScore(existing.seekerId).catch((err) =>
-      console.error("[applications] verification score recompute failed:", err)
-    );
+  if (hire.firstHire) {
+    afterFirstHire({
+      seekerProfileId: existing.seekerId,
+      applicationId: existing.id,
+      jobId: existing.job.id,
+      actorType: "EMPLOYER",
+    });
   }
 
   invalidateEmployerWorkspace(existing.job.company.id);
@@ -347,16 +348,6 @@ export async function updateApplication(applicationId: string, raw: unknown) {
       entityId: existing.id,
       metadata: { from: existing.status, to: data.status },
     });
-
-    if (becameHired) {
-      recordEvent({
-        eventType: "CANDIDATE_HIRED",
-        actorType: "EMPLOYER",
-        entityType: "APPLICATION",
-        entityId: existing.id,
-        metadata: { jobId: existing.job.id },
-      });
-    }
   }
 
   return {

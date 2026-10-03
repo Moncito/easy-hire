@@ -7,6 +7,7 @@ import { isFirstEmployerResponseTransition } from "@/lib/employer/response-metri
 import { recordEvent } from "@/lib/admin/events";
 import { notifyApplicationStatusTransition } from "@/lib/email";
 import { stageChangeActivityData } from "@/lib/jobs/stage-history";
+import { hiredTransitionData, afterFirstHire } from "@/lib/hiring/mark-hired";
 import type { z } from "zod";
 import type { collaborativePipelineSchema, collaborativeScorecardSchema } from "@/lib/validations/collaborative-review";
 
@@ -155,6 +156,10 @@ export async function updateCollaborativePipeline(companyId: string, actorUserId
     select: {
       id: true,
       status: true,
+      seekerId: true,
+      hiredAt: true,
+      hireSource: true,
+      hireConfirmedBySeekerAt: true,
       firstEmployerResponseAt: true,
       seeker: { select: { fullName: true, user: { select: { id: true, email: true, notifyApplicationUpdates: true } } } },
       job: { select: { title: true, company: { select: { companyName: true } } } },
@@ -168,6 +173,9 @@ export async function updateCollaborativePipeline(companyId: string, actorUserId
     input.status,
     Boolean(application.firstEmployerResponseAt)
   );
+  // Stamp-once hire fields, shared with the plain employer flow — see
+  // lib/hiring/mark-hired.ts.
+  const hire = hiredTransitionData(application, input.status, { hireSource: "EMPLOYER_MARKED" });
   const [updated] = await prisma.$transaction([
     prisma.application.update({
       where: { id: application.id },
@@ -175,6 +183,7 @@ export async function updateCollaborativePipeline(companyId: string, actorUserId
         status: input.status,
         rejectionReason: input.status === "REJECTED" ? input.rejectionReason ?? null : null,
         ...(becameResponded ? { firstEmployerResponseAt: new Date() } : {}),
+        ...hire.data,
       },
       select: { id: true, status: true, rejectionReason: true, updatedAt: true },
     }),
@@ -210,14 +219,13 @@ export async function updateCollaborativePipeline(companyId: string, actorUserId
     metadata: { from: application.status, to: input.status },
   });
 
-  if (input.status === "HIRED" && application.status !== "HIRED") {
-    recordEvent({
-      eventType: "CANDIDATE_HIRED",
+  if (hire.firstHire) {
+    afterFirstHire({
+      seekerProfileId: application.seekerId,
+      applicationId: application.id,
+      jobId,
       actorType: "EMPLOYER",
-      userId: actorUserId,
-      entityType: "APPLICATION",
-      entityId: application.id,
-      metadata: { jobId },
+      actorUserId,
     });
   }
 

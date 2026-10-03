@@ -23,7 +23,7 @@ EasyHire earns from hires **without** charging a commission on the "Hired" butto
 1. Employer sends an **offer** to an applicant (role, rate, hours, start date, message).
 2. VA **accepts or declines** it. Accepting marks the application **HIRED** with `hire_source = OFFER_ACCEPTED`.
 3. The existing "Hired" button keeps working (`EMPLOYER_MARKED`). The VA gets a "Confirm you were hired" prompt.
-4. **One shared function marks an application hired**, used by every path. This fixes the bug below.
+4. **One shared hire step (`hiredTransitionData` + `afterFirstHire`) is used by every path**, used by every path. This fixes the bug below.
 5. "Protect this hire" card shown at the hire moment, as a **waitlist** (no payment) to measure demand.
 6. Admin sees a hires list with source and confirmation.
 
@@ -124,30 +124,28 @@ All business logic in `lib/`, routes thin (CLAUDE.md). Zod schemas in `lib/valid
 ### `lib/hiring/mark-hired.ts`
 
 ```ts
-export async function markApplicationHired(
-  tx: Prisma.TransactionClient,
-  args: {
-    applicationId: string;
-    fromStatus: ApplicationStatus;
-    hireSource: HireSource;
-    actorMemberId: string | null;
-    seekerConfirmed: boolean; // true when the VA accepted an offer
-  }
-): Promise<{ becameHired: boolean }>;
+// Pure field helper: each path spreads `data` into its own application update.
+export function hiredTransitionData(
+  existing: { status; hiredAt; hireSource; hireConfirmedBySeekerAt },
+  nextStatus: ApplicationStatus | undefined,
+  opts: { hireSource: HireSource; seekerConfirmed?: boolean },
+  now = new Date()
+): { data: { hiredAt?; hireSource?; hireConfirmedBySeekerAt? }; firstHire: boolean };
 
-/** Side effects that must run after the transaction commits. */
-export function afterApplicationHired(args: {
-  applicationId: string;
+/** Side effects of a first hire. Call after the transaction commits, only when firstHire is true. */
+export function afterFirstHire(args: {
   seekerProfileId: string;
+  applicationId: string;
   jobId: string;
   actorType: "EMPLOYER" | "SEEKER";
   actorUserId?: string;
 }): void;
 ```
 
-- Inside the transaction: set `status = HIRED`; set `hiredAt` **only if null** (stamp-once rule, see the `Application.hiredAt` schema comment); set `hireSource` only if null; set `hireConfirmedBySeekerAt` when `seekerConfirmed`; write the STAGE_CHANGE activity via `stageChangeActivityData` (`lib/jobs/stage-history.ts`).
-- After commit: `recomputeVerificationScore` (fire-and-forget), `recordEvent("CANDIDATE_HIRED")` **only when `becameHired`** (today the team path re-records it on every re-hire), cache invalidation (`invalidateEmployerWorkspace`, `invalidateSeekerApplications`).
-- `updateApplication` and `updateCollaborativePipeline` both call these two when the target status is HIRED, with `hireSource: EMPLOYER_MARKED`. Their existing notification call stays where it is.
+- `hiredTransitionData` returns empty data unless the application is actually moving INTO HIRED (re-saving an already-HIRED row stamps nothing, so legacy team hires with no `hiredAt` never get today as a fake hire date). Otherwise it stamps `hiredAt` **only if null** (stamp-once rule, see the `Application.hiredAt` schema comment), `hireSource` only if null, and `hireConfirmedBySeekerAt` only if `seekerConfirmed` and null. `firstHire` is true only when `hiredAt` is stamped now.
+- Each path keeps its own transaction and STAGE_CHANGE write (`stageChangeActivityData`, `lib/jobs/stage-history.ts`); the helper does no DB access.
+- `afterFirstHire` (after commit, only when `firstHire`): `recomputeVerificationScore` (fire-and-forget) and `recordEvent("CANDIDATE_HIRED")`, so the event fires once per application (the team path used to record it on every re-hire). Cache invalidation stays with each caller.
+- `updateApplication` and `updateCollaborativePipeline` both use the pair, with `hireSource: EMPLOYER_MARKED`. Their existing notification call stays where it is.
 
 ### `lib/hiring/offers.ts`
 
@@ -155,7 +153,7 @@ export function afterApplicationHired(args: {
 |---|---|---|
 | `createOffer(userId, applicationId, input)` | employer | Plain flow: `requireEmployerApplication`. Team flow: membership with `applicants:manage`, or `applicants:assigned` on that job. Application must not be REJECTED or HIRED. Fails 409 if a PENDING offer exists (the partial unique index is the real guarantee). `expiresAt` = now + 7 days. |
 | `withdrawOffer(userId, offerId)` | employer | Only PENDING. Sets WITHDRAWN. |
-| `respondToOffer(userId, offerId, { accept, declineReason? })` | VA | Offer's application must belong to this seeker. Only PENDING and not past `expiresAt`. Accept: one transaction sets offer ACCEPTED + `markApplicationHired(..., hireSource: OFFER_ACCEPTED, seekerConfirmed: true)`. Decline: DECLINED + optional reason; application status unchanged. |
+| `respondToOffer(userId, offerId, { accept, declineReason? })` | VA | Offer's application must belong to this seeker. Only PENDING and not past `expiresAt`. Accept: one transaction sets offer ACCEPTED + `hiredTransitionData(..., { hireSource: "OFFER_ACCEPTED", seekerConfirmed: true })` spread into the application update, then `afterFirstHire` after commit. Decline: DECLINED + optional reason; application status unchanged. |
 | `confirmHire(userId, applicationId)` | VA | Only HIRED applications with `hireConfirmedBySeekerAt` null. Stamps it. Does not change `hireSource`. |
 | `listOffersForApplication`, `getPendingOffersForSeeker` | both | Reads. |
 
@@ -202,7 +200,7 @@ Add the four types to `notificationHref` (`lib/shared/notifications.ts`). Accept
 
 ## 6. Tests (must pass before the PR)
 
-- `markApplicationHired`: sets `hiredAt` once; never overwrites; both the plain and the team paths set it (regression test for the bug).
+- `hiredTransitionData`: sets `hiredAt` once; never overwrites; both the plain and the team paths set it (regression test for the bug).
 - Offer state machine: can't accept WITHDRAWN/DECLINED/EXPIRED; can't accept after `expiresAt`; second PENDING offer rejected.
 - Permissions: VA can't create/withdraw; employer can't accept; a VA can't respond to another VA's offer; a HIRING_MANAGER without assignment can't send offers.
 - Accepting sends the acceptance notification and not the generic hired email.
@@ -226,7 +224,7 @@ Add the four types to `notificationHref` (`lib/shared/notifications.ts`). Accept
 ## 8. Order of work
 
 1. ~~Owner approves §3 schema.~~ Done 2026-10-03.
-2. Manuel: migration + `markApplicationHired` refactor (fixes the bug on its own; can ship first) → PR into `dev`.
+2. Manuel: migration + `hiredTransitionData`/`afterFirstHire` refactor (fixes the bug on its own; can ship first) → PR into `dev`.
 3. Manuel: offers lib, routes, notifications, tests → PR into `dev`.
 4. UI on top of the endpoints → PR into `dev`.
 5. Owner tests on staging, applies the migration to production, then merges `dev` → `main`.
