@@ -87,30 +87,33 @@ export default function ReviewablePromptList({ entries, nowMs, compact = false }
     const summary =
       pendingCount > 0 ? `${pendingCount} review${pendingCount === 1 ? "" : "s"} to write` : "Post-hire reviews";
 
+    // A chip that hugs its content, not a full-width card: it is a reminder,
+    // and should not compete with the job header below it.
     return (
       <section
         aria-label="Post-hire reviews"
-        className="flex items-center gap-2.5 rounded-xl bg-white px-3.5 py-2 ring-1 ring-ink/8"
+        className="inline-flex max-w-full items-center gap-1 rounded-full bg-teal/8 py-1 pl-3 pr-1 text-sm ring-1 ring-teal/15"
       >
-        <Star className="h-4 w-4 shrink-0 text-teal" aria-hidden="true" />
-        <p className="min-w-0 flex-1 truncate text-sm text-ink/70">
+        <Star className="h-3.5 w-3.5 shrink-0 text-teal" aria-hidden="true" />
+        <p className="min-w-0 truncate pl-1 text-ink/70">
           <span className="font-semibold text-ink">{summary}</span>
           {nameLabel ? <span> · {nameLabel}</span> : null}
         </p>
         <button
           type="button"
           onClick={() => setExpanded(true)}
-          className="shrink-0 rounded-lg px-2.5 py-1 text-xs font-semibold text-teal transition hover:bg-teal/5"
+          className="ml-1 inline-flex shrink-0 items-center gap-0.5 rounded-full px-2.5 py-0.5 text-xs font-semibold text-teal transition hover:bg-teal/10"
         >
           {pendingCount > 0 ? "Review" : "View"}
+          <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
         </button>
         <button
           type="button"
           onClick={() => setDismissed(true)}
           aria-label="Hide review reminder"
-          className="shrink-0 rounded-lg p-1 text-ink/35 transition hover:bg-ink/5 hover:text-ink"
+          className="shrink-0 rounded-full p-1 text-ink/35 transition hover:bg-ink/5 hover:text-ink"
         >
-          <X className="h-4 w-4" aria-hidden="true" />
+          <X className="h-3.5 w-3.5" aria-hidden="true" />
         </button>
       </section>
     );

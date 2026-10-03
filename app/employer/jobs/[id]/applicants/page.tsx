@@ -48,8 +48,9 @@ export default async function ApplicantsPage({
 
   return (
     <>
+      {/* Same horizontal padding as the board header below (ApplicantsBoard). */}
       {jobReviewablePrompts.length > 0 && (
-        <div className="mb-6">
+        <div className="px-4 pt-4 sm:px-5">
           <ReviewablePromptList entries={jobReviewablePrompts} nowMs={nowMs} compact />
         </div>
       )}
